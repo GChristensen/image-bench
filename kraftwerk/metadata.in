@@ -1,0 +1,7 @@
+[Extension]
+
+name=kraftwerk
+
+[scripts]
+
+Before=config-presets

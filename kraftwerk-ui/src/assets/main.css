@@ -1,0 +1,67 @@
+@import './base.css';
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  font-weight: normal;
+  padding: 0 1rem;
+}
+
+
+body {
+  display: flex;
+  place-items: center;
+}
+
+.view-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.toolbar {
+  display: flex;
+  border-bottom: 1px solid #ccc;
+  width: 100%;
+  gap: 10px;
+  padding: 0 15px;
+}
+
+.tool-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  text-decoration: none;
+  color: white;
+}
+
+a.tool-item {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+a.tool-item:hover {
+  background-color: hsla(160, 100%, 37%, 0.2);
+}
+
+.item-stream-container {
+  position: relative;
+  flex-grow: 1;
+}
+
+.item-stream {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow-x: auto;
+  flex-wrap: wrap;
+  display: flex;
+  justify-content: center;
+  gap: 0.5%
+}
