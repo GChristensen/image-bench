@@ -55,14 +55,14 @@ class KraftwerkApi():
             filename = outputs_dir + "/" + filename
             filename = filename.replace("\\", "/")
 
-            data_dict = {k: v for k, v in image_data.p.__dict__.items()
-                         if isinstance(v, (int, float, str, bool, dict)) and
-                            not (isinstance(v, (int, float)) and math.isinf(v))}
+            # data_dict = {k: v for k, v in image_data.p.__dict__.items()
+            #              if isinstance(v, (int, float, str, bool, dict)) and
+            #                 not (isinstance(v, (int, float)) and math.isinf(v))}
 
             msg = {
                 "type": "SAVED_IMAGE",
                 "filename": filename,
-                "params": data_dict,
+                #"params": data_dict,
                 "pnginfo": self.pnginfo_to_dict(image_data.pnginfo)
             }
 

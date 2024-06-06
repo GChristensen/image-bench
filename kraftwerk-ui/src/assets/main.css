@@ -48,20 +48,3 @@ a.tool-item:hover {
   background-color: hsla(160, 100%, 37%, 0.2);
 }
 
-.item-stream-container {
-  position: relative;
-  flex-grow: 1;
-}
-
-.item-stream {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  overflow-x: auto;
-  flex-wrap: wrap;
-  display: flex;
-  justify-content: center;
-  gap: 0.5%
-}

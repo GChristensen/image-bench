@@ -2,7 +2,9 @@ window.kraftwerk = window.kraftwerk || {};
 kraftwerk = window.kraftwerk;
 
 kraftwerk.utils = {
-   
+   sleep: function(ms) {
+       return new Promise(rs => setTimeout(rs, ms));
+   }
 };
 
 kraftwerk.utils.html = {

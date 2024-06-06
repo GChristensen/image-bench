@@ -1,84 +1,50 @@
 <script setup>
 
-import {computed, h, ref, render} from "vue";
-import SelectableImage from "@/components/SelectableImage.vue";
+import {computed, ref} from "vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
+import ImageStream from "@/components/ImageStream.vue";
 
-const images = ref([]);
-const selected = ref(new Set());
-const allSelected = computed(() => images.value.length && (images.value.length === selected.value.size));
+const imageStream = ref(null);
 const showOverlay = ref(false);
 const overlayImage = ref(null);
 const overlayImageIndex = ref(null);
+const isAllSelected = computed(() => imageStream.value?.isAllSelected);
 
 function onSelectAllClick(e) {
   e.preventDefault();
-
-  if (allSelected.value) {
-    selected.value.clear();
-  }
-  else {
-    for (let i = 0; i < images.value.length; ++i)
-      selected.value.add(i);
-  }
+  imageStream.value.selectAll();
 }
 
 function onClearClick(e) {
   e.preventDefault();
-
-  const remainingItems = [];
-  const selectedItems = [];
-  let selectedCtr = 0;
-
-  for (let i = 0; i < images.value.length; ++i) {
-    if (selected.value.has(i)) {
-      remainingItems.push(images.value[i]);
-      selectedItems.push(selectedCtr++);
-    }
-  }
-
-  images.value = remainingItems;
-  selected.value = new Set(selectedItems);
+  imageStream.value.clearUnselected();
 }
 
 function onUpscaleSelectedClick(e) {
   e.preventDefault();
-}
+  const selectedImages = imageStream.value.getSelectedImages();
 
-function createPreview(data) {
-  const fileURL = "http://" + location.host + "/file=";
-  const imageLink = fileURL + encodeURIComponent(data.filename);
-  const parameters = JSON.stringify(data.pnginfo);
-
-  return {imageLink, parameters};
-}
-
-function onItemSelected(isSelected, index) {
-  if (isSelected)
-    selected.value.add(index)
-  else {
-    selected.value.delete(index);
-  }
-}
-
-function onImageSelect(evt, index) {
-  evt.preventDefault();
-  selected.value.add(index);
-  showOverlay.value = false;
+  if (selectedImages.length)
+    window.opener.postMessage({"type": "UPSCALE_IMAGES", "images": selectedImages});
 }
 
 function onImageClick(index) {
   overlayImageIndex.value = index;
-  overlayImage.value = images.value[index].imageLink;
+  overlayImage.value = imageStream.value.getImageLink(index);
   showOverlay.value = true;
 }
 
-function onSDEvent(e) {
-  const previewData = createPreview(e);
-  images.value.push(previewData);
+function onImageSelectOverlay(evt, index) {
+  evt.preventDefault();
+  imageStream.value.selectImage(index);
+  showOverlay.value = false;
 }
 
-defineExpose({onSDEvent});
+function onSDEvent(e) {
+  imageStream.value.addImage(e);
+}
+
+defineExpose({onSDEvent, imageStream});
 
 document.addEventListener("keydown", onKeydown);
 
@@ -87,32 +53,21 @@ function onKeydown(e) {
     showOverlay.value = false;
   }
 }
-
 </script>
 
 <template>
   <ImageOverlay v-if="showOverlay" :image="overlayImage" :imageIndex="overlayImageIndex"
                 @hide-overlay="showOverlay = false"
-                @image-select="onImageSelect"/>
+                @image-select="onImageSelectOverlay"/>
   <div class="view-container">
     <div class="toolbar">
       <a href="#" class="tool-item" id="select-all" @click="onSelectAllClick">
-        {{ allSelected? "Unselect all": "Select all" }}
+        {{ isAllSelected? "Unselect all": "Select all" }}
       </a>
       <a href="#" class="tool-item" id="clear" @click="onClearClick">Clear unselected</a>
       <a href="#" class="tool-item" id="upscale-selected" @click="onUpscaleSelectedClick">Upscale selected</a>
     </div>
-    <div class="item-stream-container">
-      <div class="item-stream">
-        <SelectableImage v-for="(item, index) in images"
-          :image-link="item.imageLink"
-          :parameters="item.parameters"
-          :selected="selected.has(index)"
-          @image-click="() => onImageClick(index)"
-          @select="isSelected => onItemSelected(isSelected, index)"
-        ></SelectableImage>
-      </div>
-    </div>
+    <ImageStream ref="imageStream" @image-click="onImageClick"></ImageStream>
   </div>
 </template>
 

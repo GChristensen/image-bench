@@ -18,6 +18,11 @@ async function onSDEvent(e) {
       await router.push("/generated-images");
     }
   }
+  else if (state === "HIRES_FIX") {
+    if (route.fullPath !== "/upscaled-images") {
+      await router.push("/upscaled-images");
+    }
+  }
 
   routerView.value.onSDEvent(e);
 }

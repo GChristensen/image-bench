@@ -4,6 +4,8 @@ kraftwerk = window.kraftwerk;
 kraftwerk.core = (function () {
 
     async function init() {
+        kraftwerk.generationState = "BATCH_GENERATION";
+
         await fetch('/kraftwerk/config.json?_=' + (+new Date()))
             .then(response => response.json())
             .then(config => {
@@ -16,7 +18,7 @@ kraftwerk.core = (function () {
             .catch(error => console.error('[state]: Error getting JSON file:', error));
 
         if (kraftwerk.config?.repositionConfigPresetsDropdown) {
-            await new Promise(rs => setTimeout(rs, 2000));
+            await kraftwerk.utils.sleep(2000);
             await repositionConfigPresetsDropdown("txt2img");
             await repositionConfigPresetsDropdown("img2img");
         }
@@ -24,6 +26,10 @@ kraftwerk.core = (function () {
         initUI();
 
         //document.getElementById("txt2img_generate").click();
+    }
+
+    function getGenerationState() {
+        return kraftwerk.generationState;
     }
 
     async function repositionConfigPresetsDropdown(kind) {
@@ -38,6 +44,7 @@ kraftwerk.core = (function () {
     }
 
     function initUI() {
+        window.name = "sd-webui-main-window";
         let quickSettings = gradioApp().getElementById("quicksettings");
         let className = quickSettings.querySelector('button').className;
 
@@ -45,7 +52,25 @@ kraftwerk.core = (function () {
 
         kraftwerk.popup = null;
 
+        const generateButton = document.getElementById("txt2img_generate");
+        generateButton.addEventListener("mousedown", onGenerateMousedown);
+        const interruptButton = document.getElementById("txt2img_interrupt");
+        generateButton.addEventListener("mousedown", onInterruptMousedown);
+
         window.addEventListener("message", onMessage);
+    }
+
+    function onGenerateMousedown(e) {
+        kraftwerk.generationState = "BATCH_GENERATION";
+    }
+
+    function onInterruptMousedown(e) {
+        if (kraftwerk.generationState === "HIRES_FIX") {
+            if (kraftwerk.upscaleQueue.length)
+                kraftwerk.upscaleQueue = [];
+        }
+
+        kraftwerk.generationState = "BATCH_GENERATION";
     }
 
     function createSocket() {
@@ -53,12 +78,20 @@ kraftwerk.core = (function () {
             kraftwerk.socket = new WebSocket("ws://" + location.host + "/kraftwerk/websocket");
             // kraftwerk.socket.onopen = e => {
             // }
-            kraftwerk.socket.onmessage = e => {
-                if (e?.data) {
-                    const msg = JSON.parse(e.data);
-                    kraftwerk.popup?.onSDEvent(msg);
+            kraftwerk.socket.onmessage = onBackendMessage;
+        }
+    }
+
+    function onBackendMessage(e) {
+        if (e?.data) {
+            const msg = JSON.parse(e.data);
+            kraftwerk.popup?.onSDEvent(msg);
+
+            if (msg.type === "SAVED_IMAGE") {
+                if (kraftwerk.generationState === "HIRES_FIX") {
+                    upscaleNextImage();
                 }
-            };
+            }
         }
     }
 
@@ -79,16 +112,119 @@ kraftwerk.core = (function () {
         }
     }
 
-    function onCloseWindow(e) {
-        print(e)
-    }
-
     function onMessage(msg) {
-        console.log(msg)
+        const payload = msg.data;
+
+        if (payload.type === "EXPLORE_MODELS")
+            exploreModels(payload.models);
+        else if (payload.type === "UPSCALE_IMAGES")
+            upscaleImages(payload.images);
+        else if (payload.type === "SET_IMAGE_PARAMS")
+            setImageParams(payload.parameters)
     }
 
-    function getGenerationState() {
-        return "BATCH_GENERATION";
+    async function upscaleImages(images) {
+        kraftwerk.generationState = "HIRES_FIX";
+        kraftwerk.upscaleQueue = images;
+
+        const batchesInput = document.querySelector("#txt2img_batch_count input[type='number']");
+
+        enableHiresFix();
+        setInputValue(batchesInput, 1);
+
+        return upscaleImage(kraftwerk.upscaleQueue.shift());
+    }
+
+    async function upscaleImage(imageData) {
+        if (!imageData)
+            return;
+
+        const seedInput = document.querySelector("#txt2img_seed input");
+        const generateButton = document.getElementById("txt2img_generate");
+
+        const parameters = JSON.parse(imageData.parameters);
+
+        setInputValue(seedInput, parameters["seed"]);
+
+        if ("variation seed" in parameters) {
+            const subseedInput = document.querySelector("#txt2img_subseed input");
+            setInputValue(subseedInput, parameters["variation seed"]);
+        }
+
+        await kraftwerk.utils.sleep(500);
+
+        generateButton.click();
+    }
+
+    function upscaleNextImage() {
+        const nextImage = kraftwerk.upscaleQueue.shift();
+
+        if (nextImage)
+            return upscaleImage(nextImage);
+        else {
+            const seedInput = document.querySelector("#txt2img_seed input");
+            const subseedInput = document.querySelector("#txt2img_subseed input");
+
+            setInputValue(seedInput, -1);
+            setInputValue(subseedInput, -1);
+        }
+    }
+
+    function enableHiresFix() {
+        const hrFixCheckbox = document.getElementById("txt2img_hr-visible-checkbox");
+
+        if (!hrFixCheckbox.checked) {
+            var inputEvent = new Event('input', {
+                'bubbles': true,
+                'cancelable': true
+            });
+
+            var clickEvent = new MouseEvent('click', {
+                'view': window,
+                'bubbles': true,
+                'cancelable': true,
+                'buttons': 1
+            });
+
+            hrFixCheckbox.dispatchEvent(clickEvent);
+            hrFixCheckbox.dispatchEvent(inputEvent);
+        }
+    }
+
+    function setInputValue(inputElement, value, blur = true) {
+        inputElement.value = value;
+
+        const inputEvent = new Event('input', { bubbles: true, cancelable: true });
+        inputElement.dispatchEvent(inputEvent);
+
+        if (blur) {
+            const blurEvent = new Event('blur', {bubbles: true, cancelable: true});
+            inputElement.dispatchEvent(blurEvent);
+        }
+    }
+
+    async function setImageParams(params) {
+        if (!params)
+            return;
+
+        const seedInput = document.querySelector("#txt2img_seed input");
+        const parameters = JSON.parse(params);
+
+        setInputValue(seedInput, parameters["seed"]);
+
+        if ("variation seed" in parameters) {
+            const subseedInput = document.querySelector("#txt2img_subseed input");
+            setInputValue(subseedInput, parameters["variation seed"]);
+        }
+    }
+
+    async function exploreModels(models) {
+        const optionsURL = `http://${location.host}/sdapi/v1/options`;
+        const opts = await fetch(optionsURL).then(r => r.json());
+
+        opts.sd_model_checkpoint = models[0].model_name;
+        await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
+
     }
 
     return { init };

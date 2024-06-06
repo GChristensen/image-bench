@@ -2,9 +2,11 @@
   defineProps(["image", "imageIndex"]);
   const emit = defineEmits(["hideOverlay", "imageSelect"]);
 
-  function onImageClick(e) {
-    //window.open(e.target.src, "_blank");
-    emit("hideOverlay");
+  function onImageMouseDown(e) {
+    if (e.button === 1)
+      window.open(e.target.src, "_blank");
+    else if (e.button === 0)
+      emit("hideOverlay");
   }
 </script>
 
@@ -13,7 +15,7 @@
     <div class="image-overlay" @click="$emit('hideOverlay')">
     </div>
     <div class="overlay-image-container">
-      <img class="overlay-image" :src="image" @click="onImageClick">
+      <img class="overlay-image" :src="image" @mousedown="onImageMouseDown">
       <div class="action-link-container">
         <a class="select-link tool-item" href="#" @click="$emit('imageSelect', $event, imageIndex)">Select image</a>
       </div>
