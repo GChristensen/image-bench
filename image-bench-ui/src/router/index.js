@@ -23,7 +23,8 @@ const router = createRouter({
     {
       path: '/image-tray',
       name: 'image-tray',
-      component: GeneratedImages
+      component: GeneratedImages,
+      props: {isTray: true}
     },
     {
       path: '/upscaled-images',

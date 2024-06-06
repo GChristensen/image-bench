@@ -1,13 +1,13 @@
-window.kraftwerk = window.kraftwerk || {};
-kraftwerk = window.kraftwerk;
+window.imageBench = window.imageBench || {};
+imageBench = window.imageBench;
 
-kraftwerk.utils = {
+imageBench.utils = {
    sleep: function(ms) {
        return new Promise(rs => setTimeout(rs, ms));
    }
 };
 
-kraftwerk.utils.html = {
+imageBench.utils.html = {
     setStyle: function setStyle(elements, style) {
         if (elements instanceof NodeList) {
             elements = Array.from(elements);
@@ -49,7 +49,7 @@ kraftwerk.utils.html = {
     },
 
     createHeaderButton: function createHeaderButton(title, text, className, style, action) {
-        const button = kraftwerk.utils.html.create('button', {
+        const button = imageBench.utils.html.create('button', {
             title: title,
             innerHTML: text,
             className: className,

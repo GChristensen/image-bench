@@ -1,3 +1,3 @@
 ui:
-	cd kraftwerk-ui; npm run build
-	cp -f kraftwerk-ui/dist/index.html kraftwerk/scripts
+	cd image-bench-ui; npm run build
+	cp -f image-bench-ui/dist/index.html image-bench/scripts

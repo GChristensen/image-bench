@@ -1,8 +1,12 @@
 <script setup>
   import SelectableImage from "@/components/SelectableImage.vue";
-  import {computed, ref} from "vue";
-  import {createImageData} from "@/utils.js";
+  import {computed, onBeforeMount, ref} from "vue";
+  import {createImageData, createImageLink} from "@/utils.js";
+  import {useImageTrayStore} from "@/stores/imageTray.js";
 
+  const imageTrayStore = useImageTrayStore();
+
+  const props = defineProps(["isTray"]);
   const emit = defineEmits(["imageClick"]);
 
   const images = ref([]);
@@ -20,12 +24,14 @@
 
     images.value.push(imageData);
 
+    console.log(images.value)
+
     if (scrolledToBottom)
       setTimeout(() => is.scrollTop = is.scrollHeight, 500);
   }
 
   function getImageLink(index) {
-    return images.value[index].imageLink;
+    return createImageLink(images.value[index].imagePath);
   }
 
   function selectImage(index) {
@@ -69,7 +75,14 @@
       }
     }
 
-    images.value = remainingItems;
+    if (props.isTray) {
+      images.value = imageTrayStore.content.images = remainingItems;
+      imageTrayStore.persist();
+    }
+    else {
+      images.value = remainingItems;
+    }
+
     selected.value = new Set(selectedItems);
   }
 
@@ -87,6 +100,13 @@
     return selectedItems;
   }
 
+  onBeforeMount(() => {
+    if (props.isTray) {
+      images.value = imageTrayStore.content.images;
+      console.log(images.value)
+    }
+  })
+
   defineExpose({addImage, getImageLink, selectImage, selectAll, clearUnselected, isAllSelected,
                getSelectedImages});
 </script>
@@ -94,11 +114,12 @@
 <template>
   <div class="image-stream-container">
     <div class="image-stream" ref="imageStream">
-      <SelectableImage v-for="(item, index) in images"
-                       :image-link="item.imageLink"
-                       :parameters="item.parameters"
+      <SelectableImage v-for="(image, index) in images"
+                       :image-path="image.imagePath"
+                       :parameters="image.parameters"
                        :selectable="true"
                        :selected="selected.has(index)"
+                       :is-tray="isTray"
                        @image-click="() => onImageClick(index)"
                        @select="isSelected => onItemSelected(isSelected, index)"
       ></SelectableImage>

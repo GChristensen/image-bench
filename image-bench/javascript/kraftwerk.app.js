@@ -1,4 +1,4 @@
 
 document.addEventListener('DOMContentLoaded', function() {
-    onUiLoaded(kraftwerk.core.init);
+    onUiLoaded(imageBench.core.init);
 });

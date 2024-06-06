@@ -2,7 +2,7 @@
 
 import {onBeforeMount, onMounted, reactive, ref} from "vue";
 import SelectableImage from "@/components/SelectableImage.vue";
-import {createImageData} from "@/utils.js";
+import {createImageData, createImageLink} from "@/utils.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 
   const models = ref([]);
@@ -23,7 +23,14 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
   }
 
   async function loadPresets() {
-    modelPresets = await fetch("http://" + location.host + "/kraftwerk/explore_presets").then(r => r.json());
+    const response = await fetch("http://" + location.host + "/image-bench/explore_presets");
+
+    if (response.ok && response.headers.get("content-length") > 0) {
+      modelPresets = await response.json();
+    }
+    else
+      modelPresets = {};
+
     lastPreset.value = modelPresets.last_preset || "";
     presetNames.value = modelPresets.presets? Object.keys(modelPresets.presets): [];
     await activatePreset(lastPreset.value);
@@ -31,7 +38,7 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
 
   async function writePresets() {
     const presets = JSON.stringify(modelPresets);
-    await fetch("http://" + location.host + "/kraftwerk/write_explore_presets", {method: "post", body: presets});
+    await fetch("http://" + location.host + "/image-bench/explore_presets", {method: "post", body: presets});
   }
 
   onBeforeMount(async () => {
@@ -89,10 +96,15 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
     e.preventDefault();
 
     const presetName = presetSelect.value.value;
-    modelPresets.presets = modelPresets.presets || {};
-    modelPresets.presets[presetName] = getSelectedModels().map(m => m.sha256);
-    modelPresets.last_preset = presetName;
-    await writePresets();
+
+    if (presetName) {
+      modelPresets.presets = modelPresets.presets || {};
+      modelPresets.presets[presetName] = getSelectedModels().map(m => m.sha256);
+      modelPresets.last_preset = presetName;
+      await writePresets();
+    }
+    else
+      alert("No preset is selected.");
   }
 
   async function onDeleteClick(e) {
@@ -135,7 +147,7 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
   }
 
   function onImageClick(image) {
-    overlayImage.value = image.imageLink;
+    overlayImage.value = createImageLink(image.imagePath);
     showOverlay.value = true;
   }
 
@@ -171,6 +183,7 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
     </div>
     <div class="explore-container">
       <div class="model-list">
+        Presets&nbsp;
         <select class="model-presets" ref="presetSelect" @change="onPresetChange">
           <option v-for="name in presetNames" :value="name" :selected="lastPreset === name">{{ name }}</option>
         </select>
@@ -195,7 +208,7 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
             <h3 class="model-name">{{ model.name }}</h3>
             <div class="model-images">
               <SelectableImage v-for="image in model.images"
-                               :image-link="image.imageLink"
+                               :image-path="image.imagePath"
                                :parameters="image.parameters"
                                @image-click="() => onImageClick(image)"></SelectableImage>
             </div>
@@ -239,9 +252,11 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
 }
 
 .model-list {
-  padding: 15px 0;
+  margin: 15px 0;
   display: flex;
   flex-direction: column;
+  padding-right: 10px;
+  border-right: 1px solid white;
 }
 
 .model-label {

@@ -1,6 +1,7 @@
 <script setup>
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
-import {ref} from "vue";
+import {onBeforeMount, ref} from "vue";
+import {useImageTrayStore} from "@/stores/imageTray.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -10,6 +11,8 @@ const generatedImagesTab = ref(null);
 const upscaledImagesTab = ref(null);
 const imageTrayTab = ref(null);
 const routerView = ref(null);
+
+const imageTrayStore = useImageTrayStore();
 
 async function onSDEvent(e) {
   const state = window.getGenerationState();
@@ -29,6 +32,10 @@ async function onSDEvent(e) {
 }
 
 window.onSDEvent = onSDEvent;
+
+onBeforeMount(async () => {
+  await imageTrayStore.init();
+});
 
 </script>
 
@@ -80,6 +87,7 @@ window.onSDEvent = onSDEvent;
     cursor: pointer;
     text-decoration: none;
     color: white;
+    font-weight: bold;
   }
 
   .tab:hover {
@@ -89,6 +97,8 @@ window.onSDEvent = onSDEvent;
 
   .tab.router-link-exact-active {
     font-weight: bold;
+    background-color: #f0f0f0;
+    color: var(--vt-c-black);
   }
 
   #tab-content {

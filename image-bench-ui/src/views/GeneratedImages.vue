@@ -68,8 +68,9 @@ function onKeydown(e) {
       </a>
       <a href="#" class="tool-item" id="clear" @click="onClearClick">Clear unselected</a>
       <a href="#" class="tool-item" id="upscale-selected" @click="onUpscaleSelectedClick">Upscale selected</a>
+      <!--a href="#" class="tool-item" id="upscale-selected" v-if="isTray" @click="onUpscaleSelectedClick">Clear storage</a-->
     </div>
-    <ImageStream ref="imageStream" @image-click="onImageClick"></ImageStream>
+    <ImageStream ref="imageStream" :is-tray="isTray" @image-click="onImageClick"></ImageStream>
   </div>
 </template>
 
