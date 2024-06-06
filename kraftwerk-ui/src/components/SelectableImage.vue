@@ -1,9 +1,10 @@
 <script setup>
-  const props = defineProps(["imageLink", "parameters", "selected"]);
+  const props = defineProps(["imageLink", "parameters", "selectable", "selected"]);
 
   function onReuseSeedClick(e) {
     e.preventDefault();
-    window.opener.postMessage({type: "SET_IMAGE_PARAMS", parameters: props.parameters});
+    const parameters = JSON.parse(JSON.stringify(props.parameters))
+    window.opener.postMessage({type: "SET_IMAGE_PARAMS", parameters});
   }
 </script>
 
@@ -12,7 +13,7 @@
   <img class="selectable-image-preview" :src="imageLink"
        @click="$emit('imageClick')">
   <div class="selectable-image-controls">
-    <label><input class="selectable-emage-checkbox" type="checkbox"
+    <label v-if="selectable"><input class="selectable-emage-checkbox" type="checkbox"
                   @change="$emit('select', $event.target.checked)"
                   :checked="selected"> Select</label>
     &nbsp;
@@ -23,7 +24,7 @@
 
 <style scoped>
 .selectable-image {
-  max-width: 30vw;
+  max-width: 30%;
   max-height: 70vh;
   height: max-content;
   margin: 15px;

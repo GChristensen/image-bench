@@ -37,6 +37,8 @@ class KraftwerkApi():
         self.websocket_queue = asyncio.Queue()
         self.add_api_route("/window", self.get_window, methods=["GET"])
         self.add_api_route("/config.json", self.get_config, methods=["GET"])
+        self.add_api_route("/explore_presets", self.get_explore_presets, methods=["GET"])
+        self.add_api_route("/write_explore_presets", self.write_explore_presets, methods=["POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
 
     def get_config(self):
@@ -80,8 +82,12 @@ class KraftwerkApi():
 
         return result_dict
 
-    def get_file_path(self, file_name):
+    def get_file_path(self, file_name, upper=False):
         current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        if upper:
+            current_dir = os.path.dirname(current_dir)
+
         file_path = os.path.join(current_dir, file_name)
         return file_path
 
@@ -94,6 +100,24 @@ class KraftwerkApi():
                 await websocket.send_text(json.dumps(msg))
             finally:
                 self.websocket_queue.task_done()
+
+    def get_explore_presets(self):
+        result = "{}"
+        presets_file = self.get_file_path("explore_presets.json", upper=True)
+
+        if os.path.exists(presets_file):
+            with open(presets_file, encoding="utf-8") as f:
+                result = f.read()
+
+        return Response(result, media_type="application/json")
+
+    async def write_explore_presets(self, request: Request):
+        presets_file = self.get_file_path("explore_presets.json", upper=True)
+
+        with open(presets_file, mode="w", encoding="utf-8") as f:
+            f.write((await request.body()).decode("utf-8"))
+
+        return Response("", media_type="application/json")
 
 
 try:

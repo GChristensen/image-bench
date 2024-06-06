@@ -1,8 +1,10 @@
 <script setup>
 
-import {computed, ref} from "vue";
+import {computed, onBeforeMount, ref} from "vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ImageStream from "@/components/ImageStream.vue";
+
+const props = defineProps(["isTray"]);
 
 const imageStream = ref(null);
 const showOverlay = ref(false);

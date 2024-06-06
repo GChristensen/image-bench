@@ -17,7 +17,8 @@
     <div class="overlay-image-container">
       <img class="overlay-image" :src="image" @mousedown="onImageMouseDown">
       <div class="action-link-container">
-        <a class="select-link tool-item" href="#" @click="$emit('imageSelect', $event, imageIndex)">Select image</a>
+        <a class="select-link tool-item" href="#" v-if="imageIndex"
+           @click="$emit('imageSelect', $event, imageIndex)">Select image</a>
       </div>
     </div>
   </div>

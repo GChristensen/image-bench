@@ -44,7 +44,7 @@ kraftwerk.core = (function () {
     }
 
     function initUI() {
-        window.name = "sd-webui-main-window";
+        //window.name = "sd-webui-main-window";
         let quickSettings = gradioApp().getElementById("quicksettings");
         let className = quickSettings.querySelector('button').className;
 
@@ -69,6 +69,10 @@ kraftwerk.core = (function () {
             if (kraftwerk.upscaleQueue.length)
                 kraftwerk.upscaleQueue = [];
         }
+        else if (kraftwerk.generationState === "EXPLORE_MODELS") {
+            if (kraftwerk.exploreQueue.length)
+                kraftwerk.exploreQueue = [];
+        }
 
         kraftwerk.generationState = "BATCH_GENERATION";
     }
@@ -90,6 +94,9 @@ kraftwerk.core = (function () {
             if (msg.type === "SAVED_IMAGE") {
                 if (kraftwerk.generationState === "HIRES_FIX") {
                     upscaleNextImage();
+                }
+                if (kraftwerk.generationState === "EXPLORE_MODELS") {
+                    exploreNextImage();
                 }
             }
         }
@@ -116,7 +123,7 @@ kraftwerk.core = (function () {
         const payload = msg.data;
 
         if (payload.type === "EXPLORE_MODELS")
-            exploreModels(payload.models);
+            exploreModels(payload.models, payload.generateImages);
         else if (payload.type === "UPSCALE_IMAGES")
             upscaleImages(payload.images);
         else if (payload.type === "SET_IMAGE_PARAMS")
@@ -142,7 +149,7 @@ kraftwerk.core = (function () {
         const seedInput = document.querySelector("#txt2img_seed input");
         const generateButton = document.getElementById("txt2img_generate");
 
-        const parameters = JSON.parse(imageData.parameters);
+        const parameters = imageData.parameters;
 
         setInputValue(seedInput, parameters["seed"]);
 
@@ -208,7 +215,7 @@ kraftwerk.core = (function () {
             return;
 
         const seedInput = document.querySelector("#txt2img_seed input");
-        const parameters = JSON.parse(params);
+        const parameters = params;
 
         setInputValue(seedInput, parameters["seed"]);
 
@@ -218,13 +225,57 @@ kraftwerk.core = (function () {
         }
     }
 
-    async function exploreModels(models) {
+    async function exploreModels(models, generateImages) {
+        if (!models.length)
+            return;
+
+        kraftwerk.generationState = "EXPLORE_MODELS";
+        kraftwerk.exploreQueue = [];
+        kraftwerk.exploreModel = models[0];
+        await setActiveModel(kraftwerk.exploreModel.model_name);
+
+        const batchesInput = document.querySelector("#txt2img_batch_count input[type='number']");
+        setInputValue(batchesInput, 1);
+        const seedInput = document.querySelector("#txt2img_seed input");
+        setInputValue(seedInput, -1);
+
+        for (const model of models) {
+            for (let i = 0; i < generateImages; ++i) {
+                kraftwerk.exploreQueue.push(model);
+            }
+        }
+
+        return exploreImage(kraftwerk.exploreQueue.shift());
+    }
+
+    async function setActiveModel(modelName) {
         const optionsURL = `http://${location.host}/sdapi/v1/options`;
         const opts = await fetch(optionsURL).then(r => r.json());
 
-        opts.sd_model_checkpoint = models[0].model_name;
+        opts.sd_model_checkpoint = modelName;
         await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
+    }
 
+    async function exploreImage(model) {
+        if (!model)
+            return;
+
+        if (kraftwerk.exploreModel.hash !== model.hash) {
+            await setActiveModel(model.model_name);
+            kraftwerk.exploreModel = model;
+        }
+
+        await kraftwerk.utils.sleep(1000);
+
+        const generateButton = document.getElementById("txt2img_generate");
+        generateButton.click();
+    }
+
+    function exploreNextImage() {
+        const model = kraftwerk.exploreQueue.shift();
+
+        if (model)
+            return exploreImage(model);
     }
 
     return { init };

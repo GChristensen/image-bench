@@ -8,6 +8,7 @@ const router = useRouter();
 const exploreTab = ref(null);
 const generatedImagesTab = ref(null);
 const upscaledImagesTab = ref(null);
+const imageTrayTab = ref(null);
 const routerView = ref(null);
 
 async function onSDEvent(e) {
@@ -36,12 +37,13 @@ window.onSDEvent = onSDEvent;
     <div class="tabs">
       <RouterLink to="/explore" class="tab" ref="exploreTab">Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab">Generated Images</RouterLink>
+      <RouterLink to="/image-tray" class="tab" ref="imageTrayTab">Image Tray</RouterLink>
       <RouterLink to="/upscaled-images" class="tab" ref="upscaledImagesTab">Upscaled</RouterLink>
     </div>
     <div id="tab-content">
       <RouterView v-slot="{ Component }">
         <KeepAlive>
-          <component ref="routerView" :is="Component" />
+          <component ref="routerView" :is="Component"  :key="$route.fullPath"/>
         </KeepAlive>
       </RouterView>
     </div>

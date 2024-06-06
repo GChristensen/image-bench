@@ -1,6 +1,7 @@
 <script setup>
   import SelectableImage from "@/components/SelectableImage.vue";
   import {computed, ref} from "vue";
+  import {createImageData} from "@/utils.js";
 
   const emit = defineEmits(["imageClick"]);
 
@@ -21,14 +22,6 @@
 
     if (scrolledToBottom)
       setTimeout(() => is.scrollTop = is.scrollHeight, 500);
-  }
-
-  function createImageData(data) {
-    const fileURL = "http://" + location.host + "/file=";
-    const imageLink = fileURL + encodeURIComponent(data.filename);
-    const parameters = JSON.stringify(data.pnginfo);
-
-    return {imageLink, parameters};
   }
 
   function getImageLink(index) {
@@ -104,6 +97,7 @@
       <SelectableImage v-for="(item, index) in images"
                        :image-link="item.imageLink"
                        :parameters="item.parameters"
+                       :selectable="true"
                        :selected="selected.has(index)"
                        @image-click="() => onImageClick(index)"
                        @select="isSelected => onItemSelected(isSelected, index)"

@@ -1,4 +1,7 @@
 import {createRouter, createWebHashHistory} from 'vue-router'
+import Explore from "@/views/Explore.vue";
+import GeneratedImages from "@/views/GeneratedImages.vue";
+import UpscaledImages from "@/views/UpscaledImages.vue";
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
@@ -10,17 +13,22 @@ const router = createRouter({
     {
       path: '/explore',
       name: 'explore',
-      component: () => import('../views/Explore.vue')
+      component: Explore
     },
     {
       path: '/generated-images',
       name: 'generated-images',
-      component: () => import('../views/GeneratedImages.vue')
+      component: GeneratedImages
+    },
+    {
+      path: '/image-tray',
+      name: 'image-tray',
+      component: GeneratedImages
     },
     {
       path: '/upscaled-images',
       name: 'upscaled-images',
-      component: () => import('../views/UpscaledImages.vue')
+      component: UpscaledImages
     }
   ]
 })
