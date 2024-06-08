@@ -13,6 +13,7 @@
     window.opener.postMessage({type: "SET_IMAGE_SEED", parameters});
   }
 
+  // currently undocumented
   function onReuseParamsClick(e) {
     e.preventDefault();
 
@@ -44,14 +45,17 @@
 <template>
 <div class="selectable-image">
   <img class="selectable-image-preview" :src="createImageLink(imagePath)" :title="createTooltip(parameters)"
-       @click="$emit('imageClick')">
+       @mousedown.left="$emit('imageClick')"
+       @mousedown.middle="$emit('imageOpen')">
   <div class="selectable-image-controls">
     <label v-if="selectable"><input class="selectable-emage-checkbox" type="checkbox"
                   @change="$emit('select', $event.target.checked)"
                   :checked="selected"> Select</label>
-    <span class="reuse-seed-link" title="Left: reuse seed, Middle: reuse all params"
-       @mousedown.left="onReuseSeedClick"
-       @mousedown.middle="onReuseParamsClick">♻️</span>
+    <span class="reuse-seed" title="Reuse seed"
+          @mousedown.left="onReuseSeedClick"
+          @mousedown.middle="onReuseParamsClick">♻️</span>
+    <span class="generation-params" title="Generation parameters"
+          @mousedown.left="$emit('showParams')">📑</span>
     <a v-if="!isTray" href="#" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</a>
     <span v-if="parameters['hires upscale']" class="upscale-indicator" title="Upscaled">⬆️</span>
   </div>
@@ -69,6 +73,8 @@
 .selectable-image-preview {
   width: 100%;
   height: 100%;
+  max-width: 30vw;
+  max-height: 70vh;
   object-fit: contain;
   cursor: pointer;
 }
@@ -77,12 +83,12 @@
   text-align: center;
 }
 
-.reuse-seed-link {
+.reuse-seed, .generation-params {
   text-decoration: none;
   cursor: pointer;
 }
 
 .upscale-indicator {
-  cursor: pointer;
+  cursor: default;
 }
 </style>

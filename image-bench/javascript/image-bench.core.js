@@ -225,6 +225,7 @@ imageBench.core = (function () {
         }
     }
 
+    // TODO: move to python script
     async function setImageParams(params) {
         if (!params)
             return;
@@ -269,11 +270,11 @@ imageBench.core = (function () {
             enableHiresFix();
         }
 
-        const optionsURL = `http://${location.host}/sdapi/v1/options`;
-        const opts = await fetch(optionsURL).then(r => r.json());
-        opts.sd_model_checkpoint = params["model"];
-        opts.sd_vae = params["vae"];
-        await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
+        // const optionsURL = `http://${location.host}/sdapi/v1/options`;
+        // const opts = await fetch(optionsURL).then(r => r.json());
+        // opts.sd_model_checkpoint = params["model"];
+        // opts.sd_vae = params["vae"];
+        // await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
     }
 
     async function exploreModels(models, generateImages) {

@@ -2,8 +2,9 @@
 
 import {onBeforeMount, onMounted, reactive, ref} from "vue";
 import SelectableImage from "@/components/SelectableImage.vue";
-import {createImageData, createImageLink} from "@/utils.js";
+import {createImageData, createImageGenerationParams, createImageLink} from "@/utils.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
+import ParametersOverlay from "@/components/ParametersOverlay.vue";
 
   const models = ref([]);
   const selected = ref(new Set());
@@ -17,6 +18,8 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
   const showOverlay = ref(false);
   const overlayImage = ref(null);
   const generatedImages = ref();
+  const showParamsOverlay = ref(false);
+  const paramsOverlayText = ref("");
 
   async function refreshModels() {
     models.value = await fetch("http://" + location.host + "/sdapi/v1/sd-models").then(r => r.json());
@@ -151,6 +154,16 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
     showOverlay.value = true;
   }
 
+  function onImageOpen(image) {
+    const imageLink = createImageLink(image.imagePath);
+    window.open(imageLink, "_blank");
+  }
+
+  function onShowParams(image) {
+    paramsOverlayText.value = createImageGenerationParams(image);
+    showParamsOverlay.value = true;
+  }
+
   function onSDEvent(e) {
     const gi = generatedImages.value;
     const scrolledToBottom = (gi.clientHeight === gi.scrollHeight) || (gi.scrollHeight - gi.scrollTop === gi.clientHeight);
@@ -174,6 +187,8 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
 <template>
   <ImageOverlay v-if="showOverlay" :image="overlayImage"
                 @hide-overlay="showOverlay = false"/>
+  <ParametersOverlay v-if="showParamsOverlay" :text="paramsOverlayText"
+                     @hide-overlay="showParamsOverlay = false"/>
   <div class="wrapper">
     <div class="toolbar">
       <a href="#" class="tool-item" id="explore-selected" @click="onExploreClick">Explore</a>
@@ -210,7 +225,9 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
               <SelectableImage v-for="image in model.images"
                                :image-path="image.imagePath"
                                :parameters="image.parameters"
-                               @image-click="() => onImageClick(image)"></SelectableImage>
+                               @show-params="() => onShowParams(image)"
+                               @image-click="() => onImageClick(image)"
+                               @image-open="onImageOpen"></SelectableImage>
             </div>
           </div>
         </div>

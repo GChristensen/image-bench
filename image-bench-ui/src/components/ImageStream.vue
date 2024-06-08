@@ -1,13 +1,13 @@
 <script setup>
   import SelectableImage from "@/components/SelectableImage.vue";
   import {computed, onBeforeMount, ref} from "vue";
-  import {createImageData, createImageLink} from "@/utils.js";
+  import {createImageData, createImageGenerationParams, createImageLink} from "@/utils.js";
   import {useImageTrayStore} from "@/stores/imageTray.js";
 
   const imageTrayStore = useImageTrayStore();
 
   const props = defineProps(["isTray"]);
-  const emit = defineEmits(["imageClick"]);
+  const emit = defineEmits(["imageClick", "imageOpen", "showParams"]);
 
   const images = ref([]);
   const selected = ref(new Set());
@@ -24,14 +24,17 @@
 
     images.value.push(imageData);
 
-    console.log(images.value)
-
     if (scrolledToBottom)
       setTimeout(() => is.scrollTop = is.scrollHeight, 500);
   }
 
   function getImageLink(index) {
     return createImageLink(images.value[index].imagePath);
+  }
+
+  function getImageGenerationParams(index) {
+    const image = images.value[index];
+    return createImageGenerationParams(image);
   }
 
   function selectImage(index) {
@@ -44,10 +47,6 @@
     else {
       selected.value.delete(index);
     }
-  }
-
-  function onImageClick(index) {
-    emit("imageClick", index);
   }
 
   function selectAll() {
@@ -103,12 +102,11 @@
   onBeforeMount(() => {
     if (props.isTray) {
       images.value = imageTrayStore.content.images;
-      console.log(images.value)
     }
   })
 
   defineExpose({addImage, getImageLink, selectImage, selectAll, clearUnselected, isAllSelected,
-               getSelectedImages});
+               getSelectedImages, getImageGenerationParams});
 </script>
 
 <template>
@@ -120,7 +118,9 @@
                        :selectable="true"
                        :selected="selected.has(index)"
                        :is-tray="isTray"
-                       @image-click="() => onImageClick(index)"
+                       @image-click="$emit('imageClick', index)"
+                       @image-open="$emit('imageOpen', index)"
+                       @show-params="$emit('showParams', index)"
                        @select="isSelected => onItemSelected(isSelected, index)"
       ></SelectableImage>
     </div>
