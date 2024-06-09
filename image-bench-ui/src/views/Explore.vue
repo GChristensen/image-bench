@@ -173,7 +173,6 @@ function onShowParams(image) {
 function onBeforeSDEvent(e) {
   const gi = generatedImagesElement.value;
   scrolledToBottom = (gi.clientHeight === gi.scrollHeight) || (gi.scrollHeight - gi.scrollTop === gi.clientHeight);
-  console.log(scrolledToBottom)
 }
 
 function onSDEvent(e) {

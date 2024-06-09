@@ -96,7 +96,7 @@ function onConfigPresetChange(e) {
   localStorage.setItem("imageBench_" + props.kind + "_configPreset", e.target.value);
 }
 
-function beforeSDEvent(e) {
+function onBeforeSDEvent(e) {
   imageStream.value.beforeAddImage();
 }
 
@@ -152,7 +152,7 @@ function displayNextImage() {
   }
 }
 
-defineExpose({beforeSDEvent, onSDEvent, imageStream});
+defineExpose({onBeforeSDEvent, onSDEvent, imageStream});
 
 
 </script>

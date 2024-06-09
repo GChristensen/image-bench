@@ -33,7 +33,7 @@ const stores = {
 function onClearAllClick(e) {
   e.preventDefault();
 
-  if (confirm("This will clear all images. Do you want to continue?")) {
+  if (confirm("This will clear all images. The image files will remain on disk. Do you want to continue?")) {
     exploreImagesStore.clear();
     generatedImagesStore.clear();
     imageTrayStore.clear();
@@ -42,6 +42,9 @@ function onClearAllClick(e) {
 }
 
 async function onSDEvent(e) {
+
+  console.log(e);
+
   if (e.type === "SOCKET_CLOSED") {
     alert("Connection with Stable Diffusion WebUI server is lost. Please reload the main WebUI page and reopen this window.");
     return;
