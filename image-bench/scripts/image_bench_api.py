@@ -5,6 +5,7 @@ import os
 import shutil
 
 from fastapi import FastAPI, Body, HTTPException, Request, Response
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
 
 import gradio as gr
@@ -21,11 +22,15 @@ from fastapi.responses import FileResponse
 import gradio as gr
 import modules.shared as shared
 import modules.script_callbacks as script_callbacks
+from starlette.responses import JSONResponse
 
 
 class ImageBenchApi():
 
     BASE_PATH = "/image-bench"
+
+    def __init__(self):
+        self.config_presets_dropdown = None
 
     def get_path(self, path):
         return f"{self.BASE_PATH}{path}"
@@ -42,6 +47,7 @@ class ImageBenchApi():
         self.add_api_route("/explore_presets", self.write_explore_presets, methods=["POST"])
         self.add_api_route("/image_tray", self.get_image_tray, methods=["GET"])
         self.add_api_route("/image_tray", self.write_image_tray, methods=["POST"])
+        self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
 
     def get_config(self):
@@ -68,9 +74,9 @@ class ImageBenchApi():
 
             msg = {
                 "type": "SAVED_IMAGE",
-                "filename": filename,
-                #"params": data_dict,
-                "pnginfo": self.pnginfo_to_dict(image_data.pnginfo)
+                "imagePath": filename,
+                "parameters": self.pnginfo_to_dict(image_data.pnginfo)
+                #"data": data_dict,
             }
 
             self.websocket_queue.put_nowait(msg)
@@ -80,8 +86,10 @@ class ImageBenchApi():
         lines = parts[-1].split(', ')
 
         result_dict = {
-            "prompt": parts[0],
-            "negative": parts[1].replace("Negative prompt: ", "")
+            "prompt": parts[0] if len(parts) > 1 and not parts[0].startswith("Negative prompt: ") else "",
+            "negative": parts[1].replace("Negative prompt: ", "") if len(parts) > 2
+                                                                     and not parts[1].startswith("Negative prompt: ")
+                                                                  else ""
         }
         for line in lines:
             if ':' in line:
@@ -141,6 +149,14 @@ class ImageBenchApi():
 
         return Response("", media_type="application/json")
 
+    def get_presets(self):
+        response = "{}"
+
+        if self.config_presets_dropdown:
+            response = jsonable_encoder(self.config_presets_dropdown.choices)
+
+        return JSONResponse(response)
+
     # def clear_outputs(self):
     #     folder = os.path.join(self.get_root_dir(), "outputs")
     #
@@ -154,10 +170,14 @@ class ImageBenchApi():
     #         except Exception as e:
     #             print('Failed to delete %s. Reason: %s' % (file_path, e))
 
+    def on_before_config_presets(self, component, *args, **kwargs):
+        if kwargs.get("elem_id") == "config_preset_txt2img_dropdown":
+            self.config_presets_dropdown = component
 
 try:
     api = ImageBenchApi()
     script_callbacks.on_app_started(api.start)
     script_callbacks.on_image_saved(api.on_image_saved)
+    script_callbacks.on_before_component(api.on_before_config_presets)
 except Exception as e:
     print(e)

@@ -1,6 +1,7 @@
 window.imageBench = window.imageBench || {};
 imageBench = window.imageBench;
 
+// TODO: refactor to modules
 imageBench.core = (function () {
 
     async function init() {
@@ -24,8 +25,6 @@ imageBench.core = (function () {
         }
 
         initUI();
-
-        //document.getElementById("txt2img_generate").click();
     }
 
     function getGenerationState() {
@@ -61,13 +60,15 @@ imageBench.core = (function () {
     }
 
     function onGenerateMousedown(e) {
+        checkConnection();
         imageBench.generationState = "BATCH_GENERATION";
+        imageBench.popup?.onSDEvent({type: "BEGIN_PROCESSING"});
     }
 
     function onInterruptMousedown(e) {
         if (imageBench.generationState === "HIRES_FIX") {
-            if (imageBench.upscaleQueue.length)
-                imageBench.upscaleQueue = [];
+            if (imageBench.processingQueue.length)
+                imageBench.processingQueue = [];
         }
         else if (imageBench.generationState === "EXPLORE_MODELS") {
             if (imageBench.exploreQueue.length)
@@ -75,6 +76,7 @@ imageBench.core = (function () {
         }
 
         imageBench.generationState = "BATCH_GENERATION";
+        finishProcessing();
     }
 
     function createSocket() {
@@ -86,14 +88,32 @@ imageBench.core = (function () {
         }
     }
 
+    function checkConnection() {
+        if (imageBench.socket?.readyState === WebSocket.CLOSED) {
+            //imageBench.popup?.onSDEvent({type: "SOCKET_CLOSED"});
+            createSocket();
+            return false
+        }
+
+        return true;
+    }
+
     function onBackendMessage(e) {
         if (e?.data) {
             const msg = JSON.parse(e.data);
+
+            if (msg.type === "SAVED_IMAGE" && imageBench.setSteps) {
+                msg.setSteps = true;
+            }
+
             imageBench.popup?.onSDEvent(msg);
 
+            revertVaryingParams();
+
             if (msg.type === "SAVED_IMAGE") {
-                if (imageBench.generationState === "HIRES_FIX") {
-                    upscaleNextImage();
+                if (imageBench.generationState === "HIRES_FIX"
+                    || imageBench.generationState === "BATCH_GENERATION" && imageBench.setSteps) {
+                    processNextImage();
                 }
                 if (imageBench.generationState === "EXPLORE_MODELS") {
                     exploreNextImage();
@@ -120,19 +140,81 @@ imageBench.core = (function () {
     }
 
     function onMessage(msg) {
+        checkConnection();
+
         const payload = msg.data;
 
         if (payload.type === "EXPLORE_MODELS")
             exploreModels(payload.models, payload.generateImages);
+        if (payload.type === "BATCH_GENERATE")
+            batchGenerate(payload.preset);
         else if (payload.type === "UPSCALE_IMAGES")
-            upscaleImages(payload.images);
+            processImages(payload.images, payload.preset);
         else if (payload.type === "SET_IMAGE_SEED")
             setImageSeed(payload.parameters)
         else if (payload.type === "SET_IMAGE_PARAMS")
             setImageParams(payload.parameters)
+        else if (payload.type === "GENERATE_VARYING_STEPS")
+            generateVaryingSteps(payload.image, payload.steps)
+        else if (payload.type === "UPSCALE_VARYING_DENOISING")
+            upscaleVaryingDenoising(payload.image, payload.denoising)
     }
 
-    function setInputValue(inputElement, value, blur = true) {
+    async function setImageSeed(params) {
+        if (!params)
+            return;
+
+        setInputValue("#txt2img_seed input", params["seed"]);
+
+        if ("variation seed" in params)
+            setInputValue("#txt2img_subseed input", params["variation seed"]);
+    }
+
+    async function setImageParams(params) {
+        if (!params)
+            return;
+
+        await setDropdownValue("#setting_sd_model_checkpoint input", params["model"]);
+        await setDropdownValue("#setting_sd_vae input", params["vae"]);
+
+        setInputValue("#txt2img_prompt textarea", params["prompt"]);
+        setInputValue("#txt2img_neg_prompt textarea", params["negative"]);
+        await setDropdownValue("#txt2img_sampling input", params["sampler"]);
+        await setDropdownValue("#txt2img_scheduler input", params["schedule type"]);
+        setInputValue("#txt2img_steps input", params["steps"]);
+        setInputValue("#txt2img_cfg_scale input", params["cfg scale"])
+        setInputValue("#txt2img_seed input", params["seed"]);
+        if ("variation seed" in params) {
+            setInputValue("#txt2img_subseed input", params["variation seed"]);
+            setInputValue("#txt2img_subseed_strength input", params["variation seed strength"]);
+        }
+        const sizes = params["size"].split("x");
+        setInputValue("#txt2img_width input", sizes[0]);
+        setInputValue("#txt2img_height input", sizes[1]);
+        if ("clip skip" in params)
+            setInputValue("#setting_CLIP_stop_at_last_layers input", params["clip skip"]);
+        if ("denoising strength" in params)
+            setInputValue("#txt2img_denoising_strength input", params["denoising strength"]);
+        if ("hires steps" in params)
+            setInputValue("#txt2img_hr_scale input", params["hires steps"]);
+        if ("hires upscale" in params) {
+            setInputValue("#txt2img_hr_scale input", params["hires upscale"]);
+            toggleHiresFix(true);
+        }
+    }
+
+    function getInputValue(inputElementSelector) {
+        const inputElement = document.querySelector(inputElementSelector);
+        if (inputElement)
+            return inputElement.value;
+    }
+
+    function setInputValue(inputElementSelector, value, blur = true) {
+        const inputElement = document.querySelector(inputElementSelector);
+        if (!inputElement) {
+            console.log(`Input element ${inputElementSelector} not found.`);
+            return;
+        }
         inputElement.value = value;
 
         const inputEvent = new Event('input', { bubbles: true, cancelable: true });
@@ -144,57 +226,53 @@ imageBench.core = (function () {
         }
     }
 
-    async function upscaleImages(images) {
-        imageBench.generationState = "HIRES_FIX";
-        imageBench.upscaleQueue = images;
+    async function setDropdownValue(inputElementSelector, value, blur = true) {
+        const inputElement = document.querySelector(inputElementSelector);
+        if (!inputElement) {
+            console.log(`Input element ${inputElementSelector} not found.`);
+            return;
+        }
 
-        const batchesInput = document.querySelector("#txt2img_batch_count input[type='number']");
-
-        enableHiresFix();
-        setInputValue(batchesInput, 1);
-
-        return upscaleImage(imageBench.upscaleQueue.shift());
-    }
-
-    async function upscaleImage(imageData) {
-        if (!imageData)
+        if (inputElement.value.includes(value))
             return;
 
-        const seedInput = document.querySelector("#txt2img_seed input");
-        const generateButton = document.getElementById("txt2img_generate");
+        inputElement.value = value;
 
-        const parameters = imageData.parameters;
+        const focusEvent = new Event("focus", { bubbles: true, cancelable: true });
+        inputElement.dispatchEvent(focusEvent);
+        inputElement.focus();
 
-        setInputValue(seedInput, parameters["seed"]);
+        await imageBench.utils.sleep(333);
 
-        if ("variation seed" in parameters) {
-            const subseedInput = document.querySelector("#txt2img_subseed input");
-            setInputValue(subseedInput, parameters["variation seed"]);
-        }
+        const optionList = inputElement.closest(".block").querySelector("ul");
 
-        await imageBench.utils.sleep(500);
+        if (optionList) {
+            const options = Array.from(optionList.querySelectorAll("li"));
 
-        generateButton.click();
-    }
+            for (const optionElement of options) {
+                if (optionElement.getAttribute("data-value").includes(value)) {
+                    const mousedownEvent = new MouseEvent('mousedown', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        button: 0
+                    });
 
-    function upscaleNextImage() {
-        const nextImage = imageBench.upscaleQueue.shift();
-
-        if (nextImage)
-            return upscaleImage(nextImage);
-        else {
-            const seedInput = document.querySelector("#txt2img_seed input");
-            const subseedInput = document.querySelector("#txt2img_subseed input");
-
-            setInputValue(seedInput, -1);
-            setInputValue(subseedInput, -1);
+                    optionElement.dispatchEvent(mousedownEvent)
+                    return;
+                }
+            }
         }
     }
 
-    function enableHiresFix() {
+    function toggleHiresFix(onlyEnable) {
         const hrFixCheckbox = document.getElementById("txt2img_hr-visible-checkbox");
+        let toggle = true;
 
-        if (!hrFixCheckbox.checked) {
+        if (onlyEnable)
+            toggle = !hrFixCheckbox.checked;
+
+        if (toggle) {
             var inputEvent = new Event('input', {
                 'bubbles': true,
                 'cancelable': true
@@ -212,69 +290,122 @@ imageBench.core = (function () {
         }
     }
 
-    async function setImageSeed(params) {
-        if (!params)
+    async function batchGenerate(preset) {
+        imageBench.generationState = "BATCH_GENERATION";
+        imageBench.popup?.onSDEvent({type: "BEGIN_PROCESSING"});
+
+        setInputValue("#txt2img_seed input", -1);
+
+        if (preset)
+            await setDropdownValue("#config_preset_txt2img_dropdown input", preset);
+
+        await imageBench.utils.sleep(500);
+
+        const generateButton = document.getElementById("txt2img_generate");
+        generateButton.click();
+    }
+
+    async function processImages(images, preset, options) {
+        imageBench.generationState = options?.setSteps? "BATCH_GENERATION": "HIRES_FIX";
+        imageBench.popup?.onSDEvent({type: "BEGIN_PROCESSING"});
+        imageBench.processingQueue = images;
+        imageBench.setDenoising = options?.setDenoising;
+        imageBench.setSteps = options?.setSteps;
+        imageBench.stepsBeforeProcessing = getInputValue("#txt2img_steps input");
+        imageBench.denoisingBeforeProcessing = getInputValue("#txt2img_denoising_strength input");
+
+        if (preset) {
+            await setDropdownValue("#config_preset_txt2img_dropdown input", preset);
+            await imageBench.utils.sleep(500);
+        }
+
+        if (!imageBench.setSteps)
+            toggleHiresFix(true);
+
+        setInputValue("#txt2img_batch_count input[type='number']", 1);
+
+        return processImage(imageBench.processingQueue.shift());
+    }
+
+    async function processImage(imageData) {
+        if (!imageData)
             return;
 
-        const seedInput = document.querySelector("#txt2img_seed input");
-        setInputValue(seedInput, params["seed"]);
+        const parameters = imageData.parameters;
 
-        if ("variation seed" in params) {
-            const subseedInput = document.querySelector("#txt2img_subseed input");
-            setInputValue(subseedInput, params["variation seed"]);
+        setInputValue("#txt2img_seed input", parameters["seed"]);
+
+        if ("variation seed" in parameters)
+            setInputValue("#txt2img_subseed input", parameters["variation seed"]);
+
+        if (imageBench.setDenoising && "denoising strength" in parameters)
+            setInputValue("#txt2img_denoising_strength input", parameters["denoising strength"]);
+
+        if (imageBench.setSteps || imageData.setSteps)
+            setInputValue("#txt2img_steps input", parameters["steps"]);
+
+        await imageBench.utils.sleep(500);
+
+        const generateButton = document.getElementById("txt2img_generate");
+        generateButton.click();
+    }
+
+    function processNextImage() {
+        const nextImage = imageBench.processingQueue.shift();
+
+        if (nextImage)
+            return processImage(nextImage);
+        else {
+            if (!imageBench.setSteps)
+                toggleHiresFix();
+
+            finishProcessing();
         }
     }
 
-    // TODO: move to python script
-    async function setImageParams(params) {
-        if (!params)
-            return;
+    function finishProcessing() {
+        revertVaryingParams();
 
-        const promptInput = document.querySelector("#txt2img_prompt textarea");
-        setInputValue(promptInput, params["prompt"]);
-        const negativePromptInput = document.querySelector("#txt2img_neg_prompt textarea");
-        setInputValue(negativePromptInput, params["negative"]);
-        // const samplerInput = document.querySelector("#txt2img_sampling input");
-        // setInputValue(samplerInput, params["sampler"]);
-        // const schedulerInput = document.querySelector("#txt2img_scheduler input");
-        // setInputValue(schedulerInput, params["scheduler type"]);
-        const stepsInput = document.querySelector("#txt2img_steps input");
-        setInputValue(stepsInput, params["steps"]);
-        const cfgScaleInput = document.querySelector("#txt2img_cfg_scale input");
-        setInputValue(cfgScaleInput, params["cfg scale"])
-        const seedInput = document.querySelector("#txt2img_seed input");
-        setInputValue(seedInput, params["seed"]);
-        if ("variation seed" in params) {
-            const subseedInput = document.querySelector("#txt2img_subseed input");
-            setInputValue(subseedInput, params["variation seed"]);
-            const subseedStrengthInput = document.querySelector("#txt2img_subseed_strength input");
-            setInputValue(subseedStrengthInput, params["variation seed strength"]);
-        }
-        const sizes = params["size"].split("x");
-        const widthInput = document.querySelector("#txt2img_width input");
-        setInputValue(widthInput, sizes[0]);
-        const heightInput = document.querySelector("#txt2img_height input");
-        setInputValue(heightInput, sizes[1]);
-        const clipSkipInput = document.querySelector("#setting_CLIP_stop_at_last_layers input");
-        if (clipSkipInput && "clip skip" in params)
-            setInputValue(clipSkipInput, params["clip skip"]);
-        const denoisingInput = document.querySelector("#txt2img_denoising_strength input");
-        if (denoisingInput && "denoising strength" in params)
-            setInputValue(denoisingInput, params["denoising strength"]);
-        const hiresStepsInput = document.querySelector("#txt2img_hr_scale input");
-        if (hiresStepsInput && "hires steps" in params)
-            setInputValue(hiresStepsInput, params["hires steps"]);
-        const hiresUpscaleInput = document.querySelector("#txt2img_hr_scale input");
-        if (hiresUpscaleInput && "hires upscale" in params) {
-            setInputValue(hiresUpscaleInput, params["hires upscale"]);
-            enableHiresFix();
+        imageBench.stepsBeforeProcessing = undefined;
+        imageBench.denoisingBeforeProcessing = undefined;
+        imageBench.setDenoising = false;
+        imageBench.setSteps = false;
+    }
+
+    function revertVaryingParams() {
+        if (imageBench.stepsBeforeProcessing)
+            setInputValue("#txt2img_steps input", imageBench.stepsBeforeProcessing);
+
+        if (imageBench.denoisingBeforeProcessing)
+            setInputValue("#txt2img_denoising_strength input", imageBench.denoisingBeforeProcessing);
+    }
+
+    function generateVaryingSteps(image, steps) {
+        const stepValues = steps.split(",").map(s => s.trim());
+
+        const images = [];
+        for (const stepValue of stepValues) {
+            const nextImage = {...image};
+            nextImage.parameters = {...image.parameters};
+            nextImage.parameters["steps"] = parseInt(stepValue);
+            images.push(nextImage);
         }
 
-        // const optionsURL = `http://${location.host}/sdapi/v1/options`;
-        // const opts = await fetch(optionsURL).then(r => r.json());
-        // opts.sd_model_checkpoint = params["model"];
-        // opts.sd_vae = params["vae"];
-        // await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
+        return processImages(images, null, {setSteps: true});
+    }
+
+    function upscaleVaryingDenoising(image, denoising) {
+        const denoisingLevels = denoising.split(",").map(s => s.trim());
+
+        const images = [];
+        for (const level of denoisingLevels) {
+            const nextImage = {...image};
+            nextImage.parameters = {...image.parameters};
+            nextImage.parameters["denoising strength"] = parseFloat(level);
+            images.push(nextImage);
+        }
+
+        return processImages(images, null, {setDenoising: true});
     }
 
     async function exploreModels(models, generateImages) {
@@ -282,14 +413,13 @@ imageBench.core = (function () {
             return;
 
         imageBench.generationState = "EXPLORE_MODELS";
+        imageBench.popup?.onSDEvent({type: "BEGIN_PROCESSING"});
         imageBench.exploreQueue = [];
         imageBench.exploreModel = models[0];
-        await setActiveModel(imageBench.exploreModel.model_name);
+        await setActiveModel(imageBench.exploreModel.hash);
 
-        const batchesInput = document.querySelector("#txt2img_batch_count input[type='number']");
-        setInputValue(batchesInput, 1);
-        const seedInput = document.querySelector("#txt2img_seed input");
-        setInputValue(seedInput, -1);
+        setInputValue("#txt2img_batch_count input[type='number']", 1);
+        setInputValue("#txt2img_seed input", -1);
 
         for (const model of models) {
             for (let i = 0; i < generateImages; ++i) {
@@ -301,11 +431,12 @@ imageBench.core = (function () {
     }
 
     async function setActiveModel(modelName) {
-        const optionsURL = `http://${location.host}/sdapi/v1/options`;
-        const opts = await fetch(optionsURL).then(r => r.json());
-
-        opts.sd_model_checkpoint = modelName;
-        await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
+        // const optionsURL = `http://${location.host}/sdapi/v1/options`;
+        // const opts = await fetch(optionsURL).then(r => r.json());
+        //
+        // opts.sd_model_checkpoint = modelName;
+        // await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
+        return setDropdownValue("#setting_sd_model_checkpoint input", modelName);
     }
 
     async function exploreImage(model) {
@@ -313,7 +444,7 @@ imageBench.core = (function () {
             return;
 
         if (imageBench.exploreModel.hash !== model.hash) {
-            await setActiveModel(model.model_name);
+            await setActiveModel(model.hash);
             imageBench.exploreModel = model;
         }
 

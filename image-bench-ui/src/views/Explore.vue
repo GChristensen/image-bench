@@ -1,192 +1,205 @@
 <script setup>
 
-import {onBeforeMount, onMounted, reactive, ref} from "vue";
+import {computed, onBeforeMount, onMounted, reactive, ref} from "vue";
 import SelectableImage from "@/components/SelectableImage.vue";
 import {createImageData, createImageGenerationParams, createImageLink} from "@/utils.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
+import {useExploreImagesStore} from "@/stores/explore.js";
 
-  const models = ref([]);
-  const selected = ref(new Set());
-  const lastPreset = ref("");
-  const presetNames = ref([]);
-  const presetSelect = ref();
-  let modelPresets = {};
-  const modelImages = ref([]);
-  const generateImages = ref(3);
+const exploreImagesStore = useExploreImagesStore();
 
-  const showOverlay = ref(false);
-  const overlayImage = ref(null);
-  const generatedImages = ref();
-  const showParamsOverlay = ref(false);
-  const paramsOverlayText = ref("");
+const models = ref([]);
+const selected = ref(new Set());
+const lastPreset = ref("");
+const presetNames = ref([]);
+const presetSelect = ref();
+let modelPresets = {};
+const modelImages = computed(() => exploreImagesStore.images);
+const generateImages = ref(3);
 
-  async function refreshModels() {
-    models.value = await fetch("http://" + location.host + "/sdapi/v1/sd-models").then(r => r.json());
+const showImageOverlay = ref(false);
+const overlayImage = ref(null);
+const generatedImagesElement = ref();
+const showParamsOverlay = ref(false);
+const paramsOverlayText = ref("");
+
+let scrolledToBottom = true;
+
+async function refreshModels() {
+  models.value = await fetch("http://" + location.host + "/sdapi/v1/sd-models").then(r => r.json());
+}
+
+async function loadPresets() {
+  const response = await fetch("http://" + location.host + "/image-bench/explore_presets");
+
+  if (response.ok && response.headers.get("content-length") > 0) {
+    modelPresets = await response.json();
   }
+  else
+    modelPresets = {};
 
-  async function loadPresets() {
-    const response = await fetch("http://" + location.host + "/image-bench/explore_presets");
+  lastPreset.value = modelPresets.last_preset || "";
+  presetNames.value = modelPresets.presets? Object.keys(modelPresets.presets): [];
+  await activatePreset(lastPreset.value);
+}
 
-    if (response.ok && response.headers.get("content-length") > 0) {
-      modelPresets = await response.json();
-    }
-    else
-      modelPresets = {};
+async function writePresets() {
+  const presets = JSON.stringify(modelPresets);
+  await fetch("http://" + location.host + "/image-bench/explore_presets", {method: "post", body: presets});
+}
 
-    lastPreset.value = modelPresets.last_preset || "";
-    presetNames.value = modelPresets.presets? Object.keys(modelPresets.presets): [];
-    await activatePreset(lastPreset.value);
-  }
+onBeforeMount(async () => {
+  await refreshModels();
+  await loadPresets();
+});
 
-  async function writePresets() {
-    const presets = JSON.stringify(modelPresets);
-    await fetch("http://" + location.host + "/image-bench/explore_presets", {method: "post", body: presets});
-  }
+function onModelCheckChange(e, index) {
+  if (e.target.checked)
+    selected.value.add(index);
+  else
+    selected.value.delete(index);
+}
 
-  onBeforeMount(async () => {
-    await refreshModels();
-    await loadPresets();
-  });
+function getSelectedModels() {
+  const selectedItems = [];
 
-  function onModelCheckChange(e, index) {
-    if (e.target.checked)
-      selected.value.add(index);
-    else
-      selected.value.delete(index);
-  }
-
-  function getSelectedModels() {
-    const selectedItems = [];
-
-    for (let i = 0; i < models.value.length; ++i) {
-      if (selected.value.has(i)) {
-        const proxyItem = models.value[i];
-        const image = JSON.parse(JSON.stringify(proxyItem));
-        selectedItems.push(image);
-      }
-    }
-
-    return selectedItems;
-  }
-
-  function onExploreClick() {
-    const selectedModels = getSelectedModels();
-
-    modelImages.value = [];
-    window.opener.postMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImages.value})
-  }
-
-  async function onCreateClick(e) {
-    e.preventDefault();
-
-    const presetName = prompt("New preset name: ");
-
-    if (presetName) {
-      lastPreset.value = presetName;
-      modelPresets.presets = modelPresets.presets || {};
-      modelPresets.presets[presetName] = getSelectedModels().map(m => m.sha256);
-      modelPresets.last_preset = presetName;
-
-      if (!presetNames.value.some(m => m === presetName))
-        presetNames.value.push(presetName);
-
-      await writePresets();
+  for (let i = 0; i < models.value.length; ++i) {
+    if (selected.value.has(i)) {
+      const proxyItem = models.value[i];
+      const image = JSON.parse(JSON.stringify(proxyItem));
+      selectedItems.push(image);
     }
   }
 
-  async function onSaveClick(e) {
-    e.preventDefault();
+  return selectedItems;
+}
 
-    const presetName = presetSelect.value.value;
+function onExploreClick() {
+  const selectedModels = getSelectedModels();
 
-    if (presetName) {
-      modelPresets.presets = modelPresets.presets || {};
-      modelPresets.presets[presetName] = getSelectedModels().map(m => m.sha256);
-      modelPresets.last_preset = presetName;
-      await writePresets();
-    }
-    else
-      alert("No preset is selected.");
-  }
+  exploreImagesStore.clear();
+  window.opener.postMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImages.value})
+}
 
-  async function onDeleteClick(e) {
-    e.preventDefault();
+async function onCreateClick(e) {
+  e.preventDefault();
 
-    if (!confirm("Do you really want to continue?"))
-      return;
+  const presetName = prompt("New preset name: ");
 
-    const presetName = presetSelect.value.value;
-    const nameIndex = presetNames.value.indexOf(presetName);
+  if (presetName) {
+    lastPreset.value = presetName;
+    modelPresets.presets = modelPresets.presets || {};
+    modelPresets.presets[presetName] = getSelectedModels().map(m => m.sha256);
+    modelPresets.last_preset = presetName;
 
-    presetNames.value.splice(nameIndex, 1);
-    delete modelPresets.presets[presetName];
-
-    if (presetNames.value.length) {
-      lastPreset.value = presetNames.value[0];
-      modelPresets.last_preset = lastPreset.value;
-      return activatePreset(lastPreset.value);
-    }
+    if (!presetNames.value.some(m => m === presetName))
+      presetNames.value.push(presetName);
 
     await writePresets();
   }
+}
 
-  function onPresetChange(e) {
-    activatePreset(e.target.value)
+async function onSaveClick(e) {
+  e.preventDefault();
+
+  const presetName = presetSelect.value.value;
+
+  if (presetName) {
+    modelPresets.presets = modelPresets.presets || {};
+    modelPresets.presets[presetName] = getSelectedModels().map(m => m.sha256);
+    modelPresets.last_preset = presetName;
+    await writePresets();
   }
+  else
+    alert("No preset is selected.");
+}
 
-  function activatePreset(presetName) {
-    selected.value = new Set();
+async function onDeleteClick(e) {
+  e.preventDefault();
 
-    for (let i = 0; i < models.value.length; ++i) {
-      if (modelPresets.presets[presetName].some(h => h === models.value[i].sha256)) {
-        selected.value.add(i);
-      }
-    }
+  if (!confirm("Do you really want to continue?"))
+    return;
 
-    lastPreset.value = presetName;
+  const presetName = presetSelect.value.value;
+  const nameIndex = presetNames.value.indexOf(presetName);
+
+  presetNames.value.splice(nameIndex, 1);
+  delete modelPresets.presets[presetName];
+
+  if (presetNames.value.length) {
+    lastPreset.value = presetNames.value[0];
     modelPresets.last_preset = lastPreset.value;
-    return writePresets();
+    return activatePreset(lastPreset.value);
   }
 
-  function onImageClick(image) {
-    overlayImage.value = createImageLink(image.imagePath);
-    showOverlay.value = true;
-  }
+  await writePresets();
+}
 
-  function onImageOpen(image) {
-    const imageLink = createImageLink(image.imagePath);
-    window.open(imageLink, "_blank");
-  }
+function onPresetChange(e) {
+  activatePreset(e.target.value)
+}
 
-  function onShowParams(image) {
-    paramsOverlayText.value = createImageGenerationParams(image);
-    showParamsOverlay.value = true;
-  }
+function activatePreset(presetName) {
+  selected.value = new Set();
 
-  function onSDEvent(e) {
-    const gi = generatedImages.value;
-    const scrolledToBottom = (gi.clientHeight === gi.scrollHeight) || (gi.scrollHeight - gi.scrollTop === gi.clientHeight);
-    let model = modelImages.value.find(m => m.hash === e.pnginfo["model hash"]);
-    
-    if (!model) {
-      model = reactive({name: e.pnginfo["model"], hash: e.pnginfo["model hash"], images: []});
-      modelImages.value.push(model);
+  for (let i = 0; i < models.value.length; ++i) {
+    if (modelPresets.presets[presetName].some(h => h === models.value[i].sha256)) {
+      selected.value.add(i);
     }
-
-    const imageData = createImageData(e);
-    model.images.push(imageData);
-
-    if (scrolledToBottom)
-      setTimeout(() => gi.scrollTop = gi.scrollHeight, 500);
   }
 
-  defineExpose({onSDEvent})
+  lastPreset.value = presetName;
+  modelPresets.last_preset = lastPreset.value;
+  return writePresets();
+}
+
+function onImageClick(image) {
+  overlayImage.value = createImageLink(image.imagePath);
+  showImageOverlay.value = true;
+}
+
+function onImageOpen(image) {
+  const imageLink = createImageLink(image.imagePath);
+  window.open(imageLink, "_blank");
+}
+
+function onShowParams(image) {
+  paramsOverlayText.value = createImageGenerationParams(image);
+  showParamsOverlay.value = true;
+}
+
+
+function onBeforeSDEvent(e) {
+  const gi = generatedImagesElement.value;
+  scrolledToBottom = (gi.clientHeight === gi.scrollHeight) || (gi.scrollHeight - gi.scrollTop === gi.clientHeight);
+  console.log(scrolledToBottom)
+}
+
+function onSDEvent(e) {
+  console.log(scrolledToBottom)
+  if (scrolledToBottom) {
+    const gi = generatedImagesElement.value;
+    setTimeout(() => gi.scrollTop = gi.scrollHeight, 500);
+  }
+}
+
+defineExpose({onBeforeSDEvent, onSDEvent})
+
+
+document.addEventListener("keydown", onKeydown);
+
+function onKeydown(e) {
+  if (e.key === "Esc" || e.key === "Escape") {
+    showImageOverlay.value = false;
+    showParamsOverlay.value = false;
+  }
+}
 </script>
 
 <template>
-  <ImageOverlay v-if="showOverlay" :image="overlayImage"
-                @hide-overlay="showOverlay = false"/>
+  <ImageOverlay v-if="showImageOverlay" :image="overlayImage"
+                @hide-overlay="showImageOverlay = false"/>
   <ParametersOverlay v-if="showParamsOverlay" :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="wrapper">
@@ -218,13 +231,12 @@ import ParametersOverlay from "@/components/ParametersOverlay.vue";
         </div>
       </div>
       <div class="generated-images-wrapper">
-        <div class="generated-images" ref="generatedImages">
+        <div class="generated-images" ref="generatedImagesElement">
           <div class="model-images-wrapper" v-for="model in modelImages">
             <h3 class="model-name">{{ model.name }}</h3>
             <div class="model-images">
               <SelectableImage v-for="image in model.images"
-                               :image-path="image.imagePath"
-                               :parameters="image.parameters"
+                               :image="image"
                                @show-params="() => onShowParams(image)"
                                @image-click="() => onImageClick(image)"
                                @image-open="onImageOpen"></SelectableImage>

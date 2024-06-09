@@ -2,6 +2,11 @@
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
 import {onBeforeMount, ref} from "vue";
 import {useImageTrayStore} from "@/stores/imageTray.js";
+import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
+import {useUpscaledImagesStore} from "@/stores/upscaled.js";
+import {useExploreImagesStore} from "@/stores/explore.js";
+import {useConfigPresetsStore} from "@/stores/configPresets.js";
+import {generationStateToKind} from "@/consts.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -12,21 +17,58 @@ const upscaledImagesTab = ref(null);
 const imageTrayTab = ref(null);
 const routerView = ref(null);
 
+const exploreImagesStore = useExploreImagesStore();
+const generatedImagesStore = useGeneratedImagesStore();
 const imageTrayStore = useImageTrayStore();
+const upscaledImageStore = useUpscaledImagesStore();
+const configPresetsStore = useConfigPresetsStore();
+
+const stores = {
+  [exploreImagesStore.kind]: exploreImagesStore,
+  [generatedImagesStore.kind]: generatedImagesStore,
+  [imageTrayStore.kind]: imageTrayStore,
+  [upscaledImageStore.kind]: upscaledImageStore,
+}
+
+function onClearAllClick(e) {
+  e.preventDefault();
+
+  if (confirm("This will clear all images. Do you want to continue?")) {
+    exploreImagesStore.clear();
+    generatedImagesStore.clear();
+    imageTrayStore.clear();
+    upscaledImageStore.clear();
+  }
+}
 
 async function onSDEvent(e) {
+  if (e.type === "SOCKET_CLOSED") {
+    alert("Connection with Stable Diffusion WebUI server is lost. Please reload the main WebUI page and reopen this window.");
+    return;
+  }
+
   const state = window.getGenerationState();
 
-  if (state === "BATCH_GENERATION") {
-    if (route.fullPath !== "/generated-images") {
-      await router.push("/generated-images");
+  if (e.type === "BEGIN_PROCESSING") {
+    if (state === "BATCH_GENERATION") {
+      if (route.fullPath !== "/generated-images") {
+        await router.push("/generated-images");
+      }
+    } else if (state === "HIRES_FIX") {
+      if (route.fullPath !== "/upscaled-images") {
+        await router.push("/upscaled-images");
+      }
     }
   }
-  else if (state === "HIRES_FIX") {
-    if (route.fullPath !== "/upscaled-images") {
-      await router.push("/upscaled-images");
-    }
+
+  try {
+    routerView.value.onBeforeSDEvent(e);
+  } catch (e) {
+    console.error(e);
   }
+
+  const store = stores[generationStateToKind(state)];
+  store?.onSDEvent(e);
 
   routerView.value.onSDEvent(e);
 }
@@ -35,6 +77,7 @@ window.onSDEvent = onSDEvent;
 
 onBeforeMount(async () => {
   await imageTrayStore.init();
+  await configPresetsStore.init();
 });
 
 </script>
@@ -44,8 +87,12 @@ onBeforeMount(async () => {
     <div class="tabs">
       <RouterLink to="/explore" class="tab" ref="exploreTab">Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab">Generated Images</RouterLink>
-      <RouterLink to="/image-tray" class="tab" ref="imageTrayTab">Image Tray</RouterLink>
+      <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab">Image Tray</RouterLink>
       <RouterLink to="/upscaled-images" class="tab" ref="upscaledImagesTab">Upscaled</RouterLink>
+      <div class="tab-spacer"></div>
+      <div class="toolbar-link-container">
+        <a class="toolbar-link clear-all-link" href="#" @click="onClearAllClick">Clear</a>
+      </div>
     </div>
     <div id="tab-content">
       <RouterView v-slot="{ Component }">
@@ -90,6 +137,10 @@ onBeforeMount(async () => {
     font-weight: bold;
   }
 
+  .tab-spacer {
+    flex-grow: 1;
+  }
+
   .tab:hover {
     background-color: #f0f0f0;
     color: var(--vt-c-black);
@@ -103,5 +154,13 @@ onBeforeMount(async () => {
 
   #tab-content {
     flex-grow: 1;
+  }
+
+  .toolbar-link-container {
+    display: flex;
+  }
+
+  .toolbar-link {
+    align-self: center;
   }
 </style>

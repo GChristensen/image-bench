@@ -1,5 +1,5 @@
 <script setup>
-  defineProps(["image", "imageIndex"]);
+  defineProps(["image", "imageIndex", "isTray"]);
   const emit = defineEmits(["hideOverlay", "imageSelect"]);
 
   function onImageMouseDown(e) {
@@ -17,7 +17,7 @@
     <div class="overlay-image-container">
       <img class="overlay-image" :src="image" @mousedown="onImageMouseDown">
       <div class="action-link-container">
-        <a class="select-link tool-item" href="#" v-if="imageIndex"
+        <a v-if="isTray && typeof imageIndex === 'number'" class="select-link tool-item" href="#"
            @click="$emit('imageSelect', $event, imageIndex)">Select image</a>
       </div>
     </div>

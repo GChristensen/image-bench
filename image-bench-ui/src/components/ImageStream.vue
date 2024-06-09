@@ -2,30 +2,30 @@
   import SelectableImage from "@/components/SelectableImage.vue";
   import {computed, onBeforeMount, ref} from "vue";
   import {createImageData, createImageGenerationParams, createImageLink} from "@/utils.js";
-  import {useImageTrayStore} from "@/stores/imageTray.js";
 
-  const imageTrayStore = useImageTrayStore();
+  const props = defineProps(["imageStore", "isTray"]);
+  const emit = defineEmits(["imageClick", "imageOpen", "showParams", "upscaleImage"]);
 
-  const props = defineProps(["isTray"]);
-  const emit = defineEmits(["imageClick", "imageOpen", "showParams"]);
-
-  const images = ref([]);
+  const images = computed(() => props.imageStore.images);
   const selected = ref(new Set());
 
-  const imageStream = ref();
+  const imageStreamElement = ref();
 
   const isAllSelected = computed(
       () => images.value.length && (images.value.length === selected.value.size));
 
-  function addImage(eventData) {
-    const is = imageStream.value;
-    const scrolledToBottom = (is.clientHeight === is.scrollHeight) || (is.scrollHeight - is.scrollTop === is.clientHeight);
-    const imageData = createImageData(eventData);
+  let scrolledToBottom = true;
 
-    images.value.push(imageData);
+  function beforeAddImage() {
+    const is = imageStreamElement.value;
+    scrolledToBottom = (is.clientHeight === is.scrollHeight) || (is.scrollHeight - is.scrollTop === is.clientHeight);
+  }
 
-    if (scrolledToBottom)
+  function afterAddImage() {
+    if (scrolledToBottom) {
+      const is = imageStreamElement.value;
       setTimeout(() => is.scrollTop = is.scrollHeight, 500);
+    }
   }
 
   function getImageLink(index) {
@@ -74,15 +74,51 @@
       }
     }
 
+    props.imageStore.images = remainingItems;
+
     if (props.isTray) {
-      images.value = imageTrayStore.content.images = remainingItems;
-      imageTrayStore.persist();
-    }
-    else {
-      images.value = remainingItems;
+      props.imageStore.persist();
     }
 
     selected.value = new Set(selectedItems);
+  }
+
+  function clear(e) {
+    if (!confirm("Do you really want to continue?"))
+      return;
+
+    props.imageStore.images = [];
+    selected.value = new Set();
+
+    if (props.isTray) {
+      props.imageStore.persist();
+    }
+  }
+
+  function onDeleteImage(image) {
+    if (!confirm("Do you really want to continue?"))
+      return;
+
+    const removedImage = images.value.find(i => i.imagePath === image.imagePath);
+
+    if (removedImage) {
+      const removedImageIndex = images.value.indexOf(removedImage);
+      images.value.splice(removedImageIndex, 1);
+
+      let selectedItems = Array.from(selected.value);
+      selectedItems = selectedItems.filter(i => i !== removedImageIndex);
+
+      for (let i = 0; i < selectedItems.length; ++i) {
+        if (selectedItems[i] > removedImageIndex)
+          selectedItems[i] -= 1;
+      }
+
+      selected.value = new Set(selectedItems);
+
+      if (props.isTray) {
+        props.imageStore.persist();
+      }
+    }
   }
 
   function getSelectedImages() {
@@ -99,29 +135,37 @@
     return selectedItems;
   }
 
-  onBeforeMount(() => {
-    if (props.isTray) {
-      images.value = imageTrayStore.content.images;
-    }
-  })
+  function getNextImage(index) {
+    if (index < images.value.length)
+      return images.value[index + 1];
+  }
 
-  defineExpose({addImage, getImageLink, selectImage, selectAll, clearUnselected, isAllSelected,
-               getSelectedImages, getImageGenerationParams});
+  function getPrevImage(index) {
+    if (images.value.length > 0)
+      return images.value[index - 1];
+  }
+
+  // onBeforeMount(() => {
+  // })
+
+  defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, clearUnselected, clear, isAllSelected,
+               getSelectedImages, getImageGenerationParams, getNextImage, getPrevImage});
 </script>
 
 <template>
   <div class="image-stream-container">
-    <div class="image-stream" ref="imageStream">
+    <div class="image-stream" ref="imageStreamElement">
       <SelectableImage v-for="(image, index) in images"
-                       :image-path="image.imagePath"
-                       :parameters="image.parameters"
-                       :selectable="true"
+                       :image="image"
+                       :selectable="isTray"
                        :selected="selected.has(index)"
                        :is-tray="isTray"
                        @image-click="$emit('imageClick', index)"
                        @image-open="$emit('imageOpen', index)"
                        @show-params="$emit('showParams', index)"
                        @select="isSelected => onItemSelected(isSelected, index)"
+                       @upscale-image="$emit('upscaleImage', image)"
+                       @delete-image="onDeleteImage"
       ></SelectableImage>
     </div>
   </div>
@@ -143,6 +187,7 @@
     flex-wrap: wrap;
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 0.5%
   }
 </style>

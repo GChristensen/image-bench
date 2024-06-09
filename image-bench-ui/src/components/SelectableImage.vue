@@ -1,15 +1,15 @@
 <script setup>
   import {useImageTrayStore} from "@/stores/imageTray.js";
-  import {createImageLink} from "@/utils.js";
+  import {animateColors, createImageLink, isImg2Img} from "@/utils.js";
 
-  const props = defineProps(["imagePath", "parameters", "selectable", "selected", "isTray"]);
+  const props = defineProps(["image", "selectable", "selected", "isTray"]);
 
   const imageTrayStore = useImageTrayStore();
 
   function onReuseSeedClick(e) {
     e.preventDefault();
 
-    const parameters = JSON.parse(JSON.stringify(props.parameters))
+    const parameters = JSON.parse(JSON.stringify(props.image.parameters))
     window.opener.postMessage({type: "SET_IMAGE_SEED", parameters});
   }
 
@@ -17,17 +17,17 @@
   function onReuseParamsClick(e) {
     e.preventDefault();
 
-    const parameters = JSON.parse(JSON.stringify(props.parameters))
+    const parameters = JSON.parse(JSON.stringify(props.image.parameters))
     window.opener.postMessage({type: "SET_IMAGE_PARAMS", parameters});
   }
 
   function onPlaceToTray(e) {
     e.preventDefault();
 
-    imageTrayStore.addImage({
-      imagePath: props.imagePath,
-      parameters: props.parameters
-    })
+    imageTrayStore.addImage(props.image);
+
+    const trayTabElement = document.getElementById("image-tray-tab");
+    animateColors(trayTabElement, 0.7);
   }
 
   function createTooltip(parameters) {
@@ -40,24 +40,66 @@
 
     return result;
   }
+
+  function onGenerateVaryingSteps(e) {
+    let storedSteps = localStorage.getItem("imageBench_varyingSteps");
+
+    if (!storedSteps)
+      storedSteps = "24, 26, 28, 30, 32";
+
+    const steps = prompt("Use step values:", storedSteps);
+    if (steps) {
+      localStorage.setItem("imageBench_varyingSteps", steps);
+      const image = JSON.parse(JSON.stringify(props.image))
+      window.opener.postMessage({type: "GENERATE_VARYING_STEPS", image, steps});
+    }
+  }
+
+  function onUpscaleVaryingDenoising(e) {
+    let storedSteps = localStorage.getItem("imageBench_varyingDenoising");
+
+    if (!storedSteps)
+      storedSteps = "0.42, 0.46, 0.5, 0.54, 0.6";
+
+    const denoising = prompt("Use denoising values:", storedSteps);
+    if (denoising) {
+      localStorage.setItem("imageBench_varyingDenoising", denoising);
+      const image = JSON.parse(JSON.stringify(props.image))
+      window.opener.postMessage({type: "UPSCALE_VARYING_DENOISING", image, denoising: denoising});
+    }
+  }
 </script>
 
 <template>
 <div class="selectable-image">
-  <img class="selectable-image-preview" :src="createImageLink(imagePath)" :title="createTooltip(parameters)"
+  <img v-if="!image.separator"
+       class="selectable-image-preview"
+       :src="createImageLink(image.imagePath)"
+       :title="createTooltip(image.parameters)"
        @mousedown.left="$emit('imageClick')"
        @mousedown.middle="$emit('imageOpen')">
-  <div class="selectable-image-controls">
-    <label v-if="selectable"><input class="selectable-emage-checkbox" type="checkbox"
+  <div class="image-separator" v-if="image.separator">🏁</div>
+  <div  v-if="!image.separator" class="selectable-image-controls">
+    <label v-if="selectable" class="select-label"><input class="selectable-emage-checkbox" type="checkbox"
                   @change="$emit('select', $event.target.checked)"
-                  :checked="selected"> Select</label>
-    <span class="reuse-seed" title="Reuse seed"
-          @mousedown.left="onReuseSeedClick"
-          @mousedown.middle="onReuseParamsClick">♻️</span>
-    <span class="generation-params" title="Generation parameters"
-          @mousedown.left="$emit('showParams')">📑</span>
-    <a v-if="!isTray" href="#" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</a>
-    <span v-if="parameters['hires upscale']" class="upscale-indicator" title="Upscaled">⬆️</span>
+                  :checked="selected"> Select&nbsp;</label>
+    <div class="control-buttons" v-if="!isImg2Img(image.imagePath)">
+      <span class="reuse-seed" title="Left: reuse seed, Middle: reuse all parameters"
+            @mousedown.left="onReuseSeedClick"
+            @mousedown.middle="onReuseParamsClick">♻️</span>
+      <span class="generation-params" title="Generation parameters"
+            @mousedown.left="$emit('showParams')">📑</span>
+      <span v-if="isTray" class="generate-steps" title="Generate with steps"
+            @mousedown.left="onGenerateVaryingSteps">📶</span>
+      <span v-if="isTray" class="upscale" title="Upscale" @mousedown.left="$emit('upscaleImage', image)">🏞️</span>
+      <span v-if="isTray" class="upscale-denoising" title="Upscale with denoising"
+            @mousedown.left="onUpscaleVaryingDenoising">📉</span>
+      <a v-if="!isTray" href="#" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</a>
+      <span v-if="image.setSteps" class="steps-indicator" :title="`Upscale with ${image.parameters['steps']} steps`">🐾</span>
+      <span v-if="image.parameters['hires upscale']" class="upscale-indicator" title="Upscaled">⬆️</span>
+      <span v-if="isTray" class="delete" title="Delete"
+            @mousedown.left="$emit('deleteImage', image)">🗑️</span>
+    </div>
   </div>
 </div>
 </template>
@@ -73,22 +115,34 @@
 .selectable-image-preview {
   width: 100%;
   height: 100%;
-  max-width: 30vw;
+  max-width: 27vw;
   max-height: 70vh;
   object-fit: contain;
   cursor: pointer;
 }
 
-.selectable-image-controls {
-  text-align: center;
+.control-buttons {
+  display: inline-block;
 }
 
-.reuse-seed, .generation-params {
+.selectable-image-controls {
+  text-align: center;
+  color: initial;
+}
+
+.select-label {
+  color: var(--color-text);
+}
+
+.reuse-seed, .generation-params, .generate-steps, .upscale-denoising, .delete, .upscale {
   text-decoration: none;
   cursor: pointer;
 }
 
-.upscale-indicator {
+.upscale-indicator, .steps-indicator {
   cursor: default;
+}
+
+.image-separator {
 }
 </style>
