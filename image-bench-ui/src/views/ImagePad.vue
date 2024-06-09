@@ -102,7 +102,7 @@ function onBeforeSDEvent(e) {
 
 function onAfterSDEvent(e) {
   const currentKind = generationStateToKind(window.getGenerationState());
-  console.log([currentKind, props.kind]);
+
   if (currentKind === props.kind)
     imageStream.value.afterAddImage();
 }

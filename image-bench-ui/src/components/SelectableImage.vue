@@ -2,10 +2,12 @@
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {createImageLink, isImg2Img, sendWebUIMessage} from "@/sdwebui.js";
   import {animateColors} from "@/utils_html.js";
+  import {useSDWebUIStore} from "@/stores/sdwebui.js";
 
   const props = defineProps(["image", "selectable", "selected", "isTray"]);
 
   const imageTrayStore = useImageTrayStore();
+  const sdWebUIStore = useSDWebUIStore();
 
   function onReuseSeedClick(e) {
     e.preventDefault();
@@ -69,6 +71,11 @@
       sendWebUIMessage({type: "UPSCALE_VARYING_DENOISING", image, denoising: denoising});
     }
   }
+
+  function needShowPromptWarning(image) {
+    return image.parameters["prompt"] != sdWebUIStore.prompt
+        || image.parameters["negative"] != sdWebUIStore.negativePrompt;
+  }
 </script>
 
 <template>
@@ -98,6 +105,8 @@
       <a v-if="!isTray" href="#" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</a>
       <span v-if="image.setSteps" class="steps-indicator" :title="`Upscale with ${image.parameters['steps']} steps`">🐾</span>
       <span v-if="image.parameters['hires upscale']" class="upscale-indicator" title="Upscaled">⬆️</span>
+      <span v-if="needShowPromptWarning(image)" class="prompt-warning" title="Image and UI prompts do not match">⚠️️</span>
+
       <span v-if="isTray" class="delete" title="Delete"
             @mousedown.left="$emit('deleteImage', image)">🗑️</span>
     </div>
@@ -140,7 +149,7 @@
   cursor: pointer;
 }
 
-.upscale-indicator, .steps-indicator {
+.upscale-indicator, .steps-indicator, .prompt-warning {
   cursor: default;
 }
 

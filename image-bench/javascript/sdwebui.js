@@ -9,17 +9,27 @@ import {sendPopupEvent} from "./popup.js";
 export function hookIntoSDWebUI() {
     const generateButton = document.getElementById("txt2img_generate");
     generateButton.addEventListener("mousedown", onGenerateMousedown);
+
     const interruptButton = document.getElementById("txt2img_interrupt");
     interruptButton.addEventListener("mousedown", onInterruptMousedown);
+
+    const promptInput = document.querySelector("#txt2img_prompt textarea");
+    promptInput.addEventListener("change", onPromptChange);
+
+    const negativePromptInput = document.querySelector("#txt2img_neg_prompt textarea");
+    negativePromptInput.addEventListener("change", onNegativePromptChange);
+
+    onPromptChange({target: promptInput});
+    onNegativePromptChange({target: negativePromptInput});
 }
 
-export function onGenerateMousedown(e) {
+function onGenerateMousedown(e) {
     checkWebSocketConnection();
     setGenerationState("BATCH_GENERATION");
     sendPopupEvent({type: "BEGIN_PROCESSING"});
 }
 
-export function onInterruptMousedown(e) {
+function onInterruptMousedown(e) {
     const generationState = getGenerationState();
 
     if (generationState === "HIRES_FIX") {
@@ -30,6 +40,14 @@ export function onInterruptMousedown(e) {
 
     setGenerationState("BATCH_GENERATION");
     finishProcessing();
+}
+
+function onPromptChange(e) {
+    sendPopupEvent({type: "PROMPT_CHANGE", text: e.target.value});
+}
+
+function onNegativePromptChange(e) {
+    sendPopupEvent({type: "NEGATIVE_PROMPT_CHANGE", text: e.target.value});
 }
 
 export async function repositionConfigPresetsDropdown(kind) {

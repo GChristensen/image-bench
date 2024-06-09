@@ -50,13 +50,15 @@ async function initUI() {
     }
 
     createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
-    hookIntoSDWebUI();
     disposePopup();
 }
 
-function onShowWindow() {
-    if (showPopup())
+async function onShowWindow() {
+    if (showPopup()) {
         createWebSocket();
+        await sleep(500);
+        hookIntoSDWebUI();
+    }
 }
 
 function onMessage(msg) {

@@ -7,6 +7,7 @@ import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {generationStateToKind} from "@/consts.js";
+import {useSDWebUIStore} from "@/stores/sdwebui.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -22,8 +23,9 @@ const generatedImagesStore = useGeneratedImagesStore();
 const imageTrayStore = useImageTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
+const sdWebUIStore = useSDWebUIStore();
 
-const stores = {
+const viewStores = {
   [exploreImagesStore.kind]: exploreImagesStore,
   [generatedImagesStore.kind]: generatedImagesStore,
   [imageTrayStore.kind]: imageTrayStore,
@@ -42,9 +44,6 @@ function onClearAllClick(e) {
 }
 
 async function onSDEvent(e) {
-
-  console.log(e);
-
   if (e.type === "SOCKET_CLOSED") {
     alert("Connection with Stable Diffusion WebUI server is lost. Please reload the main WebUI page and reopen this window.");
     return;
@@ -70,8 +69,10 @@ async function onSDEvent(e) {
     console.error(e);
   }
 
-  const store = stores[generationStateToKind(state)];
+  const store = viewStores[generationStateToKind(state)];
   store?.onSDEvent(e);
+
+  sdWebUIStore.onSDEvent(e);
 
   routerView.value.onAfterSDEvent(e);
 }
