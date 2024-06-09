@@ -1,4 +1,4 @@
-import {createImageData} from "@/utils.js";
+import {createImageData} from "@/sdwebui.js";
 
 export function addImage(eventData, images) {
     if (eventData.type === "SAVED_IMAGE")

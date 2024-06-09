@@ -6,7 +6,7 @@ export const useConfigPresetsStore = defineStore('configPresets', () => {
 
     async function init() {
         if (!presets.value.length) {
-            const response = await fetch("http://" + location.host + "/image-bench/config_presets");
+            const response = await fetch( "/image-bench/config_presets");
 
             if (response.ok && response.headers.get("content-length") > 0) {
                 const content = await response.json();

@@ -1,7 +1,7 @@
 <script setup>
   import SelectableImage from "@/components/SelectableImage.vue";
   import {computed, onBeforeMount, ref} from "vue";
-  import {createImageData, createImageGenerationParams, createImageLink} from "@/utils.js";
+  import {createImageData, createImageGenerationParams, createImageLink} from "@/sdwebui.js";
 
   const props = defineProps(["imageStore", "isTray"]);
   const emit = defineEmits(["imageClick", "imageOpen", "showParams", "upscaleImage"]);

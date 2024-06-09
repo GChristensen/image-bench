@@ -9,7 +9,7 @@ import {useImageTrayStore} from "@/stores/imageTray.js";
 import {generationStateToKind, KIND_GENERATED, KIND_TRAY, KIND_UPSCALED} from "@/consts.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
-import {createImageLink} from "@/utils.js";
+import {createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 
 const props = defineProps(["kind"]);
 
@@ -54,19 +54,19 @@ function onUpscaleSelectedClick(e) {
   const selectedImages = imageStream.value.getSelectedImages();
 
   if (selectedImages.length) {
-    window.opener.postMessage({type: "UPSCALE_IMAGES", images: selectedImages, preset: configPresets.value.value});
+    sendWebUIMessage({type: "UPSCALE_IMAGES", images: selectedImages, preset: configPresets.value.value});
   }
 }
 
 function onUpscaleImage(imageProxy) {
   const image = JSON.parse(JSON.stringify(imageProxy))
-  window.opener.postMessage({type: "UPSCALE_IMAGES", images: [image], preset: configPresets.value.value});
+  sendWebUIMessage({type: "UPSCALE_IMAGES", images: [image], preset: configPresets.value.value});
 }
 
 function onBatchGenerateClick(e) {
   e.preventDefault();
 
-  window.opener.postMessage({type: "BATCH_GENERATE", preset: configPresets.value.value});
+  sendWebUIMessage({type: "BATCH_GENERATE", preset: configPresets.value.value});
 }
 
 function onImageClick(index) {
@@ -100,7 +100,7 @@ function onBeforeSDEvent(e) {
   imageStream.value.beforeAddImage();
 }
 
-function onSDEvent(e) {
+function onAfterSDEvent(e) {
   const currentKind = generationStateToKind(window.getGenerationState());
   console.log([currentKind, props.kind]);
   if (currentKind === props.kind)
@@ -152,7 +152,7 @@ function displayNextImage() {
   }
 }
 
-defineExpose({onBeforeSDEvent, onSDEvent, imageStream});
+defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
 
 
 </script>

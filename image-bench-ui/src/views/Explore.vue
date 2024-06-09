@@ -2,7 +2,7 @@
 
 import {computed, onBeforeMount, onMounted, reactive, ref} from "vue";
 import SelectableImage from "@/components/SelectableImage.vue";
-import {createImageData, createImageGenerationParams, createImageLink} from "@/utils.js";
+import {createImageData, createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {useExploreImagesStore} from "@/stores/explore.js";
@@ -27,11 +27,11 @@ const paramsOverlayText = ref("");
 let scrolledToBottom = true;
 
 async function refreshModels() {
-  models.value = await fetch("http://" + location.host + "/sdapi/v1/sd-models").then(r => r.json());
+  models.value = await fetch("/sdapi/v1/sd-models").then(r => r.json());
 }
 
 async function loadPresets() {
-  const response = await fetch("http://" + location.host + "/image-bench/explore_presets");
+  const response = await fetch("/image-bench/explore_presets");
 
   if (response.ok && response.headers.get("content-length") > 0) {
     modelPresets = await response.json();
@@ -46,7 +46,7 @@ async function loadPresets() {
 
 async function writePresets() {
   const presets = JSON.stringify(modelPresets);
-  await fetch("http://" + location.host + "/image-bench/explore_presets", {method: "post", body: presets});
+  await fetch("/image-bench/explore_presets", {method: "post", body: presets});
 }
 
 onBeforeMount(async () => {
@@ -79,7 +79,7 @@ function onExploreClick() {
   const selectedModels = getSelectedModels();
 
   exploreImagesStore.clear();
-  window.opener.postMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImages.value})
+  sendWebUIMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImages.value})
 }
 
 async function onCreateClick(e) {
@@ -175,15 +175,14 @@ function onBeforeSDEvent(e) {
   scrolledToBottom = (gi.clientHeight === gi.scrollHeight) || (gi.scrollHeight - gi.scrollTop === gi.clientHeight);
 }
 
-function onSDEvent(e) {
-  console.log(scrolledToBottom)
+function onAfterSDEvent(e) {
   if (scrolledToBottom) {
     const gi = generatedImagesElement.value;
     setTimeout(() => gi.scrollTop = gi.scrollHeight, 500);
   }
 }
 
-defineExpose({onBeforeSDEvent, onSDEvent})
+defineExpose({onBeforeSDEvent, onAfterSDEvent})
 
 
 document.addEventListener("keydown", onKeydown);

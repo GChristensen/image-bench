@@ -1,7 +1,7 @@
 import {reactive, ref} from 'vue'
 import {defineStore} from 'pinia'
 import {KIND_EXPLORE} from "@/consts.js";
-import {createImageData} from "@/utils.js";
+import {createImageData} from "@/sdwebui.js";
 
 export const useExploreImagesStore = defineStore('exploreImages', () => {
     const kind = KIND_EXPLORE;

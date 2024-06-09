@@ -1,6 +1,7 @@
 <script setup>
   import {useImageTrayStore} from "@/stores/imageTray.js";
-  import {animateColors, createImageLink, isImg2Img} from "@/utils.js";
+  import {createImageLink, isImg2Img, sendWebUIMessage} from "@/sdwebui.js";
+  import {animateColors} from "@/utils_html.js";
 
   const props = defineProps(["image", "selectable", "selected", "isTray"]);
 
@@ -10,7 +11,7 @@
     e.preventDefault();
 
     const parameters = JSON.parse(JSON.stringify(props.image.parameters))
-    window.opener.postMessage({type: "SET_IMAGE_SEED", parameters});
+    sendWebUIMessage({type: "SET_IMAGE_SEED", parameters});
   }
 
   // currently undocumented
@@ -18,7 +19,7 @@
     e.preventDefault();
 
     const parameters = JSON.parse(JSON.stringify(props.image.parameters))
-    window.opener.postMessage({type: "SET_IMAGE_PARAMS", parameters});
+    sendWebUIMessage({type: "SET_IMAGE_PARAMS", parameters});
   }
 
   function onPlaceToTray(e) {
@@ -51,7 +52,7 @@
     if (steps) {
       localStorage.setItem("imageBench_varyingSteps", steps);
       const image = JSON.parse(JSON.stringify(props.image))
-      window.opener.postMessage({type: "GENERATE_VARYING_STEPS", image, steps});
+      sendWebUIMessage({type: "GENERATE_VARYING_STEPS", image, steps});
     }
   }
 
@@ -65,7 +66,7 @@
     if (denoising) {
       localStorage.setItem("imageBench_varyingDenoising", denoising);
       const image = JSON.parse(JSON.stringify(props.image))
-      window.opener.postMessage({type: "UPSCALE_VARYING_DENOISING", image, denoising: denoising});
+      sendWebUIMessage({type: "UPSCALE_VARYING_DENOISING", image, denoising: denoising});
     }
   }
 </script>

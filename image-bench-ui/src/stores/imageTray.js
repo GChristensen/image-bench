@@ -7,7 +7,7 @@ export const useImageTrayStore = defineStore('imageTray', () => {
   const images = ref([]);
 
   async function init() {
-    const response = await fetch("http://" + location.host + "/image-bench/image_tray");
+    const response = await fetch("/image-bench/image_tray");
 
     if (response.ok && response.headers.get("content-length") > 0) {
       const trayContent = await response.json();
@@ -20,7 +20,7 @@ export const useImageTrayStore = defineStore('imageTray', () => {
     trayContent.images = images.value;
 
     const payload = JSON.stringify(trayContent);
-    await fetch("http://" + location.host + "/image-bench/image_tray", {method: "post", body: payload});
+    await fetch("/image-bench/image_tray", {method: "post", body: payload});
   }
 
   async function addImage(imageData) {

@@ -73,7 +73,7 @@ async function onSDEvent(e) {
   const store = stores[generationStateToKind(state)];
   store?.onSDEvent(e);
 
-  routerView.value.onSDEvent(e);
+  routerView.value.onAfterSDEvent(e);
 }
 
 window.onSDEvent = onSDEvent;
