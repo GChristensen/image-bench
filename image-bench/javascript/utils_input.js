@@ -55,19 +55,22 @@ export async function setDropdownValue(inputElementSelector, value, blur = true)
                     button: 0
                 });
 
-                optionElement.dispatchEvent(mousedownEvent)
+                optionElement.dispatchEvent(mousedownEvent);
                 return;
             }
         }
     }
 }
 
-export function toggleHiresFix(onlyEnable) {
+export function toggleHiresFix(onlyEnable, onlyDisable) {
     const hrFixCheckbox = document.getElementById("txt2img_hr-visible-checkbox");
     let toggle = true;
 
     if (onlyEnable)
         toggle = !hrFixCheckbox.checked;
+
+    if (onlyDisable)
+        toggle = hrFixCheckbox.checked;
 
     if (toggle) {
         var inputEvent = new Event('input', {

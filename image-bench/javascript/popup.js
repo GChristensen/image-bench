@@ -30,6 +30,6 @@ export function disposePopup() {
     popup = null;
 }
 
-export function sendPopupEvent(msg) {
+export function sendPopupMessage(msg) {
     popup?.onSDEvent(msg);
 }

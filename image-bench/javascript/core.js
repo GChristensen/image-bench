@@ -11,9 +11,15 @@ import {
     revertVaryingParams,
     upscaleVaryingDenoising
 } from "./processing.js";
-import {disposePopup, sendPopupEvent, showPopup} from "./popup.js";
-import {hookIntoSDWebUI, repositionConfigPresetsDropdown, setImageParams, setImageSeed} from "./sdwebui.js";
-import {batchGenerate} from "./generation.js";
+import {disposePopup, sendPopupMessage, showPopup} from "./popup.js";
+import {
+    hookIntoSDWebUI,
+    initializePopupPrompts,
+    repositionConfigPresetsDropdown,
+    setImageParams,
+    setImageSeed, stopGeneration
+} from "./sdwebui.js";
+import {batchGenerate, generationAugmentMessage} from "./generation.js";
 import {checkWebSocketConnection, createWebSocket, setSocketEventListener} from "./websocket.js";
 
 let appConfig;
@@ -56,7 +62,6 @@ async function initUI() {
 async function onShowWindow() {
     if (showPopup()) {
         createWebSocket();
-        await sleep(500);
         hookIntoSDWebUI();
     }
 }
@@ -66,9 +71,13 @@ function onMessage(msg) {
 
     const payload = msg.data;
 
-    if (payload.type === "EXPLORE_MODELS")
+    if (payload.type === "INITIALIZE_PROMPTS")
+        initializePopupPrompts();
+    else if (payload.type === "STOP_GENERATION")
+        stopGeneration();
+    else if (payload.type === "EXPLORE_MODELS")
         exploreModels(payload.models, payload.generateImages);
-    if (payload.type === "BATCH_GENERATE")
+    else if (payload.type === "BATCH_GENERATE")
         batchGenerate(payload.preset);
     else if (payload.type === "UPSCALE_IMAGES")
         processImages(payload.images, payload.preset);
@@ -86,9 +95,10 @@ function onBackendMessage(e) {
     if (e?.data) {
         const msg = JSON.parse(e.data);
 
+        generationAugmentMessage(msg);
         processingAugmentMessage(msg);
 
-        sendPopupEvent(msg);
+        sendPopupMessage(msg);
 
         revertVaryingParams();
 

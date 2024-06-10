@@ -8,6 +8,7 @@ import {useExploreImagesStore} from "@/stores/explore.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {generationStateToKind} from "@/consts.js";
 import {useSDWebUIStore} from "@/stores/sdwebui.js";
+import {sendWebUIMessage} from "@/sdwebui.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -82,6 +83,8 @@ window.onSDEvent = onSDEvent;
 onBeforeMount(async () => {
   await imageTrayStore.init();
   await configPresetsStore.init();
+
+  sendWebUIMessage({type: "INITIALIZE_PROMPTS"});
 });
 
 </script>

@@ -2,10 +2,12 @@
   import SelectableImage from "@/components/SelectableImage.vue";
   import {computed, onBeforeMount, ref} from "vue";
   import {createImageData, createImageGenerationParams, createImageLink} from "@/sdwebui.js";
+  import {KIND_GENERATED, KIND_TRAY} from "@/consts.js";
 
-  const props = defineProps(["imageStore", "isTray"]);
+  const props = defineProps(["kind", "imageStore"]);
   const emit = defineEmits(["imageClick", "imageOpen", "showParams", "upscaleImage"]);
 
+  const isTray = ref(props.kind === KIND_TRAY);
   const images = computed(() => props.imageStore.images);
   const selected = ref(new Set());
 
@@ -76,7 +78,7 @@
 
     props.imageStore.images = remainingItems;
 
-    if (props.isTray) {
+    if (isTray.value) {
       props.imageStore.persist();
     }
 
@@ -90,7 +92,7 @@
     props.imageStore.images = [];
     selected.value = new Set();
 
-    if (props.isTray) {
+    if (isTray.value) {
       props.imageStore.persist();
     }
   }
@@ -115,7 +117,7 @@
 
       selected.value = new Set(selectedItems);
 
-      if (props.isTray) {
+      if (isTray.value) {
         props.imageStore.persist();
       }
     }
@@ -158,6 +160,7 @@
       <SelectableImage v-for="(image, index) in images"
                        :image="image"
                        :selectable="isTray"
+                       :upscalable="isTray || kind === KIND_GENERATED"
                        :selected="selected.has(index)"
                        :is-tray="isTray"
                        @image-click="$emit('imageClick', index)"

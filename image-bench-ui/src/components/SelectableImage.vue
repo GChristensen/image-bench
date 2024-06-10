@@ -4,7 +4,7 @@
   import {animateColors} from "@/utils_html.js";
   import {useSDWebUIStore} from "@/stores/sdwebui.js";
 
-  const props = defineProps(["image", "selectable", "selected", "isTray"]);
+  const props = defineProps([ "image", "selectable", "upscalable", "selected", "isTray"]);
 
   const imageTrayStore = useImageTrayStore();
   const sdWebUIStore = useSDWebUIStore();
@@ -37,8 +37,14 @@
     let result = "";
 
     for (const key in parameters) {
-      if (key !== "prompt" && key !== "negative" && key !== "version")
-        result += key.charAt(0).toUpperCase() + key.slice(1) + ": " + parameters[key] + "\u000d";
+      if (key !== "prompt" && key !== "negative prompt" && key !== "version") {
+        let value = parameters[key];
+
+        if (typeof value === "object")
+          value = "..."
+
+        result += key.charAt(0).toUpperCase() + key.slice(1) + ": " + value +"\u000d";
+      }
     }
 
     return result;
@@ -74,7 +80,7 @@
 
   function needShowPromptWarning(image) {
     return image.parameters["prompt"] != sdWebUIStore.prompt
-        || image.parameters["negative"] != sdWebUIStore.negativePrompt;
+        || image.parameters["negative prompt"] != sdWebUIStore.negativePrompt;
   }
 </script>
 
@@ -99,7 +105,8 @@
             @mousedown.left="$emit('showParams')">📑</span>
       <span v-if="isTray" class="generate-steps" title="Generate with steps"
             @mousedown.left="onGenerateVaryingSteps">📶</span>
-      <span v-if="isTray" class="upscale" title="Upscale" @mousedown.left="$emit('upscaleImage', image)">🏞️</span>
+      <span v-if="upscalable" class="upscale" :title="'Upscale' + (isTray? ' using preset': '')"
+            @mousedown.left="$emit('upscaleImage', image)">🏞️</span>
       <span v-if="isTray" class="upscale-denoising" title="Upscale with denoising"
             @mousedown.left="onUpscaleVaryingDenoising">📉</span>
       <a v-if="!isTray" href="#" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</a>

@@ -3,7 +3,8 @@ import {finishProcessing, interruptProcessing} from "./processing.js";
 import {interruptExploring} from "./explore.js";
 import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
-import {sendPopupEvent} from "./popup.js";
+import {sendPopupMessage} from "./popup.js";
+import {sleep} from "./utils.js";
 
 
 export function hookIntoSDWebUI() {
@@ -12,13 +13,36 @@ export function hookIntoSDWebUI() {
 
     const interruptButton = document.getElementById("txt2img_interrupt");
     interruptButton.addEventListener("mousedown", onInterruptMousedown);
+    listenInterruptButtonMutations();
 
     const promptInput = document.querySelector("#txt2img_prompt textarea");
     promptInput.addEventListener("change", onPromptChange);
 
     const negativePromptInput = document.querySelector("#txt2img_neg_prompt textarea");
     negativePromptInput.addEventListener("change", onNegativePromptChange);
+}
 
+function listenInterruptButtonMutations() {
+    const targetNode = document.getElementById('txt2img_interrupt');
+    const config = { attributes: true, attributeFilter: ['style'] };
+    const callback = function(mutationsList, observer) {
+        for (const mutation of mutationsList) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                if (mutation.target.style.cssText.includes("display: none"))
+                    if (getGenerationState() === "BATCH_GENERATION")
+                        sendPopupMessage({type: "GENERATION_FINISHED"});
+            }
+        }
+    };
+
+    const observer = new MutationObserver(callback);
+
+    observer.observe(targetNode, config);
+}
+
+export function initializePopupPrompts() {
+    const promptInput = document.querySelector("#txt2img_prompt textarea");
+    const negativePromptInput = document.querySelector("#txt2img_neg_prompt textarea");
     onPromptChange({target: promptInput});
     onNegativePromptChange({target: negativePromptInput});
 }
@@ -26,7 +50,7 @@ export function hookIntoSDWebUI() {
 function onGenerateMousedown(e) {
     checkWebSocketConnection();
     setGenerationState("BATCH_GENERATION");
-    sendPopupEvent({type: "BEGIN_PROCESSING"});
+    sendPopupMessage({type: "BEGIN_PROCESSING"});
 }
 
 function onInterruptMousedown(e) {
@@ -43,11 +67,26 @@ function onInterruptMousedown(e) {
 }
 
 function onPromptChange(e) {
-    sendPopupEvent({type: "PROMPT_CHANGE", text: e.target.value});
+    sendPopupMessage({type: "PROMPT_CHANGE", text: e.target.value});
 }
 
 function onNegativePromptChange(e) {
-    sendPopupEvent({type: "NEGATIVE_PROMPT_CHANGE", text: e.target.value});
+    sendPopupMessage({type: "NEGATIVE_PROMPT_CHANGE", text: e.target.value});
+}
+
+export async function stopGeneration() {
+    const mousedownEvent = new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        button: 0
+    });
+
+    const interruptButton = document.getElementById('txt2img_interrupt');
+    interruptButton.dispatchEvent(mousedownEvent);
+    interruptButton.click();
+    await sleep(333);
+    interruptButton.click();
 }
 
 export async function repositionConfigPresetsDropdown(kind) {
@@ -58,6 +97,19 @@ export async function repositionConfigPresetsDropdown(kind) {
 
         configPresetsDiv.parentNode.removeChild(configPresetsDiv);
         resultsDiv.insertBefore(configPresetsDiv, resultsDiv.firstChild);
+    }
+}
+
+export async function setConfigPreset(preset) {
+    const presetDropdown = document.querySelector("#config_preset_txt2img_dropdown input");
+
+    if (presetDropdown) {
+        if (presetDropdown.value === preset) {
+            await setDropdownValue("#config_preset_txt2img_dropdown input", "None");
+            await sleep(333);
+        }
+
+        await setDropdownValue("#config_preset_txt2img_dropdown input", preset);
     }
 }
 
@@ -79,7 +131,7 @@ export async function setImageParams(params) {
     await setDropdownValue("#setting_sd_vae input", params["vae"]);
 
     setInputValue("#txt2img_prompt textarea", params["prompt"]);
-    setInputValue("#txt2img_neg_prompt textarea", params["negative"]);
+    setInputValue("#txt2img_neg_prompt textarea", params["negative prompt"]);
     await setDropdownValue("#txt2img_sampling input", params["sampler"]);
     await setDropdownValue("#txt2img_scheduler input", params["schedule type"]);
     setInputValue("#txt2img_steps input", params["steps"]);
@@ -102,4 +154,13 @@ export async function setImageParams(params) {
         setInputValue("#txt2img_hr_scale input", params["hires upscale"]);
         toggleHiresFix(true);
     }
+}
+
+export function getGenerationProgress() {
+    const progressBar = document.querySelector(".progressDiv .progress");
+    const progressBarText = progressBar.textContent;
+    const matches = progressBarText.match(/(\d+)%/);
+
+    if (matches)
+        return parseInt(matches[1]);
 }

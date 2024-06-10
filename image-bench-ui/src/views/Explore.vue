@@ -2,7 +2,7 @@
 
 import {computed, onBeforeMount, onMounted, reactive, ref} from "vue";
 import SelectableImage from "@/components/SelectableImage.vue";
-import {createImageData, createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
+import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {useExploreImagesStore} from "@/stores/explore.js";
@@ -39,7 +39,7 @@ async function loadPresets() {
   else
     modelPresets = {};
 
-  lastPreset.value = modelPresets.last_preset || "";
+  presetSelect.value = lastPreset.value = modelPresets.last_preset || "";
   presetNames.value = modelPresets.presets? Object.keys(modelPresets.presets): [];
   await activatePreset(lastPreset.value);
 }
@@ -78,8 +78,15 @@ function getSelectedModels() {
 function onExploreClick() {
   const selectedModels = getSelectedModels();
 
-  exploreImagesStore.clear();
-  sendWebUIMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImages.value})
+  if (exploreImagesStore.generationInProgress) {
+    sendWebUIMessage({type: "STOP_GENERATION"});
+  }
+  else {
+    exploreImagesStore.generationProgress = 0;
+    exploreImagesStore.generationInProgress = true;
+    exploreImagesStore.clear();
+    sendWebUIMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImages.value})
+  }
 }
 
 async function onCreateClick(e) {
@@ -103,7 +110,7 @@ async function onCreateClick(e) {
 async function onSaveClick(e) {
   e.preventDefault();
 
-  const presetName = presetSelect.value.value;
+  const presetName = presetSelect.value;
 
   if (presetName) {
     modelPresets.presets = modelPresets.presets || {};
@@ -121,7 +128,7 @@ async function onDeleteClick(e) {
   if (!confirm("Do you really want to continue?"))
     return;
 
-  const presetName = presetSelect.value.value;
+  const presetName = presetSelect.value;
   const nameIndex = presetNames.value.indexOf(presetName);
 
   presetNames.value.splice(nameIndex, 1);
@@ -171,12 +178,14 @@ function onShowParams(image) {
 
 
 function onBeforeSDEvent(e) {
-  const gi = generatedImagesElement.value;
-  scrolledToBottom = (gi.clientHeight === gi.scrollHeight) || (gi.scrollHeight - gi.scrollTop === gi.clientHeight);
+  if (e.type === "SAVED_IMAGE") {
+    const gi = generatedImagesElement.value;
+    scrolledToBottom = (gi.clientHeight === gi.scrollHeight) || (gi.scrollHeight - gi.scrollTop === gi.clientHeight);
+  }
 }
 
 function onAfterSDEvent(e) {
-  if (scrolledToBottom) {
+  if (e.type === "SAVED_IMAGE" && scrolledToBottom) {
     const gi = generatedImagesElement.value;
     setTimeout(() => gi.scrollTop = gi.scrollHeight, 500);
   }
@@ -202,7 +211,13 @@ function onKeydown(e) {
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="wrapper">
     <div class="toolbar">
-      <a href="#" class="tool-item" id="explore-selected" @click="onExploreClick">Explore</a>
+      <a href="#" class="tool-item" id="explore-selected" @click="onExploreClick"
+        >{{ exploreImagesStore.generationInProgress? "Stop": "Explore" }}</a>
+      <div class="toolbar-spacer"></div>
+      <div v-if="exploreImagesStore.generationInProgress" class="generation-progress">Progress:&nbsp;
+        <progress max="100" :value="exploreImagesStore.generationProgress"></progress>
+      </div>
+      <div class="toolbar-spacer"></div>
       <div class="generate-images-container">
         <label>Generate images:&nbsp;<input type="number" class="generate-images" v-model="generateImages"></label>
       </div>
@@ -210,7 +225,7 @@ function onKeydown(e) {
     <div class="explore-container">
       <div class="model-list">
         Presets&nbsp;
-        <select class="model-presets" ref="presetSelect" @change="onPresetChange">
+        <select class="model-presets" v-model="presetSelect" @change="onPresetChange">
           <option v-for="name in presetNames" :value="name" :selected="lastPreset === name">{{ name }}</option>
         </select>
         <div class="preset-controls">
@@ -247,6 +262,10 @@ function onKeydown(e) {
 </template>
 
 <style scoped>
+.toolbar-spacer {
+  flex-grow: 1;
+}
+
 .wrapper {
   width: 100%;
   height: 100%;
@@ -333,5 +352,14 @@ function onKeydown(e) {
 
 input.generate-images {
   width: 50px;
+}
+
+.generation-progress {
+  width: 20%;
+  display: flex;
+}
+
+.generation-progress progress {
+  flex-grow: 1;
 }
 </style>

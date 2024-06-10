@@ -1,9 +1,10 @@
 import {sleep} from "./utils.js";
 import {setGenerationState} from "./state.js";
 import {setDropdownValue, setInputValue} from "./utils_input.js";
-import {sendPopupEvent} from "./popup.js";
+import {sendPopupMessage} from "./popup.js";
 
-export let exploreQueue = [];
+let totalImages = 0;
+let exploreQueue = [];
 let exploreModel;
 
 export async function exploreModels(models, generateImages) {
@@ -11,7 +12,7 @@ export async function exploreModels(models, generateImages) {
         return;
 
     setGenerationState("EXPLORE_MODELS");
-    sendPopupEvent({type: "BEGIN_PROCESSING"});
+    sendPopupMessage({type: "BEGIN_PROCESSING"});
     exploreQueue = [];
     exploreModel = models[0];
     await setActiveModel(exploreModel.hash);
@@ -24,6 +25,8 @@ export async function exploreModels(models, generateImages) {
             exploreQueue.push(model);
         }
     }
+
+    totalImages = exploreQueue.length;
 
     return exploreImage(exploreQueue.shift());
 }
@@ -53,13 +56,20 @@ async function exploreImage(model) {
 }
 
 export function exploreNextImage() {
+    const progress = (1 - exploreQueue.length / totalImages) * 100;
+    sendPopupMessage({type: "GENERATION_PROGRESS", progress});
+
     const model = exploreQueue.shift();
 
     if (model)
         return exploreImage(model);
+    else
+        sendPopupMessage({type: "GENERATION_FINISHED"});
 }
 
 export function interruptExploring() {
     if (exploreQueue.length)
         exploreQueue = [];
+
+    sendPopupMessage({type: "GENERATION_FINISHED"});
 }

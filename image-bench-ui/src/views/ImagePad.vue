@@ -17,6 +17,7 @@ const generatedImagesStore = useGeneratedImagesStore();
 const imageTrayStore = useImageTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
+const imageStore = getImageStore();
 
 const imageStream = ref(null);
 const showImageOverlay = ref(false);
@@ -27,6 +28,7 @@ const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
 const configPresets = ref();
 const lastConfigPreset = ref("");
+const batchGenerate = ref();
 
 function getImageStore() {
   switch (props.kind) {
@@ -53,20 +55,34 @@ function onUpscaleSelectedClick(e) {
   e.preventDefault();
   const selectedImages = imageStream.value.getSelectedImages();
 
-  if (selectedImages.length) {
-    sendWebUIMessage({type: "UPSCALE_IMAGES", images: selectedImages, preset: configPresets.value.value});
+  if (upscaledImageStore.generationInProgress) {
+    sendWebUIMessage({type: "STOP_GENERATION"});
+  }
+  else {
+    if (selectedImages.length) {
+      upscaledImageStore.generationProgress = 0;
+      upscaledImageStore.generationInProgress = true;
+      sendWebUIMessage({type: "UPSCALE_IMAGES", images: selectedImages, preset: configPresets.value});
+    }
   }
 }
 
 function onUpscaleImage(imageProxy) {
   const image = JSON.parse(JSON.stringify(imageProxy))
-  sendWebUIMessage({type: "UPSCALE_IMAGES", images: [image], preset: configPresets.value.value});
+  sendWebUIMessage({type: "UPSCALE_IMAGES", images: [image], preset: configPresets.value});
 }
 
 function onBatchGenerateClick(e) {
   e.preventDefault();
 
-  sendWebUIMessage({type: "BATCH_GENERATE", preset: configPresets.value.value});
+  if (imageStore.generationInProgress) {
+    sendWebUIMessage({type: "STOP_GENERATION"});
+  }
+  else {
+    imageStore.generationProgress = 0;
+    imageStore.generationInProgress = true;
+    sendWebUIMessage({type: "BATCH_GENERATE", preset: configPresets.value});
+  }
 }
 
 function onImageClick(index) {
@@ -97,18 +113,23 @@ function onConfigPresetChange(e) {
 }
 
 function onBeforeSDEvent(e) {
-  imageStream.value.beforeAddImage();
+  if (e.type === "SAVED_IMAGE") {
+    imageStream.value.beforeAddImage();
+  }
 }
 
 function onAfterSDEvent(e) {
-  const currentKind = generationStateToKind(window.getGenerationState());
+  if (e.type === "SAVED_IMAGE") {
+    const currentKind = generationStateToKind(window.getGenerationState());
 
-  if (currentKind === props.kind)
-    imageStream.value.afterAddImage();
+    if (currentKind === props.kind)
+      imageStream.value.afterAddImage();
+  }
 }
 
 onBeforeMount(() => {
-  lastConfigPreset.value = localStorage.getItem("imageBench_" + props.kind + "_configPreset");
+  configPresets.value = lastConfigPreset.value =
+      localStorage.getItem("imageBench_" + props.kind + "_configPreset");
 });
 
 document.addEventListener("keydown", onKeydown);
@@ -172,16 +193,23 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
         {{ isAllSelected? "Unselect all": "Select all" }}
       </a>
       <a href="#" class="tool-item" id="clear" @click="onClearClick">Clear</a>
-      <a v-if="kind === KIND_GENERATED" href="#" class="tool-item" id="batch-generate"
+      <a v-if="kind === KIND_GENERATED" href="#" class="tool-item" id="batch-generate" ref="batchGenerate"
          @click="onBatchGenerateClick"
-        >Generate</a>
-      <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="upscale-selected"
+        >{{ generatedImagesStore.generationInProgress? "Stop": "Generate" }}</a>
+      <a v-if="kind === KIND_TRAY && !upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected"
          @click="onUpscaleSelectedClick"
         >Upscale selected</a>
+      <a v-if="kind === KIND_UPSCALED && upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected"
+         @click="onUpscaleSelectedClick"
+        >Stop</a>
       <!--a href="#" class="tool-item" id="upscale-selected" v-if="isTray" @click="onUpscaleSelectedClick">Clear storage</a-->
       <div class="toolbar-spacer"></div>
+      <div v-if="imageStore.generationInProgress" class="generation-progress">Progress:&nbsp;
+        <progress max="100" :value="imageStore.generationProgress"></progress>
+      </div>
+      <div class="toolbar-spacer"></div>
       <div v-if="kind !== KIND_UPSCALED">Apply preset:
-        <select class="config-presets" ref="configPresets" @change="onConfigPresetChange">
+        <select class="config-presets" v-model="configPresets" @change="onConfigPresetChange">
           <option v-for="preset in configPresetsStore.presets"
                   :value="preset"
                   :selected="lastConfigPreset === preset">{{ preset }}</option>
@@ -189,8 +217,8 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
       </div>
     </div>
     <ImageStream ref="imageStream"
-                 :is-tray="kind === KIND_TRAY"
-                 :image-store="getImageStore()"
+                 :kind="kind"
+                 :image-store="imageStore"
                  @image-click="onImageClick"
                  @image-open="onImageOpen"
                  @show-params="onShowParams"
@@ -200,6 +228,15 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
 
 <style scoped>
   .toolbar-spacer {
+    flex-grow: 1;
+  }
+
+  .generation-progress {
+    width: 20%;
+    display: flex;
+  }
+
+  .generation-progress progress {
     flex-grow: 1;
   }
 </style>

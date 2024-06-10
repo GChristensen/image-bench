@@ -5,8 +5,8 @@ export function setSocketEventListener(listener) {
     onBackendMessage = listener;
 }
 
-export function createWebSocket() {
-    if (!socket) {
+export function createWebSocket(force) {
+    if (!socket || force) {
         socket = new WebSocket("ws://" + location.host + "/image-bench/websocket");
         // socket.onopen = e => {
         // }
@@ -16,7 +16,7 @@ export function createWebSocket() {
 
 export function checkWebSocketConnection() {
     if (socket?.readyState === WebSocket.CLOSED) {
-        createWebSocket();
+        createWebSocket(true);
         return false
     }
 

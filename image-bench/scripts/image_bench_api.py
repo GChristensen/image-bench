@@ -83,20 +83,40 @@ class ImageBenchApi():
 
     def pnginfo_to_dict(self, pnginfo):
         parts = pnginfo["parameters"].split("\n")
-        lines = parts[-1].split(', ')
-
         result_dict = {
             "prompt": parts[0] if len(parts) > 1 and not parts[0].startswith("Negative prompt: ") else "",
-            "negative": parts[1].replace("Negative prompt: ", "") if len(parts) > 2
-                                                                     and not parts[1].startswith("Negative prompt: ")
-                                                                  else ""
+            "negative prompt": parts[1].replace("Negative prompt: ", "") if len(parts) > 2
+                                                                           and parts[1].startswith("Negative prompt: ")
+                                                                           else ""
         }
-        for line in lines:
-            if ':' in line:
-                key, value = line.split(':', 1)
-                result_dict[key.strip().lower()] = value.strip()
 
+        lines = parts[-1].split('"') # controlnet subparams, etc.
+        self.extract_params(lines[0], result_dict)
+
+        if len(lines) > 1:
+            key = list(result_dict)[-1]
+            result_dict[key] = {}
+            self.extract_params(lines[1], result_dict[key])
+
+            subparams = lines[2:-1]
+            pairs = [subparams[i:i + 2] for i in range(0, len(subparams), 2)]
+
+            for pair in pairs:
+                if len(pair) == 2:
+                    key = pair[0].strip().lower().replace(":", "").replace(", ", "")
+                    result_dict[key] = {}
+                    self.extract_params(pair[1].strip(), result_dict[key])
+
+            self.extract_params(lines[-1], result_dict)
         return result_dict
+
+    def extract_params(self, line, result_dict):
+        main_params = line.split(", ")
+
+        for param in main_params:
+            if ':' in param:
+                key, value = param.split(':', 1)
+                result_dict[key.strip().lower()] = value.strip()
 
     def get_file_path(self, file_name, upper=False):
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -150,10 +170,10 @@ class ImageBenchApi():
         return Response("", media_type="application/json")
 
     def get_presets(self):
-        response = "{}"
-
         if self.config_presets_dropdown:
             response = jsonable_encoder(self.config_presets_dropdown.choices)
+        else:
+            response = jsonable_encoder([])
 
         return JSONResponse(response)
 

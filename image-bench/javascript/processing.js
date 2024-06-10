@@ -1,8 +1,10 @@
 import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
-import {sendPopupEvent} from "./popup.js";
+import {sendPopupMessage} from "./popup.js";
 import {sleep} from "./utils.js";
+import {setConfigPreset} from "./sdwebui.js";
 
+let totalImages = 0;
 let processingQueue = [];
 let setSteps;
 let setDenoising;
@@ -23,7 +25,8 @@ export function canProcessNextImage(msg) {
 
 export async function processImages(images, preset, options) {
     setGenerationState(options?.setSteps ? "BATCH_GENERATION" : "HIRES_FIX");
-    sendPopupEvent({type: "BEGIN_PROCESSING"});
+    sendPopupMessage({type: "BEGIN_PROCESSING"});
+    totalImages = images.length;
     processingQueue = images;
     setDenoising = options?.setDenoising;
     setSteps = options?.setSteps;
@@ -31,7 +34,7 @@ export async function processImages(images, preset, options) {
     denoisingBeforeProcessing = getInputValue("#txt2img_denoising_strength input");
 
     if (preset) {
-        await setDropdownValue("#config_preset_txt2img_dropdown input", preset);
+        await setConfigPreset(preset);
         await sleep(500);
     }
 
@@ -67,6 +70,9 @@ async function processImage(imageData) {
 }
 
 export function processNextImage() {
+    const progress = (1 - processingQueue.length / totalImages) * 100;
+    sendPopupMessage({type: "GENERATION_PROGRESS", progress});
+
     const nextImage = processingQueue.shift();
 
     if (nextImage)
@@ -86,6 +92,8 @@ export function finishProcessing() {
     denoisingBeforeProcessing = undefined;
     setDenoising = false;
     setSteps = false;
+
+    sendPopupMessage({type: "GENERATION_FINISHED"});
 }
 
 export function revertVaryingParams() {
@@ -127,4 +135,6 @@ export function upscaleVaryingDenoising(image, denoising) {
 export function interruptProcessing() {
     if (processingQueue.length)
         processingQueue = [];
+
+    sendPopupMessage({type: "GENERATION_FINISHED"});
 }

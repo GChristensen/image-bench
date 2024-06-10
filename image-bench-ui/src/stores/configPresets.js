@@ -1,5 +1,5 @@
 import {ref} from 'vue'
-import { defineStore } from 'pinia'
+import {defineStore} from 'pinia'
 
 export const useConfigPresetsStore = defineStore('configPresets', () => {
     const presets = ref([]);
@@ -9,8 +9,7 @@ export const useConfigPresetsStore = defineStore('configPresets', () => {
             const response = await fetch( "/image-bench/config_presets");
 
             if (response.ok && response.headers.get("content-length") > 0) {
-                const content = await response.json();
-                presets.value = content;
+                presets.value = await response.json();
             }
         }
     }

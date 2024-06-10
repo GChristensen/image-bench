@@ -6,14 +6,25 @@ import {addImage} from "@/stores/utils.js";
 export const useGeneratedImagesStore = defineStore('generatedImages', () => {
     const kind = KIND_GENERATED;
     const images = ref([]);
+    const generationInProgress = ref(false);
+    const generationProgress = ref(0);
 
     function onSDEvent(e) {
-        addImage(e, images);
+        if (e.type === "SAVED_IMAGE") {
+            generationProgress.value = e.progress;
+            delete e.progress;
+
+            addImage(e, images);
+        }
+        else if (e.type === "GENERATION_FINISHED") {
+            generationProgress.value = 100;
+            generationInProgress.value = false;
+        }
     }
 
     function clear() {
         images.value = [];
     }
 
-    return { kind, images, clear, onSDEvent };
+    return { kind, images, generationInProgress, generationProgress, clear, onSDEvent };
 })
