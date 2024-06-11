@@ -4,7 +4,7 @@
   import {createImageData, createImageGenerationParams, createImageLink} from "@/sdwebui.js";
   import {KIND_GENERATED, KIND_TRAY} from "@/consts.js";
 
-  const props = defineProps(["kind", "imageStore"]);
+  const props = defineProps(["kind", "imageStore", "showMarked"]);
   const emit = defineEmits(["imageClick", "imageOpen", "showParams", "upscaleImage"]);
 
   const isTray = ref(props.kind === KIND_TRAY);
@@ -147,6 +147,31 @@
       return images.value[index - 1];
   }
 
+  function onAddComment(image) {
+    let comment = prompt("Comment:");
+
+    if (comment) {
+      image.comment = comment;
+
+      if (isTray)
+        props.imageStore.persist();
+    }
+  }
+
+  function onSetMarking(image) {
+    if (isTray)
+      props.imageStore.persist();
+  }
+
+  function shouldShowImage(image) {
+    let result = true;
+
+    if (props.showMarked && !image.marking)
+      result = false;
+
+    return result;
+  }
+
   // onBeforeMount(() => {
   // })
 
@@ -158,6 +183,7 @@
   <div class="image-stream-container">
     <div class="image-stream" ref="imageStreamElement">
       <SelectableImage v-for="(image, index) in images"
+                       :displayed="shouldShowImage(image)"
                        :image="image"
                        :selectable="isTray"
                        :upscalable="isTray || kind === KIND_GENERATED"
@@ -168,6 +194,8 @@
                        @show-params="$emit('showParams', index)"
                        @select="isSelected => onItemSelected(isSelected, index)"
                        @upscale-image="$emit('upscaleImage', image)"
+                       @add-comment="onAddComment(image)"
+                       @set-marking="onSetMarking(image)"
                        @delete-image="onDeleteImage"
       ></SelectableImage>
     </div>

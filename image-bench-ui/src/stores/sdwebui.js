@@ -3,7 +3,7 @@ import {KIND_UPSCALED} from "@/consts.js";
 import {ref} from "vue";
 import {addImage} from "@/stores/utils.js";
 
-export const useSDWebUIStore = defineStore('sdWebUI', () => {
+export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
     const prompt = ref("")
     const negativePrompt = ref("")
 

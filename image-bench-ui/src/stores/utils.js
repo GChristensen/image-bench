@@ -17,3 +17,7 @@ export function insertImage(eventData, images) {
 function insertSeparator(images) {
     images.value.push({separator: true});
 }
+
+export function isImageEvent(e) {
+    return e.type === "SAVED_IMAGE" || e.type === "BEGIN_PROCESSING";
+}

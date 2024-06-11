@@ -2,12 +2,13 @@
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {createImageLink, isImg2Img, sendWebUIMessage} from "@/sdwebui.js";
   import {animateColors} from "@/utils_html.js";
-  import {useSDWebUIStore} from "@/stores/sdwebui.js";
+  import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 
-  const props = defineProps([ "image", "selectable", "upscalable", "selected", "isTray"]);
+  const emit = defineEmits(["setMarking"])
+  const props = defineProps(["displayed", "image", "selectable", "upscalable", "selected", "isTray"]);
 
   const imageTrayStore = useImageTrayStore();
-  const sdWebUIStore = useSDWebUIStore();
+  const sdWebUIStore = useSDWebUIStateStore();
 
   function onReuseSeedClick(e) {
     e.preventDefault();
@@ -33,15 +34,19 @@
     animateColors(trayTabElement, 0.7);
   }
 
-  function createTooltip(parameters) {
+  function createTooltip(image) {
+
     let result = "";
 
-    for (const key in parameters) {
+    if (image.comment)
+      result += "💬 " + image.comment +"\u000d\u000d";
+
+    for (const key in image.parameters) {
       if (key !== "prompt" && key !== "negative prompt" && key !== "version") {
-        let value = parameters[key];
+        let value = image.parameters[key];
 
         if (typeof value === "object")
-          value = "..."
+          continue;
 
         result += key.charAt(0).toUpperCase() + key.slice(1) + ": " + value +"\u000d";
       }
@@ -56,7 +61,7 @@
     if (!storedSteps)
       storedSteps = "24, 26, 28, 30, 32";
 
-    const steps = prompt("Use step values:", storedSteps);
+    const steps = prompt("Apply step values:", storedSteps);
     if (steps) {
       localStorage.setItem("imageBench_varyingSteps", steps);
       const image = JSON.parse(JSON.stringify(props.image))
@@ -70,7 +75,7 @@
     if (!storedSteps)
       storedSteps = "0.42, 0.46, 0.5, 0.54, 0.6";
 
-    const denoising = prompt("Use denoising values:", storedSteps);
+    const denoising = prompt("Apply denoising values:", storedSteps);
     if (denoising) {
       localStorage.setItem("imageBench_varyingDenoising", denoising);
       const image = JSON.parse(JSON.stringify(props.image))
@@ -82,21 +87,70 @@
     return image.parameters["prompt"] != sdWebUIStore.prompt
         || image.parameters["negative prompt"] != sdWebUIStore.negativePrompt;
   }
+
+  function getUpscaleButtonTitle(image) {
+    let result = "Upscale";
+
+    if (image.setSteps)
+      result += ` using ${image.parameters['steps']} sampling steps`;
+    else if (props.isTray)
+      result += ' using WebUI settings';
+
+    return result;
+  }
+
+  function onImageMouseEnter(e) {
+    const markings = e.target.querySelector(".markings");
+    if (markings)
+      markings.style.display = "block";
+  }
+
+  function onImageMouseLeave(e) {
+    const markings = e.target.querySelector(".markings");
+    if (markings)
+      markings.style.display = "none";
+  }
+
+  function onMarkingClick(e) {
+    props.image.marking = e.target.textContent;
+    emit("setMarking");
+  }
+
+  function onRemoveMarkingClick(e) {
+    delete props.image.marking;
+    emit("setMarking");
+  }
 </script>
 
 <template>
-<div class="selectable-image">
-  <img v-if="!image.separator"
-       class="selectable-image-preview"
-       :src="createImageLink(image.imagePath)"
-       :title="createTooltip(image.parameters)"
-       @mousedown.left="$emit('imageClick')"
-       @mousedown.middle="$emit('imageOpen')">
-  <div class="image-separator" v-if="image.separator">🏁</div>
-  <div  v-if="!image.separator" class="selectable-image-controls">
-    <label v-if="selectable" class="select-label"><input class="selectable-emage-checkbox" type="checkbox"
-                  @change="$emit('select', $event.target.checked)"
-                  :checked="selected"> Select&nbsp;</label>
+<div v-if="displayed" class="selectable-image">
+  <div class="image-wrapper"
+       @mouseenter="onImageMouseEnter"
+       @mouseleave="onImageMouseLeave">
+    <img v-if="!image.separator"
+         class="selectable-image-preview"
+         :src="createImageLink(image.imagePath)"
+         :title="createTooltip(image)"
+         @mousedown.left="$emit('imageClick')"
+         @mousedown.middle="$emit('imageOpen')">
+    <div v-if="isTray" class="markings fadeIn">
+      <span class="marking" @click="onMarkingClick">👍</span>
+      <span class="marking" @click="onMarkingClick">👎</span>
+      <span class="marking" @click="onMarkingClick">🔴</span>
+      <span class="marking" @click="onMarkingClick">🟠</span>
+      <span class="marking" @click="onMarkingClick">🟡</span>
+      <span class="marking" @click="onMarkingClick">🟢</span>
+      <span class="marking" @click="onMarkingClick">🔵</span>
+      <span class="marking" @click="onMarkingClick">🟣</span>
+    </div>
+  </div>
+  <div class="image-separator" v-if="image.separator">⚪</div>
+  <div  v-if="!image.separator" class="selectable-image-controls"><!--
+      --><span v-if="image.marking" class="image-marking" title="Remove marking"
+               @click="onRemoveMarkingClick">{{image.marking}}&nbsp;</span><!--
+      --><label v-if="selectable" class="select-label"><input class="selectable-emage-checkbox" type="checkbox"
+                  @change="$emit('select', $event.target.checked)" title="Select"
+                  :checked="selected">&nbsp;</label>
     <div class="control-buttons" v-if="!isImg2Img(image.imagePath)">
       <span class="reuse-seed" title="Left: reuse seed, Middle: reuse all parameters"
             @mousedown.left="onReuseSeedClick"
@@ -105,17 +159,17 @@
             @mousedown.left="$emit('showParams')">📑</span>
       <span v-if="isTray" class="generate-steps" title="Generate with steps"
             @mousedown.left="onGenerateVaryingSteps">📶</span>
-      <span v-if="upscalable" class="upscale" :title="'Upscale' + (isTray? ' using preset': '')"
+      <span v-if="upscalable" class="upscale" :title="getUpscaleButtonTitle(image)"
             @mousedown.left="$emit('upscaleImage', image)">🏞️</span>
       <span v-if="isTray" class="upscale-denoising" title="Upscale with denoising"
             @mousedown.left="onUpscaleVaryingDenoising">📉</span>
-      <a v-if="!isTray" href="#" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</a>
-      <span v-if="image.setSteps" class="steps-indicator" :title="`Upscale with ${image.parameters['steps']} steps`">🐾</span>
-      <span v-if="image.parameters['hires upscale']" class="upscale-indicator" title="Upscaled">⬆️</span>
+      <span v-if="!isTray" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</span>
+      <span v-if="isTray" class="add-comment" title="Add comment" @click="$emit('addComment', image)">💬</span>
+      <span v-if="isTray" class="delete" title="Delete" @mousedown.left="$emit('deleteImage', image)">🗑️</span><!--
+      -->&nbsp;<!--
+      --><span v-if="image.parameters['hires upscale']" class="upscale-indicator" title="Upscaled">⬆️</span>
+      <span v-if="image.setSteps" class="upscale-steps" :title="`Upscaled with ${image.parameters['steps']} sampling steps`">🐾</span>
       <span v-if="needShowPromptWarning(image)" class="prompt-warning" title="Image and UI prompts do not match">⚠️️</span>
-
-      <span v-if="isTray" class="delete" title="Delete"
-            @mousedown.left="$emit('deleteImage', image)">🗑️</span>
     </div>
   </div>
 </div>
@@ -151,13 +205,45 @@
   color: var(--color-text);
 }
 
-.reuse-seed, .generation-params, .generate-steps, .upscale-denoising, .delete, .upscale {
+.reuse-seed, .generation-params, .generate-steps, .upscale-denoising, .delete, .upscale, .place-to-tray, .add-comment {
   text-decoration: none;
   cursor: pointer;
 }
 
-.upscale-indicator, .steps-indicator, .prompt-warning {
+.upscale-indicator, .upscale-steps, .prompt-warning {
   cursor: default;
+}
+
+.upscale-steps {
+  color: transparent;
+  text-shadow: 0 0 0 #57ff00;
+  font-size: 90%;
+}
+
+.image-wrapper {
+  position: relative;
+}
+
+.markings {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  color: initial;
+  display: none;
+}
+
+.marking, .image-marking {
+  cursor: pointer;
+}
+
+@keyframes fadeIn {
+  from    { opacity: 0; }
+  to      { opacity: 1; }
+}
+
+.fadeIn {
+  animation: fadeIn 0.2s both ease-in;
 }
 
 .image-separator {

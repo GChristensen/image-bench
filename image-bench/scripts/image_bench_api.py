@@ -24,6 +24,11 @@ import modules.shared as shared
 import modules.script_callbacks as script_callbacks
 from starlette.responses import JSONResponse
 
+DEFAULT_CONFIG = """{
+  "repositionConfigPresetsDropdown": false
+}
+"""
+
 
 class ImageBenchApi():
 
@@ -31,6 +36,11 @@ class ImageBenchApi():
 
     def __init__(self):
         self.config_presets_dropdown = None
+
+        config_path = self.get_file_path("../config.json")
+        if not os.path.exists(config_path):
+            with open(config_path, 'w') as f:
+                f.write(DEFAULT_CONFIG)
 
     def get_path(self, path):
         return f"{self.BASE_PATH}{path}"
@@ -43,29 +53,42 @@ class ImageBenchApi():
         self.websocket_queue = asyncio.Queue()
         self.add_api_route("/window", self.get_window, methods=["GET"])
         self.add_api_route("/config.json", self.get_config, methods=["GET"])
+        self.add_api_route("/config.json", self.write_config, methods=["POST"])
         self.add_api_route("/explore_presets", self.get_explore_presets, methods=["GET"])
         self.add_api_route("/explore_presets", self.write_explore_presets, methods=["POST"])
         self.add_api_route("/image_tray", self.get_image_tray, methods=["GET"])
         self.add_api_route("/image_tray", self.write_image_tray, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
+        self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
 
     def get_config(self):
         config_path = self.get_file_path("../config.json")
+
         return FileResponse(config_path, media_type="application/json")
+
+    async def write_config(self, request: Request):
+        content = await request.body()
+        config_path = self.get_file_path("../config.json")
+
+        with open(config_path, mode="wb") as f:
+            f.write(content)
+
+        return Response("", media_type="application/json")
+
 
     def get_window(self):
         index_html_path = self.get_file_path("index.html")
         return FileResponse(index_html_path)
 
-    def get_root_dir(self):
+    def get_webui_root_dir(self):
         return os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
     def on_image_saved(self, image_data):
         filename = image_data.filename
 
         if "txt2img-images" in filename or "img2img-images" in filename:
-            filename = self.get_root_dir() + "/" + filename
+            filename = self.get_webui_root_dir() + "/" + filename
             filename = filename.replace("\\", "/")
 
             # data_dict = {k: v for k, v in image_data.p.__dict__.items()
@@ -177,22 +200,23 @@ class ImageBenchApi():
 
         return JSONResponse(response)
 
-    # def clear_outputs(self):
-    #     folder = os.path.join(self.get_root_dir(), "outputs")
-    #
-    #     for filename in os.listdir(folder):
-    #         file_path = os.path.join(folder, filename)
-    #         try:
-    #             if os.path.isfile(file_path) or os.path.islink(file_path):
-    #                 os.unlink(file_path)
-    #             elif os.path.isdir(file_path):
-    #                 shutil.rmtree(file_path)
-    #         except Exception as e:
-    #             print('Failed to delete %s. Reason: %s' % (file_path, e))
-
     def on_before_config_presets(self, component, *args, **kwargs):
         if kwargs.get("elem_id") == "config_preset_txt2img_dropdown":
             self.config_presets_dropdown = component
+
+    def clear_outputs_dir(self):
+        folder = os.path.join(self.get_webui_root_dir(), "outputs")
+
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print('Failed to delete %s. Reason: %s' % (file_path, e))
+
 
 try:
     api = ImageBenchApi()

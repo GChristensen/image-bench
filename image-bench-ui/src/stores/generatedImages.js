@@ -1,7 +1,7 @@
 import {ref} from 'vue'
 import { defineStore } from 'pinia'
 import {KIND_GENERATED} from "@/consts.js";
-import {addImage} from "@/stores/utils.js";
+import {addImage, isImageEvent} from "@/stores/utils.js";
 
 export const useGeneratedImagesStore = defineStore('generatedImages', () => {
     const kind = KIND_GENERATED;
@@ -10,7 +10,7 @@ export const useGeneratedImagesStore = defineStore('generatedImages', () => {
     const generationProgress = ref(0);
 
     function onSDEvent(e) {
-        if (e.type === "SAVED_IMAGE") {
+        if (isImageEvent(e)) {
             generationProgress.value = e.progress;
             delete e.progress;
 

@@ -127,29 +127,57 @@ export async function setImageParams(params) {
     if (!params)
         return;
 
-    await setDropdownValue("#setting_sd_model_checkpoint input", params["model"]);
-    await setDropdownValue("#setting_sd_vae input", params["vae"]);
+    if ("model" in params)
+        await setDropdownValue("#setting_sd_model_checkpoint input", params["model"]);
 
-    setInputValue("#txt2img_prompt textarea", params["prompt"]);
-    setInputValue("#txt2img_neg_prompt textarea", params["negative prompt"]);
-    await setDropdownValue("#txt2img_sampling input", params["sampler"]);
-    await setDropdownValue("#txt2img_scheduler input", params["schedule type"]);
-    setInputValue("#txt2img_steps input", params["steps"]);
-    setInputValue("#txt2img_cfg_scale input", params["cfg scale"])
-    setInputValue("#txt2img_seed input", params["seed"]);
+    if ("vae" in params)
+        await setDropdownValue("#setting_sd_vae input", params["vae"]);
+
+    if ("prompt" in params)
+        setInputValue("#txt2img_prompt textarea", params["prompt"]);
+    else
+        setInputValue("#txt2img_prompt textarea", "");
+
+    if ("negative prompt" in params)
+        setInputValue("#txt2img_neg_prompt textarea", params["negative prompt"]);
+    else
+        setInputValue("#txt2img_neg_prompt textarea", "");
+
+    if ("sampler" in params)
+        await setDropdownValue("#txt2img_sampling input", params["sampler"]);
+
+    if ("schedule type" in params)
+        await setDropdownValue("#txt2img_scheduler input", params["schedule type"]);
+
+    if ("steps" in params)
+        setInputValue("#txt2img_steps input", params["steps"]);
+
+    if ("cfg scale" in params)
+        setInputValue("#txt2img_cfg_scale input", params["cfg scale"]);
+
+    if ("seed" in params)
+        setInputValue("#txt2img_seed input", params["seed"]);
+
     if ("variation seed" in params) {
         setInputValue("#txt2img_subseed input", params["variation seed"]);
         setInputValue("#txt2img_subseed_strength input", params["variation seed strength"]);
     }
-    const sizes = params["size"].split("x");
-    setInputValue("#txt2img_width input", sizes[0]);
-    setInputValue("#txt2img_height input", sizes[1]);
+
+    if ("size" in params && params["size"].includes("x")) {
+        const sizes = params["size"].split("x");
+        setInputValue("#txt2img_width input", sizes[0]);
+        setInputValue("#txt2img_height input", sizes[1]);
+    }
+
     if ("clip skip" in params)
         setInputValue("#setting_CLIP_stop_at_last_layers input", params["clip skip"]);
+
     if ("denoising strength" in params)
         setInputValue("#txt2img_denoising_strength input", params["denoising strength"]);
+
     if ("hires steps" in params)
         setInputValue("#txt2img_hr_scale input", params["hires steps"]);
+
     if ("hires upscale" in params) {
         setInputValue("#txt2img_hr_scale input", params["hires upscale"]);
         toggleHiresFix(true);

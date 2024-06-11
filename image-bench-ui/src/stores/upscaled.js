@@ -1,7 +1,7 @@
 import {ref} from 'vue'
 import {defineStore} from 'pinia'
 import {KIND_UPSCALED} from "@/consts.js";
-import {addImage} from "@/stores/utils.js";
+import {addImage, isImageEvent} from "@/stores/utils.js";
 
 export const useUpscaledImagesStore = defineStore('upscaledImages', () => {
     const kind = KIND_UPSCALED;
@@ -10,7 +10,7 @@ export const useUpscaledImagesStore = defineStore('upscaledImages', () => {
     const generationProgress = ref(0);
 
     function onSDEvent(e) {
-        if (e.type === "SAVED_IMAGE")
+        if (isImageEvent(e))
             addImage(e, images);
         else if (e.type === "GENERATION_PROGRESS")
             generationProgress.value = e.progress;

@@ -2,6 +2,7 @@ import {createRouter, createWebHashHistory} from 'vue-router'
 import Explore from "@/views/Explore.vue";
 import ImagePad from "@/views/ImagePad.vue";
 import {KIND_GENERATED, KIND_TRAY, KIND_UPSCALED} from "@/consts.js";
+import Settings from "@/views/Settings.vue";
 
 
 const router = createRouter({
@@ -33,6 +34,11 @@ const router = createRouter({
       name: 'upscaled-images',
       component: ImagePad,
       props: {"kind": KIND_UPSCALED}
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: Settings
     }
   ]
 })
