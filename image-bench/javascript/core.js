@@ -3,10 +3,10 @@ import {createHeaderButton} from "./utils_html.js";
 import {getGenerationState, setGenerationState} from "./state.js";
 import {exploreModels, exploreNextImage} from "./explore.js";
 import {
-    canProcessNextImage,
+    isProcessingActive,
     generateVaryingSteps,
     processImages,
-    processingAugmentMessage,
+    messageSetProcessingParams,
     processNextImage,
     revertVaryingParams,
     upscaleVaryingDenoising
@@ -19,7 +19,7 @@ import {
     setImageParams,
     setImageSeed, stopGeneration
 } from "./sdwebui.js";
-import {batchGenerate, generationAugmentMessage} from "./generation.js";
+import {batchGenerate, messageSetGenerationParams} from "./generation.js";
 import {checkWebSocketConnection, createWebSocket, setSocketEventListener} from "./websocket.js";
 
 let appConfig;
@@ -76,34 +76,34 @@ function onMessage(msg) {
     else if (payload.type === "STOP_GENERATION")
         stopGeneration();
     else if (payload.type === "EXPLORE_MODELS")
-        exploreModels(payload.models, payload.generateImages);
+        exploreModels(payload);
     else if (payload.type === "BATCH_GENERATE")
-        batchGenerate(payload.preset);
+        batchGenerate(payload);
     else if (payload.type === "UPSCALE_IMAGES")
-        processImages(payload.images, payload.preset);
+        processImages(payload);
     else if (payload.type === "SET_IMAGE_SEED")
-        setImageSeed(payload.parameters)
+        setImageSeed(payload)
     else if (payload.type === "SET_IMAGE_PARAMS")
-        setImageParams(payload.parameters)
+        setImageParams(payload)
     else if (payload.type === "GENERATE_VARYING_STEPS")
-        generateVaryingSteps(payload.image, payload.steps)
+        generateVaryingSteps(payload)
     else if (payload.type === "UPSCALE_VARYING_DENOISING")
-        upscaleVaryingDenoising(payload.image, payload.denoising)
+        upscaleVaryingDenoising(payload)
 }
 
 function onBackendMessage(e) {
     if (e?.data) {
         const msg = JSON.parse(e.data);
 
-        generationAugmentMessage(msg);
-        processingAugmentMessage(msg);
+        messageSetGenerationParams(msg);
+        messageSetProcessingParams(msg);
 
         sendPopupMessage(msg);
 
         revertVaryingParams();
 
         if (msg.type === "SAVED_IMAGE") {
-            if (canProcessNextImage(msg)) {
+            if (isProcessingActive(msg)) {
                 processNextImage();
             }
             else if (getGenerationState() === "EXPLORE_MODELS") {

@@ -193,7 +193,7 @@
                        @image-open="$emit('imageOpen', index)"
                        @show-params="$emit('showParams', index)"
                        @select="isSelected => onItemSelected(isSelected, index)"
-                       @upscale-image="$emit('upscaleImage', image)"
+                       @upscale-image="(i, p) => $emit('upscaleImage', i, p)"
                        @add-comment="onAddComment(image)"
                        @set-marking="onSetMarking(image)"
                        @delete-image="onDeleteImage"

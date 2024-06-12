@@ -8,6 +8,7 @@ export const useGeneratedImagesStore = defineStore('generatedImages', () => {
     const images = ref([]);
     const generationInProgress = ref(false);
     const generationProgress = ref(0);
+    const applyPreset = ref();
 
     function onSDEvent(e) {
         if (isImageEvent(e)) {
@@ -26,5 +27,5 @@ export const useGeneratedImagesStore = defineStore('generatedImages', () => {
         images.value = [];
     }
 
-    return { kind, images, generationInProgress, generationProgress, clear, onSDEvent };
+    return { kind, images, applyPreset, generationInProgress, generationProgress, clear, onSDEvent };
 })

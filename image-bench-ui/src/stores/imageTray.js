@@ -5,6 +5,7 @@ import {KIND_TRAY} from "@/consts.js";
 export const useImageTrayStore = defineStore('imageTray', () => {
   const kind = KIND_TRAY;
   const images = ref([]);
+  const applyPreset = ref();
 
   async function init() {
     const response = await fetch("/image-bench/image_tray");
@@ -35,5 +36,5 @@ export const useImageTrayStore = defineStore('imageTray', () => {
     await persist();
   }
 
-  return { kind, init, images, addImage, persist, clear }
+  return { kind, init, images, applyPreset, addImage, persist, clear }
 })

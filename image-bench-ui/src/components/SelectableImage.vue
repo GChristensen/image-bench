@@ -89,12 +89,15 @@
   }
 
   function getUpscaleButtonTitle(image) {
-    let result = "Upscale";
+    let result = "Left: " + "upscale";
 
     if (image.setSteps)
       result += ` using ${image.parameters['steps']} sampling steps`;
     else if (props.isTray)
       result += ' using WebUI settings';
+
+    if (!image.setSteps)
+      result += ", Middle: upscale using tray preset";
 
     return result;
   }
@@ -160,7 +163,8 @@
       <span v-if="isTray" class="generate-steps" title="Generate with steps"
             @mousedown.left="onGenerateVaryingSteps">📶</span>
       <span v-if="upscalable" class="upscale" :title="getUpscaleButtonTitle(image)"
-            @mousedown.left="$emit('upscaleImage', image)">🏞️</span>
+            @mousedown.left="$emit('upscaleImage', image, false)"
+            @mousedown.middle="$emit('upscaleImage', image, true)">🏞️</span>
       <span v-if="isTray" class="upscale-denoising" title="Upscale with denoising"
             @mousedown.left="onUpscaleVaryingDenoising">📉</span>
       <span v-if="!isTray" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</span>

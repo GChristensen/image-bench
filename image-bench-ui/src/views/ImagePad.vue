@@ -11,6 +11,7 @@ import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
+import {createGenerationId} from "@/utils.js";
 
 const props = defineProps(["kind"]);
 
@@ -29,7 +30,7 @@ const overlayImageIndex = ref(null);
 const isAllSelected = computed(() => imageStream.value?.isAllSelected);
 const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
-const configPresets = ref();
+const paramsOverlayImage = ref(null);
 const lastConfigPreset = ref("");
 const batchGenerate = ref();
 const isShowingMarked = ref(false);
@@ -69,14 +70,20 @@ function onUpscaleSelectedClick(e) {
 
       upscaledImageStore.generationProgress = 0;
       upscaledImageStore.generationInProgress = true;
-      sendWebUIMessage({type: "UPSCALE_IMAGES", images: selectedImages, preset: configPresets.value});
+      sendWebUIMessage({type: "UPSCALE_IMAGES", images: selectedImages, preset: imageStore.applyPreset});
     }
   }
 }
 
-function onUpscaleImage(imageProxy) {
+function onUpscaleImage(imageProxy, usePreset) {
   const image = JSON.parse(JSON.stringify(imageProxy))
-  sendWebUIMessage({type: "UPSCALE_IMAGES", images: [image]/*, preset: configPresets.value*/});
+  const options = {type: "UPSCALE_IMAGES", images: [image]};
+
+  if (usePreset) {
+    options.preset = imageTrayStore.applyPreset;
+  }
+
+  sendWebUIMessage(options);
 }
 
 function onBatchGenerateClick(e) {
@@ -91,7 +98,9 @@ function onBatchGenerateClick(e) {
 
     imageStore.generationProgress = 0;
     imageStore.generationInProgress = true;
-    sendWebUIMessage({type: "BATCH_GENERATE", preset: configPresets.value});
+
+    const generationId = createGenerationId();
+    sendWebUIMessage({type: "BATCH_GENERATE", preset: imageStore.applyPreset, generationId});
   }
 }
 
@@ -109,6 +118,7 @@ function onImageOpen(index) {
 
 function onShowParams(index) {
   paramsOverlayText.value = imageStream.value.getImageGenerationParams(index);
+  paramsOverlayImage.value = imageStore.images[index];
   showParamsOverlay.value = true;
 }
 
@@ -138,7 +148,7 @@ function onAfterSDEvent(e) {
 }
 
 onBeforeMount(() => {
-  configPresets.value = lastConfigPreset.value =
+  imageStore.applyPreset = lastConfigPreset.value =
       localStorage.getItem("imageBench_" + props.kind + "_configPreset");
 });
 
@@ -206,7 +216,9 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
                 :is-tray="kind === KIND_TRAY"
                 @hide-overlay="showImageOverlay = false"
                 @image-select="onImageSelectOverlay"/>
-  <ParametersOverlay v-if="showParamsOverlay" :text="paramsOverlayText"
+  <ParametersOverlay v-if="showParamsOverlay"
+                     :image="paramsOverlayImage"
+                     :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="view-container">
     <div class="toolbar">
@@ -232,7 +244,7 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
       </div>
       <div class="toolbar-spacer"></div>
       <div v-if="kind !== KIND_UPSCALED">Apply preset:
-        <select class="config-presets" v-model="configPresets" @change="onConfigPresetChange">
+        <select class="config-presets" v-model="imageStore.applyPreset" @change="onConfigPresetChange">
           <option v-for="preset in configPresetsStore.presets"
                   :value="preset"
                   :selected="lastConfigPreset === preset">{{ preset }}</option>

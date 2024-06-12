@@ -1,6 +1,10 @@
 <script setup>
-  defineProps(["text"]);
+import {onBeforeMount, ref} from "vue";
+
+  const props = defineProps(["image", "text"]);
   const emit = defineEmits(["hideOverlay"]);
+
+  const controlnetImages = ref([]);
 
   function onCloseClick(e) {
     e.preventDefault();
@@ -8,6 +12,19 @@
     emit('hideOverlay');
   }
 
+  onBeforeMount(async () => {
+    const response = await fetch(`/image-bench/get_controlnet_images?id=${props.image.generationId}`);
+
+    if (response.ok) {
+      const imagePaths = await response.json();
+
+      controlnetImages.value.length = 0;
+
+      for (const imagePath of imagePaths) {
+        controlnetImages.value.push(`/file=${imagePath}`);
+      }
+    }
+  });
 </script>
 
 <template>
@@ -17,6 +34,14 @@
     <div class="overlay-text-container">
       <h3 class="parameters-title">Generation parameters</h3>
       <textarea class="overlay-text" autofocus>{{ text }}</textarea>
+      <div v-if="controlnetImages.length" class="controlnet-container">
+        <h3 class="controlnet-title">ControlNet</h3>
+        <div class="controlnet-images">
+          <a v-for="imageURL in controlnetImages" :href="imageURL" target="_blank">
+            <img class="controlnet-image" :src="imageURL">
+          </a>
+        </div>
+      </div>
       <div class="action-link-container">
         <a class="close-link tool-item" href="#"
            @click="onCloseClick">Close</a>
@@ -56,15 +81,26 @@
   max-width: 80vw;
   max-height: 80vh;
   z-index: 1002;
+  display: flex;
+  flex-direction: column;
 }
 
-.parameters-title {
+.parameters-title, .controlnet-title {
   font-weight: bold;
+}
+
+.controlnet-title {
+  margin-top: 15px;
+}
+
+.controlnet-image {
+  max-height: 100px;
+  margin-right: 15px;
 }
 
 .overlay-text{
   width: 100%;
-  height: 100%;
+  flex-grow: 1;
 }
 
 .action-link-container {

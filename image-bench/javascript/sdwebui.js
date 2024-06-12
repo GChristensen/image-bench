@@ -1,10 +1,11 @@
 import {getGenerationState, setGenerationState} from "./state.js";
-import {finishProcessing, interruptProcessing} from "./processing.js";
-import {interruptExploring} from "./explore.js";
+import {finishProcessing, isProcessingActive} from "./processing.js";
+import {finishExploring} from "./explore.js";
 import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
 import {sendPopupMessage} from "./popup.js";
 import {sleep} from "./utils.js";
+import {beginGeneration, finishGeneration} from "./generation.js";
 
 
 export function hookIntoSDWebUI() {
@@ -25,12 +26,14 @@ export function hookIntoSDWebUI() {
 function listenInterruptButtonMutations() {
     const targetNode = document.getElementById('txt2img_interrupt');
     const config = { attributes: true, attributeFilter: ['style'] };
-    const callback = function(mutationsList, observer) {
+    const callback = async function(mutationsList, observer) {
         for (const mutation of mutationsList) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                 if (mutation.target.style.cssText.includes("display: none"))
-                    if (getGenerationState() === "BATCH_GENERATION")
+                    if (getGenerationState() === "BATCH_GENERATION") {
+                        await finishGeneration();
                         sendPopupMessage({type: "GENERATION_FINISHED"});
+                    }
             }
         }
     };
@@ -49,21 +52,20 @@ export function initializePopupPrompts() {
 
 function onGenerateMousedown(e) {
     checkWebSocketConnection();
-    setGenerationState("BATCH_GENERATION");
-    sendPopupMessage({type: "BEGIN_PROCESSING"});
+    beginGeneration();
 }
 
 function onInterruptMousedown(e) {
     const generationState = getGenerationState();
 
-    if (generationState === "HIRES_FIX") {
-        interruptProcessing();
-    } else if (generationState === "EXPLORE_MODELS") {
-        interruptExploring();
+    if (isProcessingActive()) {
+        finishProcessing();
+    }
+    else if (generationState === "EXPLORE_MODELS") {
+        finishExploring();
     }
 
     setGenerationState("BATCH_GENERATION");
-    finishProcessing();
 }
 
 function onPromptChange(e) {
@@ -113,9 +115,11 @@ export async function setConfigPreset(preset) {
     }
 }
 
-export async function setImageSeed(params) {
-    if (!params)
+export async function setImageSeed(options) {
+    if (!options.parameters)
         return;
+
+    const params = options.parameters;
 
     setInputValue("#txt2img_seed input", params["seed"]);
 
@@ -123,7 +127,9 @@ export async function setImageSeed(params) {
         setInputValue("#txt2img_subseed input", params["variation seed"]);
 }
 
-export async function setImageParams(params) {
+export async function setImageParams(options) {
+    const params = options.parameters;
+
     if (!params)
         return;
 

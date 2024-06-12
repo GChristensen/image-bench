@@ -7,21 +7,21 @@ let totalImages = 0;
 let exploreQueue = [];
 let exploreModel;
 
-export async function exploreModels(models, generateImages) {
-    if (!models.length)
+export async function exploreModels(options) {
+    if (!options.models.length)
         return;
 
     setGenerationState("EXPLORE_MODELS");
     sendPopupMessage({type: "BEGIN_PROCESSING"});
     exploreQueue = [];
-    exploreModel = models[0];
+    exploreModel = options.models[0];
     await setActiveModel(exploreModel.hash);
 
     setInputValue("#txt2img_batch_count input[type='number']", 1);
     setInputValue("#txt2img_seed input", -1);
 
-    for (const model of models) {
-        for (let i = 0; i < generateImages; ++i) {
+    for (const model of options.models) {
+        for (let i = 0; i < options.generateImages; ++i) {
             exploreQueue.push(model);
         }
     }
@@ -67,7 +67,7 @@ export function exploreNextImage() {
         sendPopupMessage({type: "GENERATION_FINISHED"});
 }
 
-export function interruptExploring() {
+export function finishExploring() {
     if (exploreQueue.length)
         exploreQueue = [];
 

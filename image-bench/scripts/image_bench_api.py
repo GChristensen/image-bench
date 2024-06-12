@@ -60,6 +60,8 @@ class ImageBenchApi():
         self.add_api_route("/image_tray", self.write_image_tray, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
+        self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
+        self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
 
     def get_config(self):
@@ -91,26 +93,20 @@ class ImageBenchApi():
             filename = self.get_webui_root_dir() + "/" + filename
             filename = filename.replace("\\", "/")
 
-            # data_dict = {k: v for k, v in image_data.p.__dict__.items()
-            #              if isinstance(v, (int, float, str, bool, dict)) and
-            #                 not (isinstance(v, (int, float)) and math.isinf(v))}
-
             msg = {
                 "type": "SAVED_IMAGE",
                 "imagePath": filename,
-                "parameters": self.pnginfo_to_dict(image_data.pnginfo)
-                #"data": data_dict,
+                "parameters": self.pnginfo_to_dict(image_data.p.prompt, image_data.p.negative_prompt,
+                                                   image_data.pnginfo)
             }
 
             self.websocket_queue.put_nowait(msg)
 
-    def pnginfo_to_dict(self, pnginfo):
+    def pnginfo_to_dict(self, prompt, negative_prompt, pnginfo):
         parts = pnginfo["parameters"].split("\n")
         result_dict = {
-            "prompt": parts[0] if len(parts) > 1 and not parts[0].startswith("Negative prompt: ") else "",
-            "negative prompt": parts[1].replace("Negative prompt: ", "") if len(parts) > 2
-                                                                           and parts[1].startswith("Negative prompt: ")
-                                                                           else ""
+            "prompt": prompt,
+            "negative prompt": negative_prompt
         }
 
         lines = parts[-1].split('"') # controlnet subparams, etc.
@@ -216,6 +212,31 @@ class ImageBenchApi():
                     shutil.rmtree(file_path)
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+    async def save_controlnet_images(self, request: Request):
+        content = await request.body()
+        options = json.loads(content)
+        output_folder = os.path.join(self.get_webui_root_dir(), "outputs", "image-bench", options["generation_id"],
+                                     "controlnet")
+
+        os.makedirs(output_folder, exist_ok=True)
+
+        if "images" in options and len(options["images"]) > 0:
+            for image in options["images"]:
+                shutil.copy(image, output_folder)
+
+    async def get_controlnet_images(self, id: str):
+        image_folder = os.path.join(self.get_webui_root_dir(), "outputs", "image-bench", id, "controlnet")
+
+        result = []
+        if os.path.exists(image_folder):
+            for image in os.listdir(image_folder):
+                image_path = os.path.join(image_folder, image)
+                result.append(image_path)
+
+        response = jsonable_encoder(result)
+        return JSONResponse(response)
+
 
 
 try:

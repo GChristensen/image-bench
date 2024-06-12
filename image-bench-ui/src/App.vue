@@ -46,6 +46,8 @@ async function onSDEvent(e) {
   const state = window.getGenerationState();
   await openCurrentModeTab(e, state);
 
+  console.log(e);
+
   try {
     routerView.value.onBeforeSDEvent(e);
   } catch (e) {

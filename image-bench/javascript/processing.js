@@ -8,33 +8,38 @@ let totalImages = 0;
 let processingQueue = [];
 let setSteps;
 let setDenoising;
+let seedsBeforeProcessing;
 let stepsBeforeProcessing;
 let denoisingBeforeProcessing
 
-export function processingAugmentMessage(msg) {
-    if (msg.type === "SAVED_IMAGE" && setSteps) {
+export function messageSetProcessingParams(msg) {
+    if (msg.type === "SAVED_IMAGE"  && getGenerationState() === "BATCH_GENERATION" && setSteps) {
         msg.setSteps = true;
     }
 }
 
-export function canProcessNextImage(msg) {
+export function isProcessingActive(msg) {
     const generationState = getGenerationState();
     return generationState === "HIRES_FIX"
         || generationState === "BATCH_GENERATION" && setSteps;
 }
 
-export async function processImages(images, preset, options) {
+export async function processImages(options) {
     setGenerationState(options?.setSteps ? "BATCH_GENERATION" : "HIRES_FIX");
     sendPopupMessage({type: "BEGIN_PROCESSING"});
-    totalImages = images.length;
-    processingQueue = images;
-    setDenoising = options?.setDenoising;
-    setSteps = options?.setSteps;
+    totalImages = options.images.length;
+    processingQueue = options.images;
+    setDenoising = options.setDenoising;
+    setSteps = options.setSteps;
+    seedsBeforeProcessing = [
+        getInputValue("#txt2img_seed input"),
+        getInputValue("#txt2img_subseed input")
+    ];
     stepsBeforeProcessing = getInputValue("#txt2img_steps input");
     denoisingBeforeProcessing = getInputValue("#txt2img_denoising_strength input");
 
-    if (preset) {
-        await setConfigPreset(preset);
+    if (options.preset) {
+        await setConfigPreset(options.preset);
         await sleep(500);
     }
 
@@ -86,8 +91,12 @@ export function processNextImage() {
 }
 
 export function finishProcessing() {
+    if (processingQueue.length)
+        processingQueue = [];
+
     revertVaryingParams();
 
+    seedsBeforeProcessing = undefined;
     stepsBeforeProcessing = undefined;
     denoisingBeforeProcessing = undefined;
     setDenoising = false;
@@ -97,6 +106,11 @@ export function finishProcessing() {
 }
 
 export function revertVaryingParams() {
+    if (seedsBeforeProcessing) {
+        setInputValue("#txt2img_seed input", seedsBeforeProcessing[0]);
+        setInputValue("#txt2img_subseed input", seedsBeforeProcessing[1]);
+    }
+
     if (stepsBeforeProcessing)
         setInputValue("#txt2img_steps input", stepsBeforeProcessing);
 
@@ -104,37 +118,34 @@ export function revertVaryingParams() {
         setInputValue("#txt2img_denoising_strength input", denoisingBeforeProcessing);
 }
 
-export function generateVaryingSteps(image, steps) {
-    const stepValues = steps.split(",").map(s => s.trim());
+export function generateVaryingSteps(options) {
+    const stepValues = options.steps.split(",").map(s => s.trim());
 
-    const images = [];
+    options.images = [];
     for (const stepValue of stepValues) {
-        const nextImage = {...image};
-        nextImage.parameters = {...image.parameters};
+        const nextImage = {...options.image};
+        nextImage.parameters = {...options.image.parameters};
         nextImage.parameters["steps"] = parseInt(stepValue);
-        images.push(nextImage);
+        options.images.push(nextImage);
     }
 
-    return processImages(images, null, {setSteps: true});
+    options.setSteps = true;
+
+    return processImages(options);
 }
 
-export function upscaleVaryingDenoising(image, denoising) {
-    const denoisingLevels = denoising.split(",").map(s => s.trim());
+export function upscaleVaryingDenoising(options) {
+    const denoisingLevels = options.denoising.split(",").map(s => s.trim());
 
-    const images = [];
+    options.images = [];
     for (const level of denoisingLevels) {
-        const nextImage = {...image};
-        nextImage.parameters = {...image.parameters};
+        const nextImage = {...options.image};
+        nextImage.parameters = {...options.image.parameters};
         nextImage.parameters["denoising strength"] = parseFloat(level);
-        images.push(nextImage);
+        options.images.push(nextImage);
     }
 
-    return processImages(images, null, {setDenoising: true});
-}
+    options.setDenoising = true;
 
-export function interruptProcessing() {
-    if (processingQueue.length)
-        processingQueue = [];
-
-    sendPopupMessage({type: "GENERATION_FINISHED"});
+    return processImages(options);
 }
