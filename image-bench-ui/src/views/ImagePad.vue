@@ -12,6 +12,7 @@ import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {createGenerationId} from "@/utils.js";
+import {onBeforeRouteLeave, onBeforeRouteUpdate} from "vue-router";
 
 const props = defineProps(["kind"]);
 
@@ -205,7 +206,6 @@ function onShowMarkedClick(e) {
 }
 
 defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
-
 
 </script>
 

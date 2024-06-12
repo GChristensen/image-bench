@@ -181,7 +181,7 @@
 
 <template>
   <div class="image-stream-container">
-    <div class="image-stream" ref="imageStreamElement">
+    <div class="image-stream scrollable" ref="imageStreamElement">
       <SelectableImage v-for="(image, index) in images"
                        :displayed="shouldShowImage(image)"
                        :image="image"

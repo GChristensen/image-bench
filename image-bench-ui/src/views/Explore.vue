@@ -234,7 +234,7 @@ function onKeydown(e) {
           >&nbsp;<a class="control-link" href="#" @click="onDeleteClick">Delete</a>
         </div>
         <div class="models-container">
-          <div class="models">
+          <div class="models scrollable">
             <div v-for="(model, index) in models">
               <label class="model-label"><input type="checkbox"
                                                 @change="e => onModelCheckChange(e, index)" :checked="selected.has(index)"
