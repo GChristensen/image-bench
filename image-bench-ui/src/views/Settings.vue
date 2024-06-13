@@ -34,23 +34,16 @@ function onClearOutputsClick(e) {
     setTimeout(() => fetch("/image-bench/clear_outputs_dir"), 500);
   }
 }
-
-function persistConfig() {
-  appConfigStore.persist();
-}
-
 </script>
 
 <template>
 <div class="settings-container">
   <div class="settings-left">
     <h3>Generation</h3>
-    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.config.automaticallyClearGeneratedImages"
-                                        @change="persistConfig()"
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.automaticallyClearGeneratedImages"
     >Automatically clear generated images</label>
     <h3>Other</h3>
-    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.config.repositionConfigPresetsDropdown"
-                                        @change="persistConfig()"
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.repositionConfigPresetsDropdown"
     >Bring up the dropdown of the 'Config Presets' extension</label>
   </div>
   <div class="spacer"></div>

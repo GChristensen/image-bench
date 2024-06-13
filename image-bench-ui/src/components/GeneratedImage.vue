@@ -3,12 +3,19 @@
   import {createImageLink, isImg2Img, sendWebUIMessage} from "@/sdwebui.js";
   import {animateColors} from "@/utils_html.js";
   import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
+  import {useAppConfigStore} from "@/stores/appConfig.js";
+  import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
+  import {useUpscaledImagesStore} from "@/stores/upscaled.js";
+  import {useConfigPresetsStore} from "@/stores/configPresets.js";
 
   const emit = defineEmits(["setMarking"])
   const props = defineProps(["displayed", "image", "selectable", "upscalable", "selected", "isTray"]);
 
+  const config = useAppConfigStore();
   const imageTrayStore = useImageTrayStore();
   const sdWebUIStore = useSDWebUIStateStore();
+  const generatedImagesStore = useGeneratedImagesStore();
+  const upscaledImageStore = useUpscaledImagesStore();
 
   function onReuseSeedClick(e) {
     e.preventDefault();
@@ -35,7 +42,6 @@
   }
 
   function createTooltip(image) {
-
     let result = "";
 
     if (image.comment)
@@ -63,6 +69,9 @@
 
     const steps = prompt("Apply step values:", storedSteps);
     if (steps) {
+      if (config.automaticallyClearGeneratedImages)
+        generatedImagesStore.clear();
+
       localStorage.setItem("imageBench_varyingSteps", steps);
       const image = JSON.parse(JSON.stringify(props.image))
       sendWebUIMessage({type: "GENERATE_VARYING_STEPS", image, steps});
@@ -77,6 +86,9 @@
 
     const denoising = prompt("Apply denoising values:", storedSteps);
     if (denoising) {
+      if (config.automaticallyClearGeneratedImages)
+        upscaledImageStore.clear();
+
       localStorage.setItem("imageBench_varyingDenoising", denoising);
       const image = JSON.parse(JSON.stringify(props.image))
       sendWebUIMessage({type: "UPSCALE_VARYING_DENOISING", image, denoising: denoising});
@@ -132,7 +144,7 @@
        @mouseleave="onImageMouseLeave">
     <img v-if="!image.separator"
          class="selectable-image-preview"
-         :src="createImageLink(image.imagePath)"
+         :src="createImageLink(image)"
          :title="createTooltip(image)"
          @mousedown.left="$emit('imageClick')"
          @mousedown.middle="$emit('imageOpen')">

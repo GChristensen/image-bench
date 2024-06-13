@@ -1,7 +1,7 @@
 <script setup>
 
 import {computed, onBeforeMount, onMounted, reactive, ref} from "vue";
-import SelectableImage from "@/components/SelectableImage.vue";
+import GeneratedImage from "@/components/GeneratedImage.vue";
 import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
@@ -97,7 +97,7 @@ async function onCreateClick(e) {
   if (presetName) {
     lastPreset.value = presetName;
     modelPresets.presets = modelPresets.presets || {};
-    modelPresets.presets[presetName] = getSelectedModels().map(m => m.sha256);
+    modelPresets.presets[presetName] = getSelectedModels().map(m => m.model_name);
     modelPresets.last_preset = presetName;
 
     if (!presetNames.value.some(m => m === presetName))
@@ -114,7 +114,7 @@ async function onSaveClick(e) {
 
   if (presetName) {
     modelPresets.presets = modelPresets.presets || {};
-    modelPresets.presets[presetName] = getSelectedModels().map(m => m.sha256);
+    modelPresets.presets[presetName] = getSelectedModels().map(m => m.model_name);
     modelPresets.last_preset = presetName;
     await writePresets();
   }
@@ -151,7 +151,7 @@ function activatePreset(presetName) {
   selected.value = new Set();
 
   for (let i = 0; i < models.value.length; ++i) {
-    if (modelPresets.presets[presetName].some(h => h === models.value[i].sha256)) {
+    if (modelPresets.presets[presetName].some(h => h === models.value[i].model_name)) {
       selected.value.add(i);
     }
   }
@@ -162,12 +162,12 @@ function activatePreset(presetName) {
 }
 
 function onImageClick(image) {
-  overlayImage.value = createImageLink(image.imagePath);
+  overlayImage.value = image;
   showImageOverlay.value = true;
 }
 
 function onImageOpen(image) {
-  const imageLink = createImageLink(image.imagePath);
+  const imageLink = createImageLink(image);
   window.open(imageLink, "_blank");
 }
 
@@ -248,11 +248,12 @@ function onKeydown(e) {
           <div class="model-images-wrapper" v-for="model in modelImages">
             <h3 class="model-name">{{ model.name }}</h3>
             <div class="model-images">
-              <SelectableImage v-for="image in model.images"
+              <GeneratedImage v-for="image in model.images"
                                :image="image"
+                               :displayed="true"
                                @show-params="() => onShowParams(image)"
                                @image-click="() => onImageClick(image)"
-                               @image-open="onImageOpen"></SelectableImage>
+                               @image-open="onImageOpen"></GeneratedImage>
             </div>
           </div>
         </div>

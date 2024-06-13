@@ -3,8 +3,8 @@ export function createImageData(data) {
     return {...data};
 }
 
-export function createImageLink(imagePath) {
-    return "/file=" + imagePath;
+export function createImageLink(image) {
+    return "/file=" + image?.imagePath;
 }
 
 export function createImageGenerationParams(image) {

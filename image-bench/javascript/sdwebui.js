@@ -55,14 +55,14 @@ function onGenerateMousedown(e) {
     beginGeneration();
 }
 
-function onInterruptMousedown(e) {
+async function onInterruptMousedown(e) {
     const generationState = getGenerationState();
 
     if (isProcessingActive()) {
-        finishProcessing();
+        await finishProcessing();
     }
     else if (generationState === "EXPLORE_MODELS") {
-        finishExploring();
+        await finishExploring();
     }
 
     setGenerationState("BATCH_GENERATION");

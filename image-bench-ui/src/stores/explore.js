@@ -2,19 +2,17 @@ import {reactive, ref} from 'vue'
 import {defineStore} from 'pinia'
 import {KIND_EXPLORE} from "@/consts.js";
 import {createImageData} from "@/sdwebui.js";
-import {addImage} from "@/stores/utils.js";
+import {createImageStore} from "@/stores/imageStore.js";
 
 export const useExploreImagesStore = defineStore('exploreImages', () => {
-    const kind = KIND_EXPLORE;
-    const images = ref([]);
-    const generationInProgress = ref(false);
-    const generationProgress = ref(0);
+    const _store = createImageStore(KIND_EXPLORE);
 
     function onSDEvent(e) {
         if (e.type === "SAVED_IMAGE") {
             const imageData = createImageData(e);
+            delete imageData.type;
 
-            let model = images.value.find(m => m.hash === imageData.parameters["model hash"]);
+            let model = _store.images.value.find(m => m.name === imageData.parameters["model"]);
 
             if (!model) {
                 model = reactive({
@@ -22,22 +20,18 @@ export const useExploreImagesStore = defineStore('exploreImages', () => {
                     hash: imageData.parameters["model hash"],
                     images: []
                 });
-                images.value.push(model);
+                _store.images.value.push(model);
             }
 
             model.images.push(imageData);
         }
         else if (e.type === "GENERATION_PROGRESS")
-            generationProgress.value = e.progress;
+            _store.generationProgress.value = e.progress;
         else if (e.type === "GENERATION_FINISHED") {
-            generationProgress.value = 100;
-            generationInProgress.value = false;
+            _store.generationProgress.value = 100;
+            _store.generationInProgress.value = false;
         }
     }
 
-    function clear() {
-        images.value = [];
-    }
-
-    return { kind, images, generationInProgress, generationProgress, onSDEvent, clear };
+    return { ..._store, onSDEvent };
 })

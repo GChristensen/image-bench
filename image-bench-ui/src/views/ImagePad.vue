@@ -9,25 +9,24 @@ import {useImageTrayStore} from "@/stores/imageTray.js";
 import {generationStateToKind, KIND_GENERATED, KIND_TRAY, KIND_UPSCALED} from "@/consts.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
-import {createImageLink, sendWebUIMessage} from "@/sdwebui.js";
+import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {createGenerationId} from "@/utils.js";
-import {onBeforeRouteLeave, onBeforeRouteUpdate} from "vue-router";
 
 const props = defineProps(["kind"]);
 
-const appConfigStore = useAppConfigStore();
+const config = useAppConfigStore();
 const generatedImagesStore = useGeneratedImagesStore();
 const imageTrayStore = useImageTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const imageStore = getImageStore();
 
-const config = appConfigStore.config;
 const imageStream = ref(null);
 const showImageOverlay = ref(false);
-const overlayImageLink = ref(null);
-const overlayImageIndex = ref(null);
+// const overlayImageLink = ref(null);
+// const overlayImageIndex = ref(null);
+const overlayImage = ref(null);
 const isAllSelected = computed(() => imageStream.value?.isAllSelected);
 const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
@@ -105,27 +104,26 @@ function onBatchGenerateClick(e) {
   }
 }
 
-function onImageClick(index) {
-  overlayImageIndex.value = index;
-  overlayImageLink.value = imageStream.value.getImageLink(index);
+function onImageClick(image) {
+  overlayImage.value = image;
   showImageOverlay.value = true;
 }
 
-function onImageOpen(index) {
-  overlayImageIndex.value = index;
-  const imageLink = imageStream.value.getImageLink(index);
+function onImageOpen(image) {
+  //overlayImage.value = index;
+  const imageLink = createImageLink(image)
   window.open(imageLink, "_blank");
 }
 
-function onShowParams(index) {
-  paramsOverlayText.value = imageStream.value.getImageGenerationParams(index);
+function onShowParams(image) {
+  paramsOverlayText.value = createImageGenerationParams(image);
   paramsOverlayImage.value = imageStore.images[index];
   showParamsOverlay.value = true;
 }
 
-function onImageSelectOverlay(evt, index) {
+function onImageSelectOverlay(evt, image) {
   evt.preventDefault();
-  imageStream.value.selectImage(index);
+  imageStream.value.selectImage(image);
   showImageOverlay.value = false;
 }
 
@@ -165,6 +163,10 @@ function onKeydown(e) {
   else if (e.key === "ArrowRight") {
     displayNextImage();
   }
+  else if (e.key.toUpperCase() === "U" && e.ctrlKey) {
+    e.preventDefault();
+    imageStream.value.selectAll(false);
+  }
 }
 
 function hideOverlay() {
@@ -174,22 +176,20 @@ function hideOverlay() {
 
 function displayPrevImage() {
   if (showImageOverlay.value) {
-    const prevImage = imageStream.value.getPrevImage(overlayImageIndex.value);
+    const prevImage = imageStream.value.getPrevImage(overlayImage.value);
 
     if (prevImage) {
-      overlayImageLink.value = createImageLink(prevImage.imagePath);
-      overlayImageIndex.value -= 1;
+      overlayImage.value = prevImage;
     }
   }
 }
 
 function displayNextImage() {
   if (showImageOverlay.value) {
-    const nextImage = imageStream.value.getNextImage(overlayImageIndex.value);
+    const nextImage = imageStream.value.getNextImage(overlayImage.value);
 
     if (nextImage) {
-      overlayImageLink.value = createImageLink(nextImage.imagePath);
-      overlayImageIndex.value += 1;
+      overlayImage.value = nextImage;
     }
   }
 }
@@ -211,8 +211,7 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
 
 <template>
   <ImageOverlay v-if="showImageOverlay"
-                :image="overlayImageLink"
-                :imageIndex="overlayImageIndex"
+                :image="overlayImage"
                 :is-tray="kind === KIND_TRAY"
                 @hide-overlay="showImageOverlay = false"
                 @image-select="onImageSelectOverlay"/>

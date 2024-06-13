@@ -1,7 +1,7 @@
 <script setup>
-  import SelectableImage from "@/components/SelectableImage.vue";
-  import {computed, onBeforeMount, ref} from "vue";
-  import {createImageData, createImageGenerationParams, createImageLink} from "@/sdwebui.js";
+  import GeneratedImage from "@/components/GeneratedImage.vue";
+  import {computed, ref} from "vue";
+  import {createImageGenerationParams, createImageLink} from "@/sdwebui.js";
   import {KIND_GENERATED, KIND_TRAY} from "@/consts.js";
 
   const props = defineProps(["kind", "imageStore", "showMarked"]);
@@ -9,12 +9,11 @@
 
   const isTray = ref(props.kind === KIND_TRAY);
   const images = computed(() => props.imageStore.images);
-  const selected = ref(new Set());
 
   const imageStreamElement = ref();
 
   const isAllSelected = computed(
-      () => images.value.length && (images.value.length === selected.value.size));
+      () => images.value.length && (images.value.every(i => i.selected)));
 
   let scrolledToBottom = true;
 
@@ -31,66 +30,30 @@
   }
 
   function getImageLink(index) {
-    return createImageLink(images.value[index].imagePath);
+    return createImageLink(images.value[index]);
   }
 
-  function getImageGenerationParams(index) {
-    const image = images.value[index];
-    return createImageGenerationParams(image);
+  function selectImage(image) {
+    const index = images.value.indexOf(image);
+    images.value[index].selected = true;
   }
 
-  function selectImage(index) {
-    selected.value.add(index);
-  }
-
-  function onItemSelected(isSelected, index) {
-    if (isSelected)
-      selected.value.add(index)
-    else {
-      selected.value.delete(index);
-    }
-  }
-
-  function selectAll() {
-    if (isAllSelected.value) {
-      selected.value.clear();
+  function selectAll(selectAll) {
+    if (isAllSelected.value || !selectAll) {
+      for (const image of images.value)
+        image.selected = false;
     }
     else {
-      for (let i = 0; i < images.value.length; ++i)
-        selected.value.add(i);
+      for (const image of images.value)
+        image.selected = true;
     }
-  }
-
-  function clearUnselected(e) {
-    if (!confirm("Do you really want to continue?"))
-      return;
-
-    const remainingItems = [];
-    const selectedItems = [];
-    let selectedCtr = 0;
-
-    for (let i = 0; i < images.value.length; ++i) {
-      if (selected.value.has(i)) {
-        remainingItems.push(images.value[i]);
-        selectedItems.push(selectedCtr++);
-      }
-    }
-
-    props.imageStore.images = remainingItems;
-
-    if (isTray.value) {
-      props.imageStore.persist();
-    }
-
-    selected.value = new Set(selectedItems);
   }
 
   function clear(e) {
     if (!confirm("Do you really want to continue?"))
       return;
 
-    props.imageStore.images = [];
-    selected.value = new Set();
+    props.imageStore.images.length = 0;
 
     if (isTray.value) {
       props.imageStore.persist();
@@ -107,16 +70,6 @@
       const removedImageIndex = images.value.indexOf(removedImage);
       images.value.splice(removedImageIndex, 1);
 
-      let selectedItems = Array.from(selected.value);
-      selectedItems = selectedItems.filter(i => i !== removedImageIndex);
-
-      for (let i = 0; i < selectedItems.length; ++i) {
-        if (selectedItems[i] > removedImageIndex)
-          selectedItems[i] -= 1;
-      }
-
-      selected.value = new Set(selectedItems);
-
       if (isTray.value) {
         props.imageStore.persist();
       }
@@ -127,7 +80,7 @@
     const selectedItems = [];
 
     for (let i = 0; i < images.value.length; ++i) {
-      if (selected.value.has(i)) {
+      if (images.value[i].selected) {
         const proxyItem = images.value[i];
         const image = JSON.parse(JSON.stringify(proxyItem));
         selectedItems.push(image);
@@ -137,14 +90,26 @@
     return selectedItems;
   }
 
-  function getNextImage(index) {
-    if (index < images.value.length)
-      return images.value[index + 1];
+  function getNextImage(image) {
+    let index = images.value.indexOf(image);
+
+    while (index < images.value.length) {
+      const result = images.value[++index];
+
+      if (!result.separator)
+        return result;
+    }
   }
 
-  function getPrevImage(index) {
-    if (images.value.length > 0)
-      return images.value[index - 1];
+  function getPrevImage(image) {
+    let index = images.value.indexOf(image);
+
+    while (index > 0) {
+      const result = images.value[--index];
+
+      if (!result.separator)
+        return result;
+    }
   }
 
   function onAddComment(image) {
@@ -175,29 +140,29 @@
   // onBeforeMount(() => {
   // })
 
-  defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, clearUnselected, clear, isAllSelected,
-               getSelectedImages, getImageGenerationParams, getNextImage, getPrevImage});
+  defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, clear, isAllSelected,
+               getSelectedImages, getNextImage, getPrevImage});
 </script>
 
 <template>
   <div class="image-stream-container">
     <div class="image-stream scrollable" ref="imageStreamElement">
-      <SelectableImage v-for="(image, index) in images"
+      <GeneratedImage v-for="(image, index) in images"
                        :displayed="shouldShowImage(image)"
                        :image="image"
                        :selectable="isTray"
                        :upscalable="isTray || kind === KIND_GENERATED"
-                       :selected="selected.has(index)"
+                       :selected="image.selected"
                        :is-tray="isTray"
-                       @image-click="$emit('imageClick', index)"
-                       @image-open="$emit('imageOpen', index)"
-                       @show-params="$emit('showParams', index)"
-                       @select="isSelected => onItemSelected(isSelected, index)"
+                       @image-click="$emit('imageClick', image)"
+                       @image-open="$emit('imageOpen', image)"
+                       @show-params="$emit('showParams', image)"
+                       @select="image.selected = true"
                        @upscale-image="(i, p) => $emit('upscaleImage', i, p)"
                        @add-comment="onAddComment(image)"
                        @set-marking="onSetMarking(image)"
                        @delete-image="onDeleteImage"
-      ></SelectableImage>
+      ></GeneratedImage>
     </div>
   </div>
 </template>

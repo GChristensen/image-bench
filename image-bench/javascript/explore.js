@@ -1,11 +1,12 @@
 import {sleep} from "./utils.js";
 import {setGenerationState} from "./state.js";
-import {setDropdownValue, setInputValue} from "./utils_input.js";
+import {getInputValue, setDropdownValue, setInputValue} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
 
 let totalImages = 0;
 let exploreQueue = [];
 let exploreModel;
+let modelBeforeExplore;
 
 export async function exploreModels(options) {
     if (!options.models.length)
@@ -28,6 +29,7 @@ export async function exploreModels(options) {
 
     totalImages = exploreQueue.length;
 
+    modelBeforeExplore = getInputValue("#setting_sd_model_checkpoint input");
     return exploreImage(exploreQueue.shift());
 }
 
@@ -44,8 +46,8 @@ async function exploreImage(model) {
     if (!model)
         return;
 
-    if (exploreModel.hash !== model.hash) {
-        await setActiveModel(model.hash);
+    if (exploreModel.title !== model.title) {
+        await setActiveModel(model.title);
         exploreModel = model;
     }
 
@@ -64,12 +66,17 @@ export function exploreNextImage() {
     if (model)
         return exploreImage(model);
     else
-        sendPopupMessage({type: "GENERATION_FINISHED"});
+        return finishExploring();
 }
 
-export function finishExploring() {
+export async function finishExploring() {
     if (exploreQueue.length)
         exploreQueue = [];
+
+    if (modelBeforeExplore) {
+        await setDropdownValue("#setting_sd_model_checkpoint input", modelBeforeExplore);
+        modelBeforeExplore = null;
+    }
 
     sendPopupMessage({type: "GENERATION_FINISHED"});
 }

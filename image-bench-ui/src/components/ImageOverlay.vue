@@ -1,6 +1,11 @@
 <script setup>
-  defineProps(["image", "imageIndex", "isTray"]);
+  import {computed} from "vue";
+  import {createImageLink} from "@/sdwebui.js";
+
+  const props = defineProps(["image", "isTray"]);
   const emit = defineEmits(["hideOverlay", "imageSelect"]);
+
+  const imageLink = computed(() => createImageLink(props.image));
 
   function onImageMouseDown(e) {
     if (e.button === 1)
@@ -15,10 +20,10 @@
     <div class="image-overlay" @click="$emit('hideOverlay')">
     </div>
     <div class="overlay-image-container">
-      <img class="overlay-image" :src="image" @mousedown="onImageMouseDown">
+      <img class="overlay-image" :src="imageLink" @mousedown="onImageMouseDown">
       <div class="action-link-container">
-        <a v-if="isTray && typeof imageIndex === 'number'" class="select-link tool-item" href="#"
-           @click="$emit('imageSelect', $event, imageIndex)">Select image</a>
+        <a v-if="isTray" class="select-link tool-item" href="#"
+           @click="$emit('imageSelect', $event, props.image)">Select image</a>
       </div>
     </div>
   </div>

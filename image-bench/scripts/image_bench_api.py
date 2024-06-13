@@ -25,7 +25,8 @@ import modules.script_callbacks as script_callbacks
 from starlette.responses import JSONResponse
 
 DEFAULT_CONFIG = """{
-  "repositionConfigPresetsDropdown": false
+  "repositionConfigPresetsDropdown": false,
+  "automaticallyClearGeneratedImages": true
 }
 """
 
@@ -35,7 +36,11 @@ class ImageBenchApi():
     BASE_PATH = "/image-bench"
 
     def __init__(self):
+        webui_config = self.get_webui_config()
+
+        self.websocket_queue = asyncio.Queue()
         self.config_presets_dropdown = None
+        self.outputs_dir = webui_config.get("outdir_samples") or os.path.join(self.get_webui_root_dir(), "outputs")
 
         config_path = self.get_file_path("../config.json")
         if not os.path.exists(config_path):
@@ -45,12 +50,23 @@ class ImageBenchApi():
     def get_path(self, path):
         return f"{self.BASE_PATH}{path}"
 
-    def add_api_route(self, path: str, endpoint, **kwargs):
-        return self.app.add_api_route(self.get_path(path), endpoint, **kwargs)
+    def get_webui_root_dir(self):
+        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+    def read_json_file(self, file_path):
+        try:
+            with open(file_path, 'r', encoding="utf-8") as file:
+                data = json.load(file)
+            return data
+        except FileNotFoundError:
+            print(f"Error: The file at {file_path} was not found.")
+            return None
+        except json.JSONDecodeError:
+            print(f"Error: Failed to decode JSON from the file at {file_path}.")
+            return None
 
     def start(self, _: gr.Blocks, app: FastAPI):
         self.app = app
-        self.websocket_queue = asyncio.Queue()
         self.add_api_route("/window", self.get_window, methods=["GET"])
         self.add_api_route("/config.json", self.get_config, methods=["GET"])
         self.add_api_route("/config.json", self.write_config, methods=["POST"])
@@ -64,10 +80,17 @@ class ImageBenchApi():
         self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
 
+    def add_api_route(self, path: str, endpoint, **kwargs):
+        return self.app.add_api_route(self.get_path(path), endpoint, **kwargs)
+
     def get_config(self):
         config_path = self.get_file_path("../config.json")
 
         return FileResponse(config_path, media_type="application/json")
+
+    def get_webui_config(self):
+        config_path = os.path.join(self.get_webui_root_dir(), "config.json")
+        return self.read_json_file(config_path) or {}
 
     async def write_config(self, request: Request):
         content = await request.body()
@@ -78,19 +101,20 @@ class ImageBenchApi():
 
         return Response("", media_type="application/json")
 
-
     def get_window(self):
         index_html_path = self.get_file_path("index.html")
         return FileResponse(index_html_path)
 
-    def get_webui_root_dir(self):
-        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
     def on_image_saved(self, image_data):
         filename = image_data.filename
+        # print("\n", image_data.filename, "\n")
+        # print("\n", image_data.pnginfo, "\n")
+        # print("\n", image_data.p.__dict__, "\n")
 
-        if "txt2img-images" in filename or "img2img-images" in filename:
-            filename = self.get_webui_root_dir() + "/" + filename
+        if "grid" not in filename:
+            if not (filename.startswith("/") or ":" in filename):
+                filename = self.get_webui_root_dir() + "/" + filename
+
             filename = filename.replace("\\", "/")
 
             msg = {
@@ -201,7 +225,7 @@ class ImageBenchApi():
             self.config_presets_dropdown = component
 
     def clear_outputs_dir(self):
-        folder = os.path.join(self.get_webui_root_dir(), "outputs")
+        folder = self.outputs_dir
 
         for filename in os.listdir(folder):
             file_path = os.path.join(folder, filename)
@@ -216,8 +240,7 @@ class ImageBenchApi():
     async def save_controlnet_images(self, request: Request):
         content = await request.body()
         options = json.loads(content)
-        output_folder = os.path.join(self.get_webui_root_dir(), "outputs", "image-bench", options["generation_id"],
-                                     "controlnet")
+        output_folder = os.path.join(self.outputs_dir, "image-bench", options["generation_id"], "controlnet")
 
         os.makedirs(output_folder, exist_ok=True)
 
@@ -226,7 +249,7 @@ class ImageBenchApi():
                 shutil.copy(image, output_folder)
 
     async def get_controlnet_images(self, id: str):
-        image_folder = os.path.join(self.get_webui_root_dir(), "outputs", "image-bench", id, "controlnet")
+        image_folder = os.path.join(self.outputs_dir, "image-bench", id, "controlnet")
 
         result = []
         if os.path.exists(image_folder):
