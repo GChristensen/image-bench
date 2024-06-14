@@ -16,6 +16,10 @@ export function showPopup() {
     return created;
 }
 
+export function closePopup() {
+    popup?.close();
+}
+
 function createPopup() {
     const windowFeatures = 'width=800,height=600,left=100,top=100';
     popup = window.open("/image-bench/window", '_blank', windowFeatures);

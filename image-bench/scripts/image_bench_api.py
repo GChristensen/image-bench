@@ -30,6 +30,8 @@ DEFAULT_CONFIG = """{
 }
 """
 
+TERMINATE_WEBSOCKET = object()
+
 
 class ImageBenchApi():
 
@@ -79,6 +81,7 @@ class ImageBenchApi():
         self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
         self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
+        self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
 
     def add_api_route(self, path: str, endpoint, **kwargs):
         return self.app.add_api_route(self.get_path(path), endpoint, **kwargs)
@@ -173,12 +176,26 @@ class ImageBenchApi():
     async def handle_websocket(self, websocket, *args):
         await websocket.accept()
 
+        while not self.websocket_queue.empty():
+            self.websocket_queue.get_nowait()
+
         while True:
             try:
                 msg = await self.websocket_queue.get()
+
+                if msg == TERMINATE_WEBSOCKET:
+                    break
+
                 await websocket.send_text(json.dumps(msg))
+            except Exception as e:
+                print(e)
+                break
             finally:
                 self.websocket_queue.task_done()
+
+    def close_websocket(self):
+        self.websocket_queue.put_nowait(TERMINATE_WEBSOCKET)
+        return Response("")
 
     def get_explore_presets(self):
         return self.serve_store_file("explore_presets.json")

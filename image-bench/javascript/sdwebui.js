@@ -3,10 +3,15 @@ import {finishProcessing, isProcessingActive} from "./processing.js";
 import {finishExploring} from "./explore.js";
 import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
-import {sendPopupMessage} from "./popup.js";
+import {closePopup, sendPopupMessage} from "./popup.js";
 import {sleep} from "./utils.js";
 import {beginGeneration, finishGeneration} from "./generation.js";
 
+
+addEventListener("pagehide", () => {
+    closePopup();
+    fetch("/image-bench/close_websocket", {keepalive: true});
+});
 
 export function hookIntoSDWebUI() {
     const generateButton = document.getElementById("txt2img_generate");
