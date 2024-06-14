@@ -4,7 +4,7 @@ import math
 import os
 import shutil
 
-from fastapi import FastAPI, Body, HTTPException, Request, Response
+from fastapi import FastAPI, Body, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
 
@@ -23,6 +23,9 @@ import gradio as gr
 import modules.shared as shared
 import modules.script_callbacks as script_callbacks
 from starlette.responses import JSONResponse
+from PIL import Image
+from PIL.PngImagePlugin import PngInfo
+
 
 DEFAULT_CONFIG = """{
   "repositionConfigPresetsDropdown": false,
@@ -80,6 +83,7 @@ class ImageBenchApi():
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
         self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
         self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
+        self.add_api_route("/image_tray_upload", self.image_tray_upload, methods=["POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
 
@@ -155,6 +159,20 @@ class ImageBenchApi():
 
             self.extract_params(lines[-1], result_dict)
         return result_dict
+
+    def prompts_from_pnginfo(self, pnginfo):
+        lines = pnginfo.split("\n")
+        lines = lines[:-1]
+        neg_start = len(lines)
+
+        for i, line in enumerate(lines):
+            if line.startswith("Negative prompt: "):
+                neg_start = i
+
+        p = "\n".join(lines[:neg_start])
+        n = "\n".join(lines[neg_start:]).replace("Negative prompt: ", "")
+
+        return p, n
 
     def extract_params(self, line, result_dict):
         main_params = line.split(", ")
@@ -257,7 +275,7 @@ class ImageBenchApi():
     async def save_controlnet_images(self, request: Request):
         content = await request.body()
         options = json.loads(content)
-        output_folder = os.path.join(self.outputs_dir, "image-bench", options["generation_id"], "controlnet")
+        output_folder = os.path.join(self.outputs_dir, "image-bench", "controlnet", options["generation_id"])
 
         os.makedirs(output_folder, exist_ok=True)
 
@@ -266,7 +284,7 @@ class ImageBenchApi():
                 shutil.copy(image, output_folder)
 
     async def get_controlnet_images(self, id: str):
-        image_folder = os.path.join(self.outputs_dir, "image-bench", id, "controlnet")
+        image_folder = os.path.join(self.outputs_dir, "image-bench", "controlnet", id)
 
         result = []
         if os.path.exists(image_folder):
@@ -277,6 +295,26 @@ class ImageBenchApi():
         response = jsonable_encoder(result)
         return JSONResponse(response)
 
+    async def image_tray_upload(self, file: UploadFile):
+        imported_file = os.path.join(self.outputs_dir, "image-bench", "imported")
+
+        with open(imported_file, "wb") as f:
+            f.write(await file.read())
+
+        image = Image.open(imported_file)
+        result = {"error": "No PNGINFO text found."}
+
+        if hasattr(image, "text") and image.text:
+            parameters = image.text.get("parameters")
+
+            if parameters:
+                p, n = self.prompts_from_pnginfo(parameters)
+                result = {
+                    "imagePath": imported_file,
+                    "parameters": self.pnginfo_to_dict(p, n, image.text)
+                }
+
+        return JSONResponse(content=result)
 
 
 try:

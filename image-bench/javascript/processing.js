@@ -2,7 +2,7 @@ import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
 import {sleep} from "./utils.js";
-import {setConfigPreset} from "./sdwebui.js";
+import {getGenerationProgress, setConfigPreset} from "./sdwebui.js";
 
 let totalImages = 0;
 let processingQueue = [];
@@ -11,9 +11,10 @@ let setDenoising;
 let seedsBeforeProcessing;
 let stepsBeforeProcessing;
 let denoisingBeforeProcessing
+let progressMonitoring;
 
 export function messageSetProcessingParams(msg) {
-    if (msg.type === "SAVED_IMAGE"  && getGenerationState() === "BATCH_GENERATION" && setSteps) {
+    if (msg.type === "SAVED_IMAGE"  && getGenerationState() === "SEQUENTIAL_GENERATION" && setSteps) {
         msg.setSteps = true;
     }
 }
@@ -21,11 +22,11 @@ export function messageSetProcessingParams(msg) {
 export function isProcessingActive(msg) {
     const generationState = getGenerationState();
     return generationState === "HIRES_FIX"
-        || generationState === "BATCH_GENERATION" && setSteps;
+        || generationState === "SEQUENTIAL_GENERATION";
 }
 
 export async function processImages(options) {
-    setGenerationState(options?.setSteps ? "BATCH_GENERATION" : "HIRES_FIX");
+    setGenerationState(options?.setSteps ? "SEQUENTIAL_GENERATION" : "HIRES_FIX");
     sendPopupMessage({type: "BEGIN_PROCESSING"});
     totalImages = options.images.length;
     processingQueue = options.images;
@@ -47,6 +48,9 @@ export async function processImages(options) {
         toggleHiresFix(true);
 
     setInputValue("#txt2img_batch_count input[type='number']", 1);
+
+    if (getGenerationState() === "HIRES_FIX" && totalImages === 1)
+        monitorProgress();
 
     return processImage(processingQueue.shift());
 }
@@ -101,6 +105,7 @@ export function finishProcessing() {
     denoisingBeforeProcessing = undefined;
     setDenoising = false;
     setSteps = false;
+    progressMonitoring = false;
 
     sendPopupMessage({type: "GENERATION_FINISHED"});
 }
@@ -148,4 +153,15 @@ export function upscaleVaryingDenoising(options) {
     options.setDenoising = true;
 
     return processImages(options);
+}
+
+async function monitorProgress() {
+    progressMonitoring = true;
+
+    while (progressMonitoring) {
+        const progress = getGenerationProgress();
+
+        sendPopupMessage({type: "GENERATION_PROGRESS", progress});
+        await sleep(2000);
+    }
 }

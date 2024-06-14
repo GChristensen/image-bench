@@ -27,9 +27,14 @@ export function createImageStore(storeKind) {
         }
     }
 
+    function startingGeneration() {
+        generationProgress.value = 0;
+        generationInProgress.value = true;
+    }
+
     function clear() {
         images.value = [];
     }
 
-    return { kind, images, generationInProgress, generationProgress, init, clear, onSDEvent };
+    return { kind, images, generationInProgress, generationProgress, init, clear, startingGeneration, onSDEvent };
 }

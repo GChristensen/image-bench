@@ -34,6 +34,7 @@ const paramsOverlayImage = ref(null);
 const lastConfigPreset = ref("");
 const batchGenerate = ref();
 const isShowingMarked = ref(false);
+const openFileInput = ref()
 
 function getImageStore() {
   switch (props.kind) {
@@ -68,8 +69,8 @@ function onUpscaleSelectedClick(e) {
       if (config.automaticallyClearGeneratedImages)
         upscaledImageStore.clear();
 
-      upscaledImageStore.generationProgress = 0;
-      upscaledImageStore.generationInProgress = true;
+      upscaledImageStore.startingGeneration();
+
       sendWebUIMessage({type: "UPSCALE_IMAGES", images: selectedImages, preset: imageStore.applyPreset});
     }
   }
@@ -82,6 +83,8 @@ function onUpscaleImage(imageProxy, usePreset) {
   if (usePreset) {
     options.preset = imageTrayStore.applyPreset;
   }
+
+  upscaledImageStore.startingGeneration();
 
   sendWebUIMessage(options);
 }
@@ -96,8 +99,7 @@ function onBatchGenerateClick(e) {
     if (config.automaticallyClearGeneratedImages)
       generatedImagesStore.clear();
 
-    imageStore.generationProgress = 0;
-    imageStore.generationInProgress = true;
+    generatedImagesStore.startingGeneration();
 
     const generationId = createGenerationId();
     sendWebUIMessage({type: "BATCH_GENERATE", preset: imageStore.applyPreset, generationId});
@@ -117,7 +119,7 @@ function onImageOpen(image) {
 
 function onShowParams(image) {
   paramsOverlayText.value = createImageGenerationParams(image);
-  paramsOverlayImage.value = imageStore.images[index];
+  paramsOverlayImage.value = image;
   showParamsOverlay.value = true;
 }
 
@@ -205,6 +207,42 @@ function onShowMarkedClick(e) {
   }
 }
 
+function onOpenClick(e) {
+  e.preventDefault();
+  openFileInput.value.click();
+}
+
+async function onOpenFileInputChange(e) {
+  const file = e.target.files[0];
+
+  if (!file) {
+    alert('Please select a file.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch("/image-bench/image_tray_upload", {
+    method: "post",
+    body: formData
+  });
+
+  if (response.ok) {
+    const result = await response.json();
+
+    if (result.error) {
+      alert(result.error);
+    }
+    else {
+      imageStream.value.beforeAddImage();
+      imageStore.images.push(result);
+      imageStream.value.afterAddImage();
+      await imageStore.persist();
+    }
+  }
+}
+
 defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
 
 </script>
@@ -222,6 +260,8 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
   <div class="view-container">
     <div class="toolbar">
       <a href="#" class="tool-item" id="clear" @click="onClearClick">Clear</a>
+      <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="open" @click="onOpenClick">Open</a>
+      <input type="file" class="open-file-input" ref="openFileInput" @change="onOpenFileInputChange">
       <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="select-all" @click="onSelectAllClick">
         {{ isAllSelected? "Unselect all": "Select all" }}
       </a>
@@ -273,5 +313,13 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
 
   .generation-progress progress {
     flex-grow: 1;
+  }
+
+  .open-file-input {
+    display: none;
+  }
+
+  .tool-item {
+    white-space: nowrap;
   }
 </style>

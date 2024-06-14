@@ -21,7 +21,7 @@ export function closePopup() {
 }
 
 function createPopup() {
-    const windowFeatures = 'width=800,height=600,left=100,top=100';
+    const windowFeatures = 'width=1024,height=720,left=100,top=100';
     popup = window.open("/image-bench/window", '_blank', windowFeatures);
     popup.getGenerationState = getGenerationState;
     popup.addEventListener("unload", () => {

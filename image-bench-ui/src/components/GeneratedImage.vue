@@ -72,6 +72,8 @@
       if (config.automaticallyClearGeneratedImages)
         generatedImagesStore.clear();
 
+      generatedImagesStore.startingGeneration();
+
       localStorage.setItem("imageBench_varyingSteps", steps);
       const image = JSON.parse(JSON.stringify(props.image))
       sendWebUIMessage({type: "GENERATE_VARYING_STEPS", image, steps});
@@ -88,6 +90,8 @@
     if (denoising) {
       if (config.automaticallyClearGeneratedImages)
         upscaledImageStore.clear();
+
+      upscaledImageStore.startingGeneration();
 
       localStorage.setItem("imageBench_varyingDenoising", denoising);
       const image = JSON.parse(JSON.stringify(props.image))

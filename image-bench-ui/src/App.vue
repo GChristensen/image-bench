@@ -64,7 +64,7 @@ async function onSDEvent(e) {
 
 async function openCurrentModeTab(e, state) {
   if (e.type === "BEGIN_PROCESSING") {
-    if (state === "BATCH_GENERATION") {
+    if (state === "BATCH_GENERATION" || state === "SEQUENTIAL_GENERATION") {
       if (route.fullPath !== "/generated-images") {
         await router.push("/generated-images");
       }

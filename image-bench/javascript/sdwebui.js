@@ -197,8 +197,8 @@ export async function setImageParams(options) {
 
 export function getGenerationProgress() {
     const progressBar = document.querySelector(".progressDiv .progress");
-    const progressBarText = progressBar.textContent;
-    const matches = progressBarText.match(/(\d+)%/);
+    const progressBarText = progressBar?.textContent;
+    const matches = progressBarText?.match(/(\d+)%/);
 
     if (matches)
         return parseInt(matches[1]);
