@@ -15,6 +15,9 @@
   const isAllSelected = computed(
       () => images.value.length && (images.value.every(i => i.selected)));
 
+  const isNoneSelected = computed(
+      () => images.value.length && (!images.value.some(i => i.selected)));
+
   let scrolledToBottom = true;
 
   function beforeAddImage() {
@@ -53,7 +56,12 @@
     if (!confirm("Do you really want to continue?"))
       return;
 
-    props.imageStore.images.length = 0;
+    if (isNoneSelected.value) {
+      props.imageStore.images.length = 0;
+    }
+    else {
+      props.imageStore.images = props.imageStore.images.filter(i => !i.selected);
+    }
 
     if (isTray.value) {
       props.imageStore.persist();

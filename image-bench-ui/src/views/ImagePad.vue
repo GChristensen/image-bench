@@ -84,6 +84,9 @@ function onUpscaleImage(imageProxy, usePreset) {
     options.preset = imageTrayStore.applyPreset;
   }
 
+  if (config.automaticallyClearGeneratedImages)
+    upscaledImageStore.clear();
+
   upscaledImageStore.startingGeneration();
 
   sendWebUIMessage(options);
@@ -276,7 +279,6 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
       <a v-if="kind === KIND_UPSCALED && upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected"
          @click="onUpscaleSelectedClick"
         >Stop</a>
-      <!--a href="#" class="tool-item" id="upscale-selected" v-if="isTray" @click="onUpscaleSelectedClick">Clear storage</a-->
       <div class="toolbar-spacer"></div>
       <div v-if="imageStore.generationInProgress" class="generation-progress">Progress:&nbsp;
         <progress max="100" :value="imageStore.generationProgress || 0"></progress>

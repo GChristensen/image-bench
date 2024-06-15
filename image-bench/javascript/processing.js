@@ -44,13 +44,12 @@ export async function processImages(options) {
         await sleep(500);
     }
 
-    if (!setSteps)
+    if (getGenerationState() !== "SEQUENTIAL_GENERATION")
         toggleHiresFix(true);
 
     setInputValue("#txt2img_batch_count input[type='number']", 1);
 
-    if (getGenerationState() === "HIRES_FIX" && totalImages === 1)
-        monitorProgress();
+    monitorProgress();
 
     return processImage(processingQueue.shift());
 }
@@ -87,7 +86,7 @@ export function processNextImage() {
     if (nextImage)
         return processImage(nextImage);
     else {
-        if (!setSteps)
+        if (getGenerationState() !== "SEQUENTIAL_GENERATION")
             toggleHiresFix();
 
         finishProcessing();
@@ -158,10 +157,17 @@ export function upscaleVaryingDenoising(options) {
 async function monitorProgress() {
     progressMonitoring = true;
 
+    const chunk = 1 / totalImages;
+
     while (progressMonitoring) {
-        const progress = getGenerationProgress();
+        await sleep(1000);
+
+        let progress = (totalImages - processingQueue.length - 1) * chunk * 100;
+        const currentProgress = getGenerationProgress();
+
+        if (!isNaN(currentProgress) && currentProgress < 100)
+            progress += currentProgress * chunk;
 
         sendPopupMessage({type: "GENERATION_PROGRESS", progress});
-        await sleep(2000);
     }
 }

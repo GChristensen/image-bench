@@ -100,8 +100,6 @@ function onBackendMessage(e) {
 
         sendPopupMessage(msg);
 
-        revertVaryingParams();
-
         if (msg.type === "SAVED_IMAGE") {
             if (isProcessingActive(msg)) {
                 processNextImage();

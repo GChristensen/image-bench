@@ -144,6 +144,7 @@
 <template>
 <div v-if="displayed" class="selectable-image">
   <div class="image-wrapper"
+       :class="{upscaled: image.parameters['hires upscale'] && isTray}"
        @mouseenter="onImageMouseEnter"
        @mouseleave="onImageMouseLeave">
     <img v-if="!image.separator"
@@ -244,6 +245,10 @@
   position: relative;
 }
 
+.upscaled {
+  border-right: 3px solid orange;
+}
+
 .markings {
   position: absolute;
   bottom: 5px;
@@ -268,4 +273,5 @@
 
 .image-separator {
 }
+
 </style>

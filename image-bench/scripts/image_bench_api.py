@@ -137,28 +137,10 @@ class ImageBenchApi():
         parts = pnginfo["parameters"].split("\n")
         result_dict = {
             "prompt": prompt,
-            "negative prompt": negative_prompt
+            "negative prompt": negative_prompt,
         }
 
-        lines = parts[-1].split('"') # controlnet subparams, etc.
-        self.extract_params(lines[0], result_dict)
-
-        if len(lines) > 1:
-            key = list(result_dict)[-1]
-            result_dict[key] = {}
-            self.extract_params(lines[1], result_dict[key])
-
-            subparams = lines[2:-1]
-            pairs = [subparams[i:i + 2] for i in range(0, len(subparams), 2)]
-
-            for pair in pairs:
-                if len(pair) == 2:
-                    key = pair[0].strip().lower().replace(":", "").replace(", ", "")
-                    result_dict[key] = {}
-                    self.extract_params(pair[1].strip(), result_dict[key])
-
-            self.extract_params(lines[-1], result_dict)
-        return result_dict
+        return result_dict | parse_pnginfo(parts[-1])
 
     def prompts_from_pnginfo(self, pnginfo):
         lines = pnginfo.split("\n")
@@ -173,14 +155,6 @@ class ImageBenchApi():
         n = "\n".join(lines[neg_start:]).replace("Negative prompt: ", "")
 
         return p, n
-
-    def extract_params(self, line, result_dict):
-        main_params = line.split(", ")
-
-        for param in main_params:
-            if ':' in param:
-                key, value = param.split(':', 1)
-                result_dict[key.strip().lower()] = value.strip()
 
     def get_file_path(self, file_name, upper=False):
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -324,3 +298,34 @@ try:
     script_callbacks.on_before_component(api.on_before_config_presets)
 except Exception as e:
     print(e)
+
+
+def parse_pnginfo(input_string):
+    import re
+
+    def tokenize(string):
+        token_pattern = re.compile(r''':(?=(?:[^"]|"[^"]*")*$)|,(?=(?:[^"]|"[^"]*")*$)''')
+        return token_pattern.split(string)
+
+    def parse_tokens(tokens):
+        result = {}
+        i = 0
+        while i < len(tokens):
+            key_token = tokens[i].strip()
+            if i + 1 < len(tokens):
+                value_token = tokens[i+1].strip()
+
+                if value_token.startswith('"') and value_token.endswith('"'):
+                    nested_string = value_token[1:-1]
+                    result[key_token.lower()] = parse_pnginfo(nested_string)
+                    i += 2
+                else:
+                    result[key_token.lower()] = value_token
+                    i += 2
+            else:
+                i += 1
+        return result
+
+    tokens = tokenize(input_string)
+    parsed_result = parse_tokens(tokens)
+    return parsed_result
