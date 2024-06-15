@@ -14,8 +14,11 @@ addEventListener("pagehide", () => {
 });
 
 export function hookIntoSDWebUI() {
-    const generateButton = document.getElementById("txt2img_generate");
-    generateButton.addEventListener("mousedown", onGenerateMousedown);
+    const txt2ImgGenerateButton = document.getElementById("txt2img_generate");
+    txt2ImgGenerateButton.addEventListener("mousedown", onGenerateMousedown);
+
+    const img2ImgGenerateButton = document.getElementById("img2img_generate");
+    img2ImgGenerateButton.addEventListener("mousedown", onGenerateMousedown);
 
     const interruptButton = document.getElementById("txt2img_interrupt");
     interruptButton.addEventListener("mousedown", onInterruptMousedown);
@@ -57,7 +60,7 @@ export function initializePopupPrompts() {
 
 function onGenerateMousedown(e) {
     checkWebSocketConnection();
-    beginGeneration();
+    beginGeneration({img2img: e.target.id.includes("img2img")});
 }
 
 async function onInterruptMousedown(e) {

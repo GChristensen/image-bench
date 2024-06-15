@@ -1,9 +1,10 @@
 import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
-import {sleep} from "./utils.js";
+import {createGenerationId, sleep} from "./utils.js";
 import {getGenerationProgress, setConfigPreset} from "./sdwebui.js";
 
+let generationId;
 let totalImages = 0;
 let processingQueue = [];
 let setSteps;
@@ -17,6 +18,9 @@ export function messageSetProcessingParams(msg) {
     if (msg.type === "SAVED_IMAGE"  && getGenerationState() === "SEQUENTIAL_GENERATION" && setSteps) {
         msg.setSteps = true;
     }
+
+    if (generationId)
+        msg.generationId = generationId;
 }
 
 export function isProcessingActive(msg) {
@@ -28,6 +32,7 @@ export function isProcessingActive(msg) {
 export async function processImages(options) {
     setGenerationState(options?.setSteps ? "SEQUENTIAL_GENERATION" : "HIRES_FIX");
     sendPopupMessage({type: "BEGIN_PROCESSING"});
+    generationId = createGenerationId();
     totalImages = options.images.length;
     processingQueue = options.images;
     setDenoising = options.setDenoising;
@@ -99,6 +104,7 @@ export function finishProcessing() {
 
     revertVaryingParams();
 
+    generationId = undefined;
     seedsBeforeProcessing = undefined;
     stepsBeforeProcessing = undefined;
     denoisingBeforeProcessing = undefined;

@@ -6,5 +6,5 @@ import {createImageStore} from "@/stores/imageStore.js";
 export const useGeneratedImagesStore = defineStore('generatedImages', () => {
     const applyPreset = ref();
 
-    return { ...createImageStore(KIND_GENERATED), applyPreset};
+    return {...createImageStore(KIND_GENERATED), applyPreset};
 })

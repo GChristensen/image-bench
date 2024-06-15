@@ -1,6 +1,6 @@
 <script setup>
   import GeneratedImage from "@/components/GeneratedImage.vue";
-  import {computed, ref} from "vue";
+  import {computed, getCurrentInstance, ref} from "vue";
   import {createImageGenerationParams, createImageLink} from "@/sdwebui.js";
   import {KIND_GENERATED, KIND_TRAY} from "@/consts.js";
 
@@ -28,7 +28,7 @@
   function afterAddImage() {
     if (scrolledToBottom) {
       const is = imageStreamElement.value;
-      setTimeout(() => is.scrollTop = is.scrollHeight, 500);
+      setTimeout(() => is.scrollTop = is.scrollHeight, 333);
     }
   }
 
@@ -41,7 +41,7 @@
     images.value[index].selected = true;
   }
 
-  function selectAll(selectAll) {
+  function selectAll(selectAll=true) {
     if (isAllSelected.value || !selectAll) {
       for (const image of images.value)
         image.selected = false;
@@ -99,10 +99,12 @@
   }
 
   function getNextImage(image) {
-    let index = images.value.indexOf(image);
+    const imageView = props.showMarked? images.value.filter(i => i.marking): images.value;
 
-    while (index < images.value.length) {
-      const result = images.value[++index];
+    let index = imageView.indexOf(image);
+
+    while (index < imageView.length) {
+      const result = imageView[++index];
 
       if (!result.separator)
         return result;
@@ -110,10 +112,12 @@
   }
 
   function getPrevImage(image) {
-    let index = images.value.indexOf(image);
+    const imageView = props.showMarked? images.value.filter(i => i.marking): images.value;
+
+    let index = imageView.indexOf(image);
 
     while (index > 0) {
-      const result = images.value[--index];
+      const result = imageView[--index];
 
       if (!result.separator)
         return result;

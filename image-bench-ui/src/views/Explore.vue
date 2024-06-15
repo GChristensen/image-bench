@@ -187,7 +187,7 @@ function onBeforeSDEvent(e) {
 function onAfterSDEvent(e) {
   if (e.type === "SAVED_IMAGE" && scrolledToBottom) {
     const gi = generatedImagesElement.value;
-    setTimeout(() => gi.scrollTop = gi.scrollHeight, 500);
+    setTimeout(() => gi.scrollTop = gi.scrollHeight, 333);
   }
 }
 

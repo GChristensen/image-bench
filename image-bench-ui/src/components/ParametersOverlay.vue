@@ -6,12 +6,6 @@ import {onBeforeMount, ref} from "vue";
 
   const controlnetImages = ref([]);
 
-  function onCloseClick(e) {
-    e.preventDefault();
-
-    emit('hideOverlay');
-  }
-
   onBeforeMount(async () => {
     const response = await fetch(`/image-bench/get_controlnet_images?id=${props.image.generationId}`);
 
@@ -31,6 +25,7 @@ import {onBeforeMount, ref} from "vue";
   <div class="text-overlay-container" >
     <div class="text-overlay" @click="$emit('hideOverlay')">
     </div>
+    <div class="close-button" @click="$emit('hideOverlay')">✖</div>
     <div class="overlay-text-container">
       <h3 class="parameters-title">Generation parameters</h3>
       <textarea class="overlay-text" autofocus>{{ text }}</textarea>
@@ -41,10 +36,6 @@ import {onBeforeMount, ref} from "vue";
             <img class="controlnet-image" :src="imageURL">
           </a>
         </div>
-      </div>
-      <div class="action-link-container">
-        <a class="close-link tool-item" href="#"
-           @click="onCloseClick">Close</a>
       </div>
     </div>
   </div>
@@ -69,6 +60,14 @@ import {onBeforeMount, ref} from "vue";
   opacity: 70%;
   background-color: #444;
   z-index: 1001;
+  cursor: pointer;
+}
+
+.close-button {
+  position: fixed;
+  top: 10vh;
+  right: calc(10vw - 30px);
+  z-index: 1003;
   cursor: pointer;
 }
 

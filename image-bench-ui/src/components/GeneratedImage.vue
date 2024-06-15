@@ -7,6 +7,7 @@
   import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
   import {useUpscaledImagesStore} from "@/stores/upscaled.js";
   import {useConfigPresetsStore} from "@/stores/configPresets.js";
+  import {flashTrayTab} from "@/components/utils.js";
 
   const emit = defineEmits(["setMarking"])
   const props = defineProps(["displayed", "image", "selectable", "upscalable", "selected", "isTray"]);
@@ -37,8 +38,7 @@
 
     imageTrayStore.addImage(props.image);
 
-    const trayTabElement = document.getElementById("image-tray-tab");
-    animateColors(trayTabElement, 0.7);
+    flashTrayTab();
   }
 
   function createTooltip(image) {
@@ -139,15 +139,24 @@
     delete props.image.marking;
     emit("setMarking");
   }
+
+  function getTagStyle(image) {
+    if (image.tagColor) {
+      console.log([image.tagColor, image])
+      return {
+        'border-right': `4px solid ${image.tagColor}`
+      };
+    }
+  }
 </script>
 
 <template>
 <div v-if="displayed" class="selectable-image">
   <div class="image-wrapper"
-       :class="{upscaled: image.parameters['hires upscale'] && isTray}"
        @mouseenter="onImageMouseEnter"
        @mouseleave="onImageMouseLeave">
     <img v-if="!image.separator"
+         :style="getTagStyle(image)"
          class="selectable-image-preview"
          :src="createImageLink(image)"
          :title="createTooltip(image)"
@@ -171,26 +180,27 @@
       --><label v-if="selectable" class="select-label"><input class="selectable-emage-checkbox" type="checkbox"
                   @change="$emit('select', $event.target.checked)" title="Select"
                   :checked="selected">&nbsp;</label>
-    <div class="control-buttons" v-if="!isImg2Img(image.imagePath)">
-      <span class="reuse-seed" title="Left: reuse seed, Middle: reuse all parameters"
+    <div class="control-buttons">
+      <span v-if="!image.img2img" class="reuse-seed" title="Left: reuse seed, Middle: reuse all parameters"
             @mousedown.left="onReuseSeedClick"
             @mousedown.middle="onReuseParamsClick">♻️</span>
       <span class="generation-params" title="Generation parameters"
             @mousedown.left="$emit('showParams')">📑</span>
-      <span v-if="isTray" class="generate-steps" title="Generate with steps"
+      <span v-if="isTray && !image.img2img" class="generate-steps" title="Generate with steps"
             @mousedown.left="onGenerateVaryingSteps">📶</span>
-      <span v-if="upscalable" class="upscale" :title="getUpscaleButtonTitle(image)"
+      <span v-if="upscalable && !image.img2img" class="upscale" :title="getUpscaleButtonTitle(image)"
             @mousedown.left="$emit('upscaleImage', image, false)"
             @mousedown.middle="$emit('upscaleImage', image, true)">🏞️</span>
-      <span v-if="isTray" class="upscale-denoising" title="Upscale with denoising"
+      <span v-if="isTray && !image.img2img" class="upscale-denoising" title="Upscale with denoising"
             @mousedown.left="onUpscaleVaryingDenoising">📉</span>
       <span v-if="!isTray" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</span>
       <span v-if="isTray" class="add-comment" title="Add comment" @click="$emit('addComment', image)">💬</span>
       <span v-if="isTray" class="delete" title="Delete" @mousedown.left="$emit('deleteImage', image)">🗑️</span><!--
       -->&nbsp;<!--
       --><span v-if="image.parameters['hires upscale']" class="upscale-indicator" title="Upscaled">⬆️</span>
+      <span v-if="image.img2img" class="img2img-indicator" title="Img2Img image">🖼️</span>
       <span v-if="image.setSteps" class="upscale-steps" :title="`Upscaled with ${image.parameters['steps']} sampling steps`">🐾</span>
-      <span v-if="needShowPromptWarning(image)" class="prompt-warning" title="Image and UI prompts do not match">⚠️️</span>
+      <span v-if="needShowPromptWarning(image)" class="prompt-warning" title="Image prompt and Txt2Img prompt do not match">⚠️️</span>
     </div>
   </div>
 </div>
@@ -231,7 +241,7 @@
   cursor: pointer;
 }
 
-.upscale-indicator, .upscale-steps, .prompt-warning {
+.upscale-indicator, .upscale-steps, .prompt-warning, .img2img-indicator {
   cursor: default;
 }
 
@@ -243,10 +253,6 @@
 
 .image-wrapper {
   position: relative;
-}
-
-.upscaled {
-  border-right: 3px solid orange;
 }
 
 .markings {
