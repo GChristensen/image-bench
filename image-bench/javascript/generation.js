@@ -1,6 +1,6 @@
 import {getGenerationState, setGenerationState} from "./state.js";
 import {sendPopupMessage} from "./popup.js";
-import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
+import {setInputValue, toggleHiresFix} from "./utils_input.js";
 import {createGenerationId, sleep} from "./utils.js";
 import {getGenerationProgress, setConfigPreset} from "./sdwebui.js";
 
@@ -30,7 +30,7 @@ export function beginGeneration(options) {
     sendPopupMessage({type: "BEGIN_PROCESSING"});
 
     isImg2Img = options.img2img;
-    generationId = options?.generationId || createGenerationId();
+    generationId = createGenerationId();
 }
 
 export async function finishGeneration() {

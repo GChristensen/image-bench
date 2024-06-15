@@ -11,7 +11,6 @@ import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
-import {createGenerationId} from "@/utils.js";
 
 const props = defineProps(["kind"]);
 
@@ -104,8 +103,7 @@ function onBatchGenerateClick(e) {
 
     generatedImagesStore.startingGeneration();
 
-    const generationId = createGenerationId();
-    sendWebUIMessage({type: "BATCH_GENERATE", preset: imageStore.applyPreset, generationId});
+    sendWebUIMessage({type: "BATCH_GENERATE", preset: imageStore.applyPreset});
   }
 }
 
@@ -177,6 +175,10 @@ function onKeydown(e) {
 function hideOverlay() {
   showImageOverlay.value = false;
   showParamsOverlay.value = false;
+}
+
+function onMarkingFilter() {
+  isShowingMarked.value = true;
 }
 
 function displayPrevImage() {
@@ -296,6 +298,7 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
                  :kind="kind"
                  :image-store="imageStore"
                  :show-marked="isShowingMarked"
+                 @marking-filter="onMarkingFilter"
                  @image-click="onImageClick"
                  @image-open="onImageOpen"
                  @show-params="onShowParams"

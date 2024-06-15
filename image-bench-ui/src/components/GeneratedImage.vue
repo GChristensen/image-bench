@@ -9,8 +9,8 @@
   import {useConfigPresetsStore} from "@/stores/configPresets.js";
   import {flashTrayTab} from "@/components/utils.js";
 
-  const emit = defineEmits(["setMarking"])
-  const props = defineProps(["displayed", "image", "selectable", "upscalable", "selected", "isTray"]);
+  const emit = defineEmits(["setMarking", "filterMarking"])
+  const props = defineProps(["isTray", "image", "selectable", "displayed", "upscalable", "selected"]);
 
   const config = useAppConfigStore();
   const imageTrayStore = useImageTrayStore();
@@ -130,19 +130,18 @@
       markings.style.display = "none";
   }
 
-  function onMarkingClick(e) {
+  function onSelectMarkingClick(e) {
     props.image.marking = e.target.textContent;
     emit("setMarking");
   }
 
-  function onRemoveMarkingClick(e) {
+  function onRemoveMarking(e) {
     delete props.image.marking;
     emit("setMarking");
   }
 
   function getTagStyle(image) {
     if (image.tagColor) {
-      console.log([image.tagColor, image])
       return {
         'border-right': `4px solid ${image.tagColor}`
       };
@@ -163,20 +162,21 @@
          @mousedown.left="$emit('imageClick')"
          @mousedown.middle="$emit('imageOpen')">
     <div v-if="isTray" class="markings fadeIn">
-      <span class="marking" @click="onMarkingClick">👍</span>
-      <span class="marking" @click="onMarkingClick">👎</span>
-      <span class="marking" @click="onMarkingClick">🔴</span>
-      <span class="marking" @click="onMarkingClick">🟠</span>
-      <span class="marking" @click="onMarkingClick">🟡</span>
-      <span class="marking" @click="onMarkingClick">🟢</span>
-      <span class="marking" @click="onMarkingClick">🔵</span>
-      <span class="marking" @click="onMarkingClick">🟣</span>
+      <span class="marking" @click="onSelectMarkingClick">👍</span>
+      <span class="marking" @click="onSelectMarkingClick">👎</span>
+      <span class="marking" @click="onSelectMarkingClick">🔴</span>
+      <span class="marking" @click="onSelectMarkingClick">🟠</span>
+      <span class="marking" @click="onSelectMarkingClick">🟡</span>
+      <span class="marking" @click="onSelectMarkingClick">🟢</span>
+      <span class="marking" @click="onSelectMarkingClick">🔵</span>
+      <span class="marking" @click="onSelectMarkingClick">🟣</span>
     </div>
   </div>
-  <div class="image-separator" v-if="image.separator">⚪</div>
+  <div class="image-separator" v-if="image.separator">◇</div>
   <div  v-if="!image.separator" class="selectable-image-controls"><!--
-      --><span v-if="image.marking" class="image-marking" title="Remove marking"
-               @click="onRemoveMarkingClick">{{image.marking}}&nbsp;</span><!--
+      --><span v-if="image.marking" class="image-marking" title="Left: remove marking, Middle: fiter by"
+               @mousedown.left="onRemoveMarking"
+               @mousedown.middle="$emit('filterMarking', image.marking)">{{image.marking}}&nbsp;</span><!--
       --><label v-if="selectable" class="select-label"><input class="selectable-emage-checkbox" type="checkbox"
                   @change="$emit('select', $event.target.checked)" title="Select"
                   :checked="selected">&nbsp;</label>
@@ -278,6 +278,9 @@
 }
 
 .image-separator {
+  color: white;
+  font-size: 120%;
+  font-weight: bold;
 }
 
 </style>

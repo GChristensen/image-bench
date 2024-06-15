@@ -1,14 +1,15 @@
 <script setup>
   import GeneratedImage from "@/components/GeneratedImage.vue";
-  import {computed, getCurrentInstance, ref} from "vue";
+  import {computed, getCurrentInstance, ref, watch} from "vue";
   import {createImageGenerationParams, createImageLink} from "@/sdwebui.js";
   import {KIND_GENERATED, KIND_TRAY} from "@/consts.js";
 
   const props = defineProps(["kind", "imageStore", "showMarked"]);
-  const emit = defineEmits(["imageClick", "imageOpen", "showParams", "upscaleImage"]);
+  const emit = defineEmits(["imageClick", "imageOpen", "showParams", "upscaleImage", "markingFilter"]);
 
   const isTray = ref(props.kind === KIND_TRAY);
   const images = computed(() => props.imageStore.images);
+  const markingFilter = ref();
 
   const imageStreamElement = ref();
 
@@ -143,11 +144,22 @@
   function shouldShowImage(image) {
     let result = true;
 
-    if (props.showMarked && !image.marking)
+    if (props.showMarked && !image.marking || markingFilter.value && markingFilter.value !== image.marking)
       result = false;
 
     return result;
   }
+
+  function onFilterMarking(marking) {
+    props.showMarked = true;
+    markingFilter.value = marking;
+    emit("markingFilter");
+  }
+
+  watch(() => props.showMarked, async (newVal, oldVal) => {
+    if (!newVal)
+      markingFilter.value = null;
+  })
 
   // onBeforeMount(() => {
   // })
@@ -173,6 +185,7 @@
                        @upscale-image="(i, p) => $emit('upscaleImage', i, p)"
                        @add-comment="onAddComment(image)"
                        @set-marking="onSetMarking(image)"
+                       @filter-marking="onFilterMarking"
                        @delete-image="onDeleteImage"
       ></GeneratedImage>
     </div>
