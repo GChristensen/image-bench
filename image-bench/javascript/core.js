@@ -1,14 +1,13 @@
 import {sleep} from "./utils.js";
 import {createHeaderButton} from "./utils_html.js";
 import {getGenerationState, setGenerationState} from "./state.js";
-import {exploreModels, exploreNextImage} from "./explore.js";
+import {exploreModels, exploreNextImage, messageSetExploreParams} from "./explore.js";
 import {
     isProcessingActive,
     generateVaryingSteps,
     processImages,
     messageSetProcessingParams,
     processNextImage,
-    revertVaryingParams,
     upscaleVaryingDenoising
 } from "./processing.js";
 import {disposePopup, sendPopupMessage, showPopup} from "./popup.js";
@@ -17,7 +16,7 @@ import {
     initializePopupPrompts,
     repositionConfigPresetsDropdown,
     setImageParams,
-    setImageSeed, stopGeneration
+    setImageSeed, showModelInfoPopup, stopGeneration
 } from "./sdwebui.js";
 import {batchGenerate, messageSetGenerationParams} from "./generation.js";
 import {checkWebSocketConnection, createWebSocket, setSocketEventListener} from "./websocket.js";
@@ -55,6 +54,10 @@ async function initUI() {
         await repositionConfigPresetsDropdown("img2img");
     }
 
+    if (appConfig?.addModelInfoButton) {
+        const reloadModelsButton = document.getElementById("refresh_sd_model_checkpoint");
+        createHeaderButton('Civitai Model Info', "ℹ️", {}, showModelInfoPopup, reloadModelsButton);
+    }
     createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
     disposePopup();
 }
@@ -95,6 +98,7 @@ function onBackendMessage(e) {
     if (e?.data) {
         const msg = JSON.parse(e.data);
 
+        messageSetExploreParams(msg);
         messageSetGenerationParams(msg);
         messageSetProcessingParams(msg);
 

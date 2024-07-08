@@ -39,7 +39,7 @@ export function createButton(text, onclick) {
     return btn;
 }
 
-export function createHeaderButton(title, text, style, action) {
+export function createHeaderButton(title, text, style, action, after) {
     let quickSettings = gradioApp().getElementById("quicksettings");
     let className = quickSettings.querySelector('button').className;
 
@@ -53,6 +53,10 @@ export function createHeaderButton(title, text, style, action) {
         button.addEventListener('click', action);
     }
 
-    quickSettings.appendChild(button);
+    if (after)
+        after.after(button)
+    else
+        quickSettings.appendChild(button);
+
     return button;
 }

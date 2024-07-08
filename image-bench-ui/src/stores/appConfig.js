@@ -14,6 +14,16 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    const addModelInfoButton = computed({
+        get() {
+            return _config.addModelInfoButton;
+        },
+        set(v) {
+            _config.addModelInfoButton = v;
+            return persist();
+        }
+    });
+
     const repositionConfigPresetsDropdown = computed({
         get() {
             return _config.repositionConfigPresetsDropdown;
@@ -40,6 +50,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
     return {
         init, persist,
         repositionConfigPresetsDropdown,
+        addModelInfoButton,
         automaticallyClearGeneratedImages
     };
 });

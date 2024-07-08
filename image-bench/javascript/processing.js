@@ -15,12 +15,17 @@ let denoisingBeforeProcessing
 let progressMonitoring;
 
 export function messageSetProcessingParams(msg) {
-    if (msg.type === "SAVED_IMAGE"  && getGenerationState() === "SEQUENTIAL_GENERATION" && setSteps) {
-        msg.setSteps = true;
-    }
+    const generationState = getGenerationState();
 
-    if (generationId)
-        msg.generationId = generationId;
+    if (generationState === "HIRES_FIX" || generationState === "SEQUENTIAL_GENERATION") {
+        if (msg.type === "SAVED_IMAGE") {
+            if (generationId)
+                msg.generationId = generationId;
+
+            if (generationState === "SEQUENTIAL_GENERATION" && setSteps)
+                msg.setSteps = true;
+        }
+    }
 }
 
 export function isProcessingActive(msg) {

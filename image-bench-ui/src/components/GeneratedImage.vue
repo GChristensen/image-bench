@@ -109,7 +109,7 @@
 
     if (image.setSteps)
       result += ` using ${image.parameters['steps']} sampling steps`;
-    else if (props.isTray)
+    else
       result += ' using WebUI settings';
 
     if (!image.setSteps)

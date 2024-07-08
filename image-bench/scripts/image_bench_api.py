@@ -2,6 +2,7 @@ import asyncio
 import json
 import math
 import os
+import re
 import shutil
 
 from fastapi import FastAPI, Body, HTTPException, Request, Response, UploadFile
@@ -270,7 +271,9 @@ class ImageBenchApi():
         return JSONResponse(response)
 
     async def image_tray_upload(self, file: UploadFile):
-        imported_file = os.path.join(self.outputs_dir, "image-bench", "imported")
+        imported_dir = os.path.join(self.outputs_dir, "image-bench", "imported")
+        imported_file = os.path.join(imported_dir, file.filename)
+        os.makedirs(imported_dir, exist_ok=True)
 
         with open(imported_file, "wb") as f:
             f.write(await file.read())
@@ -301,8 +304,6 @@ except Exception as e:
 
 
 def parse_pnginfo(input_string):
-    import re
-
     def tokenize(string):
         token_pattern = re.compile(r''':(?=(?:[^"]|"[^"]*")*$)|,(?=(?:[^"]|"[^"]*")*$)''')
         return token_pattern.split(string)

@@ -1,6 +1,6 @@
 import {getGenerationState, setGenerationState} from "./state.js";
 import {finishProcessing, isProcessingActive} from "./processing.js";
-import {finishExploring} from "./explore.js";
+import {finishExploring, invalidateExplore} from "./explore.js";
 import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
@@ -29,6 +29,9 @@ export function hookIntoSDWebUI() {
 
     const negativePromptInput = document.querySelector("#txt2img_neg_prompt textarea");
     negativePromptInput.addEventListener("change", onNegativePromptChange);
+
+    const sendToTxt2ImgButton = document.querySelector("#tab_pnginfo #txt2img_tab");
+    sendToTxt2ImgButton.addEventListener("click", onSendToTxt2ImgButtonClick);
 }
 
 function listenInterruptButtonMutations() {
@@ -82,6 +85,10 @@ function onPromptChange(e) {
 
 function onNegativePromptChange(e) {
     sendPopupMessage({type: "NEGATIVE_PROMPT_CHANGE", text: e.target.value});
+}
+
+function onSendToTxt2ImgButtonClick(e) {
+    invalidateExplore();
 }
 
 export async function stopGeneration() {
@@ -205,4 +212,26 @@ export function getGenerationProgress() {
 
     if (matches)
         return parseInt(matches[1]);
+}
+
+export async function showModelInfoPopup() {
+    const inputElement = document.querySelector("#setting_sd_model_checkpoint input");
+    const hashMatches = inputElement.value.match(/\[([a-zA-Z0-9]+)]/);
+
+    if (hashMatches) {
+        const hash = hashMatches[1];
+        const response = await fetch(`https://civitai.com/api/v1/model-versions/by-hash/${hash}`);
+
+        if (response.ok) {
+            const modelInfo = await response.json();
+
+            if (modelInfo) {
+                window.open(`https://civitai.com/models/${modelInfo.modelId}?modelVersionId=${modelInfo.id}`, "_blank");
+            }
+        }
+        else if (response.status === 404)
+            alert("The model is not found on Civitai.");
+    }
+    else
+        alert("The model is not hashed yet.");
 }

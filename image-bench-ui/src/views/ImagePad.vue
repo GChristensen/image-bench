@@ -218,32 +218,32 @@ function onOpenClick(e) {
 }
 
 async function onOpenFileInputChange(e) {
-  const file = e.target.files[0];
-
-  if (!file) {
+  if (!e.target.files[0]) {
     alert('Please select a file.');
     return;
   }
 
-  const formData = new FormData();
-  formData.append('file', file);
+  for (const file of e.target.files) {
+    const formData = new FormData();
+    formData.append('file', file);
 
-  const response = await fetch("/image-bench/image_tray_upload", {
-    method: "post",
-    body: formData
-  });
+    const response = await fetch("/image-bench/image_tray_upload", {
+      method: "post",
+      body: formData
+    });
 
-  if (response.ok) {
-    const result = await response.json();
+    if (response.ok) {
+      const result = await response.json();
 
-    if (result.error) {
-      alert(result.error);
-    }
-    else {
-      imageStream.value.beforeAddImage();
-      imageStore.images.push(result);
-      imageStream.value.afterAddImage();
-      await imageStore.persist();
+      if (result.error) {
+        alert(result.error);
+      } else {
+        console.log(result);
+        imageStream.value.beforeAddImage();
+        imageStore.images.push(result);
+        imageStream.value.afterAddImage();
+        await imageStore.persist();
+      }
     }
   }
 }
@@ -266,7 +266,7 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
     <div class="toolbar">
       <a href="#" class="tool-item" id="clear" @click="onClearClick">Clear</a>
       <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="open" @click="onOpenClick">Open</a>
-      <input type="file" class="open-file-input" ref="openFileInput" @change="onOpenFileInputChange">
+      <input type="file" class="open-file-input" ref="openFileInput" @change="onOpenFileInputChange" multiple>
       <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="select-all" @click="onSelectAllClick">
         {{ isAllSelected? "Unselect all": "Select all" }}
       </a>

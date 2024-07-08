@@ -1,22 +1,31 @@
-import {sleep} from "./utils.js";
-import {setGenerationState} from "./state.js";
+import {createGenerationId, sleep} from "./utils.js";
+import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
 
+let generationId;
 let totalImages = 0;
 let exploreQueue = [];
 let exploreModel;
 let modelBeforeExplore;
+let invalidated;
 
 export async function exploreModels(options) {
     if (!options.models.length)
         return;
 
+    if (invalidated) {
+        sendPopupMessage({type: "GENERATION_FINISHED"});
+        alert("'Send to Txt2Img' was used. Please reload WebUI to explore models.");
+        return;
+    }
+
     setGenerationState("EXPLORE_MODELS");
     sendPopupMessage({type: "BEGIN_PROCESSING"});
+    generationId = createGenerationId();
     exploreQueue = [];
     exploreModel = options.models[0];
-    await setActiveModel(exploreModel.hash);
+    await setActiveModel(exploreModel.title);
 
     setInputValue("#txt2img_batch_count input[type='number']", 1);
     setInputValue("#txt2img_seed input", -1);
@@ -78,5 +87,17 @@ export async function finishExploring() {
         modelBeforeExplore = null;
     }
 
+    generationId = null;
+
     sendPopupMessage({type: "GENERATION_FINISHED"});
+}
+
+export function messageSetExploreParams(msg) {
+    if (msg.type === "SAVED_IMAGE" && getGenerationState() === "EXPLORE_MODELS") {
+        msg.generationId = generationId;
+    }
+}
+
+export function invalidateExplore() {
+    invalidated = true;
 }

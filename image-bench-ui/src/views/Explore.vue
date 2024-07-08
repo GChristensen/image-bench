@@ -143,6 +143,12 @@ async function onDeleteClick(e) {
   await writePresets();
 }
 
+async function onClearClick(e) {
+  e.preventDefault();
+
+  selected.value = new Set();
+}
+
 function onPresetChange(e) {
   activatePreset(e.target.value)
 }
@@ -231,10 +237,11 @@ function onKeydown(e) {
         <div class="preset-controls">
           <a class="control-link" href="#" @click="onCreateClick">Create</a
           >&nbsp;<a class="control-link" href="#" @click="onSaveClick">Save</a
-          >&nbsp;<a class="control-link" href="#" @click="onDeleteClick">Delete</a>
+          >&nbsp;<a class="control-link" href="#" @click="onDeleteClick">Delete</a
+          >&nbsp;<a class="control-link" href="#" @click="onClearClick">Clear</a>
         </div>
         <div class="models-container">
-          <div class="models scrollable">
+          <div class="models">
             <div v-for="(model, index) in models">
               <label class="model-label"><input type="checkbox"
                                                 @change="e => onModelCheckChange(e, index)" :checked="selected.has(index)"
@@ -244,7 +251,7 @@ function onKeydown(e) {
         </div>
       </div>
       <div class="generated-images-wrapper">
-        <div class="generated-images" ref="generatedImagesElement">
+        <div class="generated-images scrollable" ref="generatedImagesElement">
           <div class="model-images-wrapper" v-for="model in modelImages">
             <h3 class="model-name">{{ model.name }}</h3>
             <div class="model-images">

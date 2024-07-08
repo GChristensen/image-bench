@@ -42,7 +42,9 @@ function onClearOutputsClick(e) {
     <h3>Generation</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.automaticallyClearGeneratedImages"
     >Automatically clear generated images</label>
-    <h3>Other</h3>
+    <h3>SD WebUI Interface</h3>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.addModelInfoButton"
+    >Add 'Civitai Model Info' settings button</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.repositionConfigPresetsDropdown"
     >Bring up the dropdown of the 'Config Presets' extension</label>
   </div>
@@ -53,7 +55,7 @@ function onClearOutputsClick(e) {
       <a class="action-link clear-all-link" href="#" @click="onClearAllClick">Clear all images</a>
     </div>
     <div class="action-link-container">
-      <a class="action-link clear-outputs-link" href="#" @click="onClearOutputsClick">Clear outputs directory</a>
+      <a class="action-link clear-outputs-link" href="#" @click="onClearOutputsClick">Clear the outputs directory</a>
     </div>
   </div>
 </div>
