@@ -16,6 +16,9 @@
   const isAllSelected = computed(
       () => images.value.length && (images.value.every(i => i.selected)));
 
+  const isSomeSelected = computed(
+      () => images.value.length && (images.value.some(i => i.selected)));
+
   const isNoneSelected = computed(
       () => images.value.length && (!images.value.some(i => i.selected)));
 
@@ -165,7 +168,7 @@
   // })
 
   defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, clear, isAllSelected,
-               getSelectedImages, getNextImage, getPrevImage});
+    isSomeSelected, getSelectedImages, getNextImage, getPrevImage});
 </script>
 
 <template>
@@ -181,7 +184,7 @@
                        @image-click="$emit('imageClick', image)"
                        @image-open="$emit('imageOpen', image)"
                        @show-params="$emit('showParams', image)"
-                       @select="image.selected = true"
+                       @select="s => image.selected = s"
                        @upscale-image="(i, p) => $emit('upscaleImage', i, p)"
                        @add-comment="onAddComment(image)"
                        @set-marking="onSetMarking(image)"

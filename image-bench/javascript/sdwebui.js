@@ -235,3 +235,29 @@ export async function showModelInfoPopup() {
     else
         alert("The model is not hashed yet.");
 }
+
+export async function saveControlnetImages(generationId) {
+    let controlNetThumbs =
+        document.querySelectorAll("#txt2img_gallery_container .thumbnails .thumbnail-item img[src*='gradio']");
+    controlNetThumbs = Array.from(controlNetThumbs);
+
+    if (controlNetThumbs.length) {
+        let controlNetImages = new Set(controlNetThumbs.map(t => t.src));
+        controlNetImages = Array.from(controlNetImages);
+
+        const body = {
+            generation_id: generationId,
+            images: []
+        };
+
+        for (const image of controlNetImages) {
+            if (image.includes("file=")) {
+                let imagePath = image.split("file=").at(-1);
+                imagePath = imagePath.replace(/\?.*$/, "");
+                body.images.push(imagePath);
+            }
+        }
+
+        await fetch("/image-bench/save_controlnet_images", {method: "post", body: JSON.stringify(body)});
+    }
+}

@@ -2,7 +2,7 @@ import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
 import {createGenerationId, sleep} from "./utils.js";
-import {getGenerationProgress, setConfigPreset} from "./sdwebui.js";
+import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
 
 let generationId;
 let totalImages = 0;
@@ -99,16 +99,17 @@ export function processNextImage() {
         if (getGenerationState() !== "SEQUENTIAL_GENERATION")
             toggleHiresFix();
 
-        finishProcessing();
+        return finishProcessing();
     }
 }
 
-export function finishProcessing() {
+export async function finishProcessing() {
     if (processingQueue.length)
         processingQueue = [];
 
     revertVaryingParams();
 
+    const tempGenId = generationId;
     generationId = undefined;
     seedsBeforeProcessing = undefined;
     stepsBeforeProcessing = undefined;
@@ -118,6 +119,9 @@ export function finishProcessing() {
     progressMonitoring = false;
 
     sendPopupMessage({type: "GENERATION_FINISHED"});
+
+    await sleep(1000);
+    await saveControlnetImages(tempGenId);
 }
 
 export function revertVaryingParams() {

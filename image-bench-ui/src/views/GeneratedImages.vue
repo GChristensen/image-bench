@@ -27,6 +27,7 @@ const showImageOverlay = ref(false);
 // const overlayImageIndex = ref(null);
 const overlayImage = ref(null);
 const isAllSelected = computed(() => imageStream.value?.isAllSelected);
+const isSomeSelected = computed(() => imageStream.value?.isSomeSelected);
 const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
 const paramsOverlayImage = ref(null);
@@ -238,14 +239,26 @@ async function onOpenFileInputChange(e) {
       if (result.error) {
         alert(result.error);
       } else {
-        console.log(result);
         imageStream.value.beforeAddImage();
-        imageStore.images.push(result);
+
+        if (Array.isArray(result))
+          result.forEach(i => imageStore.images.push(i));
+        else
+          imageStore.images.push(result);
+
         imageStream.value.afterAddImage();
         await imageStore.persist();
       }
     }
   }
+}
+
+function onSaveClick(e) {
+  e.preventDefault();
+  const link = document.createElement('a');
+  link.href = "/image-bench/download_image_tray";
+  link.download = "image-tray.zip"
+  link.click();
 }
 
 defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
@@ -264,9 +277,11 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="view-container">
     <div class="toolbar">
-      <a href="#" class="tool-item" id="clear" @click="onClearClick">Clear</a>
+      <a href="#" class="tool-item" id="clear" @click="onClearClick">{{ isSomeSelected? "Clear selected": "Clear" }}</a>
+      <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="save" @click="onSaveClick">Save</a>
       <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="open" @click="onOpenClick">Open</a>
-      <input type="file" class="open-file-input" ref="openFileInput" @change="onOpenFileInputChange" multiple>
+      <input type="file" class="open-file-input" ref="openFileInput" @change="onOpenFileInputChange"
+             accept=".png, .zip" multiple>
       <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="select-all" @click="onSelectAllClick">
         {{ isAllSelected? "Unselect all": "Select all" }}
       </a>

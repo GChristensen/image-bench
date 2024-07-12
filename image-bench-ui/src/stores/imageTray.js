@@ -22,7 +22,7 @@ export const useImageTrayStore = defineStore('imageTray', () => {
   }
 
   async function persist() {
-    const trayContent = {images: []};
+    const trayContent = {version: 1, images: []};
     trayContent.images = [..._store.images.value];
     trayContent.images.forEach(i => delete i.selected);
 

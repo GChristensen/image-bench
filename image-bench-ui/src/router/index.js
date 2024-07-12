@@ -1,6 +1,6 @@
 import {createRouter, createWebHashHistory} from 'vue-router'
 import Explore from "@/views/Explore.vue";
-import ImagePad from "@/views/ImagePad.vue";
+import ImagePad from "@/views/GeneratedImages.vue";
 import {KIND_GENERATED, KIND_TRAY, KIND_UPSCALED} from "@/consts.js";
 import Settings from "@/views/Settings.vue";
 

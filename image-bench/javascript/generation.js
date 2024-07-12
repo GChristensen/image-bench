@@ -2,7 +2,7 @@ import {getGenerationState, setGenerationState} from "./state.js";
 import {sendPopupMessage} from "./popup.js";
 import {setInputValue, toggleHiresFix} from "./utils_input.js";
 import {createGenerationId, sleep} from "./utils.js";
-import {getGenerationProgress, setConfigPreset} from "./sdwebui.js";
+import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
 
 let generationId;
 let isImg2Img;
@@ -37,32 +37,12 @@ export async function finishGeneration() {
     if (!generationId)
         return;
 
-    let controlNetThumbs =
-        document.querySelectorAll("#txt2img_gallery_container .thumbnails .thumbnail-item img[src*='gradio']");
-    controlNetThumbs = Array.from(controlNetThumbs);
-
-    if (controlNetThumbs.length) {
-        let controlNetImages = new Set(controlNetThumbs.map(t => t.src));
-        controlNetImages = Array.from(controlNetImages);
-
-        const body = {
-            generation_id: generationId,
-            images: []
-        };
-
-        for (const image of controlNetImages) {
-            if (image.includes("file=")) {
-                let imagePath = image.split("file=").at(-1);
-                imagePath = imagePath.replace(/\?.*$/, "");
-                body.images.push(imagePath);
-            }
-        }
-
-        await fetch("/image-bench/save_controlnet_images", {method: "post", body: JSON.stringify(body)});
-    }
-
+    const tempGenId = generationId;
     generationId = null;
     isImg2Img = false;
+
+    await sleep(1000);
+    await saveControlnetImages(tempGenId);
 }
 
 export function messageSetGenerationParams(msg) {
