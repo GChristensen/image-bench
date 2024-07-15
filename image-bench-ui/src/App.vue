@@ -10,6 +10,7 @@ import {generationStateToKind} from "@/consts.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {sendWebUIMessage} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
+import {useConceptTrayStore} from "@/stores/conceptTray.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -18,6 +19,7 @@ const exploreTab = ref(null);
 const generatedImagesTab = ref(null);
 const upscaledImagesTab = ref(null);
 const imageTrayTab = ref(null);
+const conceptTrayTab = ref(null);
 const settingsTab = ref(null);
 const routerView = ref(null);
 
@@ -25,6 +27,7 @@ const appConfigStore = useAppConfigStore();
 const exploreImagesStore = useExploreImagesStore();
 const generatedImagesStore = useGeneratedImagesStore();
 const imageTrayStore = useImageTrayStore();
+const conceptTrayStore = useConceptTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
@@ -81,6 +84,7 @@ window.onSDEvent = onSDEvent;
 onBeforeMount(async () => {
   await appConfigStore.init();
   await imageTrayStore.init();
+  await conceptTrayStore.init();
   await configPresetsStore.init();
 
   sendWebUIMessage({type: "INITIALIZE_PROMPTS"});
@@ -93,6 +97,7 @@ onBeforeMount(async () => {
     <div class="tabs">
       <RouterLink to="/explore" class="tab" ref="exploreTab">Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab">Generated Images</RouterLink>
+      <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab">Concept Tray</RouterLink>
       <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab">Image Tray</RouterLink>
       <RouterLink to="/upscaled-images" class="tab" ref="upscaledImagesTab">Upscaled</RouterLink>
       <div class="tab-spacer"></div>

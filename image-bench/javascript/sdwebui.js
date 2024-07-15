@@ -4,7 +4,7 @@ import {finishExploring, invalidateExplore} from "./explore.js";
 import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
-import {sleep} from "./utils.js";
+import {isButtonVisible, sleep} from "./utils.js";
 import {beginGeneration, finishGeneration} from "./generation.js";
 
 
@@ -101,9 +101,11 @@ export async function stopGeneration() {
 
     const interruptButton = document.getElementById('txt2img_interrupt');
     interruptButton.dispatchEvent(mousedownEvent);
-    interruptButton.click();
+    if (isButtonVisible(interruptButton))
+        interruptButton.click();
     await sleep(333);
-    interruptButton.click();
+    if (isButtonVisible(interruptButton))
+        interruptButton.click();
 }
 
 export async function repositionConfigPresetsDropdown(kind) {

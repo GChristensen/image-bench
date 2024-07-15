@@ -37,6 +37,7 @@ DEFAULT_CONFIG = """{
 """
 
 IMAGE_TRAY_FILE = "image_tray.json"
+CONCEPT_TRAY_FILE = "concept_tray.json"
 
 TERMINATE_WEBSOCKET = object()
 
@@ -85,11 +86,14 @@ class ImageBenchApi():
         self.add_api_route("/explore_presets", self.write_explore_presets, methods=["POST"])
         self.add_api_route("/image_tray", self.get_image_tray, methods=["GET"])
         self.add_api_route("/image_tray", self.write_image_tray, methods=["POST"])
+        self.add_api_route("/concept_tray", self.get_concept_tray, methods=["GET"])
+        self.add_api_route("/concept_tray", self.write_concept_tray, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
         self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
         self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
         self.add_api_route("/image_tray_upload", self.image_tray_upload, methods=["POST"])
+        self.add_api_route("/concept_tray_upload", self.image_tray_upload, methods=["POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
         self.add_api_route("/download_image_tray", self.download_image_tray, methods=["GET"])
@@ -210,6 +214,13 @@ class ImageBenchApi():
         content = await request.body()
         return await self.write_store_file(IMAGE_TRAY_FILE, content.decode("utf-8"))
 
+    def get_concept_tray(self):
+        return self.serve_store_file(CONCEPT_TRAY_FILE)
+
+    async def write_concept_tray(self, request: Request):
+        content = await request.body()
+        return await self.write_store_file(CONCEPT_TRAY_FILE, content.decode("utf-8"))
+
     def serve_store_file(self, filename):
         result = ""
         presets_file = self.get_file_path(f"store/{filename}", upper=True)
@@ -302,12 +313,13 @@ class ImageBenchApi():
 
             return JSONResponse(content=result)
 
-    def download_image_tray(self):
+    def download_image_tray(self, kind: str):
         export_dir = os.path.join(self.image_bench_dir, "export")
         export_file = os.path.join(export_dir, str(round(time.time() * 1000)) + ".zip")
         os.makedirs(export_dir, exist_ok=True)
 
-        image_tray_file = self.get_file_path("../store/" + IMAGE_TRAY_FILE)
+        image_tray_file = IMAGE_TRAY_FILE if kind == "image_tray" else CONCEPT_TRAY_FILE
+        image_tray_file = self.get_file_path("../store/" + image_tray_file)
 
         if os.path.exists(image_tray_file):
             image_tray = self.read_json_file(image_tray_file)

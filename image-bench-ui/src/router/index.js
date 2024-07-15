@@ -1,7 +1,7 @@
 import {createRouter, createWebHashHistory} from 'vue-router'
 import Explore from "@/views/Explore.vue";
-import ImagePad from "@/views/GeneratedImages.vue";
-import {KIND_GENERATED, KIND_TRAY, KIND_UPSCALED} from "@/consts.js";
+import GeneratedImages from "@/views/GeneratedImages.vue";
+import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
 import Settings from "@/views/Settings.vue";
 
 const scrollBehavior = (to, from) => {
@@ -45,8 +45,20 @@ const router = createRouter({
     {
       path: '/generated-images',
       name: 'generated-images',
-      component: ImagePad,
+      component: GeneratedImages,
       props: {"kind": KIND_GENERATED},
+      meta: {
+        scrollPos: {
+          el: ".scrollable",
+          top: 0
+        },
+      },
+    },
+    {
+      path: '/concept-tray',
+      name: 'concept-tray',
+      component: GeneratedImages,
+      props: {"kind": KIND_CONCEPT_TRAY},
       meta: {
         scrollPos: {
           el: ".scrollable",
@@ -57,8 +69,8 @@ const router = createRouter({
     {
       path: '/image-tray',
       name: 'image-tray',
-      component: ImagePad,
-      props: {"kind": KIND_TRAY},
+      component: GeneratedImages,
+      props: {"kind": KIND_IMAGE_TRAY},
       meta: {
         scrollPos: {
           el: ".scrollable",
@@ -69,7 +81,7 @@ const router = createRouter({
     {
       path: '/upscaled-images',
       name: 'upscaled-images',
-      component: ImagePad,
+      component: GeneratedImages,
       props: {"kind": KIND_UPSCALED},
       meta: {
         scrollPos: {

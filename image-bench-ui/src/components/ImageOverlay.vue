@@ -16,7 +16,7 @@
 
     imageTrayStore.addImage(props.image);
 
-    flashTrayTab();
+    flashTrayTab("image-tray-tab");
   }
 
   function onImageMouseDown(e) {

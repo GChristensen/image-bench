@@ -1,7 +1,7 @@
 import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
-import {createGenerationId, sleep} from "./utils.js";
+import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
 import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
 
 let generationId;
@@ -84,7 +84,8 @@ async function processImage(imageData) {
     await sleep(500);
 
     const generateButton = document.getElementById("txt2img_generate");
-    generateButton.click();
+    if (isButtonVisible(generateButton))
+        generateButton.click();
 }
 
 export function processNextImage() {

@@ -2,12 +2,12 @@
   import GeneratedImage from "@/components/GeneratedImage.vue";
   import {computed, getCurrentInstance, ref, watch} from "vue";
   import {createImageGenerationParams, createImageLink} from "@/sdwebui.js";
-  import {KIND_GENERATED, KIND_TRAY} from "@/consts.js";
+  import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
 
   const props = defineProps(["kind", "imageStore", "showMarked"]);
   const emit = defineEmits(["imageClick", "imageOpen", "showParams", "upscaleImage", "markingFilter"]);
 
-  const isTray = ref(props.kind === KIND_TRAY);
+  const isTray = ref(props.kind === KIND_IMAGE_TRAY || props.kind === KIND_CONCEPT_TRAY);
   const images = computed(() => props.imageStore.images);
   const markingFilter = ref();
 
@@ -175,6 +175,7 @@
   <div class="image-stream-container">
     <div class="image-stream scrollable" ref="imageStreamElement">
       <GeneratedImage v-for="(image, index) in images"
+                       :kind="kind"
                        :displayed="shouldShowImage(image)"
                        :image="image"
                        :selectable="isTray"

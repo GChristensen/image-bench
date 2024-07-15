@@ -1,4 +1,4 @@
-import {createGenerationId, sleep} from "./utils.js";
+import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
 import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
@@ -63,7 +63,9 @@ async function exploreImage(model) {
     await sleep(1000);
 
     const generateButton = document.getElementById("txt2img_generate");
-    generateButton.click();
+
+    if (isButtonVisible(generateButton))
+        generateButton.click();
 }
 
 export function exploreNextImage() {

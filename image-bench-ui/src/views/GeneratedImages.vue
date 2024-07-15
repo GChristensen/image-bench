@@ -6,17 +6,19 @@ import ImageStream from "@/components/ImageStream.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useImageTrayStore} from "@/stores/imageTray.js";
-import {generationStateToKind, KIND_GENERATED, KIND_TRAY, KIND_UPSCALED} from "@/consts.js";
+import {generationStateToKind, KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
+import {useConceptTrayStore} from "@/stores/conceptTray.js";
 
 const props = defineProps(["kind"]);
 
 const config = useAppConfigStore();
 const generatedImagesStore = useGeneratedImagesStore();
 const imageTrayStore = useImageTrayStore();
+const upscaleTrayStore = useConceptTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const imageStore = getImageStore();
@@ -40,8 +42,10 @@ function getImageStore() {
   switch (props.kind) {
     case KIND_GENERATED:
       return generatedImagesStore;
-    case KIND_TRAY:
+    case KIND_IMAGE_TRAY:
       return imageTrayStore;
+    case KIND_CONCEPT_TRAY:
+      return upscaleTrayStore;
     case KIND_UPSCALED:
       return upscaledImageStore;
   }
@@ -228,7 +232,7 @@ async function onOpenFileInputChange(e) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch("/image-bench/image_tray_upload", {
+    const response = await fetch(`/image-bench/${props.kind}_upload`, {
       method: "post",
       body: formData
     });
@@ -256,19 +260,23 @@ async function onOpenFileInputChange(e) {
 function onSaveClick(e) {
   e.preventDefault();
   const link = document.createElement('a');
-  link.href = "/image-bench/download_image_tray";
-  link.download = "image-tray.zip"
+  link.href = "/image-bench/download_image_tray?kind=" + props.kind;
+  link.download = props.kind + ".zip";
   link.click();
 }
 
 defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
+
+function isComponentTray(kind) {
+  return kind === KIND_IMAGE_TRAY || kind === KIND_CONCEPT_TRAY;
+}
 
 </script>
 
 <template>
   <ImageOverlay v-if="showImageOverlay"
                 :image="overlayImage"
-                :is-tray="kind === KIND_TRAY"
+                :is-tray="isComponentTray(kind)"
                 @hide-overlay="showImageOverlay = false"
                 @image-select="onImageSelectOverlay"/>
   <ParametersOverlay v-if="showParamsOverlay"
@@ -277,25 +285,25 @@ defineExpose({onBeforeSDEvent, onAfterSDEvent, imageStream});
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="view-container">
     <div class="toolbar">
-      <a href="#" class="tool-item" id="clear" @click="onClearClick">{{ isSomeSelected? "Clear selected": "Clear" }}</a>
-      <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="save" @click="onSaveClick">Save</a>
-      <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="open" @click="onOpenClick">Open</a>
+      <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="save" @click="onSaveClick">Save</a>
+      <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="open" @click="onOpenClick">Open</a>
       <input type="file" class="open-file-input" ref="openFileInput" @change="onOpenFileInputChange"
              accept=".png, .zip" multiple>
-      <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="select-all" @click="onSelectAllClick">
+      <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="select-all" @click="onSelectAllClick">
         {{ isAllSelected? "Unselect all": "Select all" }}
       </a>
-      <a v-if="kind === KIND_TRAY" href="#" class="tool-item" id="show-marked" @click="onShowMarkedClick">
+      <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="show-marked" @click="onShowMarkedClick">
         {{ isShowingMarked? "Show all": "Show marked" }}
       </a>
       <a v-if="kind === KIND_GENERATED" href="#" class="tool-item" id="batch-generate" ref="batchGenerate"
          @click="onBatchGenerateClick"
         >{{ generatedImagesStore.generationInProgress? "Stop": "Generate" }}</a>
-      <a v-if="kind === KIND_TRAY && !upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected" @click="onUpscaleSelectedClick"
+      <a v-if="isComponentTray(kind) && !upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected" @click="onUpscaleSelectedClick"
         >Upscale selected</a>
       <a v-if="kind === KIND_UPSCALED && upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected"
          @click="onUpscaleSelectedClick"
         >Stop</a>
+      <a href="#" class="tool-item" id="clear" @click="onClearClick">{{ isSomeSelected? "Clear selected": "Clear" }}</a>
       <div class="toolbar-spacer"></div>
       <div v-if="imageStore.generationInProgress" class="generation-progress">Progress:&nbsp;
         <progress max="100" :value="imageStore.generationProgress || 0"></progress>

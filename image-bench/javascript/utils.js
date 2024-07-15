@@ -23,3 +23,7 @@ function getDateTimeString() {
    const timeString = `${hours}${minutes}${seconds}`;
    return `${dateString}_${timeString}`;
 }
+
+export function isButtonVisible(element) {
+   return element.style.display !== "none";
+}

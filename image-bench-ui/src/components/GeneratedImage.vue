@@ -8,12 +8,15 @@
   import {useUpscaledImagesStore} from "@/stores/upscaled.js";
   import {useConfigPresetsStore} from "@/stores/configPresets.js";
   import {flashTrayTab} from "@/components/utils.js";
+  import {useConceptTrayStore} from "@/stores/conceptTray.js";
+  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
 
   const emit = defineEmits(["setMarking", "filterMarking"])
-  const props = defineProps(["isTray", "image", "selectable", "displayed", "upscalable", "selected"]);
+  const props = defineProps(["isTray", "kind", "image", "selectable", "displayed", "upscalable", "selected"]);
 
   const config = useAppConfigStore();
   const imageTrayStore = useImageTrayStore();
+  const conceptTrayStore = useConceptTrayStore();
   const sdWebUIStore = useSDWebUIStateStore();
   const generatedImagesStore = useGeneratedImagesStore();
   const upscaledImageStore = useUpscaledImagesStore();
@@ -38,7 +41,15 @@
 
     imageTrayStore.addImage(props.image);
 
-    flashTrayTab();
+    flashTrayTab("image-tray-tab");
+  }
+
+  function onPlaceToConceptTray(e) {
+    e.preventDefault();
+
+    conceptTrayStore.addImage(props.image);
+
+    flashTrayTab("concept-tray-tab");
   }
 
   function createTooltip(image) {
@@ -113,7 +124,7 @@
       result += ' using WebUI settings';
 
     if (!image.setSteps)
-      result += ", Middle: upscale using tray preset";
+      result += ", Middle: upscale using image tray preset";
 
     return result;
   }
@@ -193,7 +204,10 @@
             @mousedown.middle="$emit('upscaleImage', image, true)">🏞️</span>
       <span v-if="isTray && !image.img2img" class="upscale-denoising" title="Upscale with denoising"
             @mousedown.left="onUpscaleVaryingDenoising">📉</span>
-      <span v-if="!isTray" class="place-to-tray" title="Place to tray" @click="onPlaceToTray">📥</span>
+      <span v-if="!isTray || isTray && kind === KIND_IMAGE_TRAY" class="place-to-tray" title="Place to concept tray"
+            @click="onPlaceToConceptTray">📥</span>
+      <span v-if="!isTray || isTray && kind === KIND_CONCEPT_TRAY" class="place-to-tray" title="Place to image tray"
+            @click="onPlaceToTray">🎨</span>
       <span v-if="isTray" class="add-comment" title="Add comment" @click="$emit('addComment', image)">💬</span>
       <span v-if="isTray" class="delete" title="Delete" @mousedown.left="$emit('deleteImage', image)">🗑️</span><!--
       -->&nbsp;<!--

@@ -29,5 +29,6 @@ export function animateColors(element, duration) {
 
     setTimeout(() => {
         document.head.removeChild(styleSheet);
+        element.style.animation = "";
     }, duration * 1000);
 }
