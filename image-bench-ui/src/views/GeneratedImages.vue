@@ -112,6 +112,32 @@ function onBatchGenerateClick(e) {
   }
 }
 
+function onGenerateVariationsClick(e) {
+  e.preventDefault();
+
+  let variationStrength = localStorage.getItem("imageBench_variationStrength");
+
+  if (!variationStrength)
+    variationStrength = "0.12";
+
+  const strength = prompt("Variation strength:", variationStrength);
+  if (strength) {
+    if (config.automaticallyClearGeneratedImages)
+      generatedImagesStore.clear();
+
+    generatedImagesStore.startingGeneration();
+
+    localStorage.setItem("imageBench_variationStrength", strength);
+    sendWebUIMessage({type: "GENERATE_VARIATIONS", strength, preset: imageStore.applyPreset});
+  }
+}
+
+function onStopGenerationClick(e) {
+  e.preventDefault();
+
+  sendWebUIMessage({type: "STOP_GENERATION"});
+}
+
 function onImageClick(image) {
   overlayImage.value = image;
   showImageOverlay.value = true;
@@ -295,9 +321,18 @@ function isComponentTray(kind) {
       <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="show-marked" @click="onShowMarkedClick">
         {{ isShowingMarked? "Show all": "Show marked" }}
       </a>
-      <a v-if="kind === KIND_GENERATED" href="#" class="tool-item" id="batch-generate" ref="batchGenerate"
+      <a v-if="kind === KIND_GENERATED && !generatedImagesStore.generationInProgress"
+         href="#" class="tool-item" id="batch-generate" ref="batchGenerate"
          @click="onBatchGenerateClick"
-        >{{ generatedImagesStore.generationInProgress? "Stop": "Generate" }}</a>
+        >Generate</a>
+      <a v-if="kind === KIND_GENERATED && !generatedImagesStore.generationInProgress"
+         href="#" class="tool-item" id="generate-variations"
+         @click="onGenerateVariationsClick"
+      >Variations</a>
+      <a v-if="kind === KIND_GENERATED && generatedImagesStore.generationInProgress"
+         href="#" class="tool-item" id="stop-generation"
+         @click="onStopGenerationClick"
+      >Stop</a>
       <a v-if="isComponentTray(kind) && !upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected" @click="onUpscaleSelectedClick"
         >Upscale selected</a>
       <a v-if="kind === KIND_UPSCALED && upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected"

@@ -5,7 +5,7 @@ import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js"
 import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
 import {isButtonVisible, sleep} from "./utils.js";
-import {beginGeneration, finishGeneration} from "./generation.js";
+import {setupGeneration, finishGeneration} from "./generation.js";
 
 
 addEventListener("pagehide", () => {
@@ -63,7 +63,7 @@ export function initializePopupPrompts() {
 
 function onGenerateMousedown(e) {
     checkWebSocketConnection();
-    beginGeneration({img2img: e.target.id.includes("img2img")});
+    setupGeneration({img2img: e.target.id.includes("img2img")});
 }
 
 async function onInterruptMousedown(e) {

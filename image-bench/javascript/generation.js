@@ -1,17 +1,41 @@
 import {getGenerationState, setGenerationState} from "./state.js";
 import {sendPopupMessage} from "./popup.js";
-import {setInputValue, toggleHiresFix} from "./utils_input.js";
+import {setCheckBoxValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
-import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
+import {getGenerationProgress, saveControlnetImages} from "./sdwebui.js";
 
 let generationId;
 let isImg2Img;
+let isVariations;
 
 export async function batchGenerate(options) {
-    beginGeneration(options);
+    setupGeneration(options);
 
     setInputValue("#txt2img_seed input", -1);
 
+    return beginGeneration(options);
+}
+
+export async function generateVariations(options) {
+    isVariations = true;
+    setupGeneration(options);
+
+    setCheckBoxValue("#txt2img_subseed_show input", true);
+    setInputValue("#txt2img_subseed input", -1);
+    setInputValue("#txt2img_subseed_strength input", options.strength);
+
+    return beginGeneration(options);
+}
+
+export function setupGeneration(options) {
+    setGenerationState("BATCH_GENERATION");
+    sendPopupMessage({type: "BEGIN_PROCESSING"});
+
+    isImg2Img = options.img2img;
+    generationId = createGenerationId();
+}
+
+async function beginGeneration(options) {
     if (options.preset)
         await setConfigPreset(options.preset);
     else
@@ -26,17 +50,15 @@ export async function batchGenerate(options) {
         generateButton.click();
 }
 
-export function beginGeneration(options) {
-    setGenerationState("BATCH_GENERATION");
-    sendPopupMessage({type: "BEGIN_PROCESSING"});
-
-    isImg2Img = options.img2img;
-    generationId = createGenerationId();
-}
-
 export async function finishGeneration() {
     if (!generationId)
         return;
+
+    if (isVariations) {
+        isVariations = false;
+        setInputValue("#txt2img_subseed_strength input", 0);
+        setCheckBoxValue("#txt2img_subseed_show input", false);
+    }
 
     const tempGenId = generationId;
     generationId = null;

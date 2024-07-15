@@ -18,7 +18,7 @@ import {
     setImageParams,
     setImageSeed, showModelInfoPopup, stopGeneration
 } from "./sdwebui.js";
-import {batchGenerate, messageSetGenerationParams} from "./generation.js";
+import {batchGenerate, generateVariations, messageSetGenerationParams} from "./generation.js";
 import {checkWebSocketConnection, createWebSocket, setSocketEventListener} from "./websocket.js";
 
 let appConfig;
@@ -82,6 +82,8 @@ function onMessage(msg) {
         exploreModels(payload);
     else if (payload.type === "BATCH_GENERATE")
         batchGenerate(payload);
+    else if (payload.type === "GENERATE_VARIATIONS")
+        generateVariations(payload);
     else if (payload.type === "UPSCALE_IMAGES")
         processImages(payload);
     else if (payload.type === "SET_IMAGE_SEED")

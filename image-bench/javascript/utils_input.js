@@ -12,6 +12,7 @@ export function setInputValue(inputElementSelector, value, blur = true) {
         console.log(`Input element ${inputElementSelector} not found.`);
         return;
     }
+
     inputElement.value = value;
 
     const inputEvent = new Event('input', {bubbles: true, cancelable: true});
@@ -20,6 +21,31 @@ export function setInputValue(inputElementSelector, value, blur = true) {
     if (blur) {
         const blurEvent = new Event('blur', {bubbles: true, cancelable: true});
         inputElement.dispatchEvent(blurEvent);
+    }
+}
+
+export function setCheckBoxValue(inputElementSelector, checked, blur = true) {
+    const inputElement = document.querySelector(inputElementSelector);
+    if (!inputElement) {
+        console.log(`Input element ${inputElementSelector} not found.`);
+        return;
+    }
+
+    if (inputElement.checked !== checked) {
+        const inputEvent = new Event('input', {bubbles: true, cancelable: true});
+        inputElement.dispatchEvent(inputEvent);
+
+        const changeEvent = new Event('change', {bubbles: true, cancelable: true});
+        inputElement.dispatchEvent(changeEvent);
+
+        var clickEvent = new MouseEvent('click', {
+            'view': window,
+            'bubbles': true,
+            'cancelable': true,
+            'buttons': 1
+        });
+
+        inputElement.dispatchEvent(clickEvent);
     }
 }
 
