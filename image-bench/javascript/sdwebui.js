@@ -35,23 +35,30 @@ export function hookIntoSDWebUI() {
 }
 
 function listenInterruptButtonMutations() {
-    const targetNode = document.getElementById('txt2img_interrupt');
-    const config = { attributes: true, attributeFilter: ['style'] };
-    const callback = async function(mutationsList, observer) {
-        for (const mutation of mutationsList) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-                if (mutation.target.style.cssText.includes("display: none"))
-                    if (getGenerationState() === "BATCH_GENERATION") {
-                        await finishGeneration();
-                        sendPopupMessage({type: "GENERATION_FINISHED"});
-                    }
+    const txt2imgInterrupt = document.getElementById('txt2img_interrupt');
+    const img2imgInterrupt = document.getElementById('img2img_interrupt');
+
+    setMutationListener(txt2imgInterrupt);
+    setMutationListener(img2imgInterrupt);
+
+    function setMutationListener(element) {
+        const config = { attributes: true, attributeFilter: ['style'] };
+        const callback = async function(mutationsList, observer) {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    if (mutation.target.style.cssText.includes("display: none"))
+                        if (getGenerationState() === "BATCH_GENERATION") {
+                            await finishGeneration();
+                            sendPopupMessage({type: "GENERATION_FINISHED"});
+                        }
+                }
             }
-        }
-    };
+        };
 
-    const observer = new MutationObserver(callback);
+        const observer = new MutationObserver(callback);
 
-    observer.observe(targetNode, config);
+        observer.observe(element, config);
+    }
 }
 
 export function initializePopupPrompts() {
@@ -99,7 +106,12 @@ export async function stopGeneration() {
         button: 0
     });
 
-    const interruptButton = document.getElementById('txt2img_interrupt');
+    const txt2ImgInterruptButton = document.getElementById("txt2img_interrupt");
+    const img2ImgInterruptButton = document.getElementById("img2img_interrupt");
+    const interruptButton = txt2ImgInterruptButton.offsetParent === null
+        ? img2ImgInterruptButton
+        : txt2ImgInterruptButton;
+
     interruptButton.dispatchEvent(mousedownEvent);
     if (isButtonVisible(interruptButton))
         interruptButton.click();

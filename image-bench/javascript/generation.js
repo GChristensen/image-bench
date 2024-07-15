@@ -2,7 +2,7 @@ import {getGenerationState, setGenerationState} from "./state.js";
 import {sendPopupMessage} from "./popup.js";
 import {setCheckBoxValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
-import {getGenerationProgress, saveControlnetImages} from "./sdwebui.js";
+import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
 
 let generationId;
 let isImg2Img;
@@ -36,16 +36,31 @@ export function setupGeneration(options) {
 }
 
 async function beginGeneration(options) {
-    if (options.preset)
-        await setConfigPreset(options.preset);
-    else
-        setInputValue("#txt2img_batch_count input[type='number']", 100);
+    const txt2ImgGenerateButton = document.getElementById("txt2img_generate");
+    const img2ImgGenerateButton = document.getElementById("img2img_generate");
+    const isImg2ImgTab = txt2ImgGenerateButton.offsetParent === null;
 
-    toggleHiresFix(false, true);
+    if (options.preset && !isImg2ImgTab)
+        await setConfigPreset(options.preset);
+    else {
+        if (isImg2ImgTab)
+            setInputValue("#img2img_batch_count input[type='number']", 100);
+        else
+            setInputValue("#txt2img_batch_count input[type='number']", 100);
+    }
+
+    let generateButton;
+
+    if (isImg2ImgTab) {
+        generateButton = img2ImgGenerateButton;
+    }
+    else {
+        generateButton = txt2ImgGenerateButton;
+        toggleHiresFix(false, true);
+    }
 
     await sleep(500);
 
-    const generateButton = document.getElementById("txt2img_generate");
     if (isButtonVisible(generateButton))
         generateButton.click();
 }
