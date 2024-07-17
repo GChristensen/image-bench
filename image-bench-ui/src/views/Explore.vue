@@ -173,6 +173,7 @@ function onImageClick(image) {
 }
 
 function onImageOpen(image) {
+  console.log(image)
   const imageLink = createImageLink(image);
   window.open(imageLink, "_blank");
 }
@@ -260,7 +261,7 @@ function onKeydown(e) {
                                :displayed="true"
                                @show-params="() => onShowParams(image)"
                                @image-click="() => onImageClick(image)"
-                               @image-open="onImageOpen"></GeneratedImage>
+                               @image-open="() => onImageOpen(image)"></GeneratedImage>
             </div>
           </div>
         </div>

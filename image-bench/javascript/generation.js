@@ -8,15 +8,15 @@ let generationId;
 let isImg2Img;
 let isVariations;
 
-export async function batchGenerate(options) {
+export async function batchGenerate(options, config) {
     setupGeneration(options);
 
     setInputValue("#txt2img_seed input", -1);
 
-    return beginGeneration(options);
+    return beginGeneration(options, config);
 }
 
-export async function generateVariations(options) {
+export async function generateVariations(options, config) {
     isVariations = true;
     setupGeneration(options);
 
@@ -24,7 +24,7 @@ export async function generateVariations(options) {
     setInputValue("#txt2img_subseed input", -1);
     setInputValue("#txt2img_subseed_strength input", options.strength);
 
-    return beginGeneration(options);
+    return beginGeneration(options, config);
 }
 
 export function setupGeneration(options) {
@@ -35,7 +35,7 @@ export function setupGeneration(options) {
     generationId = createGenerationId();
 }
 
-async function beginGeneration(options) {
+async function beginGeneration(options, config) {
     const txt2ImgGenerateButton = document.getElementById("txt2img_generate");
     const img2ImgGenerateButton = document.getElementById("img2img_generate");
     const isImg2ImgTab = txt2ImgGenerateButton.offsetParent === null;
@@ -44,9 +44,9 @@ async function beginGeneration(options) {
         await setConfigPreset(options.preset);
     else {
         if (isImg2ImgTab)
-            setInputValue("#img2img_batch_count input[type='number']", 100);
+            setInputValue("#img2img_batch_count input[type='number']", config.defaultBatches || 100);
         else
-            setInputValue("#txt2img_batch_count input[type='number']", 100);
+            setInputValue("#txt2img_batch_count input[type='number']", config.defaultBatches || 100);
     }
 
     let generateButton;
@@ -68,6 +68,14 @@ async function beginGeneration(options) {
 export async function finishGeneration() {
     if (!generationId)
         return;
+
+    const txt2ImgGenerateButton = document.getElementById("txt2img_generate");
+    const isImg2ImgTab = txt2ImgGenerateButton.offsetParent === null;
+
+    if (isImg2ImgTab)
+        setInputValue("#img2img_batch_count input[type='number']", 1);
+    else
+        setInputValue("#txt2img_batch_count input[type='number']", 1);
 
     if (isVariations) {
         isVariations = false;

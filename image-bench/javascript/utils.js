@@ -27,3 +27,16 @@ function getDateTimeString() {
 export function isButtonVisible(element) {
    return element.style.display !== "none";
 }
+
+export async function loadAppConfig() {
+    await fetch('/image-bench/config.json?_=' + (+new Date()))
+        .then(response => response.json())
+        .then(config => {
+            try {
+                return config;
+            } catch (error) {
+                console.error('[state]: Error:', error);
+            }
+        })
+        .catch(error => console.error('[state]: Error getting JSON file:', error));
+}

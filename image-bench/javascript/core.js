@@ -1,12 +1,12 @@
-import {sleep} from "./utils.js";
+import {loadAppConfig, sleep} from "./utils.js";
 import {createHeaderButton} from "./utils_html.js";
 import {getGenerationState, setGenerationState} from "./state.js";
 import {exploreModels, exploreNextImage, messageSetExploreParams} from "./explore.js";
 import {
-    isProcessingActive,
     generateVaryingSteps,
-    processImages,
+    isProcessingActive,
     messageSetProcessingParams,
+    processImages,
     processNextImage,
     upscaleVaryingDenoising
 } from "./processing.js";
@@ -16,7 +16,9 @@ import {
     initializePopupPrompts,
     repositionConfigPresetsDropdown,
     setImageParams,
-    setImageSeed, showModelInfoPopup, stopGeneration
+    setImageSeed,
+    showModelInfoPopup,
+    stopGeneration
 } from "./sdwebui.js";
 import {batchGenerate, generateVariations, messageSetGenerationParams} from "./generation.js";
 import {checkWebSocketConnection, createWebSocket, setSocketEventListener} from "./websocket.js";
@@ -25,24 +27,11 @@ let appConfig;
 
 export async function init() {
     setGenerationState("BATCH_GENERATION");
-    await loadAppConfig();
+    appConfig = await loadAppConfig() || {};
     await initUI();
 
     window.addEventListener("message", onMessage);
     setSocketEventListener(onBackendMessage);
-}
-
-async function loadAppConfig() {
-    await fetch('/image-bench/config.json?_=' + (+new Date()))
-        .then(response => response.json())
-        .then(config => {
-            try {
-                appConfig = config;
-            } catch (error) {
-                console.error('[state]: Error:', error);
-            }
-        })
-        .catch(error => console.error('[state]: Error getting JSON file:', error));
 }
 
 async function initUI() {
@@ -81,9 +70,9 @@ function onMessage(msg) {
     else if (payload.type === "EXPLORE_MODELS")
         exploreModels(payload);
     else if (payload.type === "BATCH_GENERATE")
-        batchGenerate(payload);
+        batchGenerate(payload, appConfig);
     else if (payload.type === "GENERATE_VARIATIONS")
-        generateVariations(payload);
+        generateVariations(payload, appConfig);
     else if (payload.type === "UPSCALE_IMAGES")
         processImages(payload);
     else if (payload.type === "SET_IMAGE_SEED")
