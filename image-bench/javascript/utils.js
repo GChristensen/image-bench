@@ -29,14 +29,7 @@ export function isButtonVisible(element) {
 }
 
 export async function loadAppConfig() {
-    await fetch('/image-bench/config.json?_=' + (+new Date()))
+    return await fetch('/image-bench/config.json?' + (+new Date()))
         .then(response => response.json())
-        .then(config => {
-            try {
-                return config;
-            } catch (error) {
-                console.error('[state]: Error:', error);
-            }
-        })
         .catch(error => console.error('[state]: Error getting JSON file:', error));
 }

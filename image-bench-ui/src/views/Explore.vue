@@ -173,7 +173,6 @@ function onImageClick(image) {
 }
 
 function onImageOpen(image) {
-  console.log(image)
   const imageLink = createImageLink(image);
   window.open(imageLink, "_blank");
 }

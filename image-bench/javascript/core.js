@@ -44,7 +44,7 @@ async function initUI() {
     }
 
     if (appConfig?.addModelInfoButton) {
-        const reloadModelsButton = document.getElementById("refresh_sd_model_checkpoint");
+        const reloadModelsButton = document.querySelector("#refresh_sd_model_checkpoint, #forge_refresh_checkpoint");
         createHeaderButton('Civitai Model Info', "ℹ️", {}, showModelInfoPopup, reloadModelsButton);
     }
     createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);

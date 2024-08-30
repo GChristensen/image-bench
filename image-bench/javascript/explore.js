@@ -48,7 +48,7 @@ async function setActiveModel(modelName) {
     //
     // opts.sd_model_checkpoint = modelName;
     // await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
-    return setDropdownValue("#setting_sd_model_checkpoint input", modelName);
+    return setDropdownValue("#setting_sd_model_checkpoint input, .model_selection input", modelName);
 }
 
 async function exploreImage(model) {

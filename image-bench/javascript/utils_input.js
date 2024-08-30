@@ -70,10 +70,15 @@ export async function setDropdownValue(inputElementSelector, value, blur = true)
     const optionList = inputElement.closest(".block").querySelector("ul");
 
     if (optionList) {
+        value = value.replace(/ \[[^\]]+\]$/, ""); // strip hash
+
         const options = Array.from(optionList.querySelectorAll("li"));
 
         for (const optionElement of options) {
-            if (optionElement.getAttribute("data-value").includes(value)) {
+            const optionName = optionElement.getAttribute("data-value")
+                || optionElement.getAttribute("aria-label");
+
+            if (optionName.includes(value)) {
                 const mousedownEvent = new MouseEvent('mousedown', {
                     bubbles: true,
                     cancelable: true,

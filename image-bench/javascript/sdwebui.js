@@ -7,6 +7,7 @@ import {closePopup, sendPopupMessage} from "./popup.js";
 import {isButtonVisible, sleep} from "./utils.js";
 import {setupGeneration, finishGeneration} from "./generation.js";
 
+export let isForge = false;
 
 addEventListener("pagehide", () => {
     closePopup();
@@ -14,6 +15,8 @@ addEventListener("pagehide", () => {
 });
 
 export function hookIntoSDWebUI() {
+    isForge = !!document.querySelector("[id^='forge']");
+
     const txt2ImgGenerateButton = document.getElementById("txt2img_generate");
     txt2ImgGenerateButton.addEventListener("mousedown", onGenerateMousedown);
 
