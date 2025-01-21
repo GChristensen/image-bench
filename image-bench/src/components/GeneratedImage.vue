@@ -205,7 +205,7 @@
       <span v-if="isTray && !image.img2img" class="upscale-denoising" title="Upscale with denoising"
             @mousedown.left="onUpscaleVaryingDenoising">📉</span>
       <span v-if="!isTray || isTray && kind === KIND_IMAGE_TRAY" class="place-to-tray" title="Place to concept tray"
-            @click="onPlaceToConceptTray">📥</span>
+            @click="onPlaceToConceptTray">💡</span>
       <span v-if="!isTray || isTray && kind === KIND_CONCEPT_TRAY" class="place-to-tray" title="Place to image tray"
             @click="onPlaceToTray">🎨</span>
       <span v-if="isTray" class="add-comment" title="Add comment" @click="$emit('addComment', image)">💬</span>

@@ -40,14 +40,18 @@ const viewStores = {
   [upscaledImageStore.kind]: upscaledImageStore,
 }
 
-async function onSDEvent(e) {
-  // if (e.type === "SOCKET_CLOSED") {
-  //   alert("Connection with Stable Diffusion WebUI server is lost. Please reload the main WebUI page and reopen this window.");
-  //   return;
-  // }
+onBeforeMount(async () => {
+  await appConfigStore.init();
+  await imageTrayStore.init();
+  await conceptTrayStore.init();
+  await configPresetsStore.init();
 
+  sendWebUIMessage({type: "INITIALIZE_PROMPTS"});
+});
+
+async function onSDEvent(e) {
   const state = window.getGenerationState();
-  await openCurrentModeTab(e, state);
+  await switchTabAccordingToGenerationMode(e, state);
 
   console.log(e);
 
@@ -64,8 +68,9 @@ async function onSDEvent(e) {
 
   routerView.value.onAfterSDEvent(e);
 }
+window.onSDEvent = onSDEvent;
 
-async function openCurrentModeTab(e, state) {
+async function switchTabAccordingToGenerationMode(e, state) {
   if (e.type === "BEGIN_PROCESSING") {
     if (state === "BATCH_GENERATION" || state === "SEQUENTIAL_GENERATION") {
       if (route.fullPath !== "/generated-images") {
@@ -78,18 +83,6 @@ async function openCurrentModeTab(e, state) {
     }
   }
 }
-
-window.onSDEvent = onSDEvent;
-
-onBeforeMount(async () => {
-  await appConfigStore.init();
-  await imageTrayStore.init();
-  await conceptTrayStore.init();
-  await configPresetsStore.init();
-
-  sendWebUIMessage({type: "INITIALIZE_PROMPTS"});
-});
-
 </script>
 
 <template>

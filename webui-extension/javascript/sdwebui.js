@@ -166,7 +166,7 @@ export async function setImageParams(options) {
         return;
 
     if ("model" in params)
-        await setDropdownValue("#setting_sd_model_checkpoint input", params["model"]);
+        await setDropdownValue("#setting_sd_model_checkpoint input, .model_selection input", params["model"]);
 
     if ("vae" in params)
         await setDropdownValue("#setting_sd_vae input", params["vae"]);
@@ -229,28 +229,6 @@ export function getGenerationProgress() {
 
     if (matches)
         return parseInt(matches[1]);
-}
-
-export async function showModelInfoPopup() {
-    const inputElement = document.querySelector("#setting_sd_model_checkpoint input");
-    const hashMatches = inputElement.value.match(/\[([a-zA-Z0-9]+)]/);
-
-    if (hashMatches) {
-        const hash = hashMatches[1];
-        const response = await fetch(`https://civitai.com/api/v1/model-versions/by-hash/${hash}`);
-
-        if (response.ok) {
-            const modelInfo = await response.json();
-
-            if (modelInfo) {
-                window.open(`https://civitai.com/models/${modelInfo.modelId}?modelVersionId=${modelInfo.id}`, "_blank");
-            }
-        }
-        else if (response.status === 404)
-            alert("The model is not found on Civitai.");
-    }
-    else
-        alert("The model is not hashed yet.");
 }
 
 export async function saveControlnetImages(generationId) {

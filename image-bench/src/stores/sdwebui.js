@@ -1,7 +1,5 @@
 import {defineStore} from "pinia";
-import {KIND_UPSCALED} from "@/consts.js";
 import {ref} from "vue";
-import {addImage} from "@/stores/utils.js";
 
 export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
     const prompt = ref("")

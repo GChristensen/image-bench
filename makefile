@@ -1,3 +1,3 @@
 ui:
-	cd image-bench-ui; npm run build
-	cp -f image-bench-ui/dist/index.html image-bench/scripts
+	cd image-bench; npm run build
+	cp -f image-bench/dist/index.html webui-extension/scripts

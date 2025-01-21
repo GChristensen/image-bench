@@ -38,7 +38,7 @@ export async function exploreModels(options) {
 
     totalImages = exploreQueue.length;
 
-    modelBeforeExplore = getInputValue("#setting_sd_model_checkpoint input");
+    modelBeforeExplore = getInputValue("#setting_sd_model_checkpoint input, .model_selection input");
     return exploreImage(exploreQueue.shift());
 }
 
@@ -85,7 +85,7 @@ export async function finishExploring() {
         exploreQueue = [];
 
     if (modelBeforeExplore) {
-        await setDropdownValue("#setting_sd_model_checkpoint input", modelBeforeExplore);
+        await setDropdownValue("#setting_sd_model_checkpoint input, .model_selection input", modelBeforeExplore);
         modelBeforeExplore = null;
     }
 

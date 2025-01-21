@@ -17,7 +17,6 @@ import {
     repositionConfigPresetsDropdown,
     setImageParams,
     setImageSeed,
-    showModelInfoPopup,
     stopGeneration
 } from "./sdwebui.js";
 import {batchGenerate, generateVariations, messageSetGenerationParams} from "./generation.js";
@@ -36,17 +35,14 @@ export async function init() {
 
 async function initUI() {
     //window.name = "sd-webui-main-window";
-
+    console.log(appConfig)
     if (appConfig?.repositionConfigPresetsDropdown) {
         await sleep(2000);
+        console.log("Repos")
         await repositionConfigPresetsDropdown("txt2img");
         await repositionConfigPresetsDropdown("img2img");
     }
 
-    if (appConfig?.addModelInfoButton) {
-        const reloadModelsButton = document.querySelector("#refresh_sd_model_checkpoint, #forge_refresh_checkpoint");
-        createHeaderButton('Civitai Model Info', "ℹ️", {}, showModelInfoPopup, reloadModelsButton);
-    }
     createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
     disposePopup();
 }
