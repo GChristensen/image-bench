@@ -1,6 +1,5 @@
 import { useImageStoreState } from './useImageStoreState.js';
 import { useDebounce } from '@/composables/useDebounce.js';
-import { triggerRef } from 'vue';
 
 /**
  * Composable for tray-specific store state and actions
@@ -56,16 +55,12 @@ export function useTrayStoreState(kind) {
 
       imageData.tagColor = color;
       baseStore.images.value.push(imageData);
-      // Trigger reactivity for shallowRef
-      //triggerRef(baseStore.images);
       await persist();
     }
   }
 
   async function clear() {
     baseStore.images.value = [];
-    // Trigger reactivity for shallowRef
-    //triggerRef(baseStore.images);
     await persist();
   }
 

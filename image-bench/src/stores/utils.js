@@ -1,5 +1,4 @@
 import {createImageData} from "@/sdwebui.js";
-import { triggerRef } from 'vue';
 
 export function addImage(eventData, images) {
     if (eventData.type === "SAVED_IMAGE") {
@@ -7,9 +6,6 @@ export function addImage(eventData, images) {
     } else if (eventData.type === "BEGIN_PROCESSING" && images.value.length) {
         insertSeparator(images);
     }
-    
-    // Trigger reactivity for shallowRef after mutations
-    //triggerRef(images);
 }
 
 export function insertImage(eventData, images) {

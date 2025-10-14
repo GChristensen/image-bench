@@ -1,4 +1,4 @@
-import { ref, shallowRef, triggerRef } from 'vue';
+import { ref } from 'vue';
 import { addImage, isImageEvent } from '@/stores/utils.js';
 
 /**
@@ -7,7 +7,6 @@ import { addImage, isImageEvent } from '@/stores/utils.js';
  * Uses shallowRef for images array to optimize performance with large lists
  */
 export function useImageStoreState(kind) {
-  // const images = shallowRef([]);
   const images = ref([]);
   const generationInProgress = ref(false);
   const generationProgress = ref(0);
@@ -26,7 +25,6 @@ export function useImageStoreState(kind) {
       }
 
       addImage(e, images);
-      // Note: triggerRef is now called inside addImage utility
     } else if (e.type === 'GENERATION_PROGRESS') {
       generationProgress.value = e.progress;
     } else if (e.type === 'GENERATION_FINISHED') {
@@ -42,8 +40,6 @@ export function useImageStoreState(kind) {
 
   function clear() {
     images.value = [];
-    // Trigger reactivity for shallowRef
-    //triggerRef(images);
   }
 
   function resetProgress() {
