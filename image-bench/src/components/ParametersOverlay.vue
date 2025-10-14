@@ -32,23 +32,30 @@ import {onBeforeMount, ref} from "vue";
 </script>
 
 <template>
-  <div class="text-overlay-container" >
-    <div class="text-overlay" @click="$emit('hideOverlay')">
-    </div>
-    <div class="close-button" @click="$emit('hideOverlay')">✖</div>
-    <div class="overlay-text-container">
-      <h3 class="parameters-title">Generation parameters</h3>
-      <textarea class="overlay-text" autofocus>{{ text }}</textarea>
-      <div v-if="controlnetImages.length" class="controlnet-container">
-        <h3 class="controlnet-title">ControlNet</h3>
-        <div class="controlnet-images">
-          <a v-for="imageURL in controlnetImages" :href="imageURL" target="_blank">
-            <img class="controlnet-image" :src="imageURL">
-          </a>
+  <!-- Using Teleport for overlay to render at body level -->\
+  <Teleport to="body">
+    <Transition name="fade">
+      <div class="text-overlay-container" >
+        <div class="text-overlay" @click="$emit('hideOverlay')">
         </div>
+        <div class="close-button" @click="$emit('hideOverlay')">✖</div>
+        <Transition name="slide-down">
+          <div class="overlay-text-container">
+            <h3 class="parameters-title">Generation parameters</h3>
+            <textarea class="overlay-text" autofocus>{{ text }}</textarea>
+            <div v-if="controlnetImages.length" class="controlnet-container">
+              <h3 class="controlnet-title">ControlNet</h3>
+              <div class="controlnet-images">
+                <a v-for="imageURL in controlnetImages" :key="imageURL" :href="imageURL" target="_blank">
+                  <img class="controlnet-image" :src="imageURL">
+                </a>
+              </div>
+            </div>
+          </div>
+        </Transition>
       </div>
-    </div>
-  </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -114,5 +121,28 @@ import {onBeforeMount, ref} from "vue";
 
 .action-link-container {
   text-align: center;
+}
+
+/* Vue 3 Transition animations */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.slide-down-enter-active, .slide-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-down-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 </style>

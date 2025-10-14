@@ -26,8 +26,7 @@ export function useImageStoreState(kind) {
       }
 
       addImage(e, images);
-      // Manually trigger reactivity for shallowRef after mutations
-      triggerRef(images);
+      // Note: triggerRef is now called inside addImage utility
     } else if (e.type === 'GENERATION_PROGRESS') {
       generationProgress.value = e.progress;
     } else if (e.type === 'GENERATION_FINISHED') {

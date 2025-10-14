@@ -39,20 +39,27 @@
 </script>
 
 <template>
-  <div class="image-overlay-container" >
-    <div class="image-overlay" @click="$emit('hideOverlay')">
-    </div>
-    <div class="close-button" @click="$emit('hideOverlay')">✖</div>
-    <div class="overlay-image-container">
-      <img class="overlay-image" :src="imageLink" @mousedown="onImageMouseDown">
-      <div class="action-link-container">
-        <a v-if="isTray" class="select-link tool-item" href="#"
-           @click="$emit('imageSelect', $event, props.image)">Select image</a>
-        &nbsp;
-        <a v-if="!isTray" class="close-link tool-item" href="#" @click="onAddToTrayClick">Add to Tray</a>
+  <!-- Using Teleport to render overlay at body level for better z-index control -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div class="image-overlay-container" >
+        <div class="image-overlay" @click="$emit('hideOverlay')">
+        </div>
+        <div class="close-button" @click="$emit('hideOverlay')">✖</div>
+        <Transition name="zoom">
+          <div class="overlay-image-container">
+            <img class="overlay-image" :src="imageLink" @mousedown="onImageMouseDown">
+            <div class="action-link-container">
+              <a v-if="isTray" class="select-link tool-item" href="#"
+                 @click="$emit('imageSelect', $event, props.image)">Select image</a>
+              &nbsp;
+              <a v-if="!isTray" class="close-link tool-item" href="#" @click="onAddToTrayClick">Add to Tray</a>
+            </div>
+          </div>
+        </Transition>
       </div>
-    </div>
-  </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -105,5 +112,28 @@
 
 .action-link-container {
   text-align: center;
+}
+
+/* Vue 3 Transition animations */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.zoom-enter-active, .zoom-leave-active {
+  transition: all 0.3s ease;
+}
+
+.zoom-enter-from {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.zoom-leave-to {
+  opacity: 0;
+  transform: scale(1.05);
 }
 </style>

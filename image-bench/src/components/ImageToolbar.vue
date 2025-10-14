@@ -5,6 +5,11 @@ import { computed } from 'vue';
  * Presentational component for the image toolbar
  * Displays actions based on kind and state, emits events to parent
  */
+defineOptions({
+  name: 'ImageToolbar',
+  inheritAttrs: false
+});
+
 const props = defineProps({
   kind: {
     type: String,
