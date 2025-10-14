@@ -83,6 +83,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
     }
   }
 }
+
 </script>
 
 <template>

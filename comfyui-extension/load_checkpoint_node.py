@@ -32,6 +32,7 @@ class LoadCheckpointNode(CheckpointLoaderSimple):
 
     def handle_model_change(self, message):
         model_name = message.get('model_name')
+
         if model_name and model_name in folder_paths.get_filename_list("checkpoints"):
             self.current_model = model_name
             return {"status": "success", "message": f"Model changed to {model_name}"}

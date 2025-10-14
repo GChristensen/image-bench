@@ -6,16 +6,19 @@ import VueDevTools from 'vite-plugin-vue-devtools'
 import { viteSingleFile } from "vite-plugin-singlefile"
 
 
+export default ({ mode }) => {
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    VueDevTools(),
-    viteSingleFile(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+
+  return defineConfig({
+    plugins: [
+      vue(),
+      VueDevTools(),
+      viteSingleFile(),
+    ],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      }
     }
-  }
-})
+  });
+}
