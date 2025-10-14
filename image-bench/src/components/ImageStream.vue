@@ -1,11 +1,27 @@
 <script setup>
   import GeneratedImage from "@/components/GeneratedImage.vue";
-  import {computed, getCurrentInstance, ref, watch} from "vue";
-  import {createImageGenerationParams, createImageLink} from "@/sdwebui.js";
+  import {computed, ref, watch} from "vue";
   import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+  import {useImageSelection} from "@/composables/useImageSelection.js";
+  import {useImageOperations} from "@/composables/useImageOperations.js";
 
-  const props = defineProps(["kind", "imageStore", "showMarked"]);
-  const emit = defineEmits(["imageClick", "imageOpen", "showParams", "upscaleImage", "markingFilter"]);
+  const props = defineProps({
+    kind: {
+      type: String,
+      required: true,
+      validator: (value) => ['generated', 'image-tray', 'concept-tray', 'upscaled', 'explore'].includes(value)
+    },
+    imageStore: {
+      type: Object,
+      required: true
+    },
+    showMarked: {
+      type: Boolean,
+      default: false
+    }
+  });
+
+  const emit = defineEmits(['imageClick', 'imageOpen', 'showParams', 'upscaleImage', 'markingFilter']);
 
   const isTray = ref(props.kind === KIND_IMAGE_TRAY || props.kind === KIND_CONCEPT_TRAY);
   const images = computed(() => props.imageStore.images);
@@ -13,14 +29,16 @@
 
   const imageStreamElement = ref();
 
-  const isAllSelected = computed(
-      () => images.value.length && (images.value.every(i => i.selected)));
-
-  const isSomeSelected = computed(
-      () => images.value.length && (images.value.some(i => i.selected)));
-
-  const isNoneSelected = computed(
-      () => images.value.length && (!images.value.some(i => i.selected)));
+  // Composables
+  const imageOps = useImageOperations();
+  const {
+    isAllSelected,
+    isSomeSelected,
+    isNoneSelected,
+    selectImage,
+    selectAll,
+    getSelectedImages
+  } = useImageSelection(images);
 
   let scrolledToBottom = true;
 
@@ -37,23 +55,7 @@
   }
 
   function getImageLink(index) {
-    return createImageLink(images.value[index]);
-  }
-
-  function selectImage(image) {
-    const index = images.value.indexOf(image);
-    images.value[index].selected = true;
-  }
-
-  function selectAll(selectAll=true) {
-    if (isAllSelected.value || !selectAll) {
-      for (const image of images.value)
-        image.selected = false;
-    }
-    else {
-      for (const image of images.value)
-        image.selected = true;
-    }
+    return imageOps.getImageLink(images.value[index]);
   }
 
   function clear(e) {
@@ -88,19 +90,6 @@
     }
   }
 
-  function getSelectedImages() {
-    const selectedItems = [];
-
-    for (let i = 0; i < images.value.length; ++i) {
-      if (images.value[i].selected) {
-        const proxyItem = images.value[i];
-        const image = JSON.parse(JSON.stringify(proxyItem));
-        selectedItems.push(image);
-      }
-    }
-
-    return selectedItems;
-  }
 
   function getNextImage(image) {
     const imageView = props.showMarked? images.value.filter(i => i.marking): images.value;

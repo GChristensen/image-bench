@@ -1,15 +1,26 @@
 <script setup>
   import {computed} from "vue";
-  import {createImageLink} from "@/sdwebui.js";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {flashTrayTab} from "@/components/utils.js";
+  import {useImageOperations} from "@/composables/useImageOperations.js";
 
-  const props = defineProps(["image", "isTray"]);
-  const emit = defineEmits(["hideOverlay", "imageSelect", "addToTray"]);
+  const props = defineProps({
+    image: {
+      type: Object,
+      required: true
+    },
+    isTray: {
+      type: Boolean,
+      default: false
+    }
+  });
+
+  const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray']);
 
   const imageTrayStore = useImageTrayStore();
+  const imageOps = useImageOperations();
 
-  const imageLink = computed(() => createImageLink(props.image));
+  const imageLink = computed(() => imageOps.getImageLink(props.image));
 
   function onAddToTrayClick(e) {
     e.preventDefault();

@@ -9,11 +9,23 @@ import {useImageTrayStore} from "@/stores/imageTray.js";
 import {generationStateToKind, KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
-import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
+import {createImageLink} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
+import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
+import {useImageOperations} from "@/composables/useImageOperations.js";
+import {useLocalStorage} from "@/composables/useLocalStorage.js";
+import {useKeyboardShortcuts} from "@/composables/useKeyboardShortcuts.js";
 
-const props = defineProps(["kind"]);
+const props = defineProps({
+  kind: {
+    type: String,
+    required: true,
+    validator: (value) => {
+      return ['generated', 'image-tray', 'concept-tray', 'upscaled'].includes(value);
+    }
+  }
+});
 
 const config = useAppConfigStore();
 const generatedImagesStore = useGeneratedImagesStore();
@@ -37,6 +49,11 @@ const lastConfigPreset = ref("");
 const batchGenerate = ref();
 const isShowingMarked = ref(false);
 const openFileInput = ref()
+
+// Composables
+const webUI = useWebUIBridge();
+const imageOps = useImageOperations();
+const storage = useLocalStorage();
 
 function getImageStore() {
   switch (props.kind) {
@@ -66,7 +83,7 @@ function onUpscaleSelectedClick(e) {
   const selectedImages = imageStream.value.getSelectedImages();
 
   if (upscaledImageStore.generationInProgress) {
-    sendWebUIMessage({type: "STOP_GENERATION"});
+    webUI.stopGeneration();
   }
   else {
     if (selectedImages.length) {
@@ -75,32 +92,28 @@ function onUpscaleSelectedClick(e) {
 
       upscaledImageStore.startingGeneration();
 
-      sendWebUIMessage({type: "UPSCALE_IMAGES", images: selectedImages, preset: imageStore.applyPreset});
+      webUI.upscaleImages(selectedImages, imageStore.applyPreset);
     }
   }
 }
 
 function onUpscaleImage(imageProxy, usePreset) {
-  const image = JSON.parse(JSON.stringify(imageProxy))
-  const options = {type: "UPSCALE_IMAGES", images: [image]};
-
-  if (usePreset) {
-    options.preset = imageTrayStore.applyPreset;
-  }
+  const image = imageOps.cloneImage(imageProxy);
+  const preset = usePreset ? imageTrayStore.applyPreset : null;
 
   if (config.automaticallyClearGeneratedImages)
     upscaledImageStore.clear();
 
   upscaledImageStore.startingGeneration();
 
-  sendWebUIMessage(options);
+  webUI.upscaleImages([image], preset);
 }
 
 function onBatchGenerateClick(e) {
   e.preventDefault();
 
   if (imageStore.generationInProgress) {
-    sendWebUIMessage({type: "STOP_GENERATION"});
+    webUI.stopGeneration();
   }
   else {
     if (config.automaticallyClearGeneratedImages)
@@ -108,34 +121,31 @@ function onBatchGenerateClick(e) {
 
     generatedImagesStore.startingGeneration();
 
-    sendWebUIMessage({type: "BATCH_GENERATE", preset: imageStore.applyPreset});
+    webUI.batchGenerate(imageStore.applyPreset);
   }
 }
 
 function onGenerateVariationsClick(e) {
   e.preventDefault();
 
-  let variationStrength = localStorage.getItem("imageBench_variationStrength");
-
-  if (!variationStrength)
-    variationStrength = "0.12";
-
+  const variationStrength = storage.getVariationStrength();
   const strength = prompt("Variation strength:", variationStrength);
+  
   if (strength) {
     if (config.automaticallyClearGeneratedImages)
       generatedImagesStore.clear();
 
     generatedImagesStore.startingGeneration();
 
-    localStorage.setItem("imageBench_variationStrength", strength);
-    sendWebUIMessage({type: "GENERATE_VARIATIONS", strength, preset: imageStore.applyPreset});
+    storage.setVariationStrength(strength);
+    webUI.generateVariations(strength, imageStore.applyPreset);
   }
 }
 
 function onStopGenerationClick(e) {
   e.preventDefault();
 
-  sendWebUIMessage({type: "STOP_GENERATION"});
+  webUI.stopGeneration();
 }
 
 function onImageClick(image) {
@@ -144,13 +154,11 @@ function onImageClick(image) {
 }
 
 function onImageOpen(image) {
-  //overlayImage.value = index;
-  const imageLink = createImageLink(image)
-  window.open(imageLink, "_blank");
+  imageOps.openImageInNewWindow(image);
 }
 
 function onShowParams(image) {
-  paramsOverlayText.value = createImageGenerationParams(image);
+  paramsOverlayText.value = imageOps.getImageParams(image);
   paramsOverlayImage.value = image;
   showParamsOverlay.value = true;
 }
@@ -162,7 +170,7 @@ function onImageSelectOverlay(evt, image) {
 }
 
 function onConfigPresetChange(e) {
-  localStorage.setItem("imageBench_" + props.kind + "_configPreset", e.target.value);
+  storage.setConfigPreset(props.kind, e.target.value);
 }
 
 function onBeforeSDEvent(e) {
@@ -181,27 +189,16 @@ function onAfterSDEvent(e) {
 }
 
 onBeforeMount(() => {
-  imageStore.applyPreset = lastConfigPreset.value =
-      localStorage.getItem("imageBench_" + props.kind + "_configPreset");
+  imageStore.applyPreset = lastConfigPreset.value = storage.getConfigPreset(props.kind);
 });
 
-document.addEventListener("keydown", onKeydown);
-
-function onKeydown(e) {
-  if (e.key === "Esc" || e.key === "Escape") {
-    hideOverlay();
-  }
-  else if (e.key === "ArrowLeft") {
-    displayPrevImage();
-  }
-  else if (e.key === "ArrowRight") {
-    displayNextImage();
-  }
-  else if (e.key.toUpperCase() === "U" && e.ctrlKey) {
-    e.preventDefault();
-    imageStream.value.selectAll(false);
-  }
-}
+// Keyboard shortcuts
+useKeyboardShortcuts({
+  onEscape: hideOverlay,
+  onArrowLeft: displayPrevImage,
+  onArrowRight: displayNextImage,
+  onCtrlU: () => imageStream.value.selectAll(false)
+});
 
 function hideOverlay() {
   showImageOverlay.value = false;

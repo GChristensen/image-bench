@@ -1,6 +1,6 @@
 <script setup>
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
-import {onBeforeMount, ref, computed} from "vue";
+import {onBeforeMount, ref, computed, onMounted, onUnmounted} from "vue";
 import {useImageTrayStore} from "@/stores/imageTray.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
@@ -8,19 +8,13 @@ import {useExploreImagesStore} from "@/stores/explore.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {generationStateToKind} from "@/consts.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
-import {sendWebUIMessage} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
+import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 
 const route = useRoute();
 const router = useRouter();
 
-const exploreTab = ref(null);
-const generatedImagesTab = ref(null);
-const upscaledImagesTab = ref(null);
-const imageTrayTab = ref(null);
-const conceptTrayTab = ref(null);
-const settingsTab = ref(null);
 const routerView = ref(null);
 
 const appConfigStore = useAppConfigStore();
@@ -32,6 +26,9 @@ const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
 const hasOpener = computed(() => !!window.opener);
+
+// Composables
+const webUI = useWebUIBridge();
 
 const viewStores = {
   [exploreImagesStore.kind]: exploreImagesStore,
@@ -46,7 +43,7 @@ onBeforeMount(async () => {
   await conceptTrayStore.init();
   await configPresetsStore.init();
 
-  sendWebUIMessage({type: "INITIALIZE_PROMPTS"});
+  webUI.initializePrompts();
 });
 
 async function onSDEvent(e) {
@@ -55,10 +52,11 @@ async function onSDEvent(e) {
 
   console.log(e);
 
+  // Notify child component if it has handlers
   try {
-    routerView.value.onBeforeSDEvent(e);
-  } catch (e) {
-    console.error(e);
+    routerView.value?.onBeforeSDEvent?.(e);
+  } catch (error) {
+    console.error('Error in onBeforeSDEvent:', error);
   }
 
   const store = viewStores[generationStateToKind(state)];
@@ -66,9 +64,23 @@ async function onSDEvent(e) {
 
   sdWebUIStateStore.onSDEvent(e);
 
-  routerView.value.onAfterSDEvent(e);
+  try {
+    routerView.value?.onAfterSDEvent?.(e);
+  } catch (error) {
+    console.error('Error in onAfterSDEvent:', error);
+  }
 }
-window.onSDEvent = onSDEvent;
+
+onMounted(() => {
+  window.onSDEvent = onSDEvent;
+});
+
+onUnmounted(() => {
+  // Clean up window event handler
+  if (window.onSDEvent === onSDEvent) {
+    window.onSDEvent = null;
+  }
+});
 
 async function switchTabAccordingToGenerationMode(e, state) {
   if (e.type === "BEGIN_PROCESSING") {

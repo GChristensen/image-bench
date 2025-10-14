@@ -1,8 +1,18 @@
 <script setup>
 import {onBeforeMount, ref} from "vue";
 
-  const props = defineProps(["image", "text"]);
-  const emit = defineEmits(["hideOverlay"]);
+  const props = defineProps({
+    image: {
+      type: Object,
+      required: true
+    },
+    text: {
+      type: String,
+      required: true
+    }
+  });
+
+  const emit = defineEmits(['hideOverlay']);
 
   const controlnetImages = ref([]);
 

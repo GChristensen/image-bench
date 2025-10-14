@@ -1,18 +1,51 @@
 <script setup>
   import {useImageTrayStore} from "@/stores/imageTray.js";
-  import {createImageLink, isImg2Img, sendWebUIMessage} from "@/sdwebui.js";
   import {animateColors} from "@/utils_html.js";
   import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
   import {useAppConfigStore} from "@/stores/appConfig.js";
   import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
   import {useUpscaledImagesStore} from "@/stores/upscaled.js";
-  import {useConfigPresetsStore} from "@/stores/configPresets.js";
   import {flashTrayTab} from "@/components/utils.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+  import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
+  import {useImageOperations} from "@/composables/useImageOperations.js";
+  import {useLocalStorage} from "@/composables/useLocalStorage.js";
 
-  const emit = defineEmits(["setMarking", "filterMarking"])
-  const props = defineProps(["isTray", "kind", "image", "selectable", "displayed", "upscalable", "selected"]);
+  const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams', 
+    'select', 'upscaleImage', 'addComment', 'deleteImage']);
+
+  const props = defineProps({
+    isTray: {
+      type: Boolean,
+      required: true
+    },
+    kind: {
+      type: String,
+      required: true,
+      validator: (value) => ['generated', 'image-tray', 'concept-tray', 'upscaled', 'explore'].includes(value)
+    },
+    image: {
+      type: Object,
+      required: true
+    },
+    selectable: {
+      type: Boolean,
+      default: false
+    },
+    displayed: {
+      type: Boolean,
+      default: true
+    },
+    upscalable: {
+      type: Boolean,
+      default: false
+    },
+    selected: {
+      type: Boolean,
+      default: false
+    }
+  });
 
   const config = useAppConfigStore();
   const imageTrayStore = useImageTrayStore();
@@ -21,19 +54,24 @@
   const generatedImagesStore = useGeneratedImagesStore();
   const upscaledImageStore = useUpscaledImagesStore();
 
+  // Composables
+  const webUI = useWebUIBridge();
+  const imageOps = useImageOperations();
+  const storage = useLocalStorage();
+
   function onReuseSeedClick(e) {
     e.preventDefault();
 
-    const parameters = JSON.parse(JSON.stringify(props.image.parameters))
-    sendWebUIMessage({type: "SET_IMAGE_SEED", parameters});
+    const parameters = imageOps.cloneImage(props.image).parameters;
+    webUI.setImageSeed(parameters);
   }
 
   // currently undocumented
   function onReuseParamsClick(e) {
     e.preventDefault();
 
-    const parameters = JSON.parse(JSON.stringify(props.image.parameters))
-    sendWebUIMessage({type: "SET_IMAGE_PARAMS", parameters});
+    const parameters = imageOps.cloneImage(props.image).parameters;
+    webUI.setImageParams(parameters);
   }
 
   function onPlaceToTray(e) {
@@ -52,61 +90,36 @@
     flashTrayTab("concept-tray-tab");
   }
 
-  function createTooltip(image) {
-    let result = "";
-
-    if (image.comment)
-      result += "💬 " + image.comment +"\u000d\u000d";
-
-    for (const key in image.parameters) {
-      if (key !== "prompt" && key !== "negative prompt" && key !== "version") {
-        let value = image.parameters[key];
-
-        if (typeof value === "object")
-          continue;
-
-        result += key.charAt(0).toUpperCase() + key.slice(1) + ": " + value +"\u000d";
-      }
-    }
-
-    return result;
-  }
 
   function onGenerateVaryingSteps(e) {
-    let storedSteps = localStorage.getItem("imageBench_varyingSteps");
-
-    if (!storedSteps)
-      storedSteps = "24, 26, 28, 30, 32";
-
+    const storedSteps = storage.getVaryingSteps();
     const steps = prompt("Apply step values:", storedSteps);
+    
     if (steps) {
       if (config.automaticallyClearGeneratedImages)
         generatedImagesStore.clear();
 
       generatedImagesStore.startingGeneration();
 
-      localStorage.setItem("imageBench_varyingSteps", steps);
-      const image = JSON.parse(JSON.stringify(props.image))
-      sendWebUIMessage({type: "GENERATE_VARYING_STEPS", image, steps});
+      storage.setVaryingSteps(steps);
+      const image = imageOps.cloneImage(props.image);
+      webUI.generateVaryingSteps(image, steps);
     }
   }
 
   function onUpscaleVaryingDenoising(e) {
-    let storedSteps = localStorage.getItem("imageBench_varyingDenoising");
-
-    if (!storedSteps)
-      storedSteps = "0.42, 0.46, 0.5, 0.54, 0.6";
-
+    const storedSteps = storage.getVaryingDenoising();
     const denoising = prompt("Apply denoising values:", storedSteps);
+    
     if (denoising) {
       if (config.automaticallyClearGeneratedImages)
         upscaledImageStore.clear();
 
       upscaledImageStore.startingGeneration();
 
-      localStorage.setItem("imageBench_varyingDenoising", denoising);
-      const image = JSON.parse(JSON.stringify(props.image))
-      sendWebUIMessage({type: "UPSCALE_VARYING_DENOISING", image, denoising: denoising});
+      storage.setVaryingDenoising(denoising);
+      const image = imageOps.cloneImage(props.image);
+      webUI.upscaleVaryingDenoising(image, denoising);
     }
   }
 
@@ -168,8 +181,8 @@
     <img v-if="!image.separator"
          :style="getTagStyle(image)"
          class="selectable-image-preview"
-         :src="createImageLink(image)"
-         :title="createTooltip(image)"
+         :src="imageOps.getImageLink(image)"
+         :title="imageOps.createImageTooltip(image)"
          @mousedown.left="$emit('imageClick')"
          @mousedown.middle="$emit('imageOpen')">
     <div v-if="isTray" class="markings fadeIn">
