@@ -10,6 +10,10 @@ export default ({ mode }) => {
 // https://vitejs.dev/config/
 
   return defineConfig({
+    build: {
+      // Set to false to disable JS/CSS minification
+      minify: false,
+    },
     plugins: [
       vue(),
       VueDevTools(),

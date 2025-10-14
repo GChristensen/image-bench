@@ -9,7 +9,7 @@ export function addImage(eventData, images) {
     }
     
     // Trigger reactivity for shallowRef after mutations
-    triggerRef(images);
+    //triggerRef(images);
 }
 
 export function insertImage(eventData, images) {

@@ -57,7 +57,7 @@ export function useTrayStoreState(kind) {
       imageData.tagColor = color;
       baseStore.images.value.push(imageData);
       // Trigger reactivity for shallowRef
-      triggerRef(baseStore.images);
+      //triggerRef(baseStore.images);
       await persist();
     }
   }
@@ -65,7 +65,7 @@ export function useTrayStoreState(kind) {
   async function clear() {
     baseStore.images.value = [];
     // Trigger reactivity for shallowRef
-    triggerRef(baseStore.images);
+    //triggerRef(baseStore.images);
     await persist();
   }
 

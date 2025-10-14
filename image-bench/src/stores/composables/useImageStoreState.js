@@ -7,8 +7,8 @@ import { addImage, isImageEvent } from '@/stores/utils.js';
  * Uses shallowRef for images array to optimize performance with large lists
  */
 export function useImageStoreState(kind) {
-  // State - using shallowRef for performance with large arrays
-  const images = shallowRef([]);
+  // const images = shallowRef([]);
+  const images = ref([]);
   const generationInProgress = ref(false);
   const generationProgress = ref(0);
   const applyPreset = ref(null);
@@ -43,7 +43,7 @@ export function useImageStoreState(kind) {
   function clear() {
     images.value = [];
     // Trigger reactivity for shallowRef
-    triggerRef(images);
+    //triggerRef(images);
   }
 
   function resetProgress() {
