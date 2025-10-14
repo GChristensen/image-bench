@@ -1,10 +1,27 @@
-import {ref} from 'vue'
+import { computed } from 'vue'
 import { defineStore } from 'pinia'
-import {KIND_GENERATED} from "@/consts.js";
-import {createImageStore} from "@/stores/imageStore.js";
+import { KIND_GENERATED } from "@/consts.js";
+import { useImageStoreState } from "@/stores/composables/useImageStoreState.js";
 
+/**
+ * Store for generated images
+ * Uses proper Pinia store pattern with composable for shared logic
+ */
 export const useGeneratedImagesStore = defineStore('generatedImages', () => {
-    const applyPreset = ref();
+  const state = useImageStoreState(KIND_GENERATED);
 
-    return {...createImageStore(KIND_GENERATED), applyPreset};
+  // Getters
+  const hasImages = computed(() => state.images.value.length > 0);
+  const imageCount = computed(() => state.images.value.length);
+  const isGenerating = computed(() => state.generationInProgress.value);
+
+  return {
+    // Expose state
+    ...state,
+    
+    // Expose getters
+    hasImages,
+    imageCount,
+    isGenerating
+  };
 })

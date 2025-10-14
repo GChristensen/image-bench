@@ -1,6 +1,12 @@
 import {ref} from "vue";
 import {addImage, isImageEvent} from "@/stores/utils.js";
 
+/**
+ * @deprecated This factory function is deprecated and kept for backwards compatibility only.
+ * Use useImageStoreState composable from @/stores/composables/useImageStoreState.js instead.
+ * 
+ * This file will be removed in a future version.
+ */
 export function createImageStore(storeKind) {
     const kind = storeKind;
     const images = ref([]);

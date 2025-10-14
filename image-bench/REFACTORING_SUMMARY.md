@@ -192,9 +192,82 @@ src/
 └── stores/               # Unchanged (ready for future refactoring)
 ```
 
+### 5. Store Architecture Refactoring
+
+**Replaced factory pattern with proper Pinia composables pattern**
+
+#### New Store Composables Created
+
+##### `src/stores/composables/useImageStoreState.js`
+- Base composable for image store state and actions
+- Provides: images, generationInProgress, generationProgress, applyPreset
+- Actions: init, clear, startingGeneration, onSDEvent, resetProgress
+- Replaces the `createImageStore` factory function
+
+##### `src/stores/composables/useTrayStoreState.js`
+- Extends base image store with tray-specific functionality
+- Adds persistence to server
+- Implements color tagging for image grouping
+- Actions: addImage, persist
+- Replaces the `createTrayStore` factory function
+
+#### All Stores Refactored
+
+**Before (Factory Pattern):**
+```javascript
+export const useGeneratedImagesStore = defineStore('generatedImages', () => {
+  const applyPreset = ref();
+  return {...createImageStore(KIND_GENERATED), applyPreset};
+})
+```
+
+**After (Composable Pattern):**
+```javascript
+export const useGeneratedImagesStore = defineStore('generatedImages', () => {
+  const state = useImageStoreState(KIND_GENERATED);
+
+  // Getters
+  const hasImages = computed(() => state.images.value.length > 0);
+  const imageCount = computed(() => state.images.value.length);
+  const isGenerating = computed(() => state.generationInProgress.value);
+
+  return {
+    ...state,
+    hasImages,
+    imageCount,
+    isGenerating
+  };
+})
+```
+
+#### Stores Refactored
+1. **generatedImages.js** - Now with proper getters (hasImages, imageCount, isGenerating)
+2. **imageTray.js** - Added getters (hasImages, imageCount, selectedCount)
+3. **conceptTray.js** - Added getters (hasImages, imageCount, selectedCount)
+4. **upscaled.js** - Added getters (hasImages, imageCount, isGenerating)
+
+#### Benefits of Store Refactoring
+
+**Proper Pinia Patterns:**
+- ✅ Uses composition API style properly
+- ✅ Getters for derived state instead of manual computation
+- ✅ Better code organization and reusability
+- ✅ Easier to test individual pieces
+
+**Improved Architecture:**
+- ✅ Eliminated factory pattern anti-pattern
+- ✅ Store logic can be shared via composables
+- ✅ Clear separation between base and extended functionality
+- ✅ Proper encapsulation of state and actions
+
+**Developer Experience:**
+- ✅ Better IDE support and autocomplete
+- ✅ Clearer store structure
+- ✅ Computed getters for derived state
+- ✅ Old factory files marked as deprecated for safe migration
+
 ## What Was NOT Changed
 
-- Store architecture (planned for future phase)
 - TypeScript (per user request)
 - Component splitting into container/presentational (planned for future phase)
 - Virtual scrolling optimization (planned for future phase)
@@ -226,12 +299,7 @@ After this refactoring, test these scenarios:
 
 ## Next Steps (Future Phases)
 
-1. **Store Architecture Refactoring**
-   - Convert factory functions to proper Pinia patterns
-   - Add getters for derived state
-   - Improve actions/mutations
-
-2. **Component Splitting**
+1. **Component Splitting**
    - Separate container/presentational components
    - Create smaller, focused components
    - Extract toolbar, image grid, etc.
@@ -246,6 +314,19 @@ After this refactoring, test these scenarios:
    - Use `<Teleport>` for overlays
    - Implement `v-memo` for performance
 
+## Store Migration Notes
+
+The old factory pattern files (`imageStore.js` and `trayStore.js`) have been marked as **@deprecated** but are kept for backwards compatibility. They will be removed in a future version once all potential external dependencies are verified.
+
+All internal store usages have been migrated to the new composable pattern.
+
 ## Conclusion
 
-This refactoring significantly improves code quality and maintainability while preserving all existing functionality. The application now follows Vue 3 best practices and provides a solid foundation for future enhancements.
+This comprehensive refactoring significantly improves code quality and maintainability while preserving all existing functionality. The application now follows Vue 3 best practices including:
+- ✅ Proper Composition API usage
+- ✅ Composables for reusable logic
+- ✅ Proper Pinia store patterns with getters
+- ✅ Clean component architecture with proper prop validation
+- ✅ Centralized operations (localStorage, WebUI, images)
+
+The codebase is now well-structured and provides a solid foundation for future enhancements.

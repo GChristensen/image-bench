@@ -1,6 +1,12 @@
 import {createImageStore} from "@/stores/imageStore.js";
 import {ref} from "vue";
 
+/**
+ * @deprecated This factory function is deprecated and kept for backwards compatibility only.
+ * Use useTrayStoreState composable from @/stores/composables/useTrayStoreState.js instead.
+ * 
+ * This file will be removed in a future version.
+ */
 export function createTrayStore(kind) {
     const _store = createImageStore(kind);
     const _colors = ["#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6",
