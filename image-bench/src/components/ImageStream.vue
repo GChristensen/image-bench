@@ -164,6 +164,8 @@
   <div class="image-stream-container">
     <div class="image-stream scrollable" ref="imageStreamElement">
       <GeneratedImage v-for="(image, index) in images"
+                       :key="image.imagePath || index"
+                       v-memo="[image.selected, image.marking, image.comment, shouldShowImage(image)]"
                        :kind="kind"
                        :displayed="shouldShowImage(image)"
                        :image="image"

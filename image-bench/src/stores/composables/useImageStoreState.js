@@ -1,13 +1,14 @@
-import { ref } from 'vue';
+import { ref, shallowRef, triggerRef } from 'vue';
 import { addImage, isImageEvent } from '@/stores/utils.js';
 
 /**
  * Composable for shared image store state and actions
  * Replaces the factory pattern with proper composable pattern
+ * Uses shallowRef for images array to optimize performance with large lists
  */
 export function useImageStoreState(kind) {
-  // State
-  const images = ref([]);
+  // State - using shallowRef for performance with large arrays
+  const images = shallowRef([]);
   const generationInProgress = ref(false);
   const generationProgress = ref(0);
   const applyPreset = ref(null);
@@ -25,6 +26,8 @@ export function useImageStoreState(kind) {
       }
 
       addImage(e, images);
+      // Manually trigger reactivity for shallowRef after mutations
+      triggerRef(images);
     } else if (e.type === 'GENERATION_PROGRESS') {
       generationProgress.value = e.progress;
     } else if (e.type === 'GENERATION_FINISHED') {
@@ -40,6 +43,8 @@ export function useImageStoreState(kind) {
 
   function clear() {
     images.value = [];
+    // Trigger reactivity for shallowRef
+    triggerRef(images);
   }
 
   function resetProgress() {
