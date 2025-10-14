@@ -4,6 +4,7 @@ import {computed, onBeforeMount, ref} from "vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ImageStream from "@/components/ImageStream.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
+import ImageToolbar from "@/components/ImageToolbar.vue";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useImageTrayStore} from "@/stores/imageTray.js";
 import {generationStateToKind, KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
@@ -46,7 +47,6 @@ const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
 const paramsOverlayImage = ref(null);
 const lastConfigPreset = ref("");
-const batchGenerate = ref();
 const isShowingMarked = ref(false);
 const openFileInput = ref()
 
@@ -169,8 +169,9 @@ function onImageSelectOverlay(evt, image) {
   showImageOverlay.value = false;
 }
 
-function onConfigPresetChange(e) {
-  storage.setConfigPreset(props.kind, e.target.value);
+function onConfigPresetChange(preset) {
+  imageStore.applyPreset = preset;
+  storage.setConfigPreset(props.kind, preset);
 }
 
 function onBeforeSDEvent(e) {
@@ -307,48 +308,34 @@ function isComponentTray(kind) {
                      :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="view-container">
-    <div class="toolbar">
-      <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="save" @click="onSaveClick">Save</a>
-      <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="open" @click="onOpenClick">Open</a>
-      <input type="file" class="open-file-input" ref="openFileInput" @change="onOpenFileInputChange"
-             accept=".png, .zip" multiple>
-      <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="select-all" @click="onSelectAllClick">
-        {{ isAllSelected? "Unselect all": "Select all" }}
-      </a>
-      <a v-if="isComponentTray(kind)" href="#" class="tool-item" id="show-marked" @click="onShowMarkedClick">
-        {{ isShowingMarked? "Show all": "Show marked" }}
-      </a>
-      <a v-if="kind === KIND_GENERATED && !generatedImagesStore.generationInProgress"
-         href="#" class="tool-item" id="batch-generate" ref="batchGenerate"
-         @click="onBatchGenerateClick"
-        >Generate</a>
-      <a v-if="kind === KIND_GENERATED && !generatedImagesStore.generationInProgress"
-         href="#" class="tool-item" id="generate-variations"
-         @click="onGenerateVariationsClick"
-      >Variations</a>
-      <a v-if="kind === KIND_GENERATED && generatedImagesStore.generationInProgress"
-         href="#" class="tool-item" id="stop-generation"
-         @click="onStopGenerationClick"
-      >Stop</a>
-      <a v-if="isComponentTray(kind) && !upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected" @click="onUpscaleSelectedClick"
-        >Upscale selected</a>
-      <a v-if="kind === KIND_UPSCALED && upscaledImageStore.generationInProgress" href="#" class="tool-item" id="upscale-selected"
-         @click="onUpscaleSelectedClick"
-        >Stop</a>
-      <a href="#" class="tool-item" id="clear" @click="onClearClick">{{ isSomeSelected? "Clear selected": "Clear" }}</a>
-      <div class="toolbar-spacer"></div>
-      <div v-if="imageStore.generationInProgress" class="generation-progress">Progress:&nbsp;
-        <progress max="100" :value="imageStore.generationProgress || 0"></progress>
-      </div>
-      <div class="toolbar-spacer"></div>
-      <div v-if="kind !== KIND_UPSCALED">Apply preset:
-        <select class="config-presets" v-model="imageStore.applyPreset" @change="onConfigPresetChange">
-          <option v-for="preset in configPresetsStore.presets"
-                  :value="preset"
-                  :selected="lastConfigPreset === preset">{{ preset }}</option>
-        </select>
-      </div>
-    </div>
+    <!-- Hidden file input for tray open functionality -->
+    <input type="file" class="open-file-input" ref="openFileInput" @change="onOpenFileInputChange"
+           accept=".png, .zip" multiple>
+    
+    <!-- Presentational toolbar component -->
+    <ImageToolbar
+      :kind="kind"
+      :is-tray="isComponentTray(kind)"
+      :is-all-selected="isAllSelected"
+      :is-some-selected="isSomeSelected"
+      :is-showing-marked="isShowingMarked"
+      :generation-in-progress="imageStore.generationInProgress"
+      :generation-progress="imageStore.generationProgress"
+      :upscale-in-progress="upscaledImageStore.generationInProgress"
+      :apply-preset="imageStore.applyPreset"
+      :presets="configPresetsStore.presets"
+      :show-preset-selector="kind !== KIND_UPSCALED"
+      @save="onSaveClick"
+      @open="onOpenClick"
+      @select-all="onSelectAllClick"
+      @show-marked="onShowMarkedClick"
+      @batch-generate="onBatchGenerateClick"
+      @generate-variations="onGenerateVariationsClick"
+      @stop-generation="onStopGenerationClick"
+      @upscale-selected="onUpscaleSelectedClick"
+      @clear="onClearClick"
+      @preset-change="onConfigPresetChange"
+    />
     <ImageStream ref="imageStream"
                  :kind="kind"
                  :image-store="imageStore"
@@ -362,24 +349,7 @@ function isComponentTray(kind) {
 </template>
 
 <style scoped>
-  .toolbar-spacer {
-    flex-grow: 1;
-  }
-
-  .generation-progress {
-    width: 20%;
-    display: flex;
-  }
-
-  .generation-progress progress {
-    flex-grow: 1;
-  }
-
   .open-file-input {
     display: none;
-  }
-
-  .tool-item {
-    white-space: nowrap;
   }
 </style>

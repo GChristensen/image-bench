@@ -266,11 +266,63 @@ export const useGeneratedImagesStore = defineStore('generatedImages', () => {
 - ✅ Computed getters for derived state
 - ✅ Old factory files marked as deprecated for safe migration
 
+### 6. Component Splitting
+
+**Separated presentational components from container logic**
+
+#### New Presentational Components
+
+##### `src/components/ImageToolbar.vue`
+- Pure presentational component for the image toolbar
+- No business logic - only receives props and emits events
+- Handles all toolbar actions: save, open, select, generate, upscale, clear
+- Conditional rendering based on `kind` and state props
+- Computed properties for dynamic text (select all/unselect all, etc.)
+
+**Benefits:**
+- ✅ Clear separation of concerns
+- ✅ Reusable across different views
+- ✅ Easier to test in isolation
+- ✅ Simpler component hierarchy
+
+#### Container Components Refactored
+
+##### `src/views/GeneratedImages.vue`
+- Now acts as container component
+- Manages state and business logic
+- Passes props to presentational components
+- Handles events from child components
+
+**Before:**
+- Mixed presentation and logic in template
+- Complex template with conditional rendering
+- Difficult to reuse toolbar
+
+**After:**
+```vue
+<ImageToolbar
+  :kind="kind"
+  :is-tray="isComponentTray(kind)"
+  :is-all-selected="isAllSelected"
+  :generation-in-progress="imageStore.generationInProgress"
+  @save="onSaveClick"
+  @batch-generate="onBatchGenerateClick"
+  @clear="onClearClick"
+/>
+```
+
+**Improvements:**
+- ✅ Cleaner template structure
+- ✅ Container handles business logic
+- ✅ Presentational component handles UI
+- ✅ Better testability
+- ✅ Easier to maintain and modify
+
 ## What Was NOT Changed
 
 - TypeScript (per user request)
-- Component splitting into container/presentational (planned for future phase)
 - Virtual scrolling optimization (planned for future phase)
+- Additional component splitting (can be done in future if needed)
 
 ## Testing Recommendations
 
@@ -299,12 +351,12 @@ After this refactoring, test these scenarios:
 
 ## Next Steps (Future Phases)
 
-1. **Component Splitting**
-   - Separate container/presentational components
-   - Create smaller, focused components
-   - Extract toolbar, image grid, etc.
+1. **Additional Component Splitting** (Optional)
+   - Further split ImageStream into smaller components
+   - Extract image card groups
+   - Create more granular presentational components
 
-3. **Performance Optimization**
+2. **Performance Optimization**
    - Virtual scrolling for large image lists
    - Lazy loading with Intersection Observer
    - Better reactivity patterns
@@ -323,10 +375,31 @@ All internal store usages have been migrated to the new composable pattern.
 ## Conclusion
 
 This comprehensive refactoring significantly improves code quality and maintainability while preserving all existing functionality. The application now follows Vue 3 best practices including:
-- ✅ Proper Composition API usage
-- ✅ Composables for reusable logic
-- ✅ Proper Pinia store patterns with getters
+
+- ✅ Proper Composition API usage throughout
+- ✅ Composables for reusable logic (5 composables)
+- ✅ Proper Pinia store patterns with getters (2 store composables, 4 refactored stores)
+- ✅ Container/Presentational component pattern
 - ✅ Clean component architecture with proper prop validation
 - ✅ Centralized operations (localStorage, WebUI, images)
+- ✅ No TypeScript (as requested)
 
-The codebase is now well-structured and provides a solid foundation for future enhancements.
+### Summary of Changes
+
+**Phase 1-3: Composables & Components**
+- 5 new composables created
+- All components refactored
+- Proper props/events definitions
+
+**Phase 4: Store Architecture**
+- Factory pattern eliminated
+- 2 store composables created
+- All 4 stores refactored with getters
+- Old files deprecated
+
+**Phase 5: Component Splitting**
+- ImageToolbar extracted as presentational component
+- GeneratedImages refactored as container
+- Clear separation of concerns
+
+The codebase is now well-structured, maintainable, and follows modern Vue 3 best practices. It provides a solid foundation for future enhancements.
