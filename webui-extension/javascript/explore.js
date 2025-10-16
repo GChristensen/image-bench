@@ -1,107 +1,54 @@
-import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
 import {getGenerationState, setGenerationState} from "./state.js";
-import {getInputValue, setDropdownValue, setInputValue} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
-import {SELECTORS, getElementById} from "./adapters/selectors.js";
+import {ModelExplorationStrategy} from "./shared/strategies/ModelExplorationStrategy.js";
 import {adapter} from "./adapters/adapter.js";
+import {messageBus} from "./shared/messaging/MessageBus.js";
 
-let generationId;
-let totalImages = 0;
-let exploreQueue = [];
-let exploreModel;
-let modelBeforeExplore;
-let invalidated;
+// Create strategy instance
+const explorationStrategy = new ModelExplorationStrategy(adapter, messageBus);
+
+// Bridge MessageBus events to existing popup system
+messageBus.subscribe('BEGIN_PROCESSING', (data) => {
+    sendPopupMessage({type: 'BEGIN_PROCESSING', ...data});
+});
+
+messageBus.subscribe('GENERATION_PROGRESS', (data) => {
+    sendPopupMessage({type: 'GENERATION_PROGRESS', ...data});
+});
+
+messageBus.subscribe('GENERATION_FINISHED', (data) => {
+    sendPopupMessage({type: 'GENERATION_FINISHED', ...data});
+});
 
 export async function exploreModels(options) {
-    if (!options.models.length)
+    if (!options.models || !options.models.length) {
         return;
+    }
 
-    if (invalidated) {
+    if (explorationStrategy.isInvalidated()) {
         sendPopupMessage({type: "GENERATION_FINISHED"});
         alert("'Send to Txt2Img' was used. Please reload WebUI to explore models.");
         return;
     }
 
     setGenerationState("EXPLORE_MODELS");
-    sendPopupMessage({type: "BEGIN_PROCESSING"});
-    generationId = createGenerationId();
-    exploreQueue = [];
-    exploreModel = options.models[0];
-    await setActiveModel(exploreModel.title);
-
-    setInputValue(SELECTORS.TXT2IMG_BATCH_COUNT, 1);
-    setInputValue(SELECTORS.TXT2IMG_SEED, -1);
-
-    for (const model of options.models) {
-        for (let i = 0; i < options.generateImages; ++i) {
-            exploreQueue.push(model);
-        }
-    }
-
-    totalImages = exploreQueue.length;
-
-    modelBeforeExplore = getInputValue(SELECTORS.MODEL_CHECKPOINT);
-    return exploreImage(exploreQueue.shift());
-}
-
-async function setActiveModel(modelName) {
-    // const optionsURL = `http://${location.host}/sdapi/v1/options`;
-    // const opts = await fetch(optionsURL).then(r => r.json());
-    //
-    // opts.sd_model_checkpoint = modelName;
-    // await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
-    return setDropdownValue(SELECTORS.MODEL_CHECKPOINT, modelName);
-}
-
-async function exploreImage(model) {
-    if (!model)
-        return;
-
-    if (exploreModel.title !== model.title) {
-        await setActiveModel(model.title);
-        exploreModel = model;
-    }
-
-    await adapter.sleep(1000);
-
-    const generateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
-
-    if (adapter.isElementVisible(generateButton))
-        generateButton.click();
+    return await explorationStrategy.process(options);
 }
 
 export function exploreNextImage() {
-    const progress = (1 - exploreQueue.length / totalImages) * 100;
-    sendPopupMessage({type: "GENERATION_PROGRESS", progress});
-
-    const model = exploreQueue.shift();
-
-    if (model)
-        return exploreImage(model);
-    else
-        return finishExploring();
+    explorationStrategy.processNext();
 }
 
 export async function finishExploring() {
-    if (exploreQueue.length)
-        exploreQueue = [];
-
-    if (modelBeforeExplore) {
-        await setDropdownValue(SELECTORS.MODEL_CHECKPOINT, modelBeforeExplore);
-        modelBeforeExplore = null;
-    }
-
-    generationId = null;
-
-    sendPopupMessage({type: "GENERATION_FINISHED"});
+    await explorationStrategy.finish();
 }
 
 export function messageSetExploreParams(msg) {
     if (msg.type === "SAVED_IMAGE" && getGenerationState() === "EXPLORE_MODELS") {
-        msg.generationId = generationId;
+        Object.assign(msg, explorationStrategy.getMessageParams());
     }
 }
 
 export function invalidateExplore() {
-    invalidated = true;
+    explorationStrategy.invalidate();
 }
