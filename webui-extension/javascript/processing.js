@@ -3,6 +3,7 @@ import {getInputValue, setDropdownValue, setInputValue, toggleHiresFix} from "./
 import {sendPopupMessage} from "./popup.js";
 import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
 import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
+import {SELECTORS, getElementById} from "./adapters/selectors.js";
 
 let generationId;
 let totalImages = 0;
@@ -43,11 +44,11 @@ export async function processImages(options) {
     setDenoising = options.setDenoising;
     setSteps = options.setSteps;
     seedsBeforeProcessing = [
-        getInputValue("#txt2img_seed input"),
-        getInputValue("#txt2img_subseed input")
+        getInputValue(SELECTORS.TXT2IMG_SEED),
+        getInputValue(SELECTORS.TXT2IMG_SUBSEED)
     ];
-    stepsBeforeProcessing = getInputValue("#txt2img_steps input");
-    denoisingBeforeProcessing = getInputValue("#txt2img_denoising_strength input");
+    stepsBeforeProcessing = getInputValue(SELECTORS.TXT2IMG_STEPS);
+    denoisingBeforeProcessing = getInputValue(SELECTORS.TXT2IMG_DENOISING);
 
     if (options.preset) {
         await setConfigPreset(options.preset);
@@ -57,7 +58,7 @@ export async function processImages(options) {
     if (getGenerationState() !== "SEQUENTIAL_GENERATION")
         toggleHiresFix(true);
 
-    setInputValue("#txt2img_batch_count input[type='number']", 1);
+    setInputValue(SELECTORS.TXT2IMG_BATCH_COUNT, 1);
 
     monitorProgress();
 
@@ -70,20 +71,20 @@ async function processImage(imageData) {
 
     const parameters = imageData.parameters;
 
-    setInputValue("#txt2img_seed input", parameters["seed"]);
+    setInputValue(SELECTORS.TXT2IMG_SEED, parameters["seed"]);
 
     if ("variation seed" in parameters)
-        setInputValue("#txt2img_subseed input", parameters["variation seed"]);
+        setInputValue(SELECTORS.TXT2IMG_SUBSEED, parameters["variation seed"]);
 
     if (setDenoising && "denoising strength" in parameters)
-        setInputValue("#txt2img_denoising_strength input", parameters["denoising strength"]);
+        setInputValue(SELECTORS.TXT2IMG_DENOISING, parameters["denoising strength"]);
 
     if (setSteps || imageData.setSteps)
-        setInputValue("#txt2img_steps input", parameters["steps"]);
+        setInputValue(SELECTORS.TXT2IMG_STEPS, parameters["steps"]);
 
     await sleep(500);
 
-    const generateButton = document.getElementById("txt2img_generate");
+    const generateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
     if (isButtonVisible(generateButton))
         generateButton.click();
 }
@@ -127,15 +128,15 @@ export async function finishProcessing() {
 
 export function revertVaryingParams() {
     if (seedsBeforeProcessing) {
-        setInputValue("#txt2img_seed input", seedsBeforeProcessing[0]);
-        setInputValue("#txt2img_subseed input", seedsBeforeProcessing[1]);
+        setInputValue(SELECTORS.TXT2IMG_SEED, seedsBeforeProcessing[0]);
+        setInputValue(SELECTORS.TXT2IMG_SUBSEED, seedsBeforeProcessing[1]);
     }
 
     if (stepsBeforeProcessing)
-        setInputValue("#txt2img_steps input", stepsBeforeProcessing);
+        setInputValue(SELECTORS.TXT2IMG_STEPS, stepsBeforeProcessing);
 
     if (denoisingBeforeProcessing)
-        setInputValue("#txt2img_denoising_strength input", denoisingBeforeProcessing);
+        setInputValue(SELECTORS.TXT2IMG_DENOISING, denoisingBeforeProcessing);
 }
 
 export function generateVaryingSteps(options) {

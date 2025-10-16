@@ -3,6 +3,7 @@ import {sendPopupMessage} from "./popup.js";
 import {setCheckBoxValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
 import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
+import {SELECTORS, getElementById} from "./adapters/selectors.js";
 
 let generationId;
 let isImg2Img;
@@ -11,7 +12,7 @@ let isVariations;
 export async function batchGenerate(options, config) {
     setupGeneration(options);
 
-    setInputValue("#txt2img_seed input", -1);
+    setInputValue(SELECTORS.TXT2IMG_SEED, -1);
 
     return beginGeneration(options, config);
 }
@@ -20,9 +21,9 @@ export async function generateVariations(options, config) {
     isVariations = true;
     setupGeneration(options);
 
-    setCheckBoxValue("#txt2img_subseed_show input", true);
-    setInputValue("#txt2img_subseed input", -1);
-    setInputValue("#txt2img_subseed_strength input", options.strength);
+    setCheckBoxValue(SELECTORS.TXT2IMG_SUBSEED_SHOW, true);
+    setInputValue(SELECTORS.TXT2IMG_SUBSEED, -1);
+    setInputValue(SELECTORS.TXT2IMG_SUBSEED_STRENGTH, options.strength);
 
     return beginGeneration(options, config);
 }
@@ -36,17 +37,17 @@ export function setupGeneration(options) {
 }
 
 async function beginGeneration(options, config) {
-    const txt2ImgGenerateButton = document.getElementById("txt2img_generate");
-    const img2ImgGenerateButton = document.getElementById("img2img_generate");
+    const txt2ImgGenerateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
+    const img2ImgGenerateButton = getElementById(SELECTORS.IMG2IMG_GENERATE);
     const isImg2ImgTab = txt2ImgGenerateButton.offsetParent === null;
 
     if (options.preset && !isImg2ImgTab)
         await setConfigPreset(options.preset);
     else {
         if (isImg2ImgTab)
-            setInputValue("#img2img_batch_count input[type='number']", config.defaultBatches || 100);
+            setInputValue(SELECTORS.IMG2IMG_BATCH_COUNT, config.defaultBatches || 100);
         else
-            setInputValue("#txt2img_batch_count input[type='number']", config.defaultBatches || 100);
+            setInputValue(SELECTORS.TXT2IMG_BATCH_COUNT, config.defaultBatches || 100);
     }
 
     let generateButton;
@@ -69,18 +70,18 @@ export async function finishGeneration() {
     if (!generationId)
         return;
 
-    const txt2ImgGenerateButton = document.getElementById("txt2img_generate");
+    const txt2ImgGenerateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
     const isImg2ImgTab = txt2ImgGenerateButton.offsetParent === null;
 
     if (isImg2ImgTab)
-        setInputValue("#img2img_batch_count input[type='number']", 1);
+        setInputValue(SELECTORS.IMG2IMG_BATCH_COUNT, 1);
     else
-        setInputValue("#txt2img_batch_count input[type='number']", 1);
+        setInputValue(SELECTORS.TXT2IMG_BATCH_COUNT, 1);
 
     if (isVariations) {
         isVariations = false;
-        setInputValue("#txt2img_subseed_strength input", 0);
-        setCheckBoxValue("#txt2img_subseed_show input", false);
+        setInputValue(SELECTORS.TXT2IMG_SUBSEED_STRENGTH, 0);
+        setCheckBoxValue(SELECTORS.TXT2IMG_SUBSEED_SHOW, false);
     }
 
     const tempGenId = generationId;

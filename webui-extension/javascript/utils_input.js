@@ -1,4 +1,5 @@
 import {sleep} from "./utils.js";
+import {SELECTORS, getElementById, querySelector} from "./adapters/selectors.js";
 
 export function getInputValue(inputElementSelector) {
     const inputElement = document.querySelector(inputElementSelector);
@@ -67,12 +68,12 @@ export async function setDropdownValue(inputElementSelector, value, blur = true)
 
     await sleep(333);
 
-    const optionList = inputElement.closest(".block").querySelector("ul");
+    const optionList = inputElement.closest(SELECTORS.DROPDOWN_BLOCK).querySelector(SELECTORS.DROPDOWN_LIST);
 
     if (optionList) {
         value = value.replace(/ \[[^\]]+\]$/, ""); // strip hash
 
-        const options = Array.from(optionList.querySelectorAll("li"));
+        const options = Array.from(optionList.querySelectorAll(SELECTORS.DROPDOWN_OPTION));
 
         for (const optionElement of options) {
             const optionName = optionElement.getAttribute("data-value")
@@ -94,7 +95,7 @@ export async function setDropdownValue(inputElementSelector, value, blur = true)
 }
 
 export function toggleHiresFix(onlyEnable, onlyDisable) {
-    const hrFixCheckbox = document.getElementById("txt2img_hr-visible-checkbox");
+    const hrFixCheckbox = getElementById(SELECTORS.HIRES_CHECKBOX);
     let toggle = true;
 
     if (onlyEnable)

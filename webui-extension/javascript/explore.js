@@ -2,6 +2,7 @@ import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
 import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
+import {SELECTORS, getElementById} from "./adapters/selectors.js";
 
 let generationId;
 let totalImages = 0;
@@ -27,8 +28,8 @@ export async function exploreModels(options) {
     exploreModel = options.models[0];
     await setActiveModel(exploreModel.title);
 
-    setInputValue("#txt2img_batch_count input[type='number']", 1);
-    setInputValue("#txt2img_seed input", -1);
+    setInputValue(SELECTORS.TXT2IMG_BATCH_COUNT, 1);
+    setInputValue(SELECTORS.TXT2IMG_SEED, -1);
 
     for (const model of options.models) {
         for (let i = 0; i < options.generateImages; ++i) {
@@ -38,7 +39,7 @@ export async function exploreModels(options) {
 
     totalImages = exploreQueue.length;
 
-    modelBeforeExplore = getInputValue("#setting_sd_model_checkpoint input, .model_selection input");
+    modelBeforeExplore = getInputValue(SELECTORS.MODEL_CHECKPOINT);
     return exploreImage(exploreQueue.shift());
 }
 
@@ -48,7 +49,7 @@ async function setActiveModel(modelName) {
     //
     // opts.sd_model_checkpoint = modelName;
     // await fetch(optionsURL, {method: "post", body: JSON.stringify(opts), headers: {"content-type": "application/json"}});
-    return setDropdownValue("#setting_sd_model_checkpoint input, .model_selection input", modelName);
+    return setDropdownValue(SELECTORS.MODEL_CHECKPOINT, modelName);
 }
 
 async function exploreImage(model) {
@@ -62,7 +63,7 @@ async function exploreImage(model) {
 
     await sleep(1000);
 
-    const generateButton = document.getElementById("txt2img_generate");
+    const generateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
 
     if (isButtonVisible(generateButton))
         generateButton.click();
@@ -85,7 +86,7 @@ export async function finishExploring() {
         exploreQueue = [];
 
     if (modelBeforeExplore) {
-        await setDropdownValue("#setting_sd_model_checkpoint input, .model_selection input", modelBeforeExplore);
+        await setDropdownValue(SELECTORS.MODEL_CHECKPOINT, modelBeforeExplore);
         modelBeforeExplore = null;
     }
 

@@ -1,3 +1,4 @@
+import {SELECTORS, getElementById} from "./adapters/selectors.js";
 
 export function setStyle(elements, style) {
     if (elements instanceof NodeList) {
@@ -40,7 +41,7 @@ export function createButton(text, onclick) {
 }
 
 export function createHeaderButton(title, text, style, action, after) {
-    let quickSettings = gradioApp().getElementById("quicksettings");
+    let quickSettings = gradioApp().getElementById(SELECTORS.QUICK_SETTINGS);
     let className = quickSettings.querySelector('button').className;
 
     const button = create('button', {

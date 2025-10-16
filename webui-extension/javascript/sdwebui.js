@@ -6,6 +6,7 @@ import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
 import {isButtonVisible, sleep} from "./utils.js";
 import {setupGeneration, finishGeneration} from "./generation.js";
+import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
 
 export let isForge = false;
 
@@ -15,31 +16,31 @@ addEventListener("pagehide", () => {
 });
 
 export function hookIntoSDWebUI() {
-    isForge = !!document.querySelector("[id^='forge']");
+    isForge = !!querySelector(SELECTORS.FORGE_INDICATOR);
 
-    const txt2ImgGenerateButton = document.getElementById("txt2img_generate");
+    const txt2ImgGenerateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
     txt2ImgGenerateButton.addEventListener("mousedown", onGenerateMousedown);
 
-    const img2ImgGenerateButton = document.getElementById("img2img_generate");
+    const img2ImgGenerateButton = getElementById(SELECTORS.IMG2IMG_GENERATE);
     img2ImgGenerateButton.addEventListener("mousedown", onGenerateMousedown);
 
-    const interruptButton = document.getElementById("txt2img_interrupt");
+    const interruptButton = getElementById(SELECTORS.TXT2IMG_INTERRUPT);
     interruptButton.addEventListener("mousedown", onInterruptMousedown);
     listenInterruptButtonMutations();
 
-    const promptInput = document.querySelector("#txt2img_prompt textarea");
+    const promptInput = querySelector(SELECTORS.TXT2IMG_PROMPT);
     promptInput.addEventListener("change", onPromptChange);
 
-    const negativePromptInput = document.querySelector("#txt2img_neg_prompt textarea");
+    const negativePromptInput = querySelector(SELECTORS.TXT2IMG_NEG_PROMPT);
     negativePromptInput.addEventListener("change", onNegativePromptChange);
 
-    const sendToTxt2ImgButton = document.querySelector("#tab_pnginfo #txt2img_tab");
+    const sendToTxt2ImgButton = querySelector(SELECTORS.SEND_TO_TXT2IMG);
     sendToTxt2ImgButton.addEventListener("click", onSendToTxt2ImgButtonClick);
 }
 
 function listenInterruptButtonMutations() {
-    const txt2imgInterrupt = document.getElementById('txt2img_interrupt');
-    const img2imgInterrupt = document.getElementById('img2img_interrupt');
+    const txt2imgInterrupt = getElementById(SELECTORS.TXT2IMG_INTERRUPT);
+    const img2imgInterrupt = getElementById(SELECTORS.IMG2IMG_INTERRUPT);
 
     setMutationListener(txt2imgInterrupt);
     setMutationListener(img2imgInterrupt);
@@ -65,8 +66,8 @@ function listenInterruptButtonMutations() {
 }
 
 export function initializePopupPrompts() {
-    const promptInput = document.querySelector("#txt2img_prompt textarea");
-    const negativePromptInput = document.querySelector("#txt2img_neg_prompt textarea");
+    const promptInput = querySelector(SELECTORS.TXT2IMG_PROMPT);
+    const negativePromptInput = querySelector(SELECTORS.TXT2IMG_NEG_PROMPT);
     onPromptChange({target: promptInput});
     onNegativePromptChange({target: negativePromptInput});
 }
@@ -109,8 +110,8 @@ export async function stopGeneration() {
         button: 0
     });
 
-    const txt2ImgInterruptButton = document.getElementById("txt2img_interrupt");
-    const img2ImgInterruptButton = document.getElementById("img2img_interrupt");
+    const txt2ImgInterruptButton = getElementById(SELECTORS.TXT2IMG_INTERRUPT);
+    const img2ImgInterruptButton = getElementById(SELECTORS.IMG2IMG_INTERRUPT);
     const interruptButton = txt2ImgInterruptButton.offsetParent === null
         ? img2ImgInterruptButton
         : txt2ImgInterruptButton;
@@ -124,10 +125,10 @@ export async function stopGeneration() {
 }
 
 export async function repositionConfigPresetsDropdown(kind) {
-    const configPresetsDiv = document.getElementById(`config_preset_wrapper_${kind}`);
+    const configPresetsDiv = getElementById(SELECTORS.CONFIG_PRESET_WRAPPER(kind));
 
     if (configPresetsDiv) {
-        const resultsDiv = document.getElementById(`${kind}_results`);
+        const resultsDiv = getElementById(SELECTORS.RESULTS_DIV(kind));
 
         configPresetsDiv.parentNode.removeChild(configPresetsDiv);
         resultsDiv.insertBefore(configPresetsDiv, resultsDiv.firstChild);
@@ -135,15 +136,15 @@ export async function repositionConfigPresetsDropdown(kind) {
 }
 
 export async function setConfigPreset(preset) {
-    const presetDropdown = document.querySelector("#config_preset_txt2img_dropdown input");
+    const presetDropdown = querySelector(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN);
 
     if (presetDropdown) {
         if (presetDropdown.value === preset) {
-            await setDropdownValue("#config_preset_txt2img_dropdown input", "None");
+        await setDropdownValue(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN, "None");
             await sleep(333);
         }
 
-        await setDropdownValue("#config_preset_txt2img_dropdown input", preset);
+        await setDropdownValue(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN, preset);
     }
 }
 
@@ -153,10 +154,10 @@ export async function setImageSeed(options) {
 
     const params = options.parameters;
 
-    setInputValue("#txt2img_seed input", params["seed"]);
+    setInputValue(SELECTORS.TXT2IMG_SEED, params["seed"]);
 
     if ("variation seed" in params)
-        setInputValue("#txt2img_subseed input", params["variation seed"]);
+        setInputValue(SELECTORS.TXT2IMG_SUBSEED, params["variation seed"]);
 }
 
 export async function setImageParams(options) {
@@ -166,64 +167,64 @@ export async function setImageParams(options) {
         return;
 
     if ("model" in params)
-        await setDropdownValue("#setting_sd_model_checkpoint input, .model_selection input", params["model"]);
+        await setDropdownValue(SELECTORS.MODEL_CHECKPOINT, params["model"]);
 
     if ("vae" in params)
-        await setDropdownValue("#setting_sd_vae input", params["vae"]);
+        await setDropdownValue(SELECTORS.SD_VAE, params["vae"]);
 
     if ("prompt" in params)
-        setInputValue("#txt2img_prompt textarea", params["prompt"]);
+        setInputValue(SELECTORS.TXT2IMG_PROMPT, params["prompt"]);
     else
-        setInputValue("#txt2img_prompt textarea", "");
+        setInputValue(SELECTORS.TXT2IMG_PROMPT, "");
 
     if ("negative prompt" in params)
-        setInputValue("#txt2img_neg_prompt textarea", params["negative prompt"]);
+        setInputValue(SELECTORS.TXT2IMG_NEG_PROMPT, params["negative prompt"]);
     else
-        setInputValue("#txt2img_neg_prompt textarea", "");
+        setInputValue(SELECTORS.TXT2IMG_NEG_PROMPT, "");
 
     if ("sampler" in params)
-        await setDropdownValue("#txt2img_sampling input", params["sampler"]);
+        await setDropdownValue(SELECTORS.TXT2IMG_SAMPLING, params["sampler"]);
 
     if ("schedule type" in params)
-        await setDropdownValue("#txt2img_scheduler input", params["schedule type"]);
+        await setDropdownValue(SELECTORS.TXT2IMG_SCHEDULER, params["schedule type"]);
 
     if ("steps" in params)
-        setInputValue("#txt2img_steps input", params["steps"]);
+        setInputValue(SELECTORS.TXT2IMG_STEPS, params["steps"]);
 
     if ("cfg scale" in params)
-        setInputValue("#txt2img_cfg_scale input", params["cfg scale"]);
+        setInputValue(SELECTORS.TXT2IMG_CFG_SCALE, params["cfg scale"]);
 
     if ("seed" in params)
-        setInputValue("#txt2img_seed input", params["seed"]);
+        setInputValue(SELECTORS.TXT2IMG_SEED, params["seed"]);
 
     if ("variation seed" in params) {
-        setInputValue("#txt2img_subseed input", params["variation seed"]);
-        setInputValue("#txt2img_subseed_strength input", params["variation seed strength"]);
+        setInputValue(SELECTORS.TXT2IMG_SUBSEED, params["variation seed"]);
+        setInputValue(SELECTORS.TXT2IMG_SUBSEED_STRENGTH, params["variation seed strength"]);
     }
 
     if ("size" in params && params["size"].includes("x")) {
         const sizes = params["size"].split("x");
-        setInputValue("#txt2img_width input", sizes[0]);
-        setInputValue("#txt2img_height input", sizes[1]);
+        setInputValue(SELECTORS.TXT2IMG_WIDTH, sizes[0]);
+        setInputValue(SELECTORS.TXT2IMG_HEIGHT, sizes[1]);
     }
 
     if ("clip skip" in params)
-        setInputValue("#setting_CLIP_stop_at_last_layers input", params["clip skip"]);
+        setInputValue(SELECTORS.CLIP_SKIP, params["clip skip"]);
 
     if ("denoising strength" in params)
-        setInputValue("#txt2img_denoising_strength input", params["denoising strength"]);
+        setInputValue(SELECTORS.TXT2IMG_DENOISING, params["denoising strength"]);
 
     if ("hires steps" in params)
-        setInputValue("#txt2img_hr_scale input", params["hires steps"]);
+        setInputValue(SELECTORS.HIRES_SCALE, params["hires steps"]);
 
     if ("hires upscale" in params) {
-        setInputValue("#txt2img_hr_scale input", params["hires upscale"]);
+        setInputValue(SELECTORS.HIRES_SCALE, params["hires upscale"]);
         toggleHiresFix(true);
     }
 }
 
 export function getGenerationProgress() {
-    const progressBar = document.querySelector(".progressDiv .progress");
+    const progressBar = querySelector(SELECTORS.PROGRESS_BAR);
     const progressBarText = progressBar?.textContent;
     const matches = progressBarText?.match(/(\d+)%/);
 
@@ -232,8 +233,7 @@ export function getGenerationProgress() {
 }
 
 export async function saveControlnetImages(generationId) {
-    let controlNetThumbs =
-        document.querySelectorAll("#txt2img_gallery_container .thumbnails .thumbnail-item img[src*='gradio']");
+    let controlNetThumbs = querySelectorAll(SELECTORS.TXT2IMG_GALLERY);
     controlNetThumbs = Array.from(controlNetThumbs);
 
     if (controlNetThumbs.length) {
