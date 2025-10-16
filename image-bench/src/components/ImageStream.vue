@@ -190,6 +190,7 @@
   .image-stream-container {
     position: relative;
     flex-grow: 1;
+    padding: 0 10px;
   }
 
   .image-stream {

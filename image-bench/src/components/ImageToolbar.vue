@@ -140,7 +140,7 @@ const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clea
     <div class="toolbar-spacer"></div>
 
     <!-- Preset selector -->
-    <div v-if="showPresetSelector">
+    <div class="preset-selector" v-if="showPresetSelector">
       Apply preset:
       <select 
         class="config-presets" 
@@ -163,7 +163,7 @@ const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clea
   border-bottom: 1px solid #ccc;
   width: 100%;
   align-items: center;
-  padding: 5px 0;
+  padding: 5px;
 }
 
 .tool-item {

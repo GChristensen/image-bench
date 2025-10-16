@@ -270,6 +270,19 @@ function onKeydown(e) {
 </template>
 
 <style scoped>
+.tool-item {
+  padding: 5px 15px;
+  cursor: pointer;
+  text-decoration: none;
+  color: white;
+  white-space: nowrap;
+}
+
+.tool-item:hover {
+  background-color: #f0f0f0;
+  color: var(--vt-c-black);
+}
+
 .toolbar-spacer {
   flex-grow: 1;
 }
@@ -284,6 +297,7 @@ function onKeydown(e) {
 .explore-container {
   display: flex;
   flex-grow: 1;
+  padding: 0 10px;
 }
 
 .model-presets {
@@ -306,7 +320,8 @@ function onKeydown(e) {
 }
 
 .model-list {
-  margin: 15px 0;
+  margin: 0 0 15px 0;
+  padding-top: 10px;
   display: flex;
   flex-direction: column;
   padding-right: 10px;
@@ -332,12 +347,23 @@ function onKeydown(e) {
   margin: 15px;
 }
 
+.preset-controls {
+  margin-top: 2px;
+  margin-bottom: 10px;
+  border-bottom: solid 1px white;
+}
+
 .control-link {
+  padding: 2px 5px;
+  cursor: pointer;
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
-  font-size: 90%;
+  color: white;
+  white-space: nowrap;
+}
+
+.control-link:hover {
+  background-color: #f0f0f0;
+  color: var(--vt-c-black);
 }
 
 .model-name {
