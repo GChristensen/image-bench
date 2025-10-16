@@ -1,123 +1,48 @@
-import {sleep} from "./utils.js";
-import {SELECTORS, getElementById, querySelector} from "./adapters/selectors.js";
+import {adapter} from "./adapters/adapter.js";
 
-export function getInputValue(inputElementSelector) {
-    const inputElement = document.querySelector(inputElementSelector);
-    if (inputElement)
-        return inputElement.value;
+/**
+ * Get input value by selector key
+ * @param {string} selectorKey - Key from SELECTORS constant
+ * @returns {string|number|null}
+ */
+export function getInputValue(selectorKey) {
+    return adapter.getInputValue(selectorKey);
 }
 
-export function setInputValue(inputElementSelector, value, blur = true) {
-    const inputElement = document.querySelector(inputElementSelector);
-    if (!inputElement) {
-        console.log(`Input element ${inputElementSelector} not found.`);
-        return;
-    }
-
-    inputElement.value = value;
-
-    const inputEvent = new Event('input', {bubbles: true, cancelable: true});
-    inputElement.dispatchEvent(inputEvent);
-
-    if (blur) {
-        const blurEvent = new Event('blur', {bubbles: true, cancelable: true});
-        inputElement.dispatchEvent(blurEvent);
-    }
+/**
+ * Set input value by selector key
+ * @param {string} selectorKey - Key from SELECTORS constant
+ * @param {string|number} value - Value to set
+ * @param {boolean} triggerEvents - Whether to trigger events
+ */
+export function setInputValue(selectorKey, value, triggerEvents = true) {
+    adapter.setInputValue(selectorKey, value, triggerEvents);
 }
 
-export function setCheckBoxValue(inputElementSelector, checked, blur = true) {
-    const inputElement = document.querySelector(inputElementSelector);
-    if (!inputElement) {
-        console.log(`Input element ${inputElementSelector} not found.`);
-        return;
-    }
-
-    if (inputElement.checked !== checked) {
-        const inputEvent = new Event('input', {bubbles: true, cancelable: true});
-        inputElement.dispatchEvent(inputEvent);
-
-        const changeEvent = new Event('change', {bubbles: true, cancelable: true});
-        inputElement.dispatchEvent(changeEvent);
-
-        var clickEvent = new MouseEvent('click', {
-            'view': window,
-            'bubbles': true,
-            'cancelable': true,
-            'buttons': 1
-        });
-
-        inputElement.dispatchEvent(clickEvent);
-    }
+/**
+ * Set checkbox value by selector key
+ * @param {string} selectorKey - Key from SELECTORS constant
+ * @param {boolean} checked - Whether to check
+ */
+export function setCheckBoxValue(selectorKey, checked) {
+    adapter.setCheckboxValue(selectorKey, checked);
 }
 
-export async function setDropdownValue(inputElementSelector, value, blur = true) {
-    const inputElement = document.querySelector(inputElementSelector);
-    if (!inputElement) {
-        console.log(`Input element ${inputElementSelector} not found.`);
-        return;
-    }
-
-    if (inputElement.value.includes(value))
-        return;
-
-    inputElement.value = value;
-
-    const focusEvent = new Event("focus", {bubbles: true, cancelable: true});
-    inputElement.dispatchEvent(focusEvent);
-    inputElement.focus();
-
-    await sleep(333);
-
-    const optionList = inputElement.closest(SELECTORS.DROPDOWN_BLOCK).querySelector(SELECTORS.DROPDOWN_LIST);
-
-    if (optionList) {
-        value = value.replace(/ \[[^\]]+\]$/, ""); // strip hash
-
-        const options = Array.from(optionList.querySelectorAll(SELECTORS.DROPDOWN_OPTION));
-
-        for (const optionElement of options) {
-            const optionName = optionElement.getAttribute("data-value")
-                || optionElement.getAttribute("aria-label");
-
-            if (optionName.includes(value)) {
-                const mousedownEvent = new MouseEvent('mousedown', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window,
-                    button: 0
-                });
-
-                optionElement.dispatchEvent(mousedownEvent);
-                return;
-            }
-        }
-    }
+/**
+ * Set dropdown value by selector key
+ * @param {string} selectorKey - Key from SELECTORS constant
+ * @param {string} value - Value to select
+ * @returns {Promise<void>}
+ */
+export async function setDropdownValue(selectorKey, value) {
+    return adapter.setDropdownValue(selectorKey, value);
 }
 
+/**
+ * Toggle hires fix
+ * @param {boolean} onlyEnable - Only enable
+ * @param {boolean} onlyDisable - Only disable
+ */
 export function toggleHiresFix(onlyEnable, onlyDisable) {
-    const hrFixCheckbox = getElementById(SELECTORS.HIRES_CHECKBOX);
-    let toggle = true;
-
-    if (onlyEnable)
-        toggle = !hrFixCheckbox.checked;
-
-    if (onlyDisable)
-        toggle = hrFixCheckbox.checked;
-
-    if (toggle) {
-        var inputEvent = new Event('input', {
-            'bubbles': true,
-            'cancelable': true
-        });
-
-        var clickEvent = new MouseEvent('click', {
-            'view': window,
-            'bubbles': true,
-            'cancelable': true,
-            'buttons': 1
-        });
-
-        hrFixCheckbox.dispatchEvent(clickEvent);
-        hrFixCheckbox.dispatchEvent(inputEvent);
-    }
+    adapter.toggleHiresFix(onlyEnable, onlyDisable);
 }

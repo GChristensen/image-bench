@@ -4,6 +4,7 @@ import {sendPopupMessage} from "./popup.js";
 import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
 import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
 import {SELECTORS, getElementById} from "./adapters/selectors.js";
+import {adapter} from "./adapters/adapter.js";
 
 let generationId;
 let totalImages = 0;
@@ -52,7 +53,7 @@ export async function processImages(options) {
 
     if (options.preset) {
         await setConfigPreset(options.preset);
-        await sleep(500);
+        await adapter.sleep(500);
     }
 
     if (getGenerationState() !== "SEQUENTIAL_GENERATION")
@@ -82,10 +83,10 @@ async function processImage(imageData) {
     if (setSteps || imageData.setSteps)
         setInputValue(SELECTORS.TXT2IMG_STEPS, parameters["steps"]);
 
-    await sleep(500);
+    await adapter.sleep(500);
 
     const generateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
-    if (isButtonVisible(generateButton))
+    if (adapter.isElementVisible(generateButton))
         generateButton.click();
 }
 
@@ -122,7 +123,7 @@ export async function finishProcessing() {
 
     sendPopupMessage({type: "GENERATION_FINISHED"});
 
-    await sleep(1000);
+    await adapter.sleep(1000);
     await saveControlnetImages(tempGenId);
 }
 
@@ -177,7 +178,7 @@ async function monitorProgress() {
     const chunk = 1 / totalImages;
 
     while (progressMonitoring) {
-        await sleep(1000);
+        await adapter.sleep(1000);
 
         let progress = (totalImages - processingQueue.length - 1) * chunk * 100;
         const currentProgress = getGenerationProgress();

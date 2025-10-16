@@ -4,6 +4,7 @@ import {setCheckBoxValue, setInputValue, toggleHiresFix} from "./utils_input.js"
 import {createGenerationId, isButtonVisible, sleep} from "./utils.js";
 import {getGenerationProgress, saveControlnetImages, setConfigPreset} from "./sdwebui.js";
 import {SELECTORS, getElementById} from "./adapters/selectors.js";
+import {adapter} from "./adapters/adapter.js";
 
 let generationId;
 let isImg2Img;
@@ -39,7 +40,7 @@ export function setupGeneration(options) {
 async function beginGeneration(options, config) {
     const txt2ImgGenerateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
     const img2ImgGenerateButton = getElementById(SELECTORS.IMG2IMG_GENERATE);
-    const isImg2ImgTab = txt2ImgGenerateButton.offsetParent === null;
+    const isImg2ImgTab = adapter.isImg2ImgTab();
 
     if (options.preset && !isImg2ImgTab)
         await setConfigPreset(options.preset);
@@ -60,9 +61,9 @@ async function beginGeneration(options, config) {
         toggleHiresFix(false, true);
     }
 
-    await sleep(500);
+    await adapter.sleep(500);
 
-    if (isButtonVisible(generateButton))
+    if (adapter.isElementVisible(generateButton))
         generateButton.click();
 }
 
@@ -70,8 +71,7 @@ export async function finishGeneration() {
     if (!generationId)
         return;
 
-    const txt2ImgGenerateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
-    const isImg2ImgTab = txt2ImgGenerateButton.offsetParent === null;
+    const isImg2ImgTab = adapter.isImg2ImgTab();
 
     if (isImg2ImgTab)
         setInputValue(SELECTORS.IMG2IMG_BATCH_COUNT, 1);
@@ -88,7 +88,7 @@ export async function finishGeneration() {
     generationId = null;
     isImg2Img = false;
 
-    await sleep(1000);
+    await adapter.sleep(1000);
     await saveControlnetImages(tempGenId);
 }
 

@@ -7,6 +7,7 @@ import {closePopup, sendPopupMessage} from "./popup.js";
 import {isButtonVisible, sleep} from "./utils.js";
 import {setupGeneration, finishGeneration} from "./generation.js";
 import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
+import {adapter, isForge as checkIsForge} from "./adapters/adapter.js";
 
 export let isForge = false;
 
@@ -16,7 +17,7 @@ addEventListener("pagehide", () => {
 });
 
 export function hookIntoSDWebUI() {
-    isForge = !!querySelector(SELECTORS.FORGE_INDICATOR);
+    isForge = checkIsForge();
 
     const txt2ImgGenerateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
     txt2ImgGenerateButton.addEventListener("mousedown", onGenerateMousedown);
@@ -224,12 +225,7 @@ export async function setImageParams(options) {
 }
 
 export function getGenerationProgress() {
-    const progressBar = querySelector(SELECTORS.PROGRESS_BAR);
-    const progressBarText = progressBar?.textContent;
-    const matches = progressBarText?.match(/(\d+)%/);
-
-    if (matches)
-        return parseInt(matches[1]);
+    return adapter.getGenerationProgress();
 }
 
 export async function saveControlnetImages(generationId) {

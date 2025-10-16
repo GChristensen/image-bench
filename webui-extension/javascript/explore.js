@@ -3,6 +3,7 @@ import {getGenerationState, setGenerationState} from "./state.js";
 import {getInputValue, setDropdownValue, setInputValue} from "./utils_input.js";
 import {sendPopupMessage} from "./popup.js";
 import {SELECTORS, getElementById} from "./adapters/selectors.js";
+import {adapter} from "./adapters/adapter.js";
 
 let generationId;
 let totalImages = 0;
@@ -61,11 +62,11 @@ async function exploreImage(model) {
         exploreModel = model;
     }
 
-    await sleep(1000);
+    await adapter.sleep(1000);
 
     const generateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
 
-    if (isButtonVisible(generateButton))
+    if (adapter.isElementVisible(generateButton))
         generateButton.click();
 }
 
