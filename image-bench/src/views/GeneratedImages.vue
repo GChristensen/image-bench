@@ -68,18 +68,15 @@ function getImageStore() {
   }
 }
 
-function onSelectAllClick(e) {
-  e.preventDefault();
+function onSelectAllClick() {
   imageStream.value.selectAll();
 }
 
-function onClearClick(e) {
-  e.preventDefault();
+function onClearClick() {
   imageStream.value.clear();
 }
 
-function onUpscaleSelectedClick(e) {
-  e.preventDefault();
+function onUpscaleSelectedClick() {
   const selectedImages = imageStream.value.getSelectedImages();
 
   if (upscaledImageStore.generationInProgress) {
@@ -109,9 +106,7 @@ function onUpscaleImage(imageProxy, usePreset) {
   webUI.upscaleImages([image], preset);
 }
 
-function onBatchGenerateClick(e) {
-  e.preventDefault();
-
+function onBatchGenerateClick() {
   if (imageStore.generationInProgress) {
     webUI.stopGeneration();
   }
@@ -125,9 +120,7 @@ function onBatchGenerateClick(e) {
   }
 }
 
-function onGenerateVariationsClick(e) {
-  e.preventDefault();
-
+function onGenerateVariationsClick() {
   const variationStrength = storage.getVariationStrength();
   const strength = prompt("Variation strength:", variationStrength);
   
@@ -142,9 +135,7 @@ function onGenerateVariationsClick(e) {
   }
 }
 
-function onStopGenerationClick(e) {
-  e.preventDefault();
-
+function onStopGenerationClick() {
   webUI.stopGeneration();
 }
 
@@ -230,9 +221,7 @@ function displayNextImage() {
   }
 }
 
-function onShowMarkedClick(e) {
-  e.preventDefault();
-
+function onShowMarkedClick() {
   if (isShowingMarked.value) {
     isShowingMarked.value = false;
   }
@@ -241,8 +230,7 @@ function onShowMarkedClick(e) {
   }
 }
 
-function onOpenClick(e) {
-  e.preventDefault();
+function onOpenClick() {
   openFileInput.value.click();
 }
 
@@ -281,8 +269,7 @@ async function onOpenFileInputChange(e) {
   }
 }
 
-function onSaveClick(e) {
-  e.preventDefault();
+function onSaveClick() {
   const link = document.createElement('a');
   link.href = "/image-bench/download_image_tray?kind=" + props.kind;
   link.download = props.kind + ".zip";

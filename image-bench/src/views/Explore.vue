@@ -89,9 +89,7 @@ function onExploreClick() {
   }
 }
 
-async function onCreateClick(e) {
-  e.preventDefault();
-
+async function onCreateClick() {
   const presetName = prompt("New preset name: ");
 
   if (presetName) {
@@ -107,9 +105,7 @@ async function onCreateClick(e) {
   }
 }
 
-async function onSaveClick(e) {
-  e.preventDefault();
-
+async function onSaveClick() {
   const presetName = presetSelect.value;
 
   if (presetName) {
@@ -122,9 +118,7 @@ async function onSaveClick(e) {
     alert("No preset is selected.");
 }
 
-async function onDeleteClick(e) {
-  e.preventDefault();
-
+async function onDeleteClick() {
   if (!confirm("Do you really want to continue?"))
     return;
 
@@ -143,9 +137,7 @@ async function onDeleteClick(e) {
   await writePresets();
 }
 
-async function onClearClick(e) {
-  e.preventDefault();
-
+async function onClearClick() {
   selected.value = new Set();
 }
 
