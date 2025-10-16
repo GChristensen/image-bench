@@ -1,11 +1,14 @@
 import {getGenerationState, setGenerationState} from "./state.js";
-import {finishProcessing, isProcessingActive} from "./processing.js";
-import {finishExploring, invalidateExplore} from "./explore.js";
+import {
+    explorationStrategy,
+    batchStrategy,
+    processingStrategy,
+    varyingStrategy
+} from "./strategies.js";
 import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
 import {isButtonVisible, sleep} from "./utils.js";
-import {setupGeneration, finishGeneration} from "./generation.js";
 import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
 import {adapter, isForge as checkIsForge} from "./adapters/adapter.js";
 
@@ -53,7 +56,9 @@ function listenInterruptButtonMutations() {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                     if (mutation.target.style.cssText.includes("display: none"))
                         if (getGenerationState() === "BATCH_GENERATION") {
-                            await finishGeneration();
+                            if (batchStrategy.isProcessing()) {
+                                await batchStrategy.finish();
+                            }
                             sendPopupMessage({type: "GENERATION_FINISHED"});
                         }
                 }
@@ -75,17 +80,21 @@ export function initializePopupPrompts() {
 
 function onGenerateMousedown(e) {
     checkWebSocketConnection();
-    setupGeneration({img2img: e.target.id.includes("img2img")});
+    setGenerationState("BATCH_GENERATION");
 }
 
 async function onInterruptMousedown(e) {
     const generationState = getGenerationState();
 
-    if (isProcessingActive()) {
-        await finishProcessing();
+    if (generationState === "HIRES_FIX" || generationState === "SEQUENTIAL_GENERATION") {
+        if (processingStrategy.isProcessing()) {
+            await processingStrategy.finish();
+        } else if (varyingStrategy.isProcessing()) {
+            await varyingStrategy.finish();
+        }
     }
     else if (generationState === "EXPLORE_MODELS") {
-        await finishExploring();
+        await explorationStrategy.finish();
     }
 
     setGenerationState("BATCH_GENERATION");
@@ -100,7 +109,7 @@ function onNegativePromptChange(e) {
 }
 
 function onSendToTxt2ImgButtonClick(e) {
-    invalidateExplore();
+    explorationStrategy.invalidate();
 }
 
 export async function stopGeneration() {
