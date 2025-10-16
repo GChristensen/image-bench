@@ -7,6 +7,7 @@ import {
     processingStrategy,
     varyingStrategy
 } from "./strategies.js";
+import {messageBus} from "./shared/messaging/MessageBus.js";
 import {disposePopup, sendPopupMessage, showPopup} from "./popup.js";
 import {
     hookIntoSDWebUI,
@@ -28,6 +29,50 @@ export async function init() {
 
     window.addEventListener("message", onMessage);
     setSocketEventListener(onBackendMessage);
+    
+    // Set up message bus event handlers
+    setupMessageBusHandlers();
+}
+
+/**
+ * Get the currently active strategy based on generation state
+ */
+function getActiveStrategy() {
+    const state = getGenerationState();
+    
+    if (state === "EXPLORE_MODELS") return explorationStrategy;
+    if (state === "BATCH_GENERATION") return batchStrategy;
+    if (state === "HIRES_FIX" || state === "SEQUENTIAL_GENERATION") {
+        return processingStrategy.isProcessing() ? processingStrategy : varyingStrategy;
+    }
+    return null;
+}
+
+/**
+ * Set up message bus event handlers for strategy control
+ */
+function setupMessageBusHandlers() {
+    // Handle strategy finish requests
+    messageBus.subscribe('STRATEGY_FINISH_REQUEST', async () => {
+        const strategy = getActiveStrategy();
+        if (strategy && strategy.isProcessing()) {
+            await strategy.finish();
+        }
+        setGenerationState("BATCH_GENERATION");
+    });
+    
+    // Handle exploration invalidation
+    messageBus.subscribe('EXPLORATION_INVALIDATE', () => {
+        explorationStrategy.invalidate();
+    });
+    
+    // Handle batch generation finished notification
+    messageBus.subscribe('BATCH_GENERATION_FINISHED', async () => {
+        if (batchStrategy.isProcessing()) {
+            await batchStrategy.finish();
+        }
+        sendPopupMessage({type: "GENERATION_FINISHED"});
+    });
 }
 
 async function initUI() {
@@ -129,36 +174,25 @@ function onBackendMessage(e) {
 
         // Set message parameters based on active strategy
         if (msg.type === "SAVED_IMAGE") {
-            const generationState = getGenerationState();
+            const strategy = getActiveStrategy();
             
-            if (generationState === "EXPLORE_MODELS") {
-                Object.assign(msg, explorationStrategy.getMessageParams());
-            }
-            else if (generationState === "BATCH_GENERATION") {
-                msg.progress = getGenerationProgress();
-                Object.assign(msg, batchStrategy.getMessageParams());
-            }
-            else if (generationState === "HIRES_FIX" || generationState === "SEQUENTIAL_GENERATION") {
-                const strategy = processingStrategy.isProcessing() ? processingStrategy : varyingStrategy;
-                if (strategy.isProcessing()) {
-                    Object.assign(msg, strategy.getMessageParams());
+            if (strategy && strategy.isProcessing()) {
+                Object.assign(msg, strategy.getMessageParams());
+                
+                // Add progress for batch generation
+                if (getGenerationState() === "BATCH_GENERATION") {
+                    msg.progress = getGenerationProgress();
                 }
             }
         }
 
         sendPopupMessage(msg);
 
-        // Process next item based on state
+        // Process next item based on active strategy
         if (msg.type === "SAVED_IMAGE") {
-            if (isProcessingActive()) {
-                if (processingStrategy.isProcessing()) {
-                    processingStrategy.processNext();
-                } else if (varyingStrategy.isProcessing()) {
-                    varyingStrategy.processNext();
-                }
-            }
-            else if (getGenerationState() === "EXPLORE_MODELS") {
-                explorationStrategy.processNext();
+            const strategy = getActiveStrategy();
+            if (strategy && strategy.isProcessing()) {
+                strategy.processNext();
             }
         }
     }

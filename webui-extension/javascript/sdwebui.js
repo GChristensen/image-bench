@@ -1,10 +1,5 @@
 import {getGenerationState, setGenerationState} from "./state.js";
-import {
-    explorationStrategy,
-    batchStrategy,
-    processingStrategy,
-    varyingStrategy
-} from "./strategies.js";
+import {messageBus} from "./shared/messaging/MessageBus.js";
 import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
@@ -56,10 +51,7 @@ function listenInterruptButtonMutations() {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                     if (mutation.target.style.cssText.includes("display: none"))
                         if (getGenerationState() === "BATCH_GENERATION") {
-                            if (batchStrategy.isProcessing()) {
-                                await batchStrategy.finish();
-                            }
-                            sendPopupMessage({type: "GENERATION_FINISHED"});
+                            messageBus.publish('BATCH_GENERATION_FINISHED');
                         }
                 }
             }
@@ -84,20 +76,8 @@ function onGenerateMousedown(e) {
 }
 
 async function onInterruptMousedown(e) {
-    const generationState = getGenerationState();
-
-    if (generationState === "HIRES_FIX" || generationState === "SEQUENTIAL_GENERATION") {
-        if (processingStrategy.isProcessing()) {
-            await processingStrategy.finish();
-        } else if (varyingStrategy.isProcessing()) {
-            await varyingStrategy.finish();
-        }
-    }
-    else if (generationState === "EXPLORE_MODELS") {
-        await explorationStrategy.finish();
-    }
-
-    setGenerationState("BATCH_GENERATION");
+    // Request to finish current active strategy via message bus
+    messageBus.publish('STRATEGY_FINISH_REQUEST');
 }
 
 function onPromptChange(e) {
@@ -109,7 +89,7 @@ function onNegativePromptChange(e) {
 }
 
 function onSendToTxt2ImgButtonClick(e) {
-    explorationStrategy.invalidate();
+    messageBus.publish('EXPLORATION_INVALIDATE');
 }
 
 export async function stopGeneration() {
