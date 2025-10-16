@@ -167,7 +167,7 @@ const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clea
 }
 
 .tool-item {
-  padding: 10px 15px;
+  padding: 5px 15px;
   cursor: pointer;
   text-decoration: none;
   color: white;
