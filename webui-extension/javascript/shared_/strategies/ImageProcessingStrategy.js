@@ -6,13 +6,11 @@
 import { QueueProcessor } from '../core/QueueProcessor.js';
 
 export class ImageProcessingStrategy extends QueueProcessor {
-    constructor(adapter, messageBus) {
-        super(adapter, messageBus);
+    constructor(uiOperations, messageBus) {
+        super(uiOperations, messageBus);
         this.setSteps = false;
         this.setDenoising = false;
-        this.seedsBeforeProcessing = null;
-        this.stepsBeforeProcessing = null;
-        this.denoisingBeforeProcessing = null;
+        this.paramsBackup = null;
         this.progressMonitoring = false;
     }
 
@@ -40,26 +38,21 @@ export class ImageProcessingStrategy extends QueueProcessor {
         this.messageBus.publish('BEGIN_PROCESSING', {});
 
         // Backup current parameters
-        this.seedsBeforeProcessing = [
-            await this.adapter.getInputValue('TXT2IMG_SEED'),
-            await this.adapter.getInputValue('TXT2IMG_SUBSEED')
-        ];
-        this.stepsBeforeProcessing = await this.adapter.getInputValue('TXT2IMG_STEPS');
-        this.denoisingBeforeProcessing = await this.adapter.getInputValue('TXT2IMG_DENOISING');
+        this.paramsBackup = await this.uiOperations.backupGenerationParams();
 
         // Apply preset if specified
         if (options.preset) {
-            await this.setConfigPreset(options.preset);
-            await this.adapter.sleep(500);
+            await this.uiOperations.applyPreset(options.preset);
+            await this.uiOperations.sleep(500);
         }
 
         // Enable hires fix for sequential generation, disable for hires fix mode
         if (!this.setSteps) {
-            this.adapter.toggleHiresFix(true);
+            this.uiOperations.toggleHiresFix(true);
         }
 
         // Set batch count to 1 for sequential processing
-        await this.adapter.setInputValue('TXT2IMG_BATCH_COUNT', 1);
+        await this.uiOperations.setBatchCount(1);
 
         // Start progress monitoring
         this.startProgressMonitoring();
@@ -76,31 +69,16 @@ export class ImageProcessingStrategy extends QueueProcessor {
 
         const parameters = imageData.parameters;
 
-        // Set seed
-        await this.adapter.setInputValue('TXT2IMG_SEED', parameters['seed']);
+        // Apply image parameters
+        await this.uiOperations.applyImageParameters(parameters, {
+            setSteps: this.setSteps || imageData.setSteps,
+            setDenoising: this.setDenoising
+        });
 
-        // Set variation seed if present
-        if ('variation seed' in parameters) {
-            await this.adapter.setInputValue('TXT2IMG_SUBSEED', parameters['variation seed']);
-        }
-
-        // Set denoising strength if needed
-        if (this.setDenoising && 'denoising strength' in parameters) {
-            await this.adapter.setInputValue('TXT2IMG_DENOISING', parameters['denoising strength']);
-        }
-
-        // Set steps if needed
-        if (this.setSteps || imageData.setSteps) {
-            await this.adapter.setInputValue('TXT2IMG_STEPS', parameters['steps']);
-        }
-
-        await this.adapter.sleep(500);
+        await this.uiOperations.sleep(500);
 
         // Click generate button
-        const generateButton = this.adapter.getElement('TXT2IMG_GENERATE');
-        if (generateButton && this.adapter.isElementVisible(generateButton)) {
-            generateButton.click();
-        }
+        this.uiOperations.clickGenerate();
     }
 
     /**
@@ -111,9 +89,9 @@ export class ImageProcessingStrategy extends QueueProcessor {
 
         const chunk = 1 / this.totalItems;
         let progress = (this.totalItems - this.queue.length - 1) * chunk * 100;
-        
+
         // Add current generation progress
-        const currentProgress = this.adapter.getGenerationProgress();
+        const currentProgress = this.uiOperations.getGenerationProgress();
         if (currentProgress !== null && !isNaN(currentProgress) && currentProgress < 100) {
             progress += currentProgress * chunk;
         }
@@ -129,7 +107,7 @@ export class ImageProcessingStrategy extends QueueProcessor {
 
         const monitorProgress = async () => {
             while (this.progressMonitoring && this.isActive) {
-                await this.adapter.sleep(1000);
+                await this.uiOperations.sleep(1000);
                 this.reportProgress();
             }
         };
@@ -147,43 +125,25 @@ export class ImageProcessingStrategy extends QueueProcessor {
         this.queue = [];
 
         // Restore parameters
-        this.revertVaryingParams();
+        if (this.paramsBackup) {
+            this.uiOperations.restoreGenerationParams(this.paramsBackup);
+        }
 
         // Toggle hires fix back if needed
         if (!this.setSteps) {
-            this.adapter.toggleHiresFix();
+            this.uiOperations.toggleHiresFix();
         }
 
         const tempGenId = this.generationId;
         this.generationId = null;
-        this.seedsBeforeProcessing = null;
-        this.stepsBeforeProcessing = null;
-        this.denoisingBeforeProcessing = null;
+        this.paramsBackup = null;
         this.setDenoising = false;
         this.setSteps = false;
 
         this.messageBus.publish('GENERATION_FINISHED', {});
 
-        await this.adapter.sleep(1000);
+        await this.uiOperations.sleep(1000);
         await this.saveControlnetImages(tempGenId);
-    }
-
-    /**
-     * Restore backed up parameters
-     */
-    revertVaryingParams() {
-        if (this.seedsBeforeProcessing) {
-            this.adapter.setInputValue('TXT2IMG_SEED', this.seedsBeforeProcessing[0]);
-            this.adapter.setInputValue('TXT2IMG_SUBSEED', this.seedsBeforeProcessing[1]);
-        }
-
-        if (this.stepsBeforeProcessing) {
-            this.adapter.setInputValue('TXT2IMG_STEPS', this.stepsBeforeProcessing);
-        }
-
-        if (this.denoisingBeforeProcessing) {
-            this.adapter.setInputValue('TXT2IMG_DENOISING', this.denoisingBeforeProcessing);
-        }
     }
 
     /**
@@ -202,26 +162,10 @@ export class ImageProcessingStrategy extends QueueProcessor {
     }
 
     /**
-     * Set config preset
-     */
-    async setConfigPreset(preset) {
-        const presetDropdown = this.adapter.getElement('CONFIG_PRESET_TXT2IMG_DROPDOWN');
-
-        if (presetDropdown) {
-            if (presetDropdown.value === preset) {
-                await this.adapter.setDropdownValue('CONFIG_PRESET_TXT2IMG_DROPDOWN', 'None');
-                await this.adapter.sleep(333);
-            }
-
-            await this.adapter.setDropdownValue('CONFIG_PRESET_TXT2IMG_DROPDOWN', preset);
-        }
-    }
-
-    /**
      * Save controlnet images for this generation
      */
     async saveControlnetImages(generationId) {
-        let controlNetThumbs = this.adapter.getAllElements('TXT2IMG_GALLERY');
+        let controlNetThumbs = this.uiOperations.getAllElements('TXT2IMG_GALLERY');
         controlNetThumbs = Array.from(controlNetThumbs);
 
         if (controlNetThumbs.length) {

@@ -1,5 +1,5 @@
 import {getGenerationState, setGenerationState} from "./state.js";
-import {messageBus} from "./shared/messaging/MessageBus.js";
+import {messageBus} from "./shared_/messaging/MessageBus.js";
 import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";

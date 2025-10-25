@@ -6,11 +6,11 @@
 
 export class QueueProcessor {
     /**
-     * @param {Object} adapter - DOM adapter instance
+     * @param {Object} uiOperations - UI operations facade instance
      * @param {Object} messageBus - Message bus for communication
      */
-    constructor(adapter, messageBus) {
-        this.adapter = adapter;
+    constructor(uiOperations, messageBus) {
+        this.uiOperations = uiOperations;
         this.messageBus = messageBus;
         this.queue = [];
         this.generationId = null;

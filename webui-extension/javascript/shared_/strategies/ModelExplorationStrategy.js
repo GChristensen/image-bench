@@ -7,8 +7,8 @@ import { QueueProcessor } from '../core/QueueProcessor.js';
 import { SELECTORS } from '../../adapters/selectors.js';
 
 export class ModelExplorationStrategy extends QueueProcessor {
-    constructor(adapter, messageBus) {
-        super(adapter, messageBus);
+    constructor(uiOperations, messageBus) {
+        super(uiOperations, messageBus);
         this.currentModel = null;
         this.modelBeforeExplore = null;
         this.invalidated = false;
@@ -41,15 +41,14 @@ export class ModelExplorationStrategy extends QueueProcessor {
      */
     async prepare(options) {
         // Save current model to restore later
-        this.modelBeforeExplore = await this.adapter.getInputValue('MODEL_CHECKPOINT');
-        
+        this.modelBeforeExplore = await this.uiOperations.backupModel();
+
         // Set initial model
-        await this.adapter.setDropdownValue('MODEL_CHECKPOINT', this.currentModel.title);
-        
+        await this.uiOperations.restoreModel(this.currentModel.title);
+
         // Configure generation parameters
-        await this.adapter.setInputValue('TXT2IMG_BATCH_COUNT', 1);
-        await this.adapter.setInputValue('TXT2IMG_SEED', -1);
-        
+        await this.uiOperations.setupBasicGeneration(-1, 1);
+
         // Notify that processing started
         this.messageBus.publish('BEGIN_PROCESSING', {});
     }
@@ -61,17 +60,14 @@ export class ModelExplorationStrategy extends QueueProcessor {
     async processItem(model) {
         // Switch model if different from current
         if (this.currentModel.title !== model.title) {
-            await this.adapter.setDropdownValue('MODEL_CHECKPOINT', model.title);
+            await this.uiOperations.restoreModel(model.title);
             this.currentModel = model;
         }
 
-        await this.adapter.sleep(1000);
+        await this.uiOperations.sleep(1000);
 
         // Click generate button
-        const generateButton = this.adapter.getElement('TXT2IMG_GENERATE');
-        if (generateButton && this.adapter.isElementVisible(generateButton)) {
-            generateButton.click();
-        }
+        this.uiOperations.clickGenerate();
     }
 
     /**
@@ -83,7 +79,7 @@ export class ModelExplorationStrategy extends QueueProcessor {
 
         // Restore original model if saved
         if (this.modelBeforeExplore) {
-            await this.adapter.setDropdownValue('MODEL_CHECKPOINT', this.modelBeforeExplore);
+            await this.uiOperations.restoreModel(this.modelBeforeExplore);
             this.modelBeforeExplore = null;
         }
 
