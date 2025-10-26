@@ -10,6 +10,7 @@ export class BatchGenerationStrategy extends QueueProcessor {
         super(uiOperations, messageBus);
         this.isImg2Img = false;
         this.isVariations = false;
+        this.nImagesToGenerate = 100;
         this.config = null;
     }
 
@@ -20,6 +21,7 @@ export class BatchGenerationStrategy extends QueueProcessor {
     initialize(options) {
         this.isImg2Img = options.img2img || false;
         this.isVariations = options.strength !== undefined;
+        this.nImagesToGenerate = options.generateImages || 100;
         this.generationId = this.createGenerationId();
         
         // Batch generation doesn't use a queue in the traditional sense
@@ -45,17 +47,10 @@ export class BatchGenerationStrategy extends QueueProcessor {
         } else {
             await this.uiOperations.setInputValue('TXT2IMG_SEED', -1);
         }
-        
-        // Set batch count or apply preset
-        if (options.preset && !isImg2ImgTab) {
-            // If preset is specified, use it (this will set batch count via preset)
-            await this.uiOperations.applyPreset(options.preset);
-        } else {
-            // Set batch count directly
-            const defaultBatches = this.config.defaultBatches || 100;
-            await this.uiOperations.setBatchCount(defaultBatches);
-        }
-        
+
+        const nImagesToGenerate = this.nImagesToGenerate || this.config.defaultBatches || 100;
+        await this.uiOperations.setBatchCount(nImagesToGenerate);
+
         // Disable hires fix for txt2img
         if (!isImg2ImgTab) {
             this.uiOperations.toggleHiresFix(false, true);

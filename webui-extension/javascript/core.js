@@ -18,7 +18,7 @@ import {
     stopGeneration
 } from "./sdwebui.js";
 import {checkWebSocketConnection, createWebSocket, setSocketEventListener} from "./websocket.js";
-import {getGenerationProgress} from "./sdwebui.js";
+import {adapter} from "./adapters/adapter.js";
 
 let appConfig;
 
@@ -77,10 +77,9 @@ function setupMessageBusHandlers() {
 
 async function initUI() {
     //window.name = "sd-webui-main-window";
-    console.log(appConfig)
+    //console.log(appConfig)
     if (appConfig?.repositionConfigPresetsDropdown) {
         await sleep(2000);
-        console.log("Repos")
         await repositionConfigPresetsDropdown("txt2img");
         await repositionConfigPresetsDropdown("img2img");
     }
@@ -181,7 +180,7 @@ function onBackendMessage(e) {
                 
                 // Add progress for batch generation
                 if (getGenerationState() === "BATCH_GENERATION") {
-                    msg.progress = getGenerationProgress();
+                    msg.progress = adapter.getGenerationProgress();
                 }
             }
         }

@@ -36,6 +36,7 @@ const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const imageStore = getImageStore();
 
+const imageToolbar = ref();
 const imageStream = ref(null);
 const showImageOverlay = ref(false);
 // const overlayImageLink = ref(null);
@@ -89,21 +90,20 @@ function onUpscaleSelectedClick() {
 
       upscaledImageStore.startingGeneration();
 
-      webUI.upscaleImages(selectedImages, imageStore.applyPreset);
+      webUI.upscaleImages(selectedImages);
     }
   }
 }
 
 function onUpscaleImage(imageProxy, usePreset) {
   const image = imageOps.cloneImage(imageProxy);
-  const preset = usePreset ? imageTrayStore.applyPreset : null;
 
   if (config.automaticallyClearGeneratedImages)
     upscaledImageStore.clear();
 
   upscaledImageStore.startingGeneration();
 
-  webUI.upscaleImages([image], preset);
+  webUI.upscaleImages([image]);
 }
 
 function onBatchGenerateClick() {
@@ -116,7 +116,8 @@ function onBatchGenerateClick() {
 
     generatedImagesStore.startingGeneration();
 
-    webUI.batchGenerate(imageStore.applyPreset);
+    const nImagesToGenerate = imageToolbar.value.generateImagesNumber;
+    webUI.batchGenerate(nImagesToGenerate);
   }
 }
 
@@ -130,8 +131,10 @@ function onGenerateVariationsClick() {
 
     generatedImagesStore.startingGeneration();
 
+    const nImagesToGenerate = imageToolbar.value.generateImagesNumber.value;
+
     storage.setVariationStrength(strength);
-    webUI.generateVariations(strength, imageStore.applyPreset);
+    webUI.generateVariations(strength, nImagesToGenerate);
   }
 }
 
@@ -301,6 +304,7 @@ function isComponentTray(kind) {
     
     <!-- Presentational toolbar component -->
     <ImageToolbar
+      ref="imageToolbar"
       :kind="kind"
       :is-tray="isComponentTray(kind)"
       :is-all-selected="isAllSelected"
@@ -311,7 +315,6 @@ function isComponentTray(kind) {
       :upscale-in-progress="upscaledImageStore.generationInProgress"
       :apply-preset="imageStore.applyPreset"
       :presets="configPresetsStore.presets"
-      :show-preset-selector="kind !== KIND_UPSCALED"
       @save="onSaveClick"
       @open="onOpenClick"
       @select-all="onSelectAllClick"

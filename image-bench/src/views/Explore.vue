@@ -16,7 +16,7 @@ const presetNames = ref([]);
 const presetSelect = ref();
 let modelPresets = {};
 const modelImages = computed(() => exploreImagesStore.images);
-const generateImages = ref(3);
+const generateImagesNumber = ref(3);
 
 const showImageOverlay = ref(false);
 const overlayImage = ref(null);
@@ -85,7 +85,7 @@ function onExploreClick() {
     exploreImagesStore.generationProgress = 0;
     exploreImagesStore.generationInProgress = true;
     exploreImagesStore.clear();
-    sendWebUIMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImages.value})
+    sendWebUIMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImagesNumber.value})
   }
 }
 
@@ -217,7 +217,7 @@ function onKeydown(e) {
       </div>
       <div class="toolbar-spacer"></div>
       <div class="generate-images-container">
-        <label>Generate images:&nbsp;<input type="number" class="generate-images" v-model="generateImages"></label>
+        <label>Generate images:&nbsp;<input type="number" class="generate-images" v-model="generateImagesNumber"></label>
       </div>
     </div>
     <div class="explore-container">

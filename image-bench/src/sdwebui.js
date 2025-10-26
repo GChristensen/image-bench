@@ -52,5 +52,6 @@ export function getGenerationState() {
 }
 
 export function sendWebUIMessage(msg) {
+    console.log("sendWebUIMessage: ", msg)
     return window.opener.postMessage(msg);
 }

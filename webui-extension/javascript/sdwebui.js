@@ -5,9 +5,6 @@ import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
 import {isButtonVisible, sleep} from "./utils.js";
 import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
-import {adapter, isForge as checkIsForge} from "./adapters/adapter.js";
-
-export let isForge = false;
 
 addEventListener("pagehide", () => {
     closePopup();
@@ -15,8 +12,6 @@ addEventListener("pagehide", () => {
 });
 
 export function hookIntoSDWebUI() {
-    isForge = checkIsForge();
-
     const txt2ImgGenerateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
     txt2ImgGenerateButton.addEventListener("mousedown", onGenerateMousedown);
 
@@ -211,10 +206,6 @@ export async function setImageParams(options) {
         setInputValue(SELECTORS.HIRES_SCALE, params["hires upscale"]);
         toggleHiresFix(true);
     }
-}
-
-export function getGenerationProgress() {
-    return adapter.getGenerationProgress();
 }
 
 export async function saveControlnetImages(generationId) {

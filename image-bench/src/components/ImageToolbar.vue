@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue';
+import {computed, ref} from 'vue';
+import {KIND_GENERATED, KIND_UPSCALED} from "@/consts.js";
 
 /**
  * Presentational component for the image toolbar
@@ -54,7 +55,7 @@ const props = defineProps({
   },
   showPresetSelector: {
     type: Boolean,
-    default: true
+    default: false
   }
 });
 
@@ -74,6 +75,9 @@ const emit = defineEmits([
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
 const showMarkedText = computed(() => props.isShowingMarked ? 'Show all' : 'Show marked');
 const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clear');
+const generateImagesNumber = ref(256);
+
+defineExpose({generateImagesNumber});
 </script>
 
 <template>
@@ -91,21 +95,21 @@ const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clea
 
     <!-- Generated images actions -->
     <a 
-      v-if="kind === 'generated' && !generationInProgress"
+      v-if="kind === KIND_GENERATED && !generationInProgress"
       href="#" 
       class="tool-item" 
       @click.prevent="$emit('batch-generate')"
     >Generate</a>
     
     <a 
-      v-if="kind === 'generated' && !generationInProgress"
+      v-if="kind === KIND_GENERATED && !generationInProgress"
       href="#" 
       class="tool-item" 
       @click.prevent="$emit('generate-variations')"
     >Variations</a>
     
     <a 
-      v-if="kind === 'generated' && generationInProgress"
+      v-if="kind === KIND_GENERATED && generationInProgress"
       href="#" 
       class="tool-item" 
       @click.prevent="$emit('stop-generation')"
@@ -120,7 +124,7 @@ const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clea
     >Upscale selected</a>
     
     <a 
-      v-if="kind === 'upscaled' && upscaleInProgress" 
+      v-if="kind === KIND_UPSCALED && upscaleInProgress"
       href="#" 
       class="tool-item"
       @click.prevent="$emit('upscale-selected')"
@@ -153,6 +157,11 @@ const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clea
           :value="preset"
         >{{ preset }}</option>
       </select>
+    </div>
+
+    <!-- Generate image number input -->
+    <div v-if="kind === KIND_GENERATED" class="generate-images-container">
+      <label>Generate images:&nbsp;<input type="number" class="generate-images" v-model="generateImagesNumber"></label>
     </div>
   </div>
 </template>
@@ -195,5 +204,18 @@ const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clea
 
 .config-presets {
   margin-left: 5px;
+}
+
+.generate-images-container {
+  display: flex;
+}
+
+.generate-images-container label {
+  display: flex;
+  align-items: center;
+}
+
+input.generate-images {
+  width: 50px;
 }
 </style>

@@ -17,20 +17,17 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'SET_IMAGE_PARAMS', parameters });
   };
 
-  const upscaleImages = (images, preset = null) => {
+  const upscaleImages = (images) => {
     const options = { type: 'UPSCALE_IMAGES', images };
-    if (preset) {
-      options.preset = preset;
-    }
     sendWebUIMessage(options);
   };
 
-  const batchGenerate = (preset = null) => {
-    sendWebUIMessage({ type: 'BATCH_GENERATE', preset });
+  const batchGenerate = (nImagesToGenerate = 100) => {
+    sendWebUIMessage({ type: 'BATCH_GENERATE', generateImages: nImagesToGenerate });
   };
 
-  const generateVariations = (strength, preset = null) => {
-    sendWebUIMessage({ type: 'GENERATE_VARIATIONS', strength, preset });
+  const generateVariations = (strength, nImagesToGenerate = 100) => {
+    sendWebUIMessage({ type: 'GENERATE_VARIATIONS', strength, generateImages: nImagesToGenerate });
   };
 
   const generateVaryingSteps = (image, steps) => {
