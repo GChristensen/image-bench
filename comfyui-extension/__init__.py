@@ -4,10 +4,15 @@ Adds a toolbar button to open the Image Bench popup window for batch generation 
 """
 
 import os
+import sys
 import asyncio
 import json
 from aiohttp import web
 from server import PromptServer
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from shared import persist
+from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler
 
 # Tell ComfyUI to serve files from the js/ directory
 WEB_DIRECTORY = "./js"
@@ -18,6 +23,11 @@ websocket_clients = set()
 # Base path for all routes
 BASE_PATH = "/image-bench"
 
+# Store file names
+IMAGE_TRAY_FILE = "image_tray.json"
+CONCEPT_TRAY_FILE = "concept_tray.json"
+EXPLORE_PRESETS_FILE = "explore_presets.json"
+
 
 def get_extension_root():
     """Get the absolute path to this extension directory"""
@@ -27,6 +37,19 @@ def get_extension_root():
 def get_config_path():
     """Get path to config.json file"""
     return os.path.join(get_extension_root(), "config.json")
+
+
+def get_image_bench_dir():
+    """Get the image-bench output directory"""
+    # Try to find ComfyUI output directory
+    comfy_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    output_dir = os.path.join(comfy_root, "output")
+
+    # Create image-bench subdirectory in output
+    image_bench_dir = os.path.join(output_dir, "image-bench")
+    os.makedirs(image_bench_dir, exist_ok=True)
+
+    return image_bench_dir
 
 
 # Serve the main window (index.html)
@@ -76,6 +99,164 @@ async def update_config(request):
 
         return web.Response(text="OK")
     except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
+# System information endpoint
+@PromptServer.instance.routes.get(BASE_PATH + "/system_info")
+async def get_system_info(request):
+    """Get system information including paths"""
+    try:
+        comfy_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        image_bench_dir = get_image_bench_dir()
+        output_dir = os.path.join(comfy_root, "output")
+
+        return web.json_response({
+            "comfyui_root": comfy_root,
+            "output_dir": output_dir,
+            "image_bench_dir": image_bench_dir
+        })
+    except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
+# Explore presets endpoints
+@PromptServer.instance.routes.get(BASE_PATH + "/explore_presets")
+async def get_explore_presets(request):
+    """Get explore presets from store"""
+    base_dir = get_extension_root()
+    content = persist.serve_store_file_content(base_dir, EXPLORE_PRESETS_FILE)
+    return web.Response(text=content, content_type="application/json")
+
+
+@PromptServer.instance.routes.post(BASE_PATH + "/explore_presets")
+async def update_explore_presets(request):
+    """Update explore presets in store"""
+    try:
+        base_dir = get_extension_root()
+        await persist.write_store_file_from_request(base_dir, EXPLORE_PRESETS_FILE, request)
+        return web.Response(text="", content_type="application/json")
+    except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
+# Image tray endpoints
+@PromptServer.instance.routes.get(BASE_PATH + "/image_tray")
+async def get_image_tray(request):
+    """Get image tray from store"""
+    base_dir = get_extension_root()
+    content = persist.serve_store_file_content(base_dir, IMAGE_TRAY_FILE)
+    return web.Response(text=content, content_type="application/json")
+
+
+@PromptServer.instance.routes.post(BASE_PATH + "/image_tray")
+async def update_image_tray(request):
+    """Update image tray in store"""
+    try:
+        base_dir = get_extension_root()
+        await persist.write_store_file_from_request(base_dir, IMAGE_TRAY_FILE, request)
+        return web.Response(text="", content_type="application/json")
+    except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
+# Concept tray endpoints
+@PromptServer.instance.routes.get(BASE_PATH + "/concept_tray")
+async def get_concept_tray(request):
+    """Get concept tray from store"""
+    base_dir = get_extension_root()
+    content = persist.serve_store_file_content(base_dir, CONCEPT_TRAY_FILE)
+    return web.Response(text=content, content_type="application/json")
+
+
+@PromptServer.instance.routes.post(BASE_PATH + "/concept_tray")
+async def update_concept_tray(request):
+    """Update concept tray in store"""
+    try:
+        base_dir = get_extension_root()
+        await persist.write_store_file_from_request(base_dir, CONCEPT_TRAY_FILE, request)
+        return web.Response(text="", content_type="application/json")
+    except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
+# Tray upload/download endpoints
+@PromptServer.instance.routes.get(BASE_PATH + "/download_image_tray")
+async def download_tray(request):
+    """Download image or concept tray as a zip archive"""
+    try:
+        kind = request.query.get("kind", "image_tray")
+        image_bench_dir = get_image_bench_dir()
+        store_dir = os.path.join(get_extension_root(), "store")
+
+        file_path, status_code = download_image_tray(
+            kind,
+            image_bench_dir,
+            store_dir,
+            IMAGE_TRAY_FILE,
+            CONCEPT_TRAY_FILE
+        )
+
+        if status_code == 200 and file_path:
+            return web.FileResponse(file_path)
+        elif status_code == 204:
+            return web.Response(status=204)  # No Content
+        else:  # 404
+            return web.Response(text="Not found", status=404)
+    except Exception as e:
+        import traceback
+        print(f"Error in download_tray: {e}")
+        print(traceback.format_exc())
+        return web.Response(text=str(e), status=500)
+
+
+@PromptServer.instance.routes.post(BASE_PATH + "/image_tray_upload")
+async def upload_image_tray(request):
+    """Upload image(s) to image tray"""
+    try:
+        # aiohttp multipart handling
+        reader = await request.multipart()
+        field = await reader.next()
+
+        if field is None:
+            return web.Response(text="No file provided", status=400)
+
+        filename = field.filename
+        file_data = await field.read()
+        image_bench_dir = get_image_bench_dir()
+
+        result = await tray_upload_handler(filename, file_data, image_bench_dir, IMAGE_TRAY_FILE)
+
+        return web.Response(text=json.dumps(result), content_type="application/json")
+    except Exception as e:
+        import traceback
+        print(f"Error in upload_image_tray: {e}")
+        print(traceback.format_exc())
+        return web.Response(text=str(e), status=500)
+
+
+@PromptServer.instance.routes.post(BASE_PATH + "/concept_tray_upload")
+async def upload_concept_tray(request):
+    """Upload image(s) to concept tray"""
+    try:
+        # aiohttp multipart handling
+        reader = await request.multipart()
+        field = await reader.next()
+
+        if field is None:
+            return web.Response(text="No file provided", status=400)
+
+        filename = field.filename
+        file_data = await field.read()
+        image_bench_dir = get_image_bench_dir()
+
+        result = await tray_upload_handler(filename, file_data, image_bench_dir, CONCEPT_TRAY_FILE)
+
+        return web.Response(text=json.dumps(result), content_type="application/json")
+    except Exception as e:
+        import traceback
+        print(f"Error in upload_concept_tray: {e}")
+        print(traceback.format_exc())
         return web.Response(text=str(e), status=500)
 
 
@@ -159,3 +340,5 @@ __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
 print("✓ Image Bench ComfyUI Extension loaded")
 print(f"  - Serving UI at {BASE_PATH}/window")
 print(f"  - WebSocket at {BASE_PATH}/websocket")
+print(f"  - Store endpoints: explore_presets, image_tray, concept_tray")
+print(f"  - Upload/Download endpoints: image_tray_upload, concept_tray_upload, download_image_tray")

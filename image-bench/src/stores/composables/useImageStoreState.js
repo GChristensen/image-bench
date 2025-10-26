@@ -1,11 +1,6 @@
 import { ref } from 'vue';
 import { addImage, isImageEvent } from '@/stores/utils.js';
 
-/**
- * Composable for shared image store state and actions
- * Replaces the factory pattern with proper composable pattern
- * Uses shallowRef for images array to optimize performance with large lists
- */
 export function useImageStoreState(kind) {
   const images = ref([]);
   const generationInProgress = ref(false);

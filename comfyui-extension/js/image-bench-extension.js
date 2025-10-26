@@ -8,7 +8,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
-import { getGenerationState } from "./state.js";
+import {getGenerationState, setGenerationState} from "./state.js";
 
 // Popup window reference
 let popupWindow = null;
@@ -18,6 +18,9 @@ let websocket = null;
 
 // Queue for messages before popup is ready
 let messageQueue = [];
+
+// System paths from backend
+let systemPaths = null;
 
 /**
  * Create and open the popup window
@@ -36,6 +39,7 @@ function openPopupWindow() {
         return;
     }
 
+    setGenerationState("BATCH_GENERATION")
     popupWindow.getGenerationState = getGenerationState;
 
     // Handle popup close
@@ -139,9 +143,12 @@ async function extractImageInfo(nodeId, output, promptId) {
         for (const imageData of output.images) {
             try {
                 // Construct full image path
-                const imagePath = `/view?filename=${imageData.filename}&type=${imageData.type || 'output'}&subfolder=${imageData.subfolder || ''}`;
+                const imageUrl = `/view?filename=${imageData.filename}&type=${imageData.type || 'output'}&subfolder=${imageData.subfolder || ''}`;
+                const imagePath = systemPaths.output_dir + "/" + imageData.filename;
+
                 images.push({
-                    imagePath: imagePath,
+                    imageUrl,
+                    imagePath,
                     filename: imageData.filename,
                     subfolder: imageData.subfolder || '',
                     type: imageData.type || 'output'
@@ -199,6 +206,38 @@ function extractParameters(promptId) {
     }
 
     return params;
+}
+
+/**
+ * Fetch system paths from backend
+ */
+async function fetchSystemPaths() {
+    try {
+        const response = await fetch("/image-bench/system_info");
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        systemPaths = await response.json();
+        console.log('[Image Bench] System paths loaded:', systemPaths);
+        return systemPaths;
+    } catch (e) {
+        console.error('[Image Bench] Failed to fetch system paths:', e);
+        return null;
+    }
+}
+
+/**
+ * Get ComfyUI root directory path
+ */
+export function getComfyUIRoot() {
+    return systemPaths?.comfyui_root;
+}
+
+/**
+ * Get all system paths
+ */
+export function getSystemPaths() {
+    return systemPaths;
 }
 
 /**
@@ -260,6 +299,9 @@ app.registerExtension({
     async setup() {
         console.log('[Image Bench] Extension initializing...');
 
+        // Fetch system paths first
+        await fetchSystemPaths();
+
         // Add toolbar button
         addToolbarButton();
 
@@ -279,6 +321,7 @@ app.registerExtension({
                 for (const imageData of images) {
                     sendToPopup({
                         type: "SAVED_IMAGE",
+                        imageUrl: imageData.imageUrl,
                         imagePath: imageData.imagePath,
                         filename: imageData.filename,
                         parameters: parameters

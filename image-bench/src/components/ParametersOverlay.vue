@@ -20,12 +20,12 @@ import {onBeforeMount, ref} from "vue";
     const response = await fetch(`/image-bench/get_controlnet_images?id=${props.image.generationId}`);
 
     if (response.ok) {
-      const imagePaths = await response.json();
+      const imageUrls = await response.json();
 
       controlnetImages.value.length = 0;
 
-      for (const imagePath of imagePaths) {
-        controlnetImages.value.push(`/file=${imagePath}`);
+      for (const imageUrl of imageUrls) {
+        controlnetImages.value.push(imageUrl);
       }
     }
   });

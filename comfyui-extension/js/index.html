@@ -9295,7 +9295,7 @@ function createImageData(data) {
   return { ...data };
 }
 function createImageLink(image) {
-  return "/file=" + (image == null ? void 0 : image.imagePath);
+  return image == null ? void 0 : image.imageUrl;
 }
 function createImageGenerationParams(image) {
   let parametersText = `Prompt:
@@ -10478,7 +10478,7 @@ const _sfc_main$6 = {
   }
 };
 const ImageOverlay = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["__scopeId", "data-v-a9ddf0cb"]]);
-const _withScopeId$3 = (n) => (pushScopeId("data-v-b23a419d"), n = n(), popScopeId(), n);
+const _withScopeId$3 = (n) => (pushScopeId("data-v-f6f25403"), n = n(), popScopeId(), n);
 const _hoisted_1$5 = { class: "text-overlay-container" };
 const _hoisted_2$3 = { class: "overlay-text-container" };
 const _hoisted_3$3 = /* @__PURE__ */ _withScopeId$3(() => /* @__PURE__ */ createBaseVNode("h3", { class: "parameters-title" }, "Generation parameters", -1));
@@ -10513,10 +10513,10 @@ const _sfc_main$5 = {
     onBeforeMount(async () => {
       const response = await fetch(`/image-bench/get_controlnet_images?id=${props.image.generationId}`);
       if (response.ok) {
-        const imagePaths = await response.json();
+        const imageUrls = await response.json();
         controlnetImages.value.length = 0;
-        for (const imagePath of imagePaths) {
-          controlnetImages.value.push(`/file=${imagePath}`);
+        for (const imageUrl of imageUrls) {
+          controlnetImages.value.push(imageUrl);
         }
       }
     });
@@ -10570,7 +10570,7 @@ const _sfc_main$5 = {
     };
   }
 };
-const ParametersOverlay = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-b23a419d"]]);
+const ParametersOverlay = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-f6f25403"]]);
 const _withScopeId$2 = (n) => (pushScopeId("data-v-0f69ab4e"), n = n(), popScopeId(), n);
 const _hoisted_1$4 = { class: "wrapper" };
 const _hoisted_2$2 = { class: "toolbar" };
@@ -12071,7 +12071,7 @@ to      { opacity: 1;
   transform: scale(1.05);
 }
 
-.text-overlay-container[data-v-b23a419d] {
+.text-overlay-container[data-v-f6f25403] {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -12079,7 +12079,7 @@ to      { opacity: 1;
   right: 0;
   z-index: 1000;
 }
-.text-overlay[data-v-b23a419d] {
+.text-overlay[data-v-f6f25403] {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -12090,14 +12090,14 @@ to      { opacity: 1;
   z-index: 1001;
   cursor: pointer;
 }
-.close-button[data-v-b23a419d] {
+.close-button[data-v-f6f25403] {
   position: fixed;
   top: 10vh;
   right: calc(10vw - 30px);
   z-index: 1003;
   cursor: pointer;
 }
-.overlay-text-container[data-v-b23a419d] {
+.overlay-text-container[data-v-f6f25403] {
   position: fixed;
   top: 10vh;
   bottom: 10vh;
@@ -12109,39 +12109,39 @@ to      { opacity: 1;
   display: flex;
   flex-direction: column;
 }
-.parameters-title[data-v-b23a419d], .controlnet-title[data-v-b23a419d] {
+.parameters-title[data-v-f6f25403], .controlnet-title[data-v-f6f25403] {
   font-weight: bold;
 }
-.controlnet-title[data-v-b23a419d] {
+.controlnet-title[data-v-f6f25403] {
   margin-top: 15px;
 }
-.controlnet-image[data-v-b23a419d] {
+.controlnet-image[data-v-f6f25403] {
   max-height: 100px;
   margin-right: 15px;
 }
-.overlay-text[data-v-b23a419d]{
+.overlay-text[data-v-f6f25403]{
   width: 100%;
   flex-grow: 1;
 }
-.action-link-container[data-v-b23a419d] {
+.action-link-container[data-v-f6f25403] {
   text-align: center;
 }
 
 /* Vue 3 Transition animations */
-.fade-enter-active[data-v-b23a419d], .fade-leave-active[data-v-b23a419d] {
+.fade-enter-active[data-v-f6f25403], .fade-leave-active[data-v-f6f25403] {
   transition: opacity 0.2s ease;
 }
-.fade-enter-from[data-v-b23a419d], .fade-leave-to[data-v-b23a419d] {
+.fade-enter-from[data-v-f6f25403], .fade-leave-to[data-v-f6f25403] {
   opacity: 0;
 }
-.slide-down-enter-active[data-v-b23a419d], .slide-down-leave-active[data-v-b23a419d] {
+.slide-down-enter-active[data-v-f6f25403], .slide-down-leave-active[data-v-f6f25403] {
   transition: all 0.3s ease;
 }
-.slide-down-enter-from[data-v-b23a419d] {
+.slide-down-enter-from[data-v-f6f25403] {
   opacity: 0;
   transform: translateY(-20px);
 }
-.slide-down-leave-to[data-v-b23a419d] {
+.slide-down-leave-to[data-v-f6f25403] {
   opacity: 0;
   transform: translateY(20px);
 }

@@ -1,10 +1,9 @@
-
 export function createImageData(data) {
     return {...data};
 }
 
 export function createImageLink(image) {
-    return "/file=" + image?.imagePath;
+    return image?.imageUrl;
 }
 
 export function createImageGenerationParams(image) {
