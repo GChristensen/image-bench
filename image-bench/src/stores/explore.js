@@ -1,18 +1,24 @@
-import {reactive, ref} from 'vue'
+import {reactive, computed} from 'vue'
 import {defineStore} from 'pinia'
 import {KIND_EXPLORE} from "@/consts.js";
 import {createImageData} from "@/sdwebui.js";
-import {createImageStore} from "@/stores/imageStore.js";
+import {useImageStoreState} from "@/stores/composables/useImageStoreState.js";
 
+/**
+ * Store for model exploration images
+ * Uses proper Pinia store pattern with composable for shared logic
+ * Groups images by model for comparison
+ */
 export const useExploreImagesStore = defineStore('exploreImages', () => {
-    const _store = createImageStore(KIND_EXPLORE);
+    const state = useImageStoreState(KIND_EXPLORE);
 
+    // Custom onSDEvent that groups images by model
     function onSDEvent(e) {
         if (e.type === "SAVED_IMAGE") {
             const imageData = createImageData(e);
             delete imageData.type;
 
-            let model = _store.images.value.find(m => m.name === imageData.parameters["model"]);
+            let model = state.images.value.find(m => m.name === imageData.parameters["model"]);
 
             if (!model) {
                 model = reactive({
@@ -20,18 +26,34 @@ export const useExploreImagesStore = defineStore('exploreImages', () => {
                     hash: imageData.parameters["model hash"],
                     images: []
                 });
-                _store.images.value.push(model);
+                state.images.value.push(model);
             }
 
             model.images.push(imageData);
         }
         else if (e.type === "GENERATION_PROGRESS")
-            _store.generationProgress.value = e.progress;
+            state.generationProgress.value = e.progress;
         else if (e.type === "GENERATION_FINISHED") {
-            _store.generationProgress.value = 100;
-            _store.generationInProgress.value = false;
+            state.generationProgress.value = 100;
+            state.generationInProgress.value = false;
         }
     }
 
-    return { ..._store, onSDEvent };
+    // Getters
+    const hasModels = computed(() => state.images.value.length > 0);
+    const modelCount = computed(() => state.images.value.length);
+    const isGenerating = computed(() => state.generationInProgress.value);
+
+    return {
+        // Expose state
+        ...state,
+
+        // Override onSDEvent with custom model-grouping logic
+        onSDEvent,
+
+        // Expose getters
+        hasModels,
+        modelCount,
+        isGenerating
+    };
 })

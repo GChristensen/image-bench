@@ -19,7 +19,7 @@ export const useImageTrayStore = defineStore('imageTray', () => {
     // Expose state
     ...state,
     
-    // Expose getters
+    // Expose getterso
     hasImages,
     imageCount,
     selectedCount
