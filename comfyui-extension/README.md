@@ -89,7 +89,7 @@ comfyui-extension/
 │
 └── js/
     ├── index.html             # Built Vue app (popup interface)
-    └── image-bench-extension.js # ComfyUI extension registration
+    └── core.js # ComfyUI extension registration
         ├── Toolbar button
         ├── Event listeners (executed, execution_start, execution_error)
         └── WebSocket bridge
