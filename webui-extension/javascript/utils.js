@@ -24,10 +24,6 @@ function getDateTimeString() {
    return `${dateString}_${timeString}`;
 }
 
-export function isButtonVisible(element) {
-   return element.style.display !== "none";
-}
-
 export async function loadAppConfig() {
     return await fetch('/image-bench/config.json?' + (+new Date()))
         .then(response => response.json())

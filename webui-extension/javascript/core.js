@@ -1,5 +1,4 @@
 import {loadAppConfig, sleep} from "./utils.js";
-import {createHeaderButton} from "./utils_html.js";
 import {getGenerationState, setGenerationState} from "./state.js";
 import {
     explorationStrategy,

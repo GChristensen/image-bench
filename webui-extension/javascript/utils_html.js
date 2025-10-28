@@ -1,4 +1,4 @@
-import {SELECTORS, getElementById} from "./adapters/selectors.js";
+import {SELECTORS} from "./adapters/selectors.js";
 
 export function setStyle(elements, style) {
     if (elements instanceof NodeList) {

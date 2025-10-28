@@ -1,10 +1,10 @@
 import {getGenerationState, setGenerationState} from "./state.js";
 import {messageBus} from "./shared_/messaging/MessageBus.js";
-import {setDropdownValue, setInputValue, toggleHiresFix} from "./utils_input.js";
 import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
-import {isButtonVisible, sleep} from "./utils.js";
+import {sleep} from "./utils.js";
 import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
+import {adapter} from "./adapters/adapter.js";
 
 addEventListener("pagehide", () => {
     closePopup();
@@ -68,6 +68,7 @@ export function initializePopupPrompts() {
 function onGenerateMousedown(e) {
     checkWebSocketConnection();
     setGenerationState("BATCH_GENERATION");
+    sendPopupMessage({type: "BEGIN_PROCESSING"});
 }
 
 async function onInterruptMousedown(e) {
@@ -102,10 +103,12 @@ export async function stopGeneration() {
         : txt2ImgInterruptButton;
 
     interruptButton.dispatchEvent(mousedownEvent);
-    if (isButtonVisible(interruptButton))
+    if (adapter.isElementVisible(interruptButton))
         interruptButton.click();
+
     await sleep(333);
-    if (isButtonVisible(interruptButton))
+
+    if (adapter.isElementVisible(interruptButton))
         interruptButton.click();
 }
 
@@ -125,11 +128,11 @@ export async function setConfigPreset(preset) {
 
     if (presetDropdown) {
         if (presetDropdown.value === preset) {
-        await setDropdownValue(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN, "None");
+        await adapter.setDropdownValue(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN, "None");
             await sleep(333);
         }
 
-        await setDropdownValue(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN, preset);
+        await adapter.setDropdownValue(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN, preset);
     }
 }
 
@@ -139,10 +142,10 @@ export async function setImageSeed(options) {
 
     const params = options.parameters;
 
-    setInputValue(SELECTORS.TXT2IMG_SEED, params["seed"]);
+    adapter.setInputValue(SELECTORS.TXT2IMG_SEED, params["seed"]);
 
     if ("variation seed" in params)
-        setInputValue(SELECTORS.TXT2IMG_SUBSEED, params["variation seed"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_SUBSEED, params["variation seed"]);
 }
 
 export async function setImageParams(options) {
@@ -152,59 +155,59 @@ export async function setImageParams(options) {
         return;
 
     if ("model" in params)
-        await setDropdownValue(SELECTORS.MODEL_CHECKPOINT, params["model"]);
+        await adapter.setDropdownValue(SELECTORS.MODEL_CHECKPOINT, params["model"]);
 
     if ("vae" in params)
-        await setDropdownValue(SELECTORS.SD_VAE, params["vae"]);
+        await adapter.setDropdownValue(SELECTORS.SD_VAE, params["vae"]);
 
     if ("prompt" in params)
-        setInputValue(SELECTORS.TXT2IMG_PROMPT, params["prompt"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_PROMPT, params["prompt"]);
     else
-        setInputValue(SELECTORS.TXT2IMG_PROMPT, "");
+        adapter.setInputValue(SELECTORS.TXT2IMG_PROMPT, "");
 
     if ("negative prompt" in params)
-        setInputValue(SELECTORS.TXT2IMG_NEG_PROMPT, params["negative prompt"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_NEG_PROMPT, params["negative prompt"]);
     else
-        setInputValue(SELECTORS.TXT2IMG_NEG_PROMPT, "");
+        adapter.setInputValue(SELECTORS.TXT2IMG_NEG_PROMPT, "");
 
     if ("sampler" in params)
-        await setDropdownValue(SELECTORS.TXT2IMG_SAMPLING, params["sampler"]);
+        await adapter.setDropdownValue(SELECTORS.TXT2IMG_SAMPLING, params["sampler"]);
 
     if ("schedule type" in params)
-        await setDropdownValue(SELECTORS.TXT2IMG_SCHEDULER, params["schedule type"]);
+        await adapter.setDropdownValue(SELECTORS.TXT2IMG_SCHEDULER, params["schedule type"]);
 
     if ("steps" in params)
-        setInputValue(SELECTORS.TXT2IMG_STEPS, params["steps"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_STEPS, params["steps"]);
 
     if ("cfg scale" in params)
-        setInputValue(SELECTORS.TXT2IMG_CFG_SCALE, params["cfg scale"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_CFG_SCALE, params["cfg scale"]);
 
     if ("seed" in params)
-        setInputValue(SELECTORS.TXT2IMG_SEED, params["seed"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_SEED, params["seed"]);
 
     if ("variation seed" in params) {
-        setInputValue(SELECTORS.TXT2IMG_SUBSEED, params["variation seed"]);
-        setInputValue(SELECTORS.TXT2IMG_SUBSEED_STRENGTH, params["variation seed strength"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_SUBSEED, params["variation seed"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_SUBSEED_STRENGTH, params["variation seed strength"]);
     }
 
     if ("size" in params && params["size"].includes("x")) {
         const sizes = params["size"].split("x");
-        setInputValue(SELECTORS.TXT2IMG_WIDTH, sizes[0]);
-        setInputValue(SELECTORS.TXT2IMG_HEIGHT, sizes[1]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_WIDTH, sizes[0]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_HEIGHT, sizes[1]);
     }
 
     if ("clip skip" in params)
-        setInputValue(SELECTORS.CLIP_SKIP, params["clip skip"]);
+        adapter.setInputValue(SELECTORS.CLIP_SKIP, params["clip skip"]);
 
     if ("denoising strength" in params)
-        setInputValue(SELECTORS.TXT2IMG_DENOISING, params["denoising strength"]);
+        adapter.setInputValue(SELECTORS.TXT2IMG_DENOISING, params["denoising strength"]);
 
     if ("hires steps" in params)
-        setInputValue(SELECTORS.HIRES_SCALE, params["hires steps"]);
+        adapter.setInputValue(SELECTORS.HIRES_SCALE, params["hires steps"]);
 
     if ("hires upscale" in params) {
-        setInputValue(SELECTORS.HIRES_SCALE, params["hires upscale"]);
-        toggleHiresFix(true);
+        adapter.setInputValue(SELECTORS.HIRES_SCALE, params["hires upscale"]);
+        adapter.toggleHiresFix(true);
     }
 }
 
