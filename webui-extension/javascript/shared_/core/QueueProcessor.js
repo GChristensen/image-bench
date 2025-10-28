@@ -139,9 +139,44 @@ export class QueueProcessor {
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const seconds = String(now.getSeconds()).padStart(2, '0');
-        
+
         const dateString = `${year}${month}${day}`;
         const timeString = `${hours}${minutes}${seconds}`;
         return `gen_${dateString}_${timeString}`;
+    }
+
+    /**
+     * Save controlnet images for this generation
+     * @param {string} generationId - The generation ID to associate images with
+     * @returns {Promise<void>}
+     */
+    async saveControlnetImages(generationId) {
+        let controlNetThumbs = this.uiOperations.getAllElements('TXT2IMG_GALLERY');
+        controlNetThumbs = Array.from(controlNetThumbs);
+
+        if (controlNetThumbs.length) {
+            let controlNetImages = new Set(controlNetThumbs.map(t => t.src));
+            controlNetImages = Array.from(controlNetImages);
+
+            const body = {
+                generation_id: generationId,
+                images: []
+            };
+
+            for (const image of controlNetImages) {
+                if (image.includes("file=")) {
+                    let imagePath = image.split("file=").at(-1);
+                    imagePath = imagePath.replace(/\?.*$/, "");
+                    body.images.push(imagePath);
+                }
+            }
+
+            if (body.images.length > 0) {
+                await fetch("/image-bench/save_controlnet_images", {
+                    method: "post",
+                    body: JSON.stringify(body)
+                });
+            }
+        }
     }
 }

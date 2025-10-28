@@ -160,37 +160,4 @@ export class ImageProcessingStrategy extends QueueProcessor {
 
         return params;
     }
-
-    /**
-     * Save controlnet images for this generation
-     */
-    async saveControlnetImages(generationId) {
-        let controlNetThumbs = this.uiOperations.getAllElements('TXT2IMG_GALLERY');
-        controlNetThumbs = Array.from(controlNetThumbs);
-
-        if (controlNetThumbs.length) {
-            let controlNetImages = new Set(controlNetThumbs.map(t => t.src));
-            controlNetImages = Array.from(controlNetImages);
-
-            const body = {
-                generation_id: generationId,
-                images: []
-            };
-
-            for (const image of controlNetImages) {
-                if (image.includes("file=")) {
-                    let imagePath = image.split("file=").at(-1);
-                    imagePath = imagePath.replace(/\?.*$/, "");
-                    body.images.push(imagePath);
-                }
-            }
-
-            if (body.images.length > 0) {
-                await fetch("/image-bench/save_controlnet_images", {
-                    method: "post",
-                    body: JSON.stringify(body)
-                });
-            }
-        }
-    }
 }
