@@ -1,8 +1,8 @@
 import {getGenerationState, setGenerationState} from "./state.js";
-import {messageBus} from "./shared_/messaging/MessageBus.js";
+import {messageBus} from "./shared/messaging/MessageBus.js";
 import {checkWebSocketConnection} from "./websocket.js";
 import {closePopup, sendPopupMessage} from "./popup.js";
-import {sleep} from "./utils.js";
+import {sleep} from "./shared/utils.js";
 import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
 import {adapter} from "./adapters/adapter.js";
 

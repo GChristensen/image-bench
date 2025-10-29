@@ -4,7 +4,6 @@
  */
 
 import { QueueProcessor } from '../core/QueueProcessor.js';
-import { SELECTORS } from '../../adapters/selectors.js';
 
 export class ModelExplorationStrategy extends QueueProcessor {
     constructor(uiOperations, messageBus) {

@@ -3,13 +3,13 @@
  * Provides direct access to all strategy instances
  */
 
-import {ModelExplorationStrategy} from "./shared_/strategies/ModelExplorationStrategy.js";
-import {BatchGenerationStrategy} from "./shared_/strategies/BatchGenerationStrategy.js";
-import {ImageProcessingStrategy} from "./shared_/strategies/ImageProcessingStrategy.js";
-import {VaryingParametersStrategy} from "./shared_/strategies/VaryingParametersStrategy.js";
-import {UIOperations} from "./shared_/facade/UIOperations.js";
+import {ModelExplorationStrategy} from "./shared/strategies/ModelExplorationStrategy.js";
+import {BatchGenerationStrategy} from "./shared/strategies/BatchGenerationStrategy.js";
+import {ImageProcessingStrategy} from "./shared/strategies/ImageProcessingStrategy.js";
+import {VaryingParametersStrategy} from "./shared/strategies/VaryingParametersStrategy.js";
+import {UIOperations} from "./facade/UIOperations.js";
 import {adapter} from "./adapters/adapter.js";
-import {messageBus} from "./shared_/messaging/MessageBus.js";
+import {messageBus} from "./shared/messaging/MessageBus.js";
 import {sendPopupMessage} from "./popup.js";
 
 // Create UIOperations facade

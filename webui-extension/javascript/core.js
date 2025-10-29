@@ -1,4 +1,4 @@
-import {loadAppConfig, sleep} from "./utils.js";
+import {loadAppConfig, sleep} from "./shared/utils.js";
 import {getGenerationState, setGenerationState} from "./state.js";
 import {
     explorationStrategy,
@@ -6,7 +6,7 @@ import {
     processingStrategy,
     varyingStrategy
 } from "./strategies.js";
-import {messageBus} from "./shared_/messaging/MessageBus.js";
+import {messageBus} from "./shared/messaging/MessageBus.js";
 import {disposePopup, sendPopupMessage, showPopup} from "./popup.js";
 import {
     hookIntoSDWebUI,
