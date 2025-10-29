@@ -8,7 +8,7 @@ export function createGenerationId() {
    return `gen_${dateTimeString}`;
 }
 
-function getDateTimeString() {
+function getDateTimeString()  {
    const now = new Date();
    const year = now.getFullYear();
    const month = String(now.getMonth() + 1).padStart(2, '0');

@@ -13,6 +13,8 @@ from fastapi.responses import FileResponse
 
 import gradio as gr
 import modules.script_callbacks as script_callbacks
+import modules.sd_models as sd_models
+import requests
 
 import websockets
 from starlette.responses import JSONResponse
@@ -71,6 +73,7 @@ class ImageBenchApi():
         self.add_api_route("/download_image_tray", self.download_image_tray, methods=["GET"])
         self.add_api_route("/image_tray_upload", self.image_tray_upload, methods=["POST"])
         self.add_api_route("/concept_tray_upload", self.image_tray_upload, methods=["POST"])
+        self.add_api_route("/models", self.get_models, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
 
@@ -202,6 +205,19 @@ class ImageBenchApi():
             response = jsonable_encoder([])
 
         return JSONResponse(response)
+
+    def get_models(self):
+        """Get list of available SD models/checkpoints"""
+        models_list = []
+        for model in sd_models.checkpoints_list.values():
+            models_list.append({
+                "title": model.title,
+                "model_name": model.title, #model.model_name
+                "hash": model.shorthash,
+                "sha256": model.sha256,
+                "filename": model.filename
+            })
+        return JSONResponse(jsonable_encoder(models_list))
 
     def on_before_config_presets(self, component, *args, **kwargs):
         if kwargs.get("elem_id") == "config_preset_txt2img_dropdown":

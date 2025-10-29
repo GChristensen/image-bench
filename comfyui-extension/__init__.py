@@ -7,6 +7,7 @@ import os
 import sys
 import asyncio
 import json
+import aiohttp
 from aiohttp import web
 from server import PromptServer
 
@@ -137,6 +138,50 @@ async def update_explore_presets(request):
         await persist.write_store_file_from_request(base_dir, EXPLORE_PRESETS_FILE, request)
         return web.Response(text="", content_type="application/json")
     except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
+# Models endpoint
+@PromptServer.instance.routes.get(BASE_PATH + "/models")
+async def get_models(request):
+    """Get list of available checkpoints from ComfyUI"""
+    try:
+        # Get ComfyUI's object_info to find available checkpoints
+        # ComfyUI typically runs on port 8188, but we can get the port from the PromptServer
+        async with aiohttp.ClientSession() as session:
+            # Use localhost since we're running inside ComfyUI
+            async with session.get('http://localhost:8188/object_info/CheckpointLoaderSimple') as resp:
+                if resp.status != 200:
+                    return web.Response(text="Failed to fetch model list from ComfyUI", status=500)
+
+                data = await resp.json()
+
+                # Extract checkpoint names from the response
+                # ComfyUI's object_info structure: { "CheckpointLoaderSimple": { "input": { "required": { "ckpt_name": [array of names] } } } }
+                checkpoint_names = []
+                if 'CheckpointLoaderSimple' in data:
+                    node_info = data['CheckpointLoaderSimple']
+                    if 'input' in node_info and 'required' in node_info['input']:
+                        if 'ckpt_name' in node_info['input']['required']:
+                            checkpoint_names = node_info['input']['required']['ckpt_name'][0]
+
+                # Format to match SD WebUI's response structure
+                models_list = []
+                for name in checkpoint_names:
+                    models_list.append({
+                        "title": name,
+                        "model_name": name,
+                        "hash": "",  # ComfyUI doesn't provide hash in object_info
+                        "sha256": "",
+                        "filename": name,
+                        "config": None
+                    })
+
+                return web.json_response(models_list)
+    except Exception as e:
+        import traceback
+        print(f"Error in get_models: {e}")
+        print(traceback.format_exc())
         return web.Response(text=str(e), status=500)
 
 

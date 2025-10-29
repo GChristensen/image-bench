@@ -27,7 +27,7 @@ const paramsOverlayText = ref("");
 let scrolledToBottom = true;
 
 async function refreshModels() {
-  models.value = await fetch("/sdapi/v1/sd-models").then(r => r.json());
+  models.value = await fetch("/image-bench/models").then(r => r.json());
 }
 
 async function loadPresets() {

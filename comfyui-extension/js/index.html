@@ -9321,6 +9321,7 @@ ${image.parameters["negative prompt"]}
   return parametersText;
 }
 function sendWebUIMessage(msg) {
+  console.log("sendWebUIMessage: ", msg);
   return window.opener.postMessage(msg);
 }
 function addImage(eventData, images) {
@@ -9487,7 +9488,7 @@ const useImageTrayStore = defineStore("imageTray", () => {
   return {
     // Expose state
     ...state,
-    // Expose getters
+    // Expose getterso
     hasImages,
     imageCount,
     selectedCount
@@ -9521,60 +9522,42 @@ const useUpscaledImagesStore = defineStore("upscaledImages", () => {
     isGenerating
   };
 });
-function createImageStore(storeKind) {
-  const kind = storeKind;
-  const images = ref([]);
-  const generationInProgress = ref(false);
-  const generationProgress = ref(0);
-  async function init() {
-  }
-  function onSDEvent(e) {
-    if (isImageEvent(e)) {
-      if (e.hasOwnProperty("progress")) {
-        generationProgress.value = e.progress;
-        delete e.progress;
-      }
-      addImage(e, images);
-    } else if (e.type === "GENERATION_PROGRESS")
-      generationProgress.value = e.progress;
-    else if (e.type === "GENERATION_FINISHED") {
-      generationProgress.value = 100;
-      generationInProgress.value = false;
-    }
-  }
-  function startingGeneration() {
-    generationProgress.value = 0;
-    generationInProgress.value = true;
-  }
-  function clear2() {
-    images.value = [];
-  }
-  return { kind, images, generationInProgress, generationProgress, init, clear: clear2, startingGeneration, onSDEvent };
-}
 const useExploreImagesStore = defineStore("exploreImages", () => {
-  const _store = createImageStore(KIND_EXPLORE);
+  const state = useImageStoreState(KIND_EXPLORE);
   function onSDEvent(e) {
     if (e.type === "SAVED_IMAGE") {
       const imageData = createImageData(e);
       delete imageData.type;
-      let model = _store.images.value.find((m) => m.name === imageData.parameters["model"]);
+      let model = state.images.value.find((m) => m.name === imageData.parameters["model"]);
       if (!model) {
         model = reactive({
           name: imageData.parameters["model"],
           hash: imageData.parameters["model hash"],
           images: []
         });
-        _store.images.value.push(model);
+        state.images.value.push(model);
       }
       model.images.push(imageData);
     } else if (e.type === "GENERATION_PROGRESS")
-      _store.generationProgress.value = e.progress;
+      state.generationProgress.value = e.progress;
     else if (e.type === "GENERATION_FINISHED") {
-      _store.generationProgress.value = 100;
-      _store.generationInProgress.value = false;
+      state.generationProgress.value = 100;
+      state.generationInProgress.value = false;
     }
   }
-  return { ..._store, onSDEvent };
+  const hasModels = computed(() => state.images.value.length > 0);
+  const modelCount = computed(() => state.images.value.length);
+  const isGenerating = computed(() => state.generationInProgress.value);
+  return {
+    // Expose state
+    ...state,
+    // Override onSDEvent with custom model-grouping logic
+    onSDEvent,
+    // Expose getters
+    hasModels,
+    modelCount,
+    isGenerating
+  };
 });
 const useConfigPresetsStore = defineStore("configPresets", () => {
   const presets = ref([]);
@@ -9679,18 +9662,15 @@ function useWebUIBridge() {
   const setImageParams = (parameters) => {
     sendWebUIMessage({ type: "SET_IMAGE_PARAMS", parameters });
   };
-  const upscaleImages = (images, preset = null) => {
+  const upscaleImages = (images) => {
     const options = { type: "UPSCALE_IMAGES", images };
-    if (preset) {
-      options.preset = preset;
-    }
     sendWebUIMessage(options);
   };
-  const batchGenerate = (preset = null) => {
-    sendWebUIMessage({ type: "BATCH_GENERATE", preset });
+  const batchGenerate = (nImagesToGenerate = 100) => {
+    sendWebUIMessage({ type: "BATCH_GENERATE", generateImages: nImagesToGenerate });
   };
-  const generateVariations = (strength, preset = null) => {
-    sendWebUIMessage({ type: "GENERATE_VARIATIONS", strength, preset });
+  const generateVariations = (strength, nImagesToGenerate = 100) => {
+    sendWebUIMessage({ type: "GENERATE_VARIATIONS", strength, generateImages: nImagesToGenerate });
   };
   const generateVaryingSteps = (image, steps) => {
     sendWebUIMessage({ type: "GENERATE_VARYING_STEPS", image, steps });
@@ -10571,7 +10551,7 @@ const _sfc_main$5 = {
   }
 };
 const ParametersOverlay = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["__scopeId", "data-v-f6f25403"]]);
-const _withScopeId$2 = (n) => (pushScopeId("data-v-25fe61a6"), n = n(), popScopeId(), n);
+const _withScopeId$2 = (n) => (pushScopeId("data-v-cf6b78c1"), n = n(), popScopeId(), n);
 const _hoisted_1$4 = { class: "wrapper" };
 const _hoisted_2$2 = { class: "toolbar" };
 const _hoisted_3$2 = /* @__PURE__ */ _withScopeId$2(() => /* @__PURE__ */ createBaseVNode("div", { class: "toolbar-spacer" }, null, -1));
@@ -10612,7 +10592,7 @@ const _sfc_main$4 = {
     const paramsOverlayText = ref("");
     let scrolledToBottom = true;
     async function refreshModels() {
-      models.value = await fetch("/sdapi/v1/sd-models").then((r) => r.json());
+      models.value = await fetch("/image-bench/models").then((r) => r.json());
     }
     async function loadPresets() {
       const response = await fetch("/image-bench/explore_presets");
@@ -10876,7 +10856,7 @@ const _sfc_main$4 = {
     };
   }
 };
-const Explore = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-25fe61a6"]]);
+const Explore = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["__scopeId", "data-v-cf6b78c1"]]);
 function useImageSelection(images) {
   const isAllSelected = computed(() => {
     return images.value.length > 0 && images.value.every((i) => i.selected);
@@ -11095,7 +11075,7 @@ const _sfc_main$3 = {
   }
 };
 const ImageStream = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["__scopeId", "data-v-370f870b"]]);
-const _withScopeId$1 = (n) => (pushScopeId("data-v-69f2c938"), n = n(), popScopeId(), n);
+const _withScopeId$1 = (n) => (pushScopeId("data-v-6747e159"), n = n(), popScopeId(), n);
 const _hoisted_1$2 = { class: "toolbar" };
 const _hoisted_2$1 = /* @__PURE__ */ _withScopeId$1(() => /* @__PURE__ */ createBaseVNode("div", { class: "toolbar-spacer" }, null, -1));
 const _hoisted_3$1 = {
@@ -11110,7 +11090,10 @@ const _hoisted_6$1 = {
 };
 const _hoisted_7$1 = ["value"];
 const _hoisted_8$1 = ["value"];
-const _hoisted_9$1 = { class: "generate-images-container" };
+const _hoisted_9$1 = {
+  key: 11,
+  class: "generate-images-container"
+};
 const _sfc_main$2 = /* @__PURE__ */ Object.assign({
   name: "ImageToolbar",
   inheritAttrs: false
@@ -11175,12 +11158,13 @@ const _sfc_main$2 = /* @__PURE__ */ Object.assign({
     "clear",
     "preset-change"
   ],
-  setup(__props, { emit: __emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
     const props = __props;
     const selectAllText = computed(() => props.isAllSelected ? "Unselect all" : "Select all");
     const showMarkedText = computed(() => props.isShowingMarked ? "Show all" : "Show marked");
     const clearText = computed(() => props.isSomeSelected ? "Clear selected" : "Clear");
     const generateImagesNumber = ref(256);
+    __expose({ generateImagesNumber });
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", _hoisted_1$2, [
         __props.isTray ? (openBlock(), createElementBlock("a", {
@@ -11207,19 +11191,19 @@ const _sfc_main$2 = /* @__PURE__ */ Object.assign({
           class: "tool-item",
           onClick: _cache[3] || (_cache[3] = withModifiers(($event) => _ctx.$emit("show-marked"), ["prevent"]))
         }, toDisplayString(showMarkedText.value), 1)) : createCommentVNode("", true),
-        __props.kind === "generated" && !__props.generationInProgress ? (openBlock(), createElementBlock("a", {
+        __props.kind === unref(KIND_GENERATED) && !__props.generationInProgress ? (openBlock(), createElementBlock("a", {
           key: 4,
           href: "#",
           class: "tool-item",
           onClick: _cache[4] || (_cache[4] = withModifiers(($event) => _ctx.$emit("batch-generate"), ["prevent"]))
         }, "Generate")) : createCommentVNode("", true),
-        __props.kind === "generated" && !__props.generationInProgress ? (openBlock(), createElementBlock("a", {
+        __props.kind === unref(KIND_GENERATED) && !__props.generationInProgress ? (openBlock(), createElementBlock("a", {
           key: 5,
           href: "#",
           class: "tool-item",
           onClick: _cache[5] || (_cache[5] = withModifiers(($event) => _ctx.$emit("generate-variations"), ["prevent"]))
         }, "Variations")) : createCommentVNode("", true),
-        __props.kind === "generated" && __props.generationInProgress ? (openBlock(), createElementBlock("a", {
+        __props.kind === unref(KIND_GENERATED) && __props.generationInProgress ? (openBlock(), createElementBlock("a", {
           key: 6,
           href: "#",
           class: "tool-item",
@@ -11231,7 +11215,7 @@ const _sfc_main$2 = /* @__PURE__ */ Object.assign({
           class: "tool-item",
           onClick: _cache[7] || (_cache[7] = withModifiers(($event) => _ctx.$emit("upscale-selected"), ["prevent"]))
         }, "Upscale selected")) : createCommentVNode("", true),
-        __props.kind === "upscaled" && __props.upscaleInProgress ? (openBlock(), createElementBlock("a", {
+        __props.kind === unref(KIND_UPSCALED) && __props.upscaleInProgress ? (openBlock(), createElementBlock("a", {
           key: 8,
           href: "#",
           class: "tool-item",
@@ -11266,7 +11250,7 @@ const _sfc_main$2 = /* @__PURE__ */ Object.assign({
             }), 128))
           ], 40, _hoisted_7$1)
         ])) : createCommentVNode("", true),
-        createBaseVNode("div", _hoisted_9$1, [
+        __props.kind === unref(KIND_GENERATED) ? (openBlock(), createElementBlock("div", _hoisted_9$1, [
           createBaseVNode("label", null, [
             createTextVNode("Generate images: "),
             withDirectives(createBaseVNode("input", {
@@ -11277,12 +11261,12 @@ const _sfc_main$2 = /* @__PURE__ */ Object.assign({
               [vModelText, generateImagesNumber.value]
             ])
           ])
-        ])
+        ])) : createCommentVNode("", true)
       ]);
     };
   }
 });
-const ImageToolbar = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-69f2c938"]]);
+const ImageToolbar = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-6747e159"]]);
 function useKeyboardShortcuts(handlers = {}) {
   const handleKeydown = (e) => {
     var _a, _b, _c, _d;
@@ -11328,6 +11312,7 @@ const _sfc_main$1 = {
     const upscaledImageStore = useUpscaledImagesStore();
     const configPresetsStore = useConfigPresetsStore();
     const imageStore = getImageStore();
+    const imageToolbar = ref();
     const imageStream = ref(null);
     const showImageOverlay = ref(false);
     const overlayImage = ref(null);
@@ -11375,17 +11360,16 @@ const _sfc_main$1 = {
           if (config.automaticallyClearGeneratedImages)
             upscaledImageStore.clear();
           upscaledImageStore.startingGeneration();
-          webUI.upscaleImages(selectedImages, imageStore.applyPreset);
+          webUI.upscaleImages(selectedImages);
         }
       }
     }
     function onUpscaleImage(imageProxy, usePreset) {
       const image = imageOps.cloneImage(imageProxy);
-      const preset = usePreset ? imageTrayStore.applyPreset : null;
       if (config.automaticallyClearGeneratedImages)
         upscaledImageStore.clear();
       upscaledImageStore.startingGeneration();
-      webUI.upscaleImages([image], preset);
+      webUI.upscaleImages([image]);
     }
     function onBatchGenerateClick() {
       if (imageStore.generationInProgress) {
@@ -11394,7 +11378,8 @@ const _sfc_main$1 = {
         if (config.automaticallyClearGeneratedImages)
           generatedImagesStore.clear();
         generatedImagesStore.startingGeneration();
-        webUI.batchGenerate(imageStore.applyPreset);
+        const nImagesToGenerate = imageToolbar.value.generateImagesNumber;
+        webUI.batchGenerate(nImagesToGenerate);
       }
     }
     function onGenerateVariationsClick() {
@@ -11404,8 +11389,9 @@ const _sfc_main$1 = {
         if (config.automaticallyClearGeneratedImages)
           generatedImagesStore.clear();
         generatedImagesStore.startingGeneration();
+        const nImagesToGenerate = imageToolbar.value.generateImagesNumber.value;
         storage.setVariationStrength(strength);
-        webUI.generateVariations(strength, imageStore.applyPreset);
+        webUI.generateVariations(strength, nImagesToGenerate);
       }
     }
     function onStopGenerationClick() {
@@ -11550,6 +11536,8 @@ const _sfc_main$1 = {
             multiple: ""
           }, null, 544),
           createVNode(ImageToolbar, {
+            ref_key: "imageToolbar",
+            ref: imageToolbar,
             kind: __props.kind,
             "is-tray": isComponentTray(__props.kind),
             "is-all-selected": isAllSelected.value,
@@ -11588,7 +11576,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const GeneratedImages = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-89009c10"]]);
+const GeneratedImages = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-7015d65e"]]);
 const _withScopeId = (n) => (pushScopeId("data-v-89774f7c"), n = n(), popScopeId(), n);
 const _hoisted_1 = { class: "settings-container" };
 const _hoisted_2 = { class: "settings-left" };
@@ -12159,40 +12147,40 @@ to      { opacity: 1;
   transform: translateY(20px);
 }
 
-.tool-item[data-v-25fe61a6] {
+.tool-item[data-v-cf6b78c1] {
   padding: 5px 15px;
   cursor: pointer;
   text-decoration: none;
   color: white;
   white-space: nowrap;
 }
-.tool-item[data-v-25fe61a6]:hover {
+.tool-item[data-v-cf6b78c1]:hover {
   background-color: #f0f0f0;
   color: var(--vt-c-black);
 }
-.toolbar-spacer[data-v-25fe61a6] {
+.toolbar-spacer[data-v-cf6b78c1] {
   flex-grow: 1;
 }
-.wrapper[data-v-25fe61a6] {
+.wrapper[data-v-cf6b78c1] {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
 }
-.explore-container[data-v-25fe61a6] {
+.explore-container[data-v-cf6b78c1] {
   display: flex;
   flex-grow: 1;
   padding: 0 10px;
 }
-.model-presets[data-v-25fe61a6] {
+.model-presets[data-v-cf6b78c1] {
   min-width: 100px;
 }
-.models-container[data-v-25fe61a6] {
+.models-container[data-v-cf6b78c1] {
   position: relative;
   flex-grow: 1;
   width: 280px;
 }
-.models[data-v-25fe61a6] {
+.models[data-v-cf6b78c1] {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -12200,7 +12188,7 @@ to      { opacity: 1;
   right: 0;
   overflow: auto;
 }
-.model-list[data-v-25fe61a6] {
+.model-list[data-v-cf6b78c1] {
   margin: 0 0 15px 0;
   padding-top: 10px;
   display: flex;
@@ -12208,14 +12196,14 @@ to      { opacity: 1;
   padding-right: 10px;
   border-right: 1px solid white;
 }
-.model-label[data-v-25fe61a6] {
+.model-label[data-v-cf6b78c1] {
   white-space: nowrap;
 }
-.generated-images-wrapper[data-v-25fe61a6] {
+.generated-images-wrapper[data-v-cf6b78c1] {
   position: relative;
   flex-grow: 1;
 }
-.generated-images[data-v-25fe61a6] {
+.generated-images[data-v-cf6b78c1] {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -12224,44 +12212,44 @@ to      { opacity: 1;
   overflow-y: auto;
   margin: 15px;
 }
-.preset-controls[data-v-25fe61a6] {
+.preset-controls[data-v-cf6b78c1] {
   margin-top: 2px;
   margin-bottom: 10px;
   border-bottom: solid 1px white;
 }
-.control-link[data-v-25fe61a6] {
+.control-link[data-v-cf6b78c1] {
   padding: 2px 5px;
   cursor: pointer;
   text-decoration: none;
   color: white;
   white-space: nowrap;
 }
-.control-link[data-v-25fe61a6]:hover {
+.control-link[data-v-cf6b78c1]:hover {
   background-color: #f0f0f0;
   color: var(--vt-c-black);
 }
-.model-name[data-v-25fe61a6] {
+.model-name[data-v-cf6b78c1] {
   font-weight: bold;
 }
-.model-images[data-v-25fe61a6] {
+.model-images[data-v-cf6b78c1] {
   display: flex;
   border-bottom: 1px solid white;
 }
-.generate-images-container[data-v-25fe61a6] {
+.generate-images-container[data-v-cf6b78c1] {
   display: flex;
 }
-.generate-images-container label[data-v-25fe61a6] {
+.generate-images-container label[data-v-cf6b78c1] {
   display: flex;
   align-items: center;
 }
-input.generate-images[data-v-25fe61a6] {
+input.generate-images[data-v-cf6b78c1] {
   width: 50px;
 }
-.generation-progress[data-v-25fe61a6] {
+.generation-progress[data-v-cf6b78c1] {
   width: 20%;
   display: flex;
 }
-.generation-progress progress[data-v-25fe61a6] {
+.generation-progress progress[data-v-cf6b78c1] {
   flex-grow: 1;
 }
 
@@ -12284,50 +12272,50 @@ input.generate-images[data-v-25fe61a6] {
     gap: 0.5%
 }
 
-.toolbar[data-v-69f2c938] {
+.toolbar[data-v-6747e159] {
   display: flex;
   border-bottom: 1px solid #ccc;
   width: 100%;
   align-items: center;
   padding: 5px;
 }
-.tool-item[data-v-69f2c938] {
+.tool-item[data-v-6747e159] {
   padding: 5px 5px;
   cursor: pointer;
   text-decoration: none;
   color: white;
   white-space: nowrap;
 }
-.tool-item[data-v-69f2c938]:hover {
+.tool-item[data-v-6747e159]:hover {
   background-color: #f0f0f0;
   color: var(--vt-c-black);
 }
-.toolbar-spacer[data-v-69f2c938] {
+.toolbar-spacer[data-v-6747e159] {
   flex-grow: 1;
 }
-.generation-progress[data-v-69f2c938] {
+.generation-progress[data-v-6747e159] {
   width: 20%;
   display: flex;
   align-items: center;
 }
-.generation-progress progress[data-v-69f2c938] {
+.generation-progress progress[data-v-6747e159] {
   flex-grow: 1;
 }
-.config-presets[data-v-69f2c938] {
+.config-presets[data-v-6747e159] {
   margin-left: 5px;
 }
-.generate-images-container[data-v-69f2c938] {
+.generate-images-container[data-v-6747e159] {
   display: flex;
 }
-.generate-images-container label[data-v-69f2c938] {
+.generate-images-container label[data-v-6747e159] {
   display: flex;
   align-items: center;
 }
-input.generate-images[data-v-69f2c938] {
+input.generate-images[data-v-6747e159] {
   width: 50px;
 }
 
-.open-file-input[data-v-89009c10] {
+.open-file-input[data-v-7015d65e] {
     display: none;
 }
 
