@@ -1,0 +1,589 @@
+/**
+ * ComfyUIOperations - ComfyUI operations facade
+ * Provides high-level operations for ComfyUI workflow manipulation
+ * Strategies depend on this facade for platform-agnostic interactions
+ *
+ * Note: This directly interacts with ComfyUI's app and api, no adapter layer needed
+ */
+
+export class ComfyUIOperations {
+    /**
+     * @param {Object} app - ComfyUI app instance
+     * @param {Object} api - ComfyUI api instance
+     * @param {Object} nodeConfig - Node configuration for marker-based discovery
+     */
+    constructor(app, api, nodeConfig = null) {
+        this.app = app;
+        this.api = api;
+        this.nodeConfig = nodeConfig;
+    }
+
+    // ==================== NODE DISCOVERY METHODS ====================
+
+    /**
+     * Parse a node name marker into its components
+     * Searches for marker pattern anywhere in the node name
+     * @param {string} nodeName - Node name (e.g., "My Checkpoint ib:cp:0" or "ib:cp:0 - Main")
+     * @returns {Object|null} Parsed marker {prefix, type, index} or null if not found
+     */
+    parseNodeMarker(nodeName) {
+        if (!nodeName || typeof nodeName !== 'string') {
+            return null;
+        }
+
+        // Match "ib:<type>:<index>" anywhere in the string
+        const markerRegex = /\bib:([a-z]+)(:(\d+)\b)?/i;
+        const match = nodeName.match(markerRegex);
+
+        if (!match) {
+            return null;
+        }
+
+        return {
+            prefix: 'ib',
+            type: match[1],
+            index: match[2]? parseInt(match[2], 10): null
+        };
+    }
+
+    /**
+     * Find a node by its marker (e.g., "cp" finds node with "ib:cp:0" in its name)
+     * The marker can appear anywhere in the node's title
+     * Examples: "ib:cp:0", "My Checkpoint ib:cp:0", "ib:cp:0 - Main Model"
+     * @param {string} typeMarker - Type marker (e.g., "cp" for checkpoint)
+     * @returns {Object|null} The marked node or null
+     */
+    getMarkedNode(typeMarker) {
+        if (!this.app?.graph?.nodes) {
+            return null;
+        }
+
+        // Find node whose title contains the marker pattern
+        return this.app.graph.nodes.find(node => {
+            const marker = this.parseNodeMarker(node.title);
+            return marker && marker.type === typeMarker;
+        });
+    }
+
+    /**
+     * Get widget from a marked node using configuration
+     * @param {string} typeMarker - Type marker (e.g., "cp")
+     * @param {string} configKey - Config key (e.g., "checkpoint")
+     * @returns {Object|null} Object with {node, widget, widgetName} or null
+     */
+    getMarkedNodeWidget(typeMarker, configKey) {
+        const markedNode = this.getMarkedNode(typeMarker);
+        if (!markedNode) {
+            return null;
+        }
+
+        // If no config, return just the node
+        if (!this.nodeConfig || !this.nodeConfig[configKey]) {
+            return { node: markedNode, widget: null, widgetName: null };
+        }
+
+        const config = this.nodeConfig[configKey];
+        const widgetNames = config.widgetNames || {};
+
+        // Find the widget name for this node type
+        const widgetName = widgetNames[markedNode.type];
+        if (!widgetName) {
+            console.warn(`No widget name configured for node type ${markedNode.type}`);
+            return { node: markedNode, widget: null, widgetName: null };
+        }
+
+        const widget = this.getNodeWidget(markedNode, widgetName);
+        return { node: markedNode, widget, widgetName };
+    }
+
+    /**
+     * Find a workflow node by its type
+     * @param {string} nodeType - Node type (e.g., 'KSampler', 'CheckpointLoaderSimple')
+     * @returns {Object|null} The node object or null
+     */
+    getNodeByType(nodeType) {
+        if (!this.app?.graph?.nodes) {
+            return null;
+        }
+
+        return this.app.graph.nodes.find(node => node.type === nodeType);
+    }
+
+    /**
+     * Get all nodes of a specific type
+     * @param {string} nodeType - Node type
+     * @returns {Array} Array of matching nodes
+     */
+    getNodesByType(nodeType) {
+        if (!this.app?.graph?.nodes) {
+            return [];
+        }
+
+        return this.app.graph.nodes.filter(node => node.type === nodeType);
+    }
+
+    /**
+     * Get a node's widget by name
+     * @param {Object} node - The node object
+     * @param {string} widgetName - Name of the widget
+     * @returns {Object|null} The widget or null
+     */
+    getNodeWidget(node, widgetName) {
+        if (!node?.widgets) {
+            return null;
+        }
+
+        return node.widgets.find(w => w.name === widgetName);
+    }
+
+    /**
+     * Set a node's widget value
+     * @param {Object} node - The node object
+     * @param {string} widgetName - Name of the widget
+     * @param {any} value - Value to set
+     * @returns {boolean} Whether the value was set
+     */
+    setNodeWidgetValue(node, widgetName, value) {
+        const widget = this.getNodeWidget(node, widgetName);
+
+        if (!widget) {
+            console.warn(`Widget ${widgetName} not found on node ${node.type}`);
+            return false;
+        }
+
+        widget.value = value;
+
+        // Trigger widget callback if it exists
+        if (widget.callback) {
+            widget.callback(value);
+        }
+
+        return true;
+    }
+
+    // ==================== HIGH-LEVEL OPERATIONS ====================
+
+    /**
+     * Backup current model
+     * Uses marker-based discovery to find the marked checkpoint node
+     * Searches for node containing "ib:cp:0" marker in its name
+     * @returns {Promise<string>} Current model name
+     */
+    async backupModel() {
+        const result = this.getMarkedNodeWidget('cp', 'checkpoint');
+        if (!result || !result.widget) {
+            console.warn('backupModel: No marked checkpoint node found (looking for "ib:cp:0" in node name)');
+            return null;
+        }
+        return result.widget.value;
+    }
+
+    /**
+     * Restore/set model
+     * Uses marker-based discovery to set the marked checkpoint node
+     * Searches for node containing "ib:cp:0" marker in its name
+     * @param {string} modelName - Model name to set
+     * @returns {Promise<void>}
+     */
+    async restoreModel(modelName) {
+        if (!modelName) {
+            console.warn('restoreModel: No model name provided');
+            return;
+        }
+
+        const result = this.getMarkedNodeWidget('cp', 'checkpoint');
+        if (!result || !result.node || !result.widgetName) {
+            console.error('restoreModel: No marked checkpoint node found (looking for "ib:cp:0" in node name)');
+            return;
+        }
+
+        this.setNodeWidgetValue(result.node, result.widgetName, modelName);
+    }
+
+    /**
+     * Click the generate button (queue the workflow)
+     * @returns {boolean} Whether the workflow was queued
+     */
+    clickGenerate() {
+        try {
+            this.app.queuePrompt(0, 1); // Queue with batch count 1
+            return true;
+        } catch (e) {
+            console.error('Failed to queue prompt:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Set up basic generation parameters (seed and batch count)
+     * Note: In ComfyUI, batch count is typically handled by the workflow itself,
+     * so this primarily sets the seed on the KSampler node
+     * @param {number} seed - Seed value (-1 for random)
+     * @param {number} batchCount - Number of images per batch (less relevant in ComfyUI)
+     * @returns {Promise<void>}
+     */
+    async setupBasicGeneration(seed, batchCount) {
+        this.setSeed(seed);
+        // Note: ComfyUI doesn't have a direct batch count like WebUI
+        // Workflows are typically queued multiple times instead
+    }
+
+    /**
+     * Set batch count (no-op in ComfyUI)
+     * ComfyUI workflows are queued individually instead of using batch counts
+     * @param {number} count - Number of images to generate per batch
+     * @returns {Promise<void>}
+     */
+    async setBatchCount(count) {
+        // No-op: ComfyUI workflows don't have a batch count parameter
+        // The queue itself handles batching by queuing workflows multiple times
+    }
+
+    // ==================== PARAMETER SETTERS ====================
+
+    /**
+     * Set the seed value
+     * @param {number} seed - The seed value
+     */
+    setSeed(seed) {
+        const sampler = this.getNodeByType('KSampler');
+        if (sampler) {
+            this.setNodeWidgetValue(sampler, 'seed', seed);
+        }
+    }
+
+    /**
+     * Set the steps value
+     * @param {number} steps - Number of steps
+     */
+    setSteps(steps) {
+        const sampler = this.getNodeByType('KSampler');
+        if (sampler) {
+            this.setNodeWidgetValue(sampler, 'steps', steps);
+        }
+    }
+
+    /**
+     * Set the CFG scale
+     * @param {number} cfg - CFG scale value
+     */
+    setCFG(cfg) {
+        const sampler = this.getNodeByType('KSampler');
+        if (sampler) {
+            this.setNodeWidgetValue(sampler, 'cfg', cfg);
+        }
+    }
+
+    /**
+     * Set the denoising strength
+     * @param {number} denoise - Denoise value (0-1)
+     */
+    setDenoise(denoise) {
+        const sampler = this.getNodeByType('KSampler');
+        if (sampler) {
+            this.setNodeWidgetValue(sampler, 'denoise', denoise);
+        }
+    }
+
+    /**
+     * Set the sampler name
+     * @param {string} samplerName - Sampler name
+     */
+    setSampler(samplerName) {
+        const sampler = this.getNodeByType('KSampler');
+        if (sampler) {
+            this.setNodeWidgetValue(sampler, 'sampler_name', samplerName);
+        }
+    }
+
+    /**
+     * Set the scheduler
+     * @param {string} scheduler - Scheduler name
+     */
+    setScheduler(scheduler) {
+        const sampler = this.getNodeByType('KSampler');
+        if (sampler) {
+            this.setNodeWidgetValue(sampler, 'scheduler', scheduler);
+        }
+    }
+
+    /**
+     * Set the positive prompt
+     * @param {string} prompt - The prompt text
+     */
+    setPrompt(prompt) {
+        const promptNodes = this.getNodesByType('CLIPTextEncode');
+        if (promptNodes.length > 0) {
+            // First CLIPTextEncode is usually positive prompt
+            this.setNodeWidgetValue(promptNodes[0], 'text', prompt);
+        }
+    }
+
+    /**
+     * Set the negative prompt
+     * @param {string} prompt - The negative prompt text
+     */
+    setNegativePrompt(prompt) {
+        const promptNodes = this.getNodesByType('CLIPTextEncode');
+        if (promptNodes.length > 1) {
+            // Second CLIPTextEncode is usually negative prompt
+            this.setNodeWidgetValue(promptNodes[1], 'text', prompt);
+        }
+    }
+
+    // ==================== LOW-LEVEL UTILITIES ====================
+
+    /**
+     * Get the value of an input element
+     * @param {string} selectorKey - Key or format "NodeType:widgetName"
+     * @returns {any|null}
+     */
+    getInputValue(selectorKey) {
+        // Handle special selector keys with marker-based discovery
+        if (selectorKey === 'MODEL_CHECKPOINT') {
+            const result = this.getMarkedNodeWidget('cp', 'checkpoint');
+            if (!result || !result.widget) {
+                console.warn('MODEL_CHECKPOINT: No marked checkpoint node found (looking for "ib:cp:0" in node name)');
+                return null;
+            }
+            return result.widget.value;
+        }
+
+        const [nodeType, widgetName] = selectorKey.split(':');
+        const node = this.getNodeByType(nodeType);
+
+        if (!node) {
+            return null;
+        }
+
+        const widget = this.getNodeWidget(node, widgetName);
+        return widget?.value ?? null;
+    }
+
+    /**
+     * Set the value of an input element
+     * @param {string} selectorKey - Key or format "NodeType:widgetName"
+     * @param {any} value - The value to set
+     * @returns {Promise<void>}
+     */
+    async setInputValue(selectorKey, value) {
+        const [nodeType, widgetName] = selectorKey.split(':');
+        const node = this.getNodeByType(nodeType);
+
+        if (!node) {
+            console.warn(`Node type ${nodeType} not found`);
+            return;
+        }
+
+        this.setNodeWidgetValue(node, widgetName, value);
+    }
+
+    /**
+     * Set the value of a dropdown element
+     * @param {string} selectorKey - Key or format "NodeType:widgetName"
+     * @param {string} value - The value to select
+     * @returns {Promise<void>}
+     */
+    async setDropdownValue(selectorKey, value) {
+        // Handle special selector keys with marker-based discovery
+        if (selectorKey === 'MODEL_CHECKPOINT') {
+            const result = this.getMarkedNodeWidget('cp', 'checkpoint');
+            if (!result || !result.node || !result.widgetName) {
+                console.error('MODEL_CHECKPOINT: No marked checkpoint node found (looking for "ib:cp:0" in node name)');
+                return;
+            }
+            this.setNodeWidgetValue(result.node, result.widgetName, value);
+            return;
+        }
+
+        await this.setInputValue(selectorKey, value);
+    }
+
+    /**
+     * Get element by selector key (returns ComfyUI nodes or app objects)
+     * @param {string} selectorKey - Key identifier
+     * @returns {Object|null}
+     */
+    getElement(selectorKey) {
+        if (selectorKey === 'APP') {
+            return this.app;
+        }
+
+        if (selectorKey === 'API') {
+            return this.api;
+        }
+
+        if (selectorKey === 'GRAPH') {
+            return this.app?.graph;
+        }
+
+        // Try to find a node by type
+        return this.getNodeByType(selectorKey);
+    }
+
+    /**
+     * Get all elements matching selector key
+     * @param {string} selectorKey - Node type
+     * @returns {Array}
+     */
+    getAllElements(selectorKey) {
+        return this.getNodesByType(selectorKey);
+    }
+
+    /**
+     * Check if currently in img2img mode
+     * In ComfyUI, checks if workflow has LoadImage node
+     * @returns {boolean}
+     */
+    isImg2ImgTab() {
+        const loadImageNode = this.getNodeByType('LoadImage');
+        return loadImageNode !== null;
+    }
+
+    /**
+     * Check if an element is visible
+     * @param {HTMLElement} element - The element to check
+     * @returns {boolean}
+     */
+    isElementVisible(element) {
+        if (!element) {
+            return false;
+        }
+
+        return element.style?.display !== 'none';
+    }
+
+    /**
+     * Get current generation progress percentage
+     * @returns {number|null} Progress from 0-100, or null if not available
+     */
+    getGenerationProgress() {
+        // ComfyUI doesn't have a simple progress bar
+        // Progress is tracked via WebSocket events
+        return null;
+    }
+
+    /**
+     * Sleep for specified milliseconds
+     * @param {number} ms - Milliseconds to sleep
+     * @returns {Promise<void>}
+     */
+    async sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Toggle hires fix (no-op in ComfyUI)
+     * Hires fix in ComfyUI is handled via LatentUpscale nodes in the workflow
+     * @param {boolean} onlyEnable - Only enable, don't toggle off
+     * @param {boolean} onlyDisable - Only disable, don't toggle on
+     */
+    toggleHiresFix(onlyEnable = false, onlyDisable = false) {
+        // No-op: Hires fix is workflow-specific in ComfyUI
+        console.warn('toggleHiresFix not applicable to ComfyUI - use LatentUpscale nodes');
+    }
+
+    /**
+     * Apply a preset (no-op in ComfyUI)
+     * ComfyUI uses workflow templates instead of presets
+     * @param {string} presetName - Name of the preset to apply
+     * @returns {Promise<void>}
+     */
+    async applyPreset(presetName) {
+        // No-op: ComfyUI uses workflow templates
+        console.warn('applyPreset not applicable to ComfyUI - load workflow templates instead');
+    }
+
+    /**
+     * Enable variation generation (not implemented for ComfyUI)
+     * @param {number} strength - Variation strength (0-1)
+     * @returns {Promise<void>}
+     */
+    async enableVariations(strength) {
+        console.warn('enableVariations not implemented for ComfyUI');
+    }
+
+    /**
+     * Disable variation generation (not implemented for ComfyUI)
+     * @returns {Promise<void>}
+     */
+    async disableVariations() {
+        console.warn('disableVariations not implemented for ComfyUI');
+    }
+
+    /**
+     * Backup current generation parameters (not fully implemented for ComfyUI)
+     * @returns {Promise<Object>} Backup object with seeds
+     */
+    async backupGenerationParams() {
+        const seed = this.getInputValue('KSampler:seed');
+        return { seeds: [seed, null] };
+    }
+
+    /**
+     * Restore generation parameters from backup (not fully implemented for ComfyUI)
+     * @param {Object} backup - Backup object from backupGenerationParams()
+     */
+    restoreGenerationParams(backup) {
+        if (backup.seeds && backup.seeds[0] !== null) {
+            this.setInputValue('KSampler:seed', backup.seeds[0]);
+        }
+    }
+
+    /**
+     * Apply parameters from an image to current generation settings
+     * @param {Object} parameters - Image parameters object
+     * @param {Object} options - { setSteps: boolean, setDenoising: boolean }
+     * @returns {Promise<void>}
+     */
+    async applyImageParameters(parameters, options = {}) {
+        // Set seed if present
+        if ('seed' in parameters) {
+            this.setSeed(parameters['seed']);
+        }
+
+        // Set steps if needed
+        if (options.setSteps && 'steps' in parameters) {
+            this.setSteps(parameters['steps']);
+        }
+
+        // Set denoising if needed
+        if (options.setDenoising && 'denoising strength' in parameters) {
+            this.setDenoise(parameters['denoising strength']);
+        }
+    }
+
+    /**
+     * Get the current workflow as JSON
+     * @returns {Object} The workflow object
+     */
+    getWorkflow() {
+        return this.app?.graph?.serialize() || {};
+    }
+
+    /**
+     * Load a workflow from JSON
+     * @param {Object} workflow - The workflow to load
+     */
+    async loadWorkflow(workflow) {
+        if (!this.app) {
+            throw new Error('ComfyUI app not available');
+        }
+
+        await this.app.loadGraphData(workflow);
+    }
+
+    /**
+     * Interrupt the current execution
+     * @returns {boolean} Whether the interrupt succeeded
+     */
+    interrupt() {
+        try {
+            this.api.interrupt();
+            return true;
+        } catch (e) {
+            console.error('Failed to interrupt:', e);
+            return false;
+        }
+    }
+}

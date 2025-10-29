@@ -63,13 +63,22 @@ export class QueueProcessor {
      * @returns {Promise<void>}
      */
     async process(options) {
+        console.log('[QueueProcessor] Starting process with options:', options);
         this.isActive = true;
+
+        console.log('[QueueProcessor] Calling initialize()');
         this.initialize(options);
+        console.log('[QueueProcessor] Queue initialized with', this.queue.length, 'items');
+
+        console.log('[QueueProcessor] Calling prepare()');
         await this.prepare(options);
-        
+        console.log('[QueueProcessor] Prepare complete');
+
         if (this.queue.length > 0) {
+            console.log('[QueueProcessor] Queue has items, calling processNext()');
             await this.processNext();
         } else {
+            console.log('[QueueProcessor] Queue is empty, calling finish()');
             await this.finish();
         }
     }
@@ -79,16 +88,23 @@ export class QueueProcessor {
      * @returns {Promise<void>}
      */
     async processNext() {
+        console.log('[QueueProcessor] processNext() called. Active:', this.isActive, 'Queue length:', this.queue.length);
+
         if (!this.isActive) {
+            console.log('[QueueProcessor] Not active, skipping processNext()');
             return;
         }
 
         const item = this.queue.shift();
-        
+
         if (item) {
+            console.log('[QueueProcessor] Processing item:', item, 'Remaining queue:', this.queue.length);
             await this.processItem(item);
+            console.log('[QueueProcessor] processItem() complete. Reporting progress...');
             this.reportProgress();
+            console.log('[QueueProcessor] Progress reported. Waiting for next trigger...');
         } else {
+            console.log('[QueueProcessor] No more items in queue, calling finish()');
             await this.finish();
         }
     }
@@ -97,9 +113,14 @@ export class QueueProcessor {
      * Report progress to message bus
      */
     reportProgress() {
-        if (this.totalItems === 0) return;
-        
-        const progress = ((this.totalItems - this.queue.length) / this.totalItems) * 100;
+        if (this.totalItems === 0) {
+            console.log('[QueueProcessor] reportProgress: totalItems is 0, skipping');
+            return;
+        }
+
+        const completed = this.totalItems - this.queue.length;
+        const progress = (completed / this.totalItems) * 100;
+        console.log('[QueueProcessor] Progress:', completed, '/', this.totalItems, '=', progress.toFixed(1) + '%');
         this.messageBus.publish('GENERATION_PROGRESS', { progress });
     }
 

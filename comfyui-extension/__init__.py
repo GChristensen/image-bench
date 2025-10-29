@@ -40,6 +40,11 @@ def get_config_path():
     return os.path.join(get_extension_root(), "config.json")
 
 
+def get_node_config_path():
+    """Get path to node_config.json file"""
+    return os.path.join(get_extension_root(), "node_config.json")
+
+
 def get_image_bench_dir():
     """Get the image-bench output directory"""
     # Try to find ComfyUI output directory
@@ -101,6 +106,35 @@ async def update_config(request):
         return web.Response(text="OK")
     except Exception as e:
         return web.Response(text=str(e), status=500)
+
+
+# Serve node_config.json
+@PromptServer.instance.routes.get(BASE_PATH + "/node_config.json")
+async def get_node_config(request):
+    """Serve the node configuration file for marker-based node discovery"""
+    node_config_path = get_node_config_path()
+
+    # Create default config if it doesn't exist
+    if not os.path.exists(node_config_path):
+        default_node_config = {
+            "checkpoint": {
+                "marker": "cp",
+                "nodeTypes": [
+                    "CheckpointLoaderSimple",
+                    "CheckpointLoader",
+                    "unCLIPCheckpointLoader"
+                ],
+                "widgetNames": {
+                    "CheckpointLoaderSimple": "ckpt_name",
+                    "CheckpointLoader": "ckpt_name",
+                    "unCLIPCheckpointLoader": "ckpt_name"
+                }
+            }
+        }
+        with open(node_config_path, 'w') as f:
+            json.dump(default_node_config, f, indent=2)
+
+    return web.FileResponse(node_config_path)
 
 
 # System information endpoint

@@ -1,13 +1,8 @@
 import {loadAppConfig, sleep} from "./shared/utils.js";
-import {getGenerationState, setGenerationState} from "./state.js";
-import {
-    explorationStrategy,
-    batchStrategy,
-    processingStrategy,
-    varyingStrategy
-} from "./strategies.js";
-import {messageBus} from "./shared/messaging/MessageBus.js";
-import {disposePopup, sendPopupMessage, showPopup} from "./popup.js";
+import {getGenerationState, setGenerationState} from "./shared/state.js";
+import {createStrategies} from "./shared/strategy-factory.js";
+import {createPopupManager} from "./shared/popup.js";
+import {createWebSocket, isConnectionClosed} from "./shared/websocket.js";
 import {
     hookIntoSDWebUI,
     initializePopupPrompts,
@@ -16,8 +11,31 @@ import {
     setImageSeed,
     stopGeneration
 } from "./sdwebui.js";
-import {checkWebSocketConnection, createWebSocket, setSocketEventListener} from "./websocket.js";
 import {adapter} from "./adapters/adapter.js";
+import {UIOperations} from "./facade/UIOperations.js";
+import {messageBus} from "./shared/messaging/MessageBus.js";
+
+// Create popup manager instance (no WebSocket integration for WebUI)
+const popupManager = createPopupManager({
+    endpoint: '/image-bench/window',
+    integrateWebSocket: false,
+    windowName: '_blank',
+    windowFeatures: 'width=1024,height=720,left=100,top=100'
+});
+
+// Create WebSocket state
+let websocket = null;
+
+// Helper to send popup messages
+const sendPopupMessage = (msg) => popupManager.sendMessage(msg);
+
+// Create UIOperations facade and strategies
+const uiOperations = new UIOperations(adapter);
+const strategies = createStrategies(uiOperations, sendPopupMessage);
+
+// Extract strategy instances
+const {exploration: explorationStrategy, batch: batchStrategy, processing: processingStrategy,
+        varying: varyingStrategy} = strategies;
 
 let appConfig;
 
@@ -27,8 +45,13 @@ export async function init() {
     await initUI();
 
     window.addEventListener("message", onMessage);
-    setSocketEventListener(onBackendMessage);
-    
+
+    // Close popup on page unload
+    window.addEventListener("pagehide", () => {
+        popupManager.close();
+        fetch("/image-bench/close_websocket", {keepalive: true});
+    });
+
     // Set up message bus event handlers
     setupMessageBusHandlers();
 }
@@ -84,14 +107,31 @@ async function initUI() {
     }
 
     createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
-    disposePopup();
+    popupManager.dispose();
 }
 
 async function onShowWindow() {
-    if (showPopup()) {
-        createWebSocket();
-        hookIntoSDWebUI();
+    if (popupManager.open()) {
+        createWebSocketConnection();
+        hookIntoSDWebUI(sendPopupMessage, checkWebSocketConnection);
     }
+}
+
+function createWebSocketConnection() {
+    if (!websocket) {
+        websocket = createWebSocket({
+            endpoint: '/image-bench/websocket',
+            onMessage: onBackendMessage
+        });
+    }
+}
+
+function checkWebSocketConnection() {
+    if (isConnectionClosed(websocket)) {
+        createWebSocketConnection();
+        return false;
+    }
+    return true;
 }
 
 async function onMessage(msg) {
@@ -100,7 +140,7 @@ async function onMessage(msg) {
     const payload = msg.data;
 
     if (payload.type === "INITIALIZE_PROMPTS")
-        initializePopupPrompts();
+        initializePopupPrompts(sendPopupMessage);
     else if (payload.type === "STOP_GENERATION")
         stopGeneration();
     else if (payload.type === "EXPLORE_MODELS")

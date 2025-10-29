@@ -1,17 +1,17 @@
-import {getGenerationState, setGenerationState} from "./state.js";
+import {getGenerationState, setGenerationState} from "./shared/state.js";
 import {messageBus} from "./shared/messaging/MessageBus.js";
-import {checkWebSocketConnection} from "./websocket.js";
-import {closePopup, sendPopupMessage} from "./popup.js";
 import {sleep} from "./shared/utils.js";
 import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
 import {adapter} from "./adapters/adapter.js";
 
-addEventListener("pagehide", () => {
-    closePopup();
-    fetch("/image-bench/close_websocket", {keepalive: true});
-});
+// Dependencies injected from core.js
+let sendPopupMessage;
+let checkWebSocketConnection;
 
-export function hookIntoSDWebUI() {
+export function hookIntoSDWebUI(sendPopupFn, checkWebSocketFn) {
+    // Store dependencies
+    sendPopupMessage = sendPopupFn;
+    checkWebSocketConnection = checkWebSocketFn;
     const txt2ImgGenerateButton = getElementById(SELECTORS.TXT2IMG_GENERATE);
     txt2ImgGenerateButton.addEventListener("mousedown", onGenerateMousedown);
 
@@ -58,11 +58,13 @@ function listenInterruptButtonMutations() {
     }
 }
 
-export function initializePopupPrompts() {
+export function initializePopupPrompts(sendPopupFn) {
+    // Use injected dependency if provided (for direct calls)
+    const messageSender = sendPopupFn || sendPopupMessage;
     const promptInput = querySelector(SELECTORS.TXT2IMG_PROMPT);
     const negativePromptInput = querySelector(SELECTORS.TXT2IMG_NEG_PROMPT);
-    onPromptChange({target: promptInput});
-    onNegativePromptChange({target: negativePromptInput});
+    onPromptChange({target: promptInput}, messageSender);
+    onNegativePromptChange({target: negativePromptInput}, messageSender);
 }
 
 function onGenerateMousedown(e) {
@@ -76,12 +78,14 @@ async function onInterruptMousedown(e) {
     messageBus.publish('STRATEGY_FINISH_REQUEST');
 }
 
-function onPromptChange(e) {
-    sendPopupMessage({type: "PROMPT_CHANGE", text: e.target.value});
+function onPromptChange(e, messageSender) {
+    const sender = messageSender || sendPopupMessage;
+    sender({type: "PROMPT_CHANGE", text: e.target.value});
 }
 
-function onNegativePromptChange(e) {
-    sendPopupMessage({type: "NEGATIVE_PROMPT_CHANGE", text: e.target.value});
+function onNegativePromptChange(e, messageSender) {
+    const sender = messageSender || sendPopupMessage;
+    sender({type: "NEGATIVE_PROMPT_CHANGE", text: e.target.value});
 }
 
 function onSendToTxt2ImgButtonClick(e) {

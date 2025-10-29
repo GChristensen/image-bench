@@ -5,6 +5,7 @@ webui:
 comfy:
     cd image-bench; npm run build:comfy
     cp -f image-bench/dist/index.html comfyui-extension/js
+    cp -rf common-extension/shared_frontend/* comfyui-extension/js/shared/
 
 test-webui:
     cd D:/ai/sd/webui; cmd //c start _start_webui
