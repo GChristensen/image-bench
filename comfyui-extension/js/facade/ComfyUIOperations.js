@@ -586,4 +586,12 @@ export class ComfyUIOperations {
             return false;
         }
     }
+
+    /**
+     * Get the platform identifier
+     * @returns {string} Platform identifier ('comfyui')
+     */
+    getPlatform() {
+        return 'comfyui';
+    }
 }

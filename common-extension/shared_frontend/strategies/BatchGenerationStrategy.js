@@ -23,11 +23,23 @@ export class BatchGenerationStrategy extends QueueProcessor {
         this.isVariations = options.strength !== undefined;
         this.nImagesToGenerate = options.generateImages || 100;
         this.generationId = this.createGenerationId();
-        
-        // Batch generation doesn't use a queue in the traditional sense
-        // The batch count is handled by the WebUI itself
-        this.queue = [true]; // Single item to trigger generation
-        this.totalItems = 1;
+
+        // Detect platform to determine queue structure
+        const platform = this.uiOperations.getPlatform();
+
+        if (platform === 'comfyui') {
+            // ComfyUI: Create N queue items (one per image)
+            // Each processItem() call queues one workflow
+            this.queue = [];
+            for (let i = 0; i < this.nImagesToGenerate; i++) {
+                this.queue.push({ index: i });
+            }
+            this.totalItems = this.queue.length;
+        } else {
+            // SD WebUI: Single queue item, batch count parameter handles multiple images
+            this.queue = [true];
+            this.totalItems = 1;
+        }
     }
 
     /**
@@ -35,11 +47,12 @@ export class BatchGenerationStrategy extends QueueProcessor {
      */
     async prepare(options) {
         this.config = options.config || {};
-        
+
         // Notify that processing started
         this.messageBus.publish('BEGIN_PROCESSING', {});
-        
+
         const isImg2ImgTab = this.uiOperations.isImg2ImgTab();
+        const platform = this.uiOperations.getPlatform();
 
         // Set seed
         if (this.isVariations) {
@@ -48,11 +61,14 @@ export class BatchGenerationStrategy extends QueueProcessor {
             await this.uiOperations.setInputValue('TXT2IMG_SEED', -1);
         }
 
-        const nImagesToGenerate = this.nImagesToGenerate || this.config.defaultBatches || 100;
-        await this.uiOperations.setBatchCount(nImagesToGenerate);
+        // Set batch count (only for WebUI, no-op in ComfyUI)
+        if (platform === 'webui') {
+            const nImagesToGenerate = this.nImagesToGenerate || this.config.defaultBatches || 100;
+            await this.uiOperations.setBatchCount(nImagesToGenerate);
+        }
 
-        // Disable hires fix for txt2img
-        if (!isImg2ImgTab) {
+        // Disable hires fix for txt2img (WebUI only)
+        if (platform === 'webui' && !isImg2ImgTab) {
             this.uiOperations.toggleHiresFix(false, true);
         }
     }
@@ -71,8 +87,12 @@ export class BatchGenerationStrategy extends QueueProcessor {
     async finish() {
         this.isActive = false;
 
-        // Reset batch count
-        await this.uiOperations.setBatchCount(1);
+        const platform = this.uiOperations.getPlatform();
+
+        // Reset batch count (only for WebUI)
+        if (platform === 'webui') {
+            await this.uiOperations.setBatchCount(1);
+        }
 
         // Reset variations if used
         if (this.isVariations) {
@@ -86,8 +106,13 @@ export class BatchGenerationStrategy extends QueueProcessor {
 
         await this.uiOperations.sleep(1000);
 
-        // Save controlnet images if any
-        await this.saveControlnetImages(tempGenId);
+        // Save controlnet images if any (WebUI only)
+        if (platform === 'webui') {
+            await this.saveControlnetImages(tempGenId);
+        }
+
+        // Publish GENERATION_FINISHED event
+        this.messageBus.publish('GENERATION_FINISHED', {});
     }
 
     /**

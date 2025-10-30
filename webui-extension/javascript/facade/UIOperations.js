@@ -267,4 +267,12 @@ export class UIOperations {
     async sleep(ms) {
         return await this.adapter.sleep(ms);
     }
+
+    /**
+     * Get the platform identifier
+     * @returns {string} Platform identifier ('webui')
+     */
+    getPlatform() {
+        return 'webui';
+    }
 }

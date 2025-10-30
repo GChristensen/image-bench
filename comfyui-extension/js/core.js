@@ -99,6 +99,9 @@ function setupMessageBusHandlers() {
         console.log('[Image Bench] Generation finished, resetting state');
         setGenerationState("BATCH_GENERATION");
         currentStrategy = null;
+
+        // Forward to popup
+        sendPopupMessage({type: "GENERATION_FINISHED"});
     });
 
     console.log('[Image Bench] Message bus handlers set up');
@@ -303,12 +306,43 @@ async function handleExploreModels(options) {
 /**
  * Handle batch generation request
  * @param {Object} options - Batch generation options
+ * @param {number} options.generateImages - Number of images to generate
+ * @param {string} [options.preset] - Optional preset name
+ * @param {boolean} [options.img2img] - Whether in img2img mode
+ * @param {number} [options.strength] - Strength for variations
  */
 async function handleBatchGenerate(options) {
-    console.log('[Image Bench] handleBatchGenerate() called');
-    console.warn('[Image Bench] Batch generation not yet implemented for ComfyUI');
+    console.log('[Image Bench] handleBatchGenerate() called with options:', options);
+
+    if (!strategies) {
+        console.error('[Image Bench] Strategies not initialized');
+        return;
+    }
+
+    // Set generation state
     setGenerationState("BATCH_GENERATION");
-    // TODO: Implement batch generation strategy for ComfyUI
+    console.log('[Image Bench] Generation state set to: BATCH_GENERATION');
+
+    try {
+        // Stop any existing strategy
+        if (currentStrategy && currentStrategy.isActive) {
+            console.log('[Image Bench] Stopping existing strategy');
+            await currentStrategy.finish();
+        }
+
+        // Use the pre-created batch strategy
+        currentStrategy = strategies.batch;
+        console.log('[Image Bench] Using batch strategy:', currentStrategy);
+
+        // Start processing
+        console.log('[Image Bench] Calling strategy.process()...');
+        await currentStrategy.process(options);
+
+        console.log('[Image Bench] Batch generation started successfully');
+    } catch (error) {
+        console.error('[Image Bench] Failed to start batch generation:', error);
+        console.error('[Image Bench] Error stack:', error.stack);
+    }
 }
 
 /**
@@ -358,12 +392,36 @@ async function handleUpscaleVaryingDenoising(options) {
 
 /**
  * Stop current generation
+ * Interrupts ComfyUI execution and stops any active strategy
  */
-function stopGeneration() {
+async function stopGeneration() {
     console.log('[Image Bench] stopGeneration() called');
-    console.warn('[Image Bench] Stop generation not yet implemented for ComfyUI');
-    // TODO: Implement generation stopping for ComfyUI
-    // Will need to interact with ComfyUI's queue system
+
+    // 1. Interrupt current ComfyUI execution
+    if (uiOperations) {
+        const interrupted = uiOperations.interrupt();
+        console.log('[Image Bench] ComfyUI execution interrupted:', interrupted);
+    }
+
+    // 2. Stop active strategy
+    if (currentStrategy && currentStrategy.isProcessing()) {
+        console.log('[Image Bench] Stopping active strategy');
+        try {
+            await currentStrategy.finish();
+        } catch (error) {
+            console.error('[Image Bench] Error stopping strategy:', error);
+        }
+    }
+
+    // 3. Reset state
+    setGenerationState("BATCH_GENERATION");
+    currentStrategy = null;
+    console.log('[Image Bench] Generation state reset to: BATCH_GENERATION');
+
+    // 4. Notify popup
+    sendPopupMessage({
+        type: "GENERATION_STOPPED"
+    });
 }
 
 /**
