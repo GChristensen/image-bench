@@ -33,6 +33,11 @@ let nodeConfig = null;
 let strategies = null;
 let currentStrategy = null;
 
+// Flag to track whether generation was initiated by Image Bench (vs manual ComfyUI)
+// When true, seed capture is enabled to fix race condition
+// When false, seed capture is skipped to allow normal ComfyUI behavior
+let isImageBenchGeneration = false;
+
 /**
  * Load node configuration for marker-based node discovery
  */
@@ -100,6 +105,10 @@ function setupMessageBusHandlers() {
         console.log('[Image Bench] Generation finished, resetting state');
         setGenerationState("BATCH_GENERATION");
         currentStrategy = null;
+
+        // Disable seed capture when generation finishes
+        isImageBenchGeneration = false;
+        console.log('[Image Bench] Seed capture disabled (generation finished)');
 
         // Forward to popup
         sendPopupMessage({type: "GENERATION_FINISHED"});
@@ -170,10 +179,17 @@ async function handleExecuted(event) {
     const images = await extractImageInfo(node, output, prompt_id);
 
     if (images.length > 0) {
-        // Retrieve captured seed to fix race condition
-        const capturedSeed = seedStorage.retrieve(prompt_id);
+        // Only use captured seed for Image Bench-initiated generations
+        let capturedSeed;
+        if (isImageBenchGeneration) {
+            capturedSeed = seedStorage.retrieve(prompt_id);
+            console.log('[Image Bench] Using captured seed (Image Bench generation)');
+        } else {
+            capturedSeed = undefined;
+            console.log('[Image Bench] Using workflow seed (manual ComfyUI generation)');
+        }
 
-        // Extract parameters, passing the captured seed
+        // Extract parameters, passing the captured seed (or undefined for manual generations)
         const parameters = extractParameters(prompt_id, capturedSeed);
 
         // Send each image to popup
@@ -208,25 +224,32 @@ async function handleExecuted(event) {
 /**
  * Handle execution start event
  * Captures seed before ComfyUI randomizes it for the next generation
+ * Only captures when generation is initiated by Image Bench strategies
  */
 function handleExecutionStart(event) {
     const { prompt_id } = event.detail;
     console.log('[Image Bench] Execution started:', prompt_id);
 
-    // Capture seed BEFORE execution to fix race condition
-    try {
-        const workflow = app.graph.serialize();
-        const sampler = workflow.nodes?.find(n => n.type === "KSampler");
+    // Only capture seed for Image Bench-initiated generations
+    if (isImageBenchGeneration) {
+        console.log('[Image Bench] Seed capture ENABLED (Image Bench generation)');
 
-        if (sampler && sampler.widgets_values) {
-            const seed = sampler.widgets_values[0];
-            seedStorage.store(prompt_id, seed);
-            console.log(`[Image Bench] Captured seed for prompt ${prompt_id}: ${seed}`);
-        } else {
-            console.warn('[Image Bench] No KSampler found in workflow, cannot capture seed');
+        try {
+            const workflow = app.graph.serialize();
+            const sampler = workflow.nodes?.find(n => n.type === "KSampler");
+
+            if (sampler && sampler.widgets_values) {
+                const seed = sampler.widgets_values[0];
+                seedStorage.store(prompt_id, seed);
+                console.log(`[Image Bench] Captured seed for prompt ${prompt_id}: ${seed}`);
+            } else {
+                console.warn('[Image Bench] No KSampler found in workflow, cannot capture seed');
+            }
+        } catch (error) {
+            console.error('[Image Bench] Failed to capture seed:', error);
         }
-    } catch (error) {
-        console.error('[Image Bench] Failed to capture seed:', error);
+    } else {
+        console.log('[Image Bench] Seed capture DISABLED (manual ComfyUI generation)');
     }
 
     sendPopupMessage({
@@ -303,6 +326,10 @@ async function handleExploreModels(options) {
     setGenerationState("EXPLORE_MODELS");
     console.log('[Image Bench] Generation state set to: EXPLORE_MODELS');
 
+    // Enable seed capture for Image Bench-initiated generations
+    isImageBenchGeneration = true;
+    console.log('[Image Bench] Seed capture enabled for model exploration');
+
     try {
         // Stop any existing strategy
         if (currentStrategy && currentStrategy.isActive) {
@@ -322,6 +349,8 @@ async function handleExploreModels(options) {
     } catch (error) {
         console.error('[Image Bench] Failed to start model exploration:', error);
         console.error('[Image Bench] Error stack:', error.stack);
+        // Reset flag on error
+        isImageBenchGeneration = false;
     }
 }
 
@@ -345,6 +374,10 @@ async function handleBatchGenerate(options) {
     setGenerationState("BATCH_GENERATION");
     console.log('[Image Bench] Generation state set to: BATCH_GENERATION');
 
+    // Enable seed capture for Image Bench-initiated generations
+    isImageBenchGeneration = true;
+    console.log('[Image Bench] Seed capture enabled for batch generation');
+
     try {
         // Stop any existing strategy
         if (currentStrategy && currentStrategy.isActive) {
@@ -364,6 +397,8 @@ async function handleBatchGenerate(options) {
     } catch (error) {
         console.error('[Image Bench] Failed to start batch generation:', error);
         console.error('[Image Bench] Error stack:', error.stack);
+        // Reset flag on error
+        isImageBenchGeneration = false;
     }
 }
 
@@ -409,6 +444,10 @@ async function handleGenerateVaryingSteps(options) {
     setGenerationState("SEQUENTIAL_GENERATION");
     console.log('[Image Bench] Generation state set to: SEQUENTIAL_GENERATION');
 
+    // Enable seed capture for Image Bench-initiated generations
+    isImageBenchGeneration = true;
+    console.log('[Image Bench] Seed capture enabled for varying steps generation');
+
     try {
         // Stop any existing strategy
         if (currentStrategy && currentStrategy.isActive) {
@@ -428,6 +467,8 @@ async function handleGenerateVaryingSteps(options) {
     } catch (error) {
         console.error('[Image Bench] Failed to start varying steps generation:', error);
         console.error('[Image Bench] Error stack:', error.stack);
+        // Reset flag on error
+        isImageBenchGeneration = false;
     }
 }
 
@@ -470,7 +511,11 @@ async function stopGeneration() {
     currentStrategy = null;
     console.log('[Image Bench] Generation state reset to: BATCH_GENERATION');
 
-    // 4. Notify popup
+    // 4. Disable seed capture
+    isImageBenchGeneration = false;
+    console.log('[Image Bench] Seed capture disabled (generation stopped)');
+
+    // 5. Notify popup
     sendPopupMessage({
         type: "GENERATION_STOPPED"
     });
