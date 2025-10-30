@@ -243,23 +243,46 @@ export class ComfyUIOperations {
 
     /**
      * Set the seed value
+     * Uses marker-based discovery (ib:smp:0) or falls back to KSampler
      * @param {number} seed - The seed value
      */
     setSeed(seed) {
+        // Try marker-based discovery first
+        const result = this.getMarkedNodeWidget('smp', 'sampler');
+        if (result && result.node) {
+            // Seed widget is named 'seed' across all standard sampler types
+            this.setNodeWidgetValue(result.node, 'seed', seed);
+            return;
+        }
+
+        // Fallback: try standard KSampler
         const sampler = this.getNodeByType('KSampler');
         if (sampler) {
             this.setNodeWidgetValue(sampler, 'seed', seed);
+        } else {
+            console.warn('[ComfyUIOperations] No sampler node found (marked with ib:smp:0 or KSampler)');
         }
     }
 
     /**
      * Set the steps value
+     * Uses marker-based discovery (ib:smp:0) or falls back to KSampler
      * @param {number} steps - Number of steps
      */
     setSteps(steps) {
+        // Try marker-based discovery first
+        const result = this.getMarkedNodeWidget('smp', 'sampler');
+        if (result && result.node && result.widgetName) {
+            this.setNodeWidgetValue(result.node, result.widgetName, steps);
+            return;
+        }
+
+        // Fallback: try standard KSampler
         const sampler = this.getNodeByType('KSampler');
         if (sampler) {
             this.setNodeWidgetValue(sampler, 'steps', steps);
+        } else {
+            console.warn('[ComfyUIOperations] No sampler node found (marked with ib:smp:0 or KSampler)');
         }
     }
 

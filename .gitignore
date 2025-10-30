@@ -1,6 +1,8 @@
 /.idea/
 /.claude/
+CLAUDE.md
 /webui-extension/store/
 /webui-extension/scripts/index.html
-CLAUDE.md
+/comfyui-extension/store/
+/comfyui-extension/js/index.html
 /comfyui-extension/js/shared/

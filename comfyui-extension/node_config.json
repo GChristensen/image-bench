@@ -11,5 +11,20 @@
       "CheckpointLoader": "ckpt_name",
       "unCLIPCheckpointLoader": "ckpt_name"
     }
+  },
+  "sampler": {
+    "marker": "smp",
+    "nodeTypes": [
+      "KSampler",
+      "KSamplerAdvanced",
+      "SamplerCustom",
+      "SamplerCustomAdvanced"
+    ],
+    "widgetNames": {
+      "KSampler": "steps",
+      "KSamplerAdvanced": "steps",
+      "SamplerCustom": "steps",
+      "SamplerCustomAdvanced": "steps"
+    }
   }
 }

@@ -371,12 +371,42 @@ async function handleProcessImages(options) {
 /**
  * Handle varying steps generation request
  * @param {Object} options - Varying steps options
+ * @param {Object} options.image - Source image with parameters
+ * @param {string} [options.steps] - Comma-separated step values (e.g., "10,20,30")
+ * @param {string} [options.denoising] - Comma-separated denoising values (optional)
  */
 async function handleGenerateVaryingSteps(options) {
-    console.log('[Image Bench] handleGenerateVaryingSteps() called');
-    console.warn('[Image Bench] Varying steps generation not yet implemented for ComfyUI');
+    console.log('[Image Bench] handleGenerateVaryingSteps() called with options:', options);
+
+    if (!strategies) {
+        console.error('[Image Bench] Strategies not initialized');
+        return;
+    }
+
+    // Set generation state
     setGenerationState("SEQUENTIAL_GENERATION");
-    // TODO: Implement varying parameters strategy for ComfyUI
+    console.log('[Image Bench] Generation state set to: SEQUENTIAL_GENERATION');
+
+    try {
+        // Stop any existing strategy
+        if (currentStrategy && currentStrategy.isActive) {
+            console.log('[Image Bench] Stopping existing strategy');
+            await currentStrategy.finish();
+        }
+
+        // Use the pre-created varying parameters strategy
+        currentStrategy = strategies.varying;
+        console.log('[Image Bench] Using varying parameters strategy:', currentStrategy);
+
+        // Start processing
+        console.log('[Image Bench] Calling strategy.process()...');
+        await currentStrategy.process(options);
+
+        console.log('[Image Bench] Varying steps generation started successfully');
+    } catch (error) {
+        console.error('[Image Bench] Failed to start varying steps generation:', error);
+        console.error('[Image Bench] Error stack:', error.stack);
+    }
 }
 
 /**
