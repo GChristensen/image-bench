@@ -97,6 +97,21 @@ export class ComfyUIOperations {
     }
 
     /**
+     * Get sampler node using marker-based discovery with fallback
+     * @returns {Object|null} The sampler node or null
+     */
+    getSamplerNode() {
+        // Try marker-based discovery first
+        const result = this.getMarkedNodeWidget('smp', 'sampler');
+        if (result && result.node) {
+            return result.node;
+        }
+
+        // Fallback: standard KSampler
+        return this.getNodeByType('KSampler');
+    }
+
+    /**
      * Find a workflow node by its type
      * @param {string} nodeType - Node type (e.g., 'KSampler', 'CheckpointLoaderSimple')
      * @returns {Object|null} The node object or null
@@ -247,21 +262,52 @@ export class ComfyUIOperations {
      * @param {number} seed - The seed value
      */
     setSeed(seed) {
-        // Try marker-based discovery first
-        const result = this.getMarkedNodeWidget('smp', 'sampler');
-        if (result && result.node) {
-            // Seed widget is named 'seed' across all standard sampler types
-            this.setNodeWidgetValue(result.node, 'seed', seed);
-            return;
-        }
-
-        // Fallback: try standard KSampler
-        const sampler = this.getNodeByType('KSampler');
+        const sampler = this.getSamplerNode();
         if (sampler) {
             this.setNodeWidgetValue(sampler, 'seed', seed);
         } else {
-            console.warn('[ComfyUIOperations] No sampler node found (marked with ib:smp:0 or KSampler)');
+            console.warn('[ComfyUIOperations] No sampler node found for setSeed');
         }
+    }
+
+    /**
+     * Get the seed value from sampler
+     * @returns {number|null} The seed value or null
+     */
+    getSeed() {
+        const sampler = this.getSamplerNode();
+        if (sampler) {
+            const widget = this.getNodeWidget(sampler, 'seed');
+            return widget?.value;
+        }
+        return null;
+    }
+
+    /**
+     * Set control_after_generate on sampler
+     * @param {string} value - Control mode ("fixed", "increment", "decrement", "randomize")
+     */
+    setControlAfterGenerate(value) {
+        const sampler = this.getSamplerNode();
+        console.log(sampler);
+        if (sampler) {
+            this.setNodeWidgetValue(sampler, 'control_after_generate', value);
+        } else {
+            console.warn('[ComfyUIOperations] No sampler node found for setControlAfterGenerate');
+        }
+    }
+
+    /**
+     * Get control_after_generate from sampler
+     * @returns {string|null} The control mode or null
+     */
+    getControlAfterGenerate() {
+        const sampler = this.getSamplerNode();
+        if (sampler) {
+            const widget = this.getNodeWidget(sampler, 'control_after_generate');
+            return widget?.value;
+        }
+        return null;
     }
 
     /**
@@ -284,6 +330,19 @@ export class ComfyUIOperations {
         } else {
             console.warn('[ComfyUIOperations] No sampler node found (marked with ib:smp:0 or KSampler)');
         }
+    }
+
+    /**
+     * Get the steps value from sampler
+     * @returns {number|null} The steps value or null
+     */
+    getSteps() {
+        const sampler = this.getSamplerNode();
+        if (sampler) {
+            const widget = this.getNodeWidget(sampler, 'steps');
+            return widget?.value;
+        }
+        return null;
     }
 
     /**
@@ -332,25 +391,45 @@ export class ComfyUIOperations {
 
     /**
      * Set the positive prompt
+     * Uses marker-based discovery (ib:pp:0) or falls back to first CLIPTextEncode
      * @param {string} prompt - The prompt text
      */
     setPrompt(prompt) {
+        // Try marker-based discovery first
+        const result = this.getMarkedNodeWidget('pp', 'positive_prompt');
+        if (result && result.node && result.widgetName) {
+            this.setNodeWidgetValue(result.node, result.widgetName, prompt);
+            return;
+        }
+
+        // Fallback: use first CLIPTextEncode node
         const promptNodes = this.getNodesByType('CLIPTextEncode');
         if (promptNodes.length > 0) {
-            // First CLIPTextEncode is usually positive prompt
             this.setNodeWidgetValue(promptNodes[0], 'text', prompt);
+        } else {
+            console.warn('[ComfyUIOperations] No marked positive prompt node found (looking for "ib:pp:0" in node title) and no CLIPTextEncode nodes found');
         }
     }
 
     /**
      * Set the negative prompt
+     * Uses marker-based discovery (ib:np:0) or falls back to second CLIPTextEncode
      * @param {string} prompt - The negative prompt text
      */
     setNegativePrompt(prompt) {
+        // Try marker-based discovery first
+        const result = this.getMarkedNodeWidget('np', 'negative_prompt');
+        if (result && result.node && result.widgetName) {
+            this.setNodeWidgetValue(result.node, result.widgetName, prompt);
+            return;
+        }
+
+        // Fallback: use second CLIPTextEncode node
         const promptNodes = this.getNodesByType('CLIPTextEncode');
         if (promptNodes.length > 1) {
-            // Second CLIPTextEncode is usually negative prompt
             this.setNodeWidgetValue(promptNodes[1], 'text', prompt);
+        } else {
+            console.warn('[ComfyUIOperations] No marked negative prompt node found (looking for "ib:np:0" in node title) and no second CLIPTextEncode node found');
         }
     }
 
@@ -535,21 +614,36 @@ export class ComfyUIOperations {
     }
 
     /**
-     * Backup current generation parameters (not fully implemented for ComfyUI)
-     * @returns {Promise<Object>} Backup object with seeds
+     * Backup current generation parameters using marker-based discovery
+     * @returns {Promise<Object>} Backup object with seeds, control_after_generate, and steps
      */
     async backupGenerationParams() {
-        const seed = this.getInputValue('KSampler:seed');
-        return { seeds: [seed, null] };
+        const seed = this.getSeed();
+        const controlAfterGenerate = this.getControlAfterGenerate();
+        const steps = this.getSteps();
+
+        return {
+            seeds: [seed, null],
+            controlAfterGenerate: controlAfterGenerate,
+            steps: steps
+        };
     }
 
     /**
-     * Restore generation parameters from backup (not fully implemented for ComfyUI)
+     * Restore generation parameters from backup using marker-based discovery
      * @param {Object} backup - Backup object from backupGenerationParams()
      */
     restoreGenerationParams(backup) {
-        if (backup.seeds && backup.seeds[0] !== null) {
-            this.setInputValue('KSampler:seed', backup.seeds[0]);
+        if (backup && backup.seeds && backup.seeds[0] !== null) {
+            this.setSeed(backup.seeds[0]);
+        }
+
+        if (backup && backup.controlAfterGenerate !== undefined && backup.controlAfterGenerate !== null) {
+            this.setControlAfterGenerate(backup.controlAfterGenerate);
+        }
+
+        if (backup && backup.steps !== undefined && backup.steps !== null) {
+            this.setSteps(backup.steps);
         }
     }
 

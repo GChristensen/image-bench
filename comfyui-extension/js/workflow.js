@@ -10,6 +10,7 @@ export async function extractImageInfo(nodeId, output, promptId) {
         // The output already contains all image information we need
         for (const imageData of output.images) {
             try {
+                console.log(imageData)
                 // Construct full image path
                 const imageUrl = `/view?filename=${imageData.filename}&type=${imageData.type || 'output'}&subfolder=${imageData.subfolder || ''}`;
                 const imagePath = getSystemPaths().output_dir + "/" + imageData.filename;
@@ -28,6 +29,23 @@ export async function extractImageInfo(nodeId, output, promptId) {
     }
 
     return images;
+}
+
+/**
+ * Parse node marker from node title
+ * @param {string} title - Node title
+ * @returns {Object|null} - {type, index} or null
+ */
+function parseNodeMarker(title) {
+    if (!title) return null;
+    const match = title.match(/\bib:([a-z]+)(:(\d+)\b)?/i);
+    if (match) {
+        return {
+            type: match[1],
+            index: match[3] ? parseInt(match[3]) : 0
+        };
+    }
+    return null;
 }
 
 /**
@@ -50,7 +68,7 @@ export function extractParameters(promptId) {
             params.seed = sampler.widgets_values[0];
             params.steps = sampler.widgets_values[2];
             params.cfg = sampler.widgets_values[3];
-            params.sampler_name = sampler.widgets_values[4];
+            params.sampler = sampler.widgets_values[4];
             params.scheduler = sampler.widgets_values[5];
             params.denoise = sampler.widgets_values[6];
         }
@@ -61,13 +79,23 @@ export function extractParameters(promptId) {
             params.model = checkpoint.widgets_values[0];
         }
 
-        // Find CLIPTextEncode nodes for prompts
-        const promptNodes = nodes.filter(n => n.type === "CLIPTextEncode");
-        if (promptNodes.length > 0) {
-            params.prompt = promptNodes[0].widgets_values?.[0] || '';
+        // Find marked prompt nodes using marker-based discovery
+        const positivePromptNode = nodes.find(n => {
+            const marker = parseNodeMarker(n.title);
+            return marker && marker.type === 'pp';
+        });
+
+        const negativePromptNode = nodes.find(n => {
+            const marker = parseNodeMarker(n.title);
+            return marker && marker.type === 'np';
+        });
+
+        if (positivePromptNode && positivePromptNode.widgets_values) {
+            params.prompt = positivePromptNode.widgets_values[0] || '';
         }
-        if (promptNodes.length > 1) {
-            params.negative_prompt = promptNodes[1].widgets_values?.[0] || '';
+
+        if (negativePromptNode && negativePromptNode.widgets_values) {
+            params["negative prompt"] = negativePromptNode.widgets_values[0] || '';
         }
     } catch (e) {
         console.error('[Image Bench] Failed to extract parameters:', e);

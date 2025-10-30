@@ -7,6 +7,8 @@ export function createImageLink(image) {
 }
 
 export function createImageGenerationParams(image) {
+    image = {...image};
+
     let parametersText = `Prompt:
 ${image.parameters["prompt"]}
 
@@ -14,10 +16,14 @@ Negative prompt:
 ${image.parameters["negative prompt"]}
 
 `;
+    delete image.parameters["prompt"];
+    delete image.parameters["Prompt"];
+    delete image.parameters["negative prompt"];
+    delete image.parameters["Negative prompt"];
 
     const keys = Object.keys(image.parameters);
 
-    for (const key of keys.slice(2, keys.length)) {
+    for (const key of keys) {
         const value = image.parameters[key];
 
         if (typeof value === "object") {

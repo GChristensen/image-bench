@@ -26,5 +26,39 @@
       "SamplerCustom": "steps",
       "SamplerCustomAdvanced": "steps"
     }
+  },
+  "positive_prompt": {
+    "marker": "pp",
+    "nodeTypes": [
+      "ConstantString",
+      "CLIPTextEncode",
+      "CLIPTextEncodeSDXL",
+      "CLIPTextEncodeFlux",
+      "CLIPTextEncodeSD3"
+    ],
+    "widgetNames": {
+      "ConstantString": "value",
+      "CLIPTextEncode": "text",
+      "CLIPTextEncodeSDXL": "text",
+      "CLIPTextEncodeFlux": "text",
+      "CLIPTextEncodeSD3": "text"
+    }
+  },
+  "negative_prompt": {
+    "marker": "np",
+    "nodeTypes": [
+      "ConstantString",
+      "CLIPTextEncode",
+      "CLIPTextEncodeSDXL",
+      "CLIPTextEncodeFlux",
+      "CLIPTextEncodeSD3"
+    ],
+    "widgetNames": {
+      "ConstantString": "value",
+      "CLIPTextEncode": "text",
+      "CLIPTextEncodeSDXL": "text",
+      "CLIPTextEncodeFlux": "text",
+      "CLIPTextEncodeSD3": "text"
+    }
   }
 }

@@ -47,4 +47,14 @@ export class VaryingParametersStrategy extends ImageProcessingStrategy {
         this.totalItems = images.length;
         this.generationId = this.createGenerationId();
     }
+
+    async prepare(options) {
+        await super.prepare(options);
+
+        if (this.uiOperations.getPlatform() === 'comfyui') {
+            if (this.uiOperations.setControlAfterGenerate) {
+                this.uiOperations.setControlAfterGenerate('fixed');
+            }
+        }
+    }
 }
