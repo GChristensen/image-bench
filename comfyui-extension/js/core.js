@@ -14,6 +14,7 @@ import {messageBus} from "./shared/messaging/messageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager} from "./shared/popup.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
+import {seedStorage} from "./seed-storage.js";
 
 // Create popup manager instance with WebSocket integration for ComfyUI
 const popupManager = createPopupManager({
@@ -169,7 +170,11 @@ async function handleExecuted(event) {
     const images = await extractImageInfo(node, output, prompt_id);
 
     if (images.length > 0) {
-        const parameters = extractParameters(prompt_id);
+        // Retrieve captured seed to fix race condition
+        const capturedSeed = seedStorage.retrieve(prompt_id);
+
+        // Extract parameters, passing the captured seed
+        const parameters = extractParameters(prompt_id, capturedSeed);
 
         // Send each image to popup
         for (const imageData of images) {
@@ -202,10 +207,27 @@ async function handleExecuted(event) {
 
 /**
  * Handle execution start event
+ * Captures seed before ComfyUI randomizes it for the next generation
  */
 function handleExecutionStart(event) {
     const { prompt_id } = event.detail;
     console.log('[Image Bench] Execution started:', prompt_id);
+
+    // Capture seed BEFORE execution to fix race condition
+    try {
+        const workflow = app.graph.serialize();
+        const sampler = workflow.nodes?.find(n => n.type === "KSampler");
+
+        if (sampler && sampler.widgets_values) {
+            const seed = sampler.widgets_values[0];
+            seedStorage.store(prompt_id, seed);
+            console.log(`[Image Bench] Captured seed for prompt ${prompt_id}: ${seed}`);
+        } else {
+            console.warn('[Image Bench] No KSampler found in workflow, cannot capture seed');
+        }
+    } catch (error) {
+        console.error('[Image Bench] Failed to capture seed:', error);
+    }
 
     sendPopupMessage({
         type: "BEGIN_PROCESSING",

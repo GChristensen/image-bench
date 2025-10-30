@@ -50,8 +50,10 @@ function parseNodeMarker(title) {
 
 /**
  * Extract generation parameters from the workflow
+ * @param {string} promptId - The ComfyUI prompt ID
+ * @param {number} [capturedSeed] - Optional seed captured before execution (fixes race condition)
  */
-export function extractParameters(promptId) {
+export function extractParameters(promptId, capturedSeed) {
     // Get the current workflow to extract parameters
     const workflow = app.graph.serialize();
     const params = {
@@ -65,7 +67,23 @@ export function extractParameters(promptId) {
         // Find KSampler node
         const sampler = nodes.find(n => n.type === "KSampler");
         if (sampler && sampler.widgets_values) {
-            params.seed = sampler.widgets_values[0];
+            // Use captured seed if provided, otherwise read from workflow
+            const workflowSeed = sampler.widgets_values[0];
+
+            if (capturedSeed !== undefined && capturedSeed !== null) {
+                params.seed = capturedSeed;
+
+                // Validation logging: check if race condition occurred
+                if (workflowSeed !== capturedSeed) {
+                    console.log(`[Image Bench] Seed race condition detected and fixed!`);
+                    console.log(`  - Captured seed (correct): ${capturedSeed}`);
+                    console.log(`  - Workflow seed (would be wrong): ${workflowSeed}`);
+                }
+            } else {
+                params.seed = workflowSeed;
+                console.warn('[Image Bench] No captured seed provided - using workflow seed (may be incorrect if randomized)');
+            }
+
             params.steps = sampler.widgets_values[2];
             params.cfg = sampler.widgets_values[3];
             params.sampler = sampler.widgets_values[4];
