@@ -279,3 +279,208 @@ export async function loadWorkflow(app, workflow) {
 
     await app.loadGraphData(workflow);
 }
+
+// ==================== HISTORY-BASED PARAMETER EXTRACTION ====================
+// These functions extract parameters from ComfyUI's history API (read-only, after generation)
+// For setting values in live workflows, use the functions above
+
+/**
+ * Find a node in history prompt by marker or node types
+ * @param {Object} historyPrompt - History prompt object from api.getHistory()[prompt_id].prompt
+ * @param {string} [markerType] - Optional marker type to search for (e.g., "smp", "pp", "np", "cp")
+ * @param {Array<string>} [nodeTypes] - Optional array of node types to search for (fallback)
+ * @returns {Object|null} Node data with {nodeId, class_type, inputs} or null
+ */
+function findNodeInHistory(historyPrompt, markerType, nodeTypes) {
+    if (!historyPrompt) {
+        return null;
+    }
+
+    // Try marker-based discovery first (if marker provided)
+    if (markerType) {
+        for (const [nodeId, nodeData] of Object.entries(historyPrompt)) {
+            const title = nodeData._meta?.title;
+            if (title) {
+                const marker = parseNodeMarker(title);
+                if (marker && marker.type === markerType) {
+                    console.log(`[Image Bench] Found node by marker '${markerType}':`, nodeId, title);
+                    return { nodeId, ...nodeData };
+                }
+            }
+        }
+    }
+
+    // Fallback to type-based discovery (if types provided)
+    if (nodeTypes && Array.isArray(nodeTypes)) {
+        for (const [nodeId, nodeData] of Object.entries(historyPrompt)) {
+            if (nodeTypes.includes(nodeData.class_type)) {
+                console.log(`[Image Bench] Found node by type '${nodeData.class_type}':`, nodeId);
+                return { nodeId, ...nodeData };
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Extract sampler parameters from history prompt
+ * Uses marker-based discovery (ib:smp:*) with type-based fallback
+ * @param {Object} historyPrompt - History prompt object
+ * @param {Object} nodeConfig - Node configuration
+ * @returns {Object} Sampler parameters (seed, steps, cfg, etc.)
+ */
+function extractSamplerFromHistory(historyPrompt, nodeConfig) {
+    const params = {};
+
+    // Get sampler marker and types from config
+    const samplerMarker = nodeConfig?.sampler?.marker || 'smp';
+    const samplerTypes = nodeConfig?.sampler?.nodeTypes || ['KSampler'];
+
+    // Try marker-based first, fall back to type-based
+    const samplerNode = findNodeInHistory(historyPrompt, samplerMarker, samplerTypes);
+
+    if (samplerNode && samplerNode.inputs) {
+        const inputs = samplerNode.inputs;
+
+        // Extract standard sampler parameters
+        if (inputs.seed !== undefined) params.seed = inputs.seed;
+        if (inputs.steps !== undefined) params.steps = inputs.steps;
+        if (inputs.cfg !== undefined) params.cfg = inputs.cfg;
+        if (inputs.sampler_name !== undefined) params.sampler = inputs.sampler_name;
+        if (inputs.scheduler !== undefined) params.scheduler = inputs.scheduler;
+        if (inputs.denoise !== undefined) params.denoise = inputs.denoise;
+
+        console.log('[Image Bench] Extracted sampler params from history:', params);
+    } else {
+        console.warn('[Image Bench] No sampler node found in history');
+    }
+
+    return params;
+}
+
+/**
+ * Extract checkpoint/model from history prompt
+ * Uses marker-based discovery (ib:cp:*) with type-based fallback
+ * @param {Object} historyPrompt - History prompt object
+ * @param {Object} nodeConfig - Node configuration
+ * @returns {Object} Checkpoint parameters {model}
+ */
+function extractCheckpointFromHistory(historyPrompt, nodeConfig) {
+    const params = {};
+
+    // Get checkpoint marker and types from config
+    const checkpointMarker = nodeConfig?.checkpoint?.marker || 'cp';
+    const checkpointTypes = nodeConfig?.checkpoint?.nodeTypes || ['CheckpointLoaderSimple'];
+
+    // Try marker-based first, fall back to type-based
+    const checkpointNode = findNodeInHistory(historyPrompt, checkpointMarker, checkpointTypes);
+
+    if (checkpointNode && checkpointNode.inputs) {
+        // Get widget name for this node type
+        const widgetNames = nodeConfig?.checkpoint?.widgetNames || {};
+        const widgetName = widgetNames[checkpointNode.class_type] || 'ckpt_name';
+
+        if (checkpointNode.inputs[widgetName] !== undefined) {
+            params.model = checkpointNode.inputs[widgetName];
+            console.log('[Image Bench] Extracted checkpoint from history:', params.model);
+        }
+    } else {
+        console.warn('[Image Bench] No checkpoint node found in history');
+    }
+
+    return params;
+}
+
+/**
+ * Extract prompts from history prompt
+ * Uses marker-based discovery (ib:pp:* and ib:np:*) with type-based fallback
+ * @param {Object} historyPrompt - History prompt object
+ * @param {Object} nodeConfig - Node configuration
+ * @returns {Object} Prompt parameters {prompt, "negative prompt"}
+ */
+function extractPromptsFromHistory(historyPrompt, nodeConfig) {
+    const params = {};
+
+    // Get prompt markers and types from config
+    const positiveMarker = nodeConfig?.positive_prompt?.marker || 'pp';
+    const negativeMarker = nodeConfig?.negative_prompt?.marker || 'np';
+    const positiveTypes = nodeConfig?.positive_prompt?.nodeTypes || ['CLIPTextEncode'];
+    const negativeTypes = nodeConfig?.negative_prompt?.nodeTypes || ['CLIPTextEncode'];
+
+    // Standard widget name for text encode nodes
+    const widgetName = 'text';
+
+    // Extract positive prompt (marker-based first, type-based fallback)
+    const positiveNode = findNodeInHistory(historyPrompt, positiveMarker, positiveTypes);
+    if (positiveNode && positiveNode.inputs && positiveNode.inputs[widgetName] !== undefined) {
+        params.prompt = positiveNode.inputs[widgetName];
+        console.log('[Image Bench] Extracted positive prompt from history');
+    }
+
+    // Extract negative prompt (marker-based first, type-based fallback)
+    const negativeNode = findNodeInHistory(historyPrompt, negativeMarker, negativeTypes);
+    if (negativeNode && negativeNode.inputs && negativeNode.inputs[widgetName] !== undefined) {
+        params["negative prompt"] = negativeNode.inputs[widgetName];
+        console.log('[Image Bench] Extracted negative prompt from history');
+    }
+
+    return params;
+}
+
+/**
+ * Extract generation parameters from ComfyUI history API
+ * This is the SOURCE OF TRUTH for what was actually generated (no race conditions)
+ * @param {string} promptId - The ComfyUI prompt ID
+ * @param {Object|Array} historyPrompt - History prompt from api.getHistory()[promptId].prompt (may be array)
+ * @param {Object} nodeConfig - Node configuration for node type discovery
+ * @returns {Object} Parameters object with all extracted values
+ */
+export function extractParametersFromHistory(promptId, historyPrompt, nodeConfig) {
+    console.log('[Image Bench] Extracting parameters from history for prompt:', promptId);
+
+    const params = {
+        prompt_id: promptId
+    };
+
+    if (!historyPrompt) {
+        console.warn('[Image Bench] No history prompt provided, returning minimal params');
+        return params;
+    }
+
+    // Handle array structure: ComfyUI's prompt can be an array containing the nodes object
+    let nodesObject = historyPrompt;
+    if (Array.isArray(historyPrompt)) {
+        console.log('[Image Bench] History prompt is an array, finding nodes object...');
+        // Find the nodes object (has node IDs as string keys like "15", "118", etc.)
+        nodesObject = historyPrompt.find(item =>
+            typeof item === 'object' &&
+            item !== null &&
+            !Array.isArray(item) &&
+            Object.keys(item).length > 0
+        );
+
+        if (!nodesObject) {
+            console.warn('[Image Bench] No nodes object found in history prompt array');
+            return params;
+        }
+        console.log('[Image Bench] Found nodes object with', Object.keys(nodesObject).length, 'nodes');
+    }
+
+    try {
+        // Extract sampler parameters (seed, steps, cfg, etc.)
+        Object.assign(params, extractSamplerFromHistory(nodesObject, nodeConfig));
+
+        // Extract checkpoint/model
+        Object.assign(params, extractCheckpointFromHistory(nodesObject, nodeConfig));
+
+        // Extract prompts (positive and negative)
+        Object.assign(params, extractPromptsFromHistory(nodesObject, nodeConfig));
+
+        console.log('[Image Bench] Successfully extracted parameters from history:', params);
+    } catch (error) {
+        console.error('[Image Bench] Error extracting parameters from history:', error);
+    }
+
+    return params;
+}

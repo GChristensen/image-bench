@@ -8,13 +8,12 @@
 import {app} from "../../scripts/app.js";
 import {api} from "../../scripts/api.js";
 import {fetchSystemPaths} from "./paths.js";
-import {extractImageInfo, extractParameters} from "./workflow.js";
+import {extractImageInfo, extractParameters, extractParametersFromHistory} from "./workflow.js";
 import {ComfyUIOperations} from "./facade/ComfyUIOperations.js";
 import {messageBus} from "./shared/messaging/messageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager} from "./shared/popup.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
-import {seedStorage} from "./seed-storage.js";
 
 // Create popup manager instance with WebSocket integration for ComfyUI
 const popupManager = createPopupManager({
@@ -33,10 +32,43 @@ let nodeConfig = null;
 let strategies = null;
 let currentStrategy = null;
 
-// Flag to track whether generation was initiated by Image Bench (vs manual ComfyUI)
-// When true, seed capture is enabled to fix race condition
-// When false, seed capture is skipped to allow normal ComfyUI behavior
-let isImageBenchGeneration = false;
+/**
+ * Register the extension with ComfyUI
+ */
+app.registerExtension({
+    name: "ImageBench.Extension",
+
+    async setup() {
+        console.log('[Image Bench] Extension initializing...');
+
+        // Initialize default generation state
+        setGenerationState("BATCH_GENERATION");
+        console.log('[Image Bench] Default generation state set to: BATCH_GENERATION');
+
+        // Fetch system paths first
+        await fetchSystemPaths();
+
+        // Initialize operations facade for model exploration
+        await initializeOperations();
+
+        // Add toolbar button
+        addToolbarButton();
+
+        // Register event listeners
+        api.addEventListener("executed", handleExecuted);
+        api.addEventListener("execution_start", handleExecutionStart);
+        api.addEventListener("execution_error", handleExecutionError);
+
+        // Listen for postMessage from popup window
+        window.addEventListener("message", handlePostMessage);
+
+        console.log('[Image Bench] Extension initialized successfully');
+    },
+
+    async nodeCreated(node) {
+        // Can be used to modify nodes if needed in the future
+    }
+});
 
 /**
  * Load node configuration for marker-based node discovery
@@ -105,10 +137,6 @@ function setupMessageBusHandlers() {
         console.log('[Image Bench] Generation finished, resetting state');
         setGenerationState("BATCH_GENERATION");
         currentStrategy = null;
-
-        // Disable seed capture when generation finishes
-        isImageBenchGeneration = false;
-        console.log('[Image Bench] Seed capture disabled (generation finished)');
 
         // Forward to popup
         sendPopupMessage({type: "GENERATION_FINISHED"});
@@ -179,18 +207,27 @@ async function handleExecuted(event) {
     const images = await extractImageInfo(node, output, prompt_id);
 
     if (images.length > 0) {
-        // Only use captured seed for Image Bench-initiated generations
-        let capturedSeed;
-        if (isImageBenchGeneration) {
-            capturedSeed = seedStorage.retrieve(prompt_id);
-            console.log('[Image Bench] Using captured seed (Image Bench generation)');
-        } else {
-            capturedSeed = undefined;
-            console.log('[Image Bench] Using workflow seed (manual ComfyUI generation)');
-        }
+        // Extract parameters from history API (source of truth for generated images)
+        let parameters;
+        try {
+            console.log('[Image Bench] Fetching history for prompt:', prompt_id);
+            const resp = await api.fetchApi(`/history/${prompt_id}`);
+            const history = await resp.json();
+            const historyData = history[prompt_id];
 
-        // Extract parameters, passing the captured seed (or undefined for manual generations)
-        const parameters = extractParameters(prompt_id, capturedSeed);
+            if (historyData && historyData.prompt) {
+                // Extract from history (no race conditions!)
+                console.log(historyData)
+                parameters = extractParametersFromHistory(prompt_id, historyData.prompt, nodeConfig);
+                console.log('[Image Bench] Parameters extracted from history API');
+            } else {
+                console.warn('[Image Bench] History data incomplete');
+                //parameters = extractParameters(prompt_id, undefined);
+            }
+        } catch (error) {
+            console.error('[Image Bench] Failed to fetch history, falling back to live workflow:', error);
+            parameters = extractParameters(prompt_id, undefined);
+        }
 
         // Send each image to popup
         for (const imageData of images) {
@@ -223,34 +260,10 @@ async function handleExecuted(event) {
 
 /**
  * Handle execution start event
- * Captures seed before ComfyUI randomizes it for the next generation
- * Only captures when generation is initiated by Image Bench strategies
  */
 function handleExecutionStart(event) {
     const { prompt_id } = event.detail;
     console.log('[Image Bench] Execution started:', prompt_id);
-
-    // Only capture seed for Image Bench-initiated generations
-    if (isImageBenchGeneration) {
-        console.log('[Image Bench] Seed capture ENABLED (Image Bench generation)');
-
-        try {
-            const workflow = app.graph.serialize();
-            const sampler = workflow.nodes?.find(n => n.type === "KSampler");
-
-            if (sampler && sampler.widgets_values) {
-                const seed = sampler.widgets_values[0];
-                seedStorage.store(prompt_id, seed);
-                console.log(`[Image Bench] Captured seed for prompt ${prompt_id}: ${seed}`);
-            } else {
-                console.warn('[Image Bench] No KSampler found in workflow, cannot capture seed');
-            }
-        } catch (error) {
-            console.error('[Image Bench] Failed to capture seed:', error);
-        }
-    } else {
-        console.log('[Image Bench] Seed capture DISABLED (manual ComfyUI generation)');
-    }
 
     sendPopupMessage({
         type: "BEGIN_PROCESSING",
@@ -326,10 +339,6 @@ async function handleExploreModels(options) {
     setGenerationState("EXPLORE_MODELS");
     console.log('[Image Bench] Generation state set to: EXPLORE_MODELS');
 
-    // Enable seed capture for Image Bench-initiated generations
-    isImageBenchGeneration = true;
-    console.log('[Image Bench] Seed capture enabled for model exploration');
-
     try {
         // Stop any existing strategy
         if (currentStrategy && currentStrategy.isActive) {
@@ -349,8 +358,6 @@ async function handleExploreModels(options) {
     } catch (error) {
         console.error('[Image Bench] Failed to start model exploration:', error);
         console.error('[Image Bench] Error stack:', error.stack);
-        // Reset flag on error
-        isImageBenchGeneration = false;
     }
 }
 
@@ -374,10 +381,6 @@ async function handleBatchGenerate(options) {
     setGenerationState("BATCH_GENERATION");
     console.log('[Image Bench] Generation state set to: BATCH_GENERATION');
 
-    // Enable seed capture for Image Bench-initiated generations
-    isImageBenchGeneration = true;
-    console.log('[Image Bench] Seed capture enabled for batch generation');
-
     try {
         // Stop any existing strategy
         if (currentStrategy && currentStrategy.isActive) {
@@ -397,8 +400,6 @@ async function handleBatchGenerate(options) {
     } catch (error) {
         console.error('[Image Bench] Failed to start batch generation:', error);
         console.error('[Image Bench] Error stack:', error.stack);
-        // Reset flag on error
-        isImageBenchGeneration = false;
     }
 }
 
@@ -444,10 +445,6 @@ async function handleGenerateVaryingSteps(options) {
     setGenerationState("SEQUENTIAL_GENERATION");
     console.log('[Image Bench] Generation state set to: SEQUENTIAL_GENERATION');
 
-    // Enable seed capture for Image Bench-initiated generations
-    isImageBenchGeneration = true;
-    console.log('[Image Bench] Seed capture enabled for varying steps generation');
-
     try {
         // Stop any existing strategy
         if (currentStrategy && currentStrategy.isActive) {
@@ -467,8 +464,6 @@ async function handleGenerateVaryingSteps(options) {
     } catch (error) {
         console.error('[Image Bench] Failed to start varying steps generation:', error);
         console.error('[Image Bench] Error stack:', error.stack);
-        // Reset flag on error
-        isImageBenchGeneration = false;
     }
 }
 
@@ -511,11 +506,7 @@ async function stopGeneration() {
     currentStrategy = null;
     console.log('[Image Bench] Generation state reset to: BATCH_GENERATION');
 
-    // 4. Disable seed capture
-    isImageBenchGeneration = false;
-    console.log('[Image Bench] Seed capture disabled (generation stopped)');
-
-    // 5. Notify popup
+    // 4. Notify popup
     sendPopupMessage({
         type: "GENERATION_STOPPED"
     });
@@ -550,44 +541,6 @@ function initializePrompts() {
     // TODO: Extract current prompts from ComfyUI workflow and send to popup
 }
 
-/**
- * Register the extension with ComfyUI
- */
-app.registerExtension({
-    name: "ImageBench.Extension",
-
-    async setup() {
-        console.log('[Image Bench] Extension initializing...');
-
-        // Initialize default generation state
-        setGenerationState("BATCH_GENERATION");
-        console.log('[Image Bench] Default generation state set to: BATCH_GENERATION');
-
-        // Fetch system paths first
-        await fetchSystemPaths();
-
-        // Initialize operations facade for model exploration
-        await initializeOperations();
-
-        // Add toolbar button
-        addToolbarButton();
-
-        // Register event listeners
-        api.addEventListener("executed", handleExecuted);
-        api.addEventListener("execution_start", handleExecutionStart);
-        api.addEventListener("execution_error", handleExecutionError);
-
-        // Listen for postMessage from popup window
-        window.addEventListener("message", handlePostMessage);
-
-        console.log('[Image Bench] Extension initialized successfully');
-    },
-
-    async nodeCreated(node) {
-        // Can be used to modify nodes if needed in the future
-    }
-});
-
 // Handle page unload
 window.addEventListener("beforeunload", () => {
     popupManager.close();
@@ -596,12 +549,3 @@ window.addEventListener("beforeunload", () => {
 });
 
 console.log('[Image Bench] Extension script loaded');
-
-// Export operations facade for use by strategies
-export function getUIOperations() {
-    return uiOperations;
-}
-
-export function getNodeConfig() {
-    return nodeConfig;
-}
