@@ -112,7 +112,8 @@ export class BatchGenerationStrategy extends QueueProcessor {
         }
 
         // Publish GENERATION_FINISHED event
-        this.messageBus.publish('GENERATION_FINISHED', {});
+        if (platform === 'comfyui')
+            this.messageBus.publish('GENERATION_FINISHED', {});
     }
 
     /**

@@ -124,8 +124,9 @@
   }
 
   function needShowPromptWarning(image) {
-    return image.parameters["prompt"] != sdWebUIStore.prompt
-        || image.parameters["negative prompt"] != sdWebUIStore.negativePrompt;
+    return import.meta.env.webui
+        && (image.parameters["prompt"] != sdWebUIStore.prompt
+        || image.parameters["negative prompt"] != sdWebUIStore.negativePrompt);
   }
 
   function getUpscaleButtonTitle(image) {
