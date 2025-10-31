@@ -29,6 +29,22 @@
 
   const imageStreamElement = ref();
 
+  // Filter function for determining which images to show
+  function shouldShowImage(image) {
+    let result = true;
+
+    if (props.showMarked && !image.marking || markingFilter.value
+          && markingFilter.value !== image.marking)
+      result = false;
+
+    return result;
+  }
+
+  // Filtered images based on current filter state
+  const filteredImages = computed(() => {
+    return images.value.filter(image => shouldShowImage(image));
+  });
+
   // Composables
   const imageOps = useImageOperations();
   const {
@@ -38,7 +54,7 @@
     selectImage,
     selectAll,
     getSelectedImages
-  } = useImageSelection(images);
+  } = useImageSelection(filteredImages);
 
   let scrolledToBottom = true;
 
@@ -131,15 +147,6 @@
   function onSetMarking(image) {
     if (isTray)
       props.imageStore.persist();
-  }
-
-  function shouldShowImage(image) {
-    let result = true;
-
-    if (props.showMarked && !image.marking || markingFilter.value && markingFilter.value !== image.marking)
-      result = false;
-
-    return result;
   }
 
   function onFilterMarking(marking) {
