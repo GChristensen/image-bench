@@ -10,6 +10,7 @@ import json
 import time
 import zipfile
 import re
+import shutil
 from typing import Dict, Any, Optional, Tuple, Union
 from PIL import Image
 
@@ -97,6 +98,86 @@ def pnginfo_to_dict(prompt: str, negative_prompt: str, pnginfo: Dict[str, Any]) 
     }
 
     return result_dict | parse_pnginfo(parts[-1])
+
+
+async def save_image_to_tray(
+    image_data: Dict[str, Any],
+    kind: str,
+    image_bench_dir: str,
+    platform: str
+) -> Dict[str, Any]:
+    """
+    Copy image file to tray directory and update paths.
+
+    This function handles the physical copying of images when they are added to trays,
+    ensuring they are stored in dedicated tray directories with platform-specific naming.
+
+    Args:
+        image_data: Dictionary containing image metadata with keys:
+                    - imagePath: Source path of the image file
+                    - imageUrl: Current URL for accessing the image
+                    - parameters: Dict with generation parameters (must include prompt_id for ComfyUI)
+        kind: Type of tray - "image_tray" or "concept_tray"
+        image_bench_dir: Base directory for image bench files (e.g., outputs/image-bench/)
+        platform: Platform identifier - "webui" or "comfyui"
+
+    Returns:
+        Updated image_data dictionary with new imagePath and imageUrl pointing to tray directory
+
+    Raises:
+        FileNotFoundError: If source image file doesn't exist
+        KeyError: If required fields are missing from image_data
+    """
+    # Create tray directory if it doesn't exist
+    tray_dir = os.path.join(image_bench_dir, kind)
+    os.makedirs(tray_dir, exist_ok=True)
+
+    # Get source image path
+    source_path = image_data["imagePath"]
+
+    # Check if source file exists
+    if not os.path.exists(source_path):
+        raise FileNotFoundError(f"Source image not found: {source_path}")
+
+    # Determine destination filename based on platform
+    if platform == "comfyui":
+        # ComfyUI: Use prompt_id for unique naming
+        prompt_id = image_data.get("parameters", {}).get("prompt_id", "unknown")
+        # Extract file extension from source (usually .png)
+        _, ext = os.path.splitext(source_path)
+        new_filename = f"{prompt_id}{ext}"
+    else:
+        # WebUI: Keep original filename
+        new_filename = os.path.basename(source_path)
+
+    # Handle filename conflicts (WebUI only, ComfyUI prompt_id is unique)
+    dest_path = os.path.join(tray_dir, new_filename)
+    if os.path.exists(dest_path) and platform == "webui":
+        # Append counter if file exists
+        base_name, ext = os.path.splitext(new_filename)
+        counter = 1
+        while os.path.exists(dest_path):
+            new_filename = f"{base_name}_{counter:03d}{ext}"
+            dest_path = os.path.join(tray_dir, new_filename)
+            counter += 1
+
+    # Copy file to tray directory (only if not already there)
+    if os.path.abspath(source_path) != os.path.abspath(dest_path):
+        shutil.copy2(source_path, dest_path)
+
+    # Update image data with new paths
+    image_data["imagePath"] = dest_path
+
+    if platform == "comfyui":
+        # ComfyUI: Update URL to use subfolder format
+        # Format: /view?filename=<filename>&type=output&subfolder=image-bench/<kind>
+        subfolder = f"image-bench/{kind}"
+        image_data["imageUrl"] = f"/view?filename={new_filename}&type=output&subfolder={subfolder}"
+    else:
+        # WebUI: Update URL to use /file= format
+        image_data["imageUrl"] = f"/file={dest_path}"
+
+    return image_data
 
 
 async def image_tray_upload(

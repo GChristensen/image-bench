@@ -1,3 +1,4 @@
+import { triggerRef } from 'vue';
 import { useImageStoreState } from './useImageStoreState.js';
 import { useDebounce } from '@/composables/useDebounce.js';
 
@@ -31,7 +32,22 @@ export function useTrayStoreState(kind) {
     trayContent.images.forEach(i => delete i.selected);
 
     const payload = JSON.stringify(trayContent);
-    await fetch(`/image-bench/${kind}`, { method: 'post', body: payload });
+    const response = await fetch(`/image-bench/${kind}`, { method: 'post', body: payload });
+
+    // Update store with backend's modified data (contains updated paths after file copying)
+    if (response.ok) {
+      try {
+        const updatedTray = await response.json();
+        if (updatedTray && updatedTray.images) {
+            console.log(updatedTray)
+          baseStore.images.value = updatedTray.images;
+          triggerRef(baseStore.images);
+        }
+      } catch (error) {
+        console.error('[Image Bench] Failed to parse persist response:', error);
+        // Continue anyway - persist succeeded even if parsing failed
+      }
+    }
   }
 
   // Debounced persist function to reduce server calls

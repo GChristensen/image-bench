@@ -13,7 +13,7 @@ from server import PromptServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from shared import persist
-from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler
+from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler, save_image_to_tray
 
 # Tell ComfyUI to serve files from the js/ directory
 WEB_DIRECTORY = "./js"
@@ -232,9 +232,36 @@ async def get_image_tray(request):
 async def update_image_tray(request):
     """Update image tray in store"""
     try:
+        # Read and parse tray data
+        content = await request.text()
+        tray_data = json.loads(content)
+
+        # Get image-bench directory
+        image_bench_dir = get_image_bench_dir()
+
+        # Process each image: copy to tray directory if not already processed
+        for image in tray_data.get("images", []):
+            if not image.get("_tray_processed"):
+                try:
+                    # Copy image to dedicated tray directory and update paths
+                    await save_image_to_tray(
+                        image,
+                        "image_tray",
+                        image_bench_dir,
+                        "comfyui"
+                    )
+                    # Mark as processed to avoid re-copying on subsequent saves
+                    image["_tray_processed"] = True
+                except Exception as e:
+                    print(f"[Image Bench] Error copying image to tray: {e}")
+                    # Continue with other images even if one fails
+
+        # Save updated tray data with new paths
         base_dir = get_extension_root()
-        await persist.write_store_file_from_request(base_dir, IMAGE_TRAY_FILE, request)
-        return web.Response(text="", content_type="application/json")
+        await persist.write_store_file_content(base_dir, IMAGE_TRAY_FILE, json.dumps(tray_data))
+
+        # Return updated tray data so frontend can update its store with new paths
+        return web.Response(text=json.dumps(tray_data), content_type="application/json")
     except Exception as e:
         return web.Response(text=str(e), status=500)
 
@@ -252,9 +279,36 @@ async def get_concept_tray(request):
 async def update_concept_tray(request):
     """Update concept tray in store"""
     try:
+        # Read and parse tray data
+        content = await request.text()
+        tray_data = json.loads(content)
+
+        # Get image-bench directory
+        image_bench_dir = get_image_bench_dir()
+
+        # Process each image: copy to tray directory if not already processed
+        for image in tray_data.get("images", []):
+            if not image.get("_tray_processed"):
+                try:
+                    # Copy image to dedicated tray directory and update paths
+                    await save_image_to_tray(
+                        image,
+                        "concept_tray",
+                        image_bench_dir,
+                        "comfyui"
+                    )
+                    # Mark as processed to avoid re-copying on subsequent saves
+                    image["_tray_processed"] = True
+                except Exception as e:
+                    print(f"[Image Bench] Error copying image to tray: {e}")
+                    # Continue with other images even if one fails
+
+        # Save updated tray data with new paths
         base_dir = get_extension_root()
-        await persist.write_store_file_from_request(base_dir, CONCEPT_TRAY_FILE, request)
-        return web.Response(text="", content_type="application/json")
+        await persist.write_store_file_content(base_dir, CONCEPT_TRAY_FILE, json.dumps(tray_data))
+
+        # Return updated tray data so frontend can update its store with new paths
+        return web.Response(text=json.dumps(tray_data), content_type="application/json")
     except Exception as e:
         return web.Response(text=str(e), status=500)
 
