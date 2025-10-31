@@ -225,8 +225,8 @@ async function handleExecuted(event) {
                 //parameters = extractParameters(prompt_id, undefined);
             }
         } catch (error) {
-            console.error('[Image Bench] Failed to fetch history, falling back to live workflow:', error);
-            parameters = extractParameters(prompt_id, undefined);
+            console.error('[Image Bench] Failed to fetch history', error);
+            //parameters = extractParameters(prompt_id, undefined);
         }
 
         // Send each image to popup
@@ -514,22 +514,108 @@ async function stopGeneration() {
 
 /**
  * Set image seed
- * @param {Object} payload - Seed payload
+ * @param {Object} payload - Seed payload with payload.parameters.seed
  */
 function setImageSeed(payload) {
     console.log('[Image Bench] setImageSeed() called with:', payload);
-    console.warn('[Image Bench] Set image seed not yet implemented for ComfyUI');
-    // TODO: Implement seed setting for ComfyUI
+
+    if (!uiOperations) {
+        console.error('[Image Bench] UIOperations not initialized');
+        return;
+    }
+
+    if (!payload?.parameters?.seed) {
+        console.warn('[Image Bench] No seed found in payload parameters');
+        return;
+    }
+
+    try {
+        const seed = payload.parameters.seed;
+        uiOperations.setSeed(seed);
+        console.log('[Image Bench] Seed set to:', seed);
+    } catch (error) {
+        console.error('[Image Bench] Failed to set seed:', error);
+    }
 }
 
 /**
  * Set image parameters
- * @param {Object} payload - Parameters payload
+ * @param {Object} payload - Parameters payload with payload.parameters containing generation settings
  */
 function setImageParams(payload) {
     console.log('[Image Bench] setImageParams() called with:', payload);
-    console.warn('[Image Bench] Set image params not yet implemented for ComfyUI');
-    // TODO: Implement parameter setting for ComfyUI
+
+    if (!uiOperations) {
+        console.error('[Image Bench] UIOperations not initialized');
+        return;
+    }
+
+    if (!payload?.parameters) {
+        console.warn('[Image Bench] No parameters found in payload');
+        return;
+    }
+
+    const params = payload.parameters;
+
+    try {
+        // Set seed
+        if (params.seed !== undefined) {
+            uiOperations.setSeed(params.seed);
+            console.log('[Image Bench] Seed set to:', params.seed);
+        }
+
+        // Set steps
+        if (params.steps !== undefined) {
+            uiOperations.setSteps(params.steps);
+            console.log('[Image Bench] Steps set to:', params.steps);
+        }
+
+        // Set CFG scale
+        if (params.cfg !== undefined) {
+            uiOperations.setCFG(params.cfg);
+            console.log('[Image Bench] CFG set to:', params.cfg);
+        }
+
+        // Set denoise
+        if (params.denoise !== undefined) {
+            uiOperations.setDenoise(params.denoise);
+            console.log('[Image Bench] Denoise set to:', params.denoise);
+        }
+
+        // Set sampler
+        if (params.sampler !== undefined) {
+            uiOperations.setSampler(params.sampler);
+            console.log('[Image Bench] Sampler set to:', params.sampler);
+        }
+
+        // Set scheduler
+        if (params.scheduler !== undefined) {
+            uiOperations.setScheduler(params.scheduler);
+            console.log('[Image Bench] Scheduler set to:', params.scheduler);
+        }
+
+        // Set model/checkpoint
+        if (params.model !== undefined) {
+            uiOperations.restoreModel(params.model);
+            console.log('[Image Bench] Model set to:', params.model);
+        }
+
+        // Set positive prompt
+        if (params.prompt !== undefined) {
+            uiOperations.setPrompt(params.prompt);
+            console.log('[Image Bench] Prompt set');
+        }
+
+        // Set negative prompt
+        if (params["negative prompt"] !== undefined) {
+            uiOperations.setNegativePrompt(params["negative prompt"]);
+            console.log('[Image Bench] Negative prompt set');
+        }
+
+        console.log('[Image Bench] All parameters set successfully');
+    } catch (error) {
+        console.error('[Image Bench] Failed to set parameters:', error);
+    }
 }
 
 /**

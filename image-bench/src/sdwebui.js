@@ -16,14 +16,12 @@ Negative prompt:
 ${image.parameters["negative prompt"]}
 
 `;
-    delete image.parameters["prompt"];
-    delete image.parameters["Prompt"];
-    delete image.parameters["negative prompt"];
-    delete image.parameters["Negative prompt"];
-
     const keys = Object.keys(image.parameters);
 
     for (const key of keys) {
+        if (["prompt", "negative prompt"].includes(key))
+            continue;
+
         const value = image.parameters[key];
 
         if (typeof value === "object") {

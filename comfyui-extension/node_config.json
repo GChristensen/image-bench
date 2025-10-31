@@ -30,14 +30,14 @@
   "positive_prompt": {
     "marker": "pp",
     "nodeTypes": [
-      "ConstantString",
+      "String Literal",
       "CLIPTextEncode",
       "CLIPTextEncodeSDXL",
       "CLIPTextEncodeFlux",
       "CLIPTextEncodeSD3"
     ],
     "widgetNames": {
-      "ConstantString": "value",
+      "String Literal": "string",
       "CLIPTextEncode": "text",
       "CLIPTextEncodeSDXL": "text",
       "CLIPTextEncodeFlux": "text",
@@ -47,14 +47,14 @@
   "negative_prompt": {
     "marker": "np",
     "nodeTypes": [
-      "ConstantString",
+      "String Literal",
       "CLIPTextEncode",
       "CLIPTextEncodeSDXL",
       "CLIPTextEncodeFlux",
       "CLIPTextEncodeSD3"
     ],
     "widgetNames": {
-      "ConstantString": "value",
+      "String Literal": "string",
       "CLIPTextEncode": "text",
       "CLIPTextEncodeSDXL": "text",
       "CLIPTextEncodeFlux": "text",

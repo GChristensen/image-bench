@@ -401,28 +401,39 @@ function extractCheckpointFromHistory(historyPrompt, nodeConfig) {
  */
 function extractPromptsFromHistory(historyPrompt, nodeConfig) {
     const params = {};
-
+    console.log(historyPrompt)
     // Get prompt markers and types from config
     const positiveMarker = nodeConfig?.positive_prompt?.marker || 'pp';
     const negativeMarker = nodeConfig?.negative_prompt?.marker || 'np';
     const positiveTypes = nodeConfig?.positive_prompt?.nodeTypes || ['CLIPTextEncode'];
     const negativeTypes = nodeConfig?.negative_prompt?.nodeTypes || ['CLIPTextEncode'];
 
-    // Standard widget name for text encode nodes
-    const widgetName = 'text';
-
     // Extract positive prompt (marker-based first, type-based fallback)
     const positiveNode = findNodeInHistory(historyPrompt, positiveMarker, positiveTypes);
-    if (positiveNode && positiveNode.inputs && positiveNode.inputs[widgetName] !== undefined) {
-        params.prompt = positiveNode.inputs[widgetName];
-        console.log('[Image Bench] Extracted positive prompt from history');
+    if (positiveNode && positiveNode.inputs) {
+        // Get widget name for this node type from config
+        const positiveWidgetNames = nodeConfig?.positive_prompt?.widgetNames || {};
+        const positiveWidgetName = positiveWidgetNames[positiveNode.class_type] || 'text';
+
+        console.log([positiveNode, positiveNode.class_type, positiveWidgetNames, positiveWidgetName]);
+
+        if (positiveNode.inputs[positiveWidgetName] !== undefined) {
+            params.prompt = positiveNode.inputs[positiveWidgetName];
+            console.log('[Image Bench] Extracted positive prompt from history');
+        }
     }
 
     // Extract negative prompt (marker-based first, type-based fallback)
     const negativeNode = findNodeInHistory(historyPrompt, negativeMarker, negativeTypes);
-    if (negativeNode && negativeNode.inputs && negativeNode.inputs[widgetName] !== undefined) {
-        params["negative prompt"] = negativeNode.inputs[widgetName];
-        console.log('[Image Bench] Extracted negative prompt from history');
+    if (negativeNode && negativeNode.inputs) {
+        // Get widget name for this node type from config
+        const negativeWidgetNames = nodeConfig?.negative_prompt?.widgetNames || {};
+        const negativeWidgetName = negativeWidgetNames[negativeNode.class_type] || 'text';
+
+        if (negativeNode.inputs[negativeWidgetName] !== undefined) {
+            params["negative prompt"] = negativeNode.inputs[negativeWidgetName];
+            console.log('[Image Bench] Extracted negative prompt from history');
+        }
     }
 
     return params;
