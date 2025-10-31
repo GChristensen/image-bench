@@ -1,8 +1,10 @@
 <script setup>
-  import {computed} from "vue";
+  import {computed, ref} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
+  import {useConceptTrayStore} from "@/stores/conceptTray.js";
   import {flashTrayTab} from "@/components/utils.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
+  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
 
   const props = defineProps({
     image: {
@@ -12,22 +14,41 @@
     isTray: {
       type: Boolean,
       default: false
+    },
+    kind: {
+      type: String,
+      default: 'generated'
     }
   });
 
   const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray']);
 
   const imageTrayStore = useImageTrayStore();
+  const conceptTrayStore = useConceptTrayStore();
   const imageOps = useImageOperations();
 
   const imageLink = computed(() => imageOps.getImageLink(props.image));
+  const isLandscape = ref(true); // Default to landscape
 
-  function onAddToTrayClick(e) {
+  function onImageLoad(e) {
+    const img = e.target;
+    isLandscape.value = img.naturalWidth >= img.naturalHeight;
+  }
+
+  function onPlaceToImageTray(e) {
     e.preventDefault();
 
     imageTrayStore.addImage(props.image);
 
     flashTrayTab("image-tray-tab");
+  }
+
+  function onPlaceToConceptTray(e) {
+    e.preventDefault();
+
+    conceptTrayStore.addImage(props.image);
+
+    flashTrayTab("concept-tray-tab");
   }
 
   function onImageMouseDown(e) {
@@ -47,16 +68,16 @@
         </div>
         <div class="close-button" @click="$emit('hideOverlay')">✖</div>
         <Transition name="zoom">
-          <div class="overlay-image-container">
-            <img class="overlay-image" :src="imageLink" @mousedown="onImageMouseDown">
-            <div class="action-link-container">
-              <a v-if="isTray" class="select-link tool-item" href="#"
-                 @click="$emit('imageSelect', $event, props.image)">Select image</a>
-              &nbsp;
-              <a v-if="!isTray" class="close-link tool-item" href="#" @click="onAddToTrayClick">Add to Tray</a>
-            </div>
+          <div class="overlay-image-container" :class="{ 'landscape': isLandscape, 'portrait': !isLandscape }">
+            <img class="overlay-image" :src="imageLink" @load="onImageLoad" @mousedown="onImageMouseDown">
           </div>
         </Transition>
+        <div class="overlay-emoji-buttons">
+          <span class="emoji-button" title="Place to concept tray"
+                @click="onPlaceToConceptTray">💡</span>
+          <span class="emoji-button" title="Place to image tray"
+                @click="onPlaceToImageTray">🎨</span>
+        </div>
       </div>
     </Transition>
   </Teleport>
@@ -74,10 +95,11 @@
 
 .close-button {
   position: fixed;
-  top: 10vh;
-  right: calc(10vw - 30px);
+  top: 20px;
+  right: 20px;
   z-index: 1003;
   cursor: pointer;
+  font-size: 24px;
 }
 
 .image-overlay {
@@ -94,24 +116,61 @@
 
 .overlay-image-container {
   position: fixed;
-  top: 10vh;
-  bottom: 10vh;
-  left: 10vw;
-  right: 10vw;
-  max-width: 80vw;
-  max-height: 80vh;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+}
+
+.overlay-image-container.landscape {
+  max-height: 90%;
+  margin: auto 0;
+  height: max-content;
+}
+
+.overlay-image-container.portrait {
+  max-width: 90%;
+  margin: 0 auto;
+  width: max-content;
 }
 
 .overlay-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
   cursor: pointer;
 }
 
-.action-link-container {
-  text-align: center;
+.landscape .overlay-image {
+
+}
+
+.portrait .overlay-image {
+
+}
+
+.overlay-emoji-buttons {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1003;
+  display: flex;
+  gap: 10px;
+}
+
+.emoji-button {
+  font-size: 24px;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.9;
+}
+
+.emoji-button:hover {
+  transform: scale(1.2);
+  opacity: 1;
 }
 
 /* Vue 3 Transition animations */
