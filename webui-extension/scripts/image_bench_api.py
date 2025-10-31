@@ -272,17 +272,7 @@ class ImageBenchApi():
             self.config_presets_dropdown = component
 
     def clear_outputs_dir(self):
-        folder = self.outputs_dir
-
-        for filename in os.listdir(folder):
-            file_path = os.path.join(folder, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
+        persist.clear_directory(self.outputs_dir)
 
     async def save_controlnet_images(self, request: Request):
         content = await request.body()

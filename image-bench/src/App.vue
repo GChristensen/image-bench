@@ -11,6 +11,7 @@ import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
+import ActionsModal from "@/components/ActionsModal.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -29,6 +30,7 @@ const hasOpener = computed(() => !!window.opener);
 
 // Composables
 const webUI = useWebUIBridge();
+const showActionsModal = ref(false);
 
 const viewStores = {
   [exploreImagesStore.kind]: exploreImagesStore,
@@ -109,6 +111,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <div class="tab-spacer"></div>
       <span v-if="!hasOpener" class="window-warning" title="Lost connection with the SD WebUI">&nbsp;⚠️&nbsp;</span>
       <RouterLink to="/settings" class="tab" ref="settingsTab">Settings</RouterLink>
+      <button class="actions-button" @click="showActionsModal = true" title="Actions">☢️</button>
     </div>
     <div id="tab-content">
       <RouterView v-slot="{ Component }">
@@ -117,6 +120,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
         </KeepAlive>
       </RouterView>
     </div>
+  <ActionsModal :show="showActionsModal" @close="showActionsModal = false" />
   </div>
 </template>
 
@@ -179,6 +183,21 @@ async function switchTabAccordingToGenerationMode(e, state) {
   .toolbar-link {
     align-self: center;
   }
+
+
+.actions-button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px 12px;
+  transition: background-color 0.2s;
+  align-self: center;
+}
+
+.actions-button:hover {
+  background-color: #f0f0f0;
+}
 
   .window-warning {
     align-self: center;

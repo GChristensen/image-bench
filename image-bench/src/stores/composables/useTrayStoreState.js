@@ -39,7 +39,6 @@ export function useTrayStoreState(kind) {
       try {
         const updatedTray = await response.json();
         if (updatedTray && updatedTray.images) {
-            console.log(updatedTray)
           baseStore.images.value = updatedTray.images;
           triggerRef(baseStore.images);
         }

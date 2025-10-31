@@ -156,6 +156,20 @@ async def get_system_info(request):
 
 
 # Explore presets endpoints
+
+# Clear outputs directory endpoint
+@PromptServer.instance.routes.get(BASE_PATH + "/clear_outputs_dir")
+async def clear_outputs_dir(request):
+    """Clear all files in the ComfyUI output directory"""
+    try:
+        comfy_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        output_dir = os.path.join(comfy_root, "output")
+        persist.clear_directory(output_dir)
+        return web.Response(text="OK")
+    except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
 @PromptServer.instance.routes.get(BASE_PATH + "/explore_presets")
 async def get_explore_presets(request):
     """Get explore presets from store"""
@@ -473,5 +487,3 @@ __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
 print("✓ Image Bench ComfyUI Extension loaded")
 print(f"  - Serving UI at {BASE_PATH}/window")
 print(f"  - WebSocket at {BASE_PATH}/websocket")
-print(f"  - Store endpoints: explore_presets, image_tray, concept_tray")
-print(f"  - Upload/Download endpoints: image_tray_upload, concept_tray_upload, download_image_tray")

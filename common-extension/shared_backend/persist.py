@@ -161,3 +161,31 @@ async def write_store_file_from_request(base_dir: str, filename: str, request):
     content = await read_request_body(request)
     file_path = get_store_file_path(base_dir, filename)
     write_file_content(file_path, content.decode('utf-8'))
+
+
+def clear_directory(directory_path: str):
+    """
+    Clear all files and directories within the specified directory.
+
+    Args:
+        directory_path: Path to directory to clear
+
+    Note:
+        Does not delete the directory itself, only its contents.
+        Handles exceptions gracefully and continues on error.
+    """
+    import shutil
+
+    if not os.path.exists(directory_path):
+        print(f"Directory does not exist: {directory_path}")
+        return
+
+    for filename in os.listdir(directory_path):
+        file_path = os.path.join(directory_path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')

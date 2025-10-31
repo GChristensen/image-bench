@@ -1,39 +1,7 @@
 <script setup>
-import {useExploreImagesStore} from "@/stores/explore.js";
-import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
-import {useImageTrayStore} from "@/stores/imageTray.js";
-import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 
 const appConfigStore = useAppConfigStore();
-const exploreImagesStore = useExploreImagesStore();
-const generatedImagesStore = useGeneratedImagesStore();
-const imageTrayStore = useImageTrayStore();
-const upscaledImageStore = useUpscaledImagesStore();
-
-function onClearAllClick(e) {
-  e.preventDefault();
-
-  if (confirm("This will clear all images. The image files will remain on disk. Do you want to continue?")) {
-    clearImageStores();
-  }
-}
-
-function clearImageStores() {
-  exploreImagesStore.clear();
-  generatedImagesStore.clear();
-  imageTrayStore.clear();
-  upscaledImageStore.clear();
-}
-
-function onClearOutputsClick(e) {
-  e.preventDefault();
-
-  if (confirm("This will clear all files in the SD WebUI outputs dir. Do you want to continue?")) {
-    clearImageStores();
-    setTimeout(() => fetch("/image-bench/clear_outputs_dir"), 500);
-  }
-}
 </script>
 
 <template>
@@ -48,16 +16,6 @@ function onClearOutputsClick(e) {
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.repositionConfigPresetsDropdown"
     >Bring up the dropdown of the 'Config Presets' extension</label>
   </div>
-  <div class="spacer"></div>
-  <div class="settings-right">
-    <h3>Actions</h3>
-    <div class="action-link-container">
-      <a class="action-link clear-all-link" href="#" @click="onClearAllClick">Clear all images</a>
-    </div>
-    <div class="action-link-container">
-      <a class="action-link clear-outputs-link" href="#" @click="onClearOutputsClick">Clear the outputs directory</a>
-    </div>
-  </div>
 </div>
 </template>
 
@@ -66,11 +24,6 @@ function onClearOutputsClick(e) {
   display: flex;
   flex-direction: row;
   padding-top: 15px;
-}
-
-.spacer {
-  /*flex-grow: 1;*/
-  width: 50px;
 }
 
 a {
