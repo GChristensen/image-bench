@@ -11,6 +11,8 @@
   import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {useLocalStorage} from "@/composables/useLocalStorage.js";
+  import {usePromptModal} from "@/composables/usePromptModal.js";
+  import PromptModal from "@/components/PromptModal.vue";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams', 
     'select', 'upscaleImage', 'addComment', 'deleteImage']);
@@ -58,6 +60,7 @@
   const webUI = useWebUIBridge();
   const imageOps = useImageOperations();
   const storage = useLocalStorage();
+  const promptModal = usePromptModal();
 
   function onReuseSeedClick(e) {
     e.preventDefault();
@@ -91,10 +94,14 @@
   }
 
 
-  function onGenerateVaryingSteps(e) {
+  async function onGenerateVaryingSteps(e) {
     const storedSteps = storage.getVaryingSteps();
-    const steps = prompt("Apply step values:", storedSteps);
-    
+    const steps = await promptModal.showPrompt(
+      "Apply step values:",
+      storedSteps,
+      "varyingSteps"
+    );
+
     if (steps) {
       if (config.automaticallyClearGeneratedImages)
         generatedImagesStore.clear();
@@ -107,10 +114,14 @@
     }
   }
 
-  function onUpscaleVaryingDenoising(e) {
+  async function onUpscaleVaryingDenoising(e) {
     const storedSteps = storage.getVaryingDenoising();
-    const denoising = prompt("Apply denoising values:", storedSteps);
-    
+    const denoising = await promptModal.showPrompt(
+      "Apply denoising values:",
+      storedSteps,
+      "varyingDenoising"
+    );
+
     if (denoising) {
       if (config.automaticallyClearGeneratedImages)
         upscaledImageStore.clear();
@@ -175,6 +186,14 @@
 </script>
 
 <template>
+<PromptModal
+  :show="promptModal.showModal.value"
+  :message="promptModal.modalMessage.value"
+  :default-value="promptModal.modalDefaultValue.value"
+  :storage-key="promptModal.modalStorageKey.value"
+  @confirm="promptModal.onConfirm"
+  @cancel="promptModal.onCancel"
+/>
 <div v-if="displayed" class="selectable-image">
   <div class="image-wrapper"
        @mouseenter="onImageMouseEnter"

@@ -4,6 +4,8 @@
   import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
   import {useImageSelection} from "@/composables/useImageSelection.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
+  import {usePromptModal} from "@/composables/usePromptModal.js";
+  import PromptModal from "@/components/PromptModal.vue";
 
   const props = defineProps({
     kind: {
@@ -47,6 +49,7 @@
 
   // Composables
   const imageOps = useImageOperations();
+  const promptModal = usePromptModal();
   const {
     isAllSelected,
     isSomeSelected,
@@ -133,8 +136,12 @@
     }
   }
 
-  function onAddComment(image) {
-    let comment = prompt("Comment:");
+  async function onAddComment(image) {
+    let comment = await promptModal.showPrompt(
+      "Comment:",
+      image.comment || "",
+      "imageComment"
+    );
 
     if (comment) {
       image.comment = comment;
@@ -168,6 +175,14 @@
 </script>
 
 <template>
+  <PromptModal
+    :show="promptModal.showModal.value"
+    :message="promptModal.modalMessage.value"
+    :default-value="promptModal.modalDefaultValue.value"
+    :storage-key="promptModal.modalStorageKey.value"
+    @confirm="promptModal.onConfirm"
+    @cancel="promptModal.onCancel"
+  />
   <div class="image-stream-container">
     <div class="image-stream scrollable" ref="imageStreamElement">
       <GeneratedImage v-for="(image, index) in images"

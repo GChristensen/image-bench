@@ -6,8 +6,11 @@ import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {useExploreImagesStore} from "@/stores/explore.js";
+import {usePromptModal} from "@/composables/usePromptModal.js";
+import PromptModal from "@/components/PromptModal.vue";
 
 const exploreImagesStore = useExploreImagesStore();
+const promptModal = usePromptModal();
 
 const models = ref([]);
 const selected = ref(new Set());
@@ -90,7 +93,11 @@ function onExploreClick() {
 }
 
 async function onCreateClick() {
-  const presetName = prompt("New preset name: ");
+  const presetName = await promptModal.showPrompt(
+    "New preset name:",
+    "",
+    "presetName"
+  );
 
   if (presetName) {
     lastPreset.value = presetName;
@@ -203,6 +210,14 @@ function onKeydown(e) {
 </script>
 
 <template>
+  <PromptModal
+    :show="promptModal.showModal.value"
+    :message="promptModal.modalMessage.value"
+    :default-value="promptModal.modalDefaultValue.value"
+    :storage-key="promptModal.modalStorageKey.value"
+    @confirm="promptModal.onConfirm"
+    @cancel="promptModal.onCancel"
+  />
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage"
                 @hide-overlay="showImageOverlay = false"/>
   <ParametersOverlay v-if="showParamsOverlay" :text="paramsOverlayText"

@@ -17,6 +17,8 @@ import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useKeyboardShortcuts} from "@/composables/useKeyboardShortcuts.js";
+import {usePromptModal} from "@/composables/usePromptModal.js";
+import PromptModal from "@/components/PromptModal.vue";
 
 const props = defineProps({
   kind: {
@@ -55,6 +57,7 @@ const openFileInput = ref()
 const webUI = useWebUIBridge();
 const imageOps = useImageOperations();
 const storage = useLocalStorage();
+const promptModal = usePromptModal();
 
 function getImageStore() {
   switch (props.kind) {
@@ -121,10 +124,14 @@ function onBatchGenerateClick() {
   }
 }
 
-function onGenerateVariationsClick() {
+async function onGenerateVariationsClick() {
   const variationStrength = storage.getVariationStrength();
-  const strength = prompt("Variation strength:", variationStrength);
-  
+  const strength = await promptModal.showPrompt(
+    "Variation strength:",
+    variationStrength,
+    "variationStrength"
+  );
+
   if (strength) {
     if (config.automaticallyClearGeneratedImages)
       generatedImagesStore.clear();
@@ -288,6 +295,14 @@ function isComponentTray(kind) {
 </script>
 
 <template>
+  <PromptModal
+    :show="promptModal.showModal.value"
+    :message="promptModal.modalMessage.value"
+    :default-value="promptModal.modalDefaultValue.value"
+    :storage-key="promptModal.modalStorageKey.value"
+    @confirm="promptModal.onConfirm"
+    @cancel="promptModal.onCancel"
+  />
   <ImageOverlay v-if="showImageOverlay"
                 :image="overlayImage"
                 :is-tray="isComponentTray(kind)"
