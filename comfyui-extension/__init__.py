@@ -170,6 +170,19 @@ async def clear_outputs_dir(request):
         return web.Response(text=str(e), status=500)
 
 
+# Clear generated images (everything except image-bench folder)
+@PromptServer.instance.routes.get(BASE_PATH + "/clear_generated_images")
+async def clear_generated_images(request):
+    """Clear all files in the ComfyUI output directory except image-bench folder"""
+    try:
+        comfy_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        output_dir = os.path.join(comfy_root, "output")
+        persist.clear_directory_except(output_dir, ["image-bench"])
+        return web.Response(text="OK")
+    except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
 @PromptServer.instance.routes.get(BASE_PATH + "/explore_presets")
 async def get_explore_presets(request):
     """Get explore presets from store"""

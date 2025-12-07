@@ -189,3 +189,36 @@ def clear_directory(directory_path: str):
                 shutil.rmtree(file_path)
         except Exception as e:
             print(f'Failed to delete {file_path}. Reason: {e}')
+
+
+def clear_directory_except(directory_path: str, exclude_dirs: list):
+    """
+    Clear all files and directories within the specified directory except specified subdirectories.
+
+    Args:
+        directory_path: Path to directory to clear
+        exclude_dirs: List of subdirectory names to exclude from deletion
+
+    Note:
+        Does not delete the directory itself or excluded subdirectories.
+        Handles exceptions gracefully and continues on error.
+    """
+    import shutil
+
+    if not os.path.exists(directory_path):
+        print(f"Directory does not exist: {directory_path}")
+        return
+
+    for filename in os.listdir(directory_path):
+        # Skip excluded directories
+        if filename in exclude_dirs:
+            continue
+
+        file_path = os.path.join(directory_path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')

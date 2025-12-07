@@ -68,6 +68,7 @@ class ImageBenchApi():
         self.add_api_route("/concept_tray", self.write_concept_tray, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
+        self.add_api_route("/clear_generated_images", self.clear_generated_images, methods=["GET"])
         self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
         self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
         self.add_api_route("/download_image_tray", self.download_image_tray, methods=["GET"])
@@ -273,6 +274,9 @@ class ImageBenchApi():
 
     def clear_outputs_dir(self):
         persist.clear_directory(self.outputs_dir)
+
+    def clear_generated_images(self):
+        persist.clear_directory_except(self.outputs_dir, ["image-bench"])
 
     async def save_controlnet_images(self, request: Request):
         content = await request.body()

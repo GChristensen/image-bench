@@ -3,8 +3,14 @@ import {createImageData} from "@/sdwebui.js";
 export function addImage(eventData, images) {
     if (eventData.type === "SAVED_IMAGE") {
         insertImage(eventData, images);
-    } else if (eventData.type === "BEGIN_PROCESSING" && images.value.length) {
-        insertSeparator(images);
+    } else if (eventData.type === "BEGIN_PROCESSING") {
+        let isInsertSeparator = !!images.value.length;
+
+        if (import.meta.env.MODE === "comfy")
+            isInsertSeparator &&= !eventData.isBatchGeneration;
+
+        if (isInsertSeparator)
+            insertSeparator(images);
     }
 }
 

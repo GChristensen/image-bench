@@ -146,28 +146,36 @@ function setupMessageBusHandlers() {
 }
 
 /**
- * Add toolbar button to ComfyUI interface
+ * Add toolbar button to ComfyUI interface using the official app.menu API
  */
+let addButtonRetryCount = 0;
+const MAX_RETRIES = 20; // Try for up to 20 seconds
+
 function addToolbarButton() {
-    // Find the menu bar
-    const menuBar = document.querySelector('.comfyui-menu');
-
-    if (!menuBar) {
-        console.warn('[Image Bench] Menu bar not found, retrying...');
-        setTimeout(addToolbarButton, 1000);
-        return;
-    }
-
     // Check if button already exists
     if (document.getElementById('image-bench-button')) {
         return;
     }
 
-    // Create button
+    // Use ComfyUI's official app.menu API (same approach as rgthree extension)
+    if (!app.menu?.settingsGroup?.element) {
+        if (addButtonRetryCount < MAX_RETRIES) {
+            addButtonRetryCount++;
+            console.log(`[Image Bench] app.menu.settingsGroup not ready yet, retry ${addButtonRetryCount}/${MAX_RETRIES}...`);
+            setTimeout(addToolbarButton, 1000);
+            return;
+        } else {
+            console.error('[Image Bench] app.menu.settingsGroup not available after max retries');
+            return;
+        }
+    }
+
+    // Create button element
     const button = document.createElement('button');
     button.id = 'image-bench-button';
     button.textContent = '🔬 Image Bench';
     button.title = 'Open Image Bench for batch generation management';
+    button.className = 'comfyui-button';
     button.style.cssText = `
         margin-left: 8px;
         padding: 4px 8px;
@@ -189,10 +197,10 @@ function addToolbarButton() {
 
     button.addEventListener('click', () => popupManager.open());
 
-    // Add button to menu bar
-    menuBar.appendChild(button);
+    // Insert button before the settings group (same approach as rgthree)
+    app.menu.settingsGroup.element.before(button);
 
-    console.log('[Image Bench] Toolbar button added');
+    console.log('[Image Bench] Toolbar button added successfully using app.menu API');
 }
 
 /**
@@ -267,7 +275,8 @@ function handleExecutionStart(event) {
 
     sendPopupMessage({
         type: "BEGIN_PROCESSING",
-        prompt_id: prompt_id
+        prompt_id: prompt_id,
+        isBatchGeneration: currentStrategy && currentStrategy.isProcessing()
     });
 }
 
