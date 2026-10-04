@@ -1,5 +1,5 @@
 <script setup>
-  import {computed, ref} from "vue";
+  import {computed, nextTick, ref, watch} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
   import {flashTrayTab} from "@/components/utils.js";
@@ -28,11 +28,34 @@
   const imageOps = useImageOperations();
 
   const imageLink = computed(() => imageOps.getImageLink(props.image));
-  const isLandscape = ref(true); // Default to landscape
+  const isFullSize = ref(false);
+  const containerElement = ref(null);
 
-  function onImageLoad(e) {
+  // Each newly displayed image (e.g. navigated with arrow keys) starts scaled
+  watch(imageLink, () => {
+    isFullSize.value = false;
+  });
+
+  async function toggleFullSize(e) {
+    const container = containerElement.value;
     const img = e.target;
-    isLandscape.value = img.naturalWidth >= img.naturalHeight;
+
+    if (isFullSize.value) {
+      isFullSize.value = false;
+      return;
+    }
+
+    // Keep the clicked point of the image under the cursor after zooming in
+    const rect = img.getBoundingClientRect();
+    const fx = (e.clientX - rect.left) / rect.width;
+    const fy = (e.clientY - rect.top) / rect.height;
+
+    isFullSize.value = true;
+    await nextTick();
+
+    const fullRect = img.getBoundingClientRect();
+    container.scrollLeft += fullRect.left + fx * fullRect.width - e.clientX;
+    container.scrollTop += fullRect.top + fy * fullRect.height - e.clientY;
   }
 
   function onPlaceToImageTray(e) {
@@ -54,8 +77,6 @@
   function onImageMouseDown(e) {
     if (e.button === 1)
       window.open(e.target.src, "_blank");
-    else if (e.button === 0)
-      emit("hideOverlay");
   }
 </script>
 
@@ -68,8 +89,12 @@
         </div>
         <div class="close-button" @click="$emit('hideOverlay')">✖</div>
         <Transition name="zoom">
-          <div class="overlay-image-container" :class="{ 'landscape': isLandscape, 'portrait': !isLandscape }">
-            <img class="overlay-image" :src="imageLink" @load="onImageLoad" @mousedown="onImageMouseDown">
+          <div class="overlay-image-container" ref="containerElement"
+               :class="{ 'full-size': isFullSize }"
+               @click.self="$emit('hideOverlay')">
+            <img class="overlay-image" :src="imageLink"
+                 :title="isFullSize ? 'Click to fit to screen' : 'Click to view in full size'"
+                 @click="toggleFullSize" @mousedown="onImageMouseDown">
           </div>
         </Transition>
         <div class="overlay-emoji-buttons">
@@ -85,7 +110,7 @@
 
 <style scoped>
 .image-overlay-container {
-  position: absolute;
+  position: fixed;
   top: 0;
   bottom: 0;
   left: 0;
@@ -122,34 +147,29 @@
   right: 0;
   z-index: 1002;
   display: flex;
-  flex-direction: column;
-  //justify-content: center;
-  align-items: center;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Auto margins center the image while it fits, and collapse to zero when it overflows,
+   so the whole image stays reachable by scrolling (unlike justify-content/align-items: center) */
+.overlay-image {
+  margin: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+
+.overlay-image-container.full-size {
   overflow: auto;
 }
 
-.overlay-image-container.landscape {
-  max-height: 90%;
-  margin: auto 0;
-  height: max-content;
-}
-
-.overlay-image-container.portrait {
-  max-width: 90%;
-  margin: 0 auto;
-  width: max-content;
-}
-
-.overlay-image {
-  cursor: pointer;
-}
-
-.landscape .overlay-image {
-
-}
-
-.portrait .overlay-image {
-
+.full-size .overlay-image {
+  max-width: none;
+  max-height: none;
+  flex-shrink: 0;
+  cursor: zoom-out;
 }
 
 .overlay-emoji-buttons {
