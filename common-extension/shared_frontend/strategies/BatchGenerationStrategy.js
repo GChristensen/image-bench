@@ -12,7 +12,7 @@ export class BatchGenerationStrategy extends QueueProcessor {
         this.isVariations = false;
         this.nImagesToGenerate = 100;
         this.config = null;
-        this.progressMonitoring = false;
+        this.savedImages = 0;
     }
 
     isWebUI() {
@@ -28,6 +28,7 @@ export class BatchGenerationStrategy extends QueueProcessor {
         this.isVariations = options.strength !== undefined;
         this.nImagesToGenerate = options.generateImages || 100;
         this.generationId = this.createGenerationId();
+        this.savedImages = 0;
 
         // Detect platform to determine queue structure
         const platform = this.uiOperations.getPlatform();
@@ -84,17 +85,16 @@ export class BatchGenerationStrategy extends QueueProcessor {
     async processItem(item) {
         await this.uiOperations.sleep(500);
         this.uiOperations.clickGenerate();
-
-        if (this.isWebUI())
-            this.startProgressMonitoring();
     }
 
     /**
-     * On WebUI the whole batch is a single generation: saved images must not finish the strategy,
-     * it is finished by BATCH_GENERATION_FINISHED when the interrupt button is hidden
+     * On WebUI the whole batch is a single generation: processNext() is called on each saved image,
+     * which only advances the progress. The strategy is finished by BATCH_GENERATION_FINISHED
+     * when the interrupt button is hidden
      */
     async processNext() {
         if (this.isWebUI() && this.queue.length === 0) {
+            this.savedImages += 1;
             this.reportProgress();
             return;
         }
@@ -103,38 +103,16 @@ export class BatchGenerationStrategy extends QueueProcessor {
     }
 
     /**
-     * On WebUI report the progress shown by the WebUI progress bar (covers the whole batch)
+     * On WebUI report the overall progress over the batch: saved images / batch count
      */
     reportProgress() {
         if (!this.isWebUI())
             return super.reportProgress();
 
-        const progress = this.uiOperations.getGenerationProgress();
+        const completed = Math.min(this.savedImages, this.nImagesToGenerate);
+        const progress = (completed / this.nImagesToGenerate) * 100;
 
-        if (progress !== null && !isNaN(progress))
-            this.messageBus.publish('GENERATION_PROGRESS', { progress });
-    }
-
-    /**
-     * Poll the WebUI progress bar while the batch is being generated
-     */
-    startProgressMonitoring() {
-        if (this.progressMonitoring)
-            return;
-
-        this.progressMonitoring = true;
-
-        const monitorProgress = async () => {
-            while (this.progressMonitoring && this.isActive) {
-                await this.uiOperations.sleep(1000);
-
-                if (this.progressMonitoring && this.isActive)
-                    this.reportProgress();
-            }
-            this.progressMonitoring = false;
-        };
-
-        monitorProgress();
+        this.messageBus.publish('GENERATION_PROGRESS', { progress });
     }
 
     /**
@@ -142,7 +120,6 @@ export class BatchGenerationStrategy extends QueueProcessor {
      */
     async finish() {
         this.isActive = false;
-        this.progressMonitoring = false;
 
         const platform = this.uiOperations.getPlatform();
 

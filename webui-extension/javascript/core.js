@@ -214,14 +214,8 @@ function onBackendMessage(e) {
         if (msg.type === "SAVED_IMAGE") {
             const strategy = getActiveStrategy();
             
-            if (strategy && strategy.isProcessing()) {
+            if (strategy && strategy.isProcessing())
                 Object.assign(msg, strategy.getMessageParams());
-                
-                // Add progress for batch generation
-                if (getGenerationState() === "BATCH_GENERATION") {
-                    msg.progress = adapter.getGenerationProgress();
-                }
-            }
         }
 
         sendPopupMessage(msg);
