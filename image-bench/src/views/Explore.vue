@@ -1,26 +1,23 @@
 <script setup>
 
-import {computed, onBeforeMount, onMounted, reactive, ref} from "vue";
+import {computed, onBeforeMount, ref, watch} from "vue";
 import GeneratedImage from "@/components/GeneratedImage.vue";
 import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {usePromptModal} from "@/composables/usePromptModal.js";
+import {useExploreList} from "@/composables/useExploreList.js";
+import {useLocalStorage} from "@/composables/useLocalStorage.js";
+import {useAppConfigStore} from "@/stores/appConfig.js";
 import PromptModal from "@/components/PromptModal.vue";
 import ExploreParamsModal from "@/components/ExploreParamsModal.vue";
+import LoraParamsModal from "@/components/LoraParamsModal.vue";
+import ExploreListPanel from "@/components/ExploreListPanel.vue";
 
-const exploreImagesStore = useExploreImagesStore();
-const promptModal = usePromptModal();
-
-const models = ref([]);
-const selected = ref(new Set());
-const lastPreset = ref("");
-const presetNames = ref([]);
-const presetSelect = ref();
-let modelPresets = {};
-const modelImages = computed(() => exploreImagesStore.images);
-const generateImagesNumber = ref(3);
+const TAB_CHECKPOINTS = "checkpoints";
+const TAB_LORAS = "loras";
+const ACTIVE_TAB_STORAGE_KEY = "imageBench_exploreActiveTab";
 
 const PARAM_LABELS = {
   sampler: "Smp",
@@ -31,49 +28,103 @@ const PARAM_LABELS = {
   distilledCfg: "DCFG"
 };
 
-const modelParams = ref({});
-const focusedModel = ref(null);
+const LORA_PARAM_LABELS = {
+  weight: "Weight",
+  text: "Text"
+};
+
+const exploreImagesStore = useExploreImagesStore();
+const promptModal = usePromptModal();
+const storage = useLocalStorage();
+const appConfigStore = useAppConfigStore();
+
+// Shared explore presets object: checkpoints use the top-level keys, LoRAs the "loras" section
+let explorePresets = {};
+
+const checkpoints = useExploreList({
+  keyOf: model => model.model_name,
+  section: () => explorePresets,
+  keys: {presets: "presets", lastPreset: "last_preset", params: "model_params"},
+  save: writePresets
+});
+
+const loras = useExploreList({
+  keyOf: lora => lora.name,
+  labelOf: lora => lora.folder ? `${lora.folder}/${lora.name}` : lora.name,
+  section: () => explorePresets.loras = explorePresets.loras || {},
+  keys: {presets: "presets", lastPreset: "last_preset", params: "params"},
+  save: writePresets
+});
+
+const activeTab = ref(storage.getItem(ACTIVE_TAB_STORAGE_KEY, TAB_CHECKPOINTS));
+const activeList = computed(() => activeTab.value === TAB_LORAS ? loras : checkpoints);
+
+watch(activeTab, tab => storage.setItem(ACTIVE_TAB_STORAGE_KEY, tab));
+
+const modelImages = computed(() => exploreImagesStore.images);
+const generateImagesNumber = ref(3);
+
 const samplers = ref([]);
 const schedulers = ref([]);
 const showParamsModal = ref(false);
+const showLoraParamsModal = ref(false);
 
-const focusedModelParams = computed(() => focusedModel.value ? modelParams.value[focusedModel.value] : null);
-const paramsSummary = computed(() => {
-  const params = focusedModelParams.value;
+const activeListItems = computed(() => {
+  const list = activeList.value;
+  return list.items.value.map(item => ({key: list.keyOf(item), label: list.labelOf(item)}));
+});
+
+const focusedModelParams = computed(() =>
+  checkpoints.focusedKey.value ? checkpoints.params.value[checkpoints.focusedKey.value] : null);
+
+const focusedLora = computed(() =>
+  loras.items.value.find(lora => lora.name === loras.focusedKey.value) || null);
+const focusedLoraParams = computed(() =>
+  loras.focusedKey.value ? loras.params.value[loras.focusedKey.value] : null);
+
+const settingsSummary = computed(() => {
+  const list = activeList.value;
+  const labels = activeTab.value === TAB_LORAS ? LORA_PARAM_LABELS : PARAM_LABELS;
+  const params = list.focusedKey.value ? list.params.value[list.focusedKey.value] : null;
   const items = params
-    ? Object.keys(PARAM_LABELS).filter(k => k in params).map(k => `${PARAM_LABELS[k]}: ${params[k]}`)
+    ? Object.keys(labels).filter(k => k in params).map(k => `${labels[k]}: ${params[k]}`)
     : [];
 
   return items.length ? items.join(", ") : "default";
 });
 
+const generatedImagesElement = ref();
 const showImageOverlay = ref(false);
 const overlayImage = ref(null);
-const generatedImagesElement = ref();
 const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
 
 let scrolledToBottom = true;
 
+function sortByName(list, nameOf) {
+  return list.sort((a, b) => nameOf(a).localeCompare(nameOf(b), undefined, {numeric: true, sensitivity: "base"}));
+}
+
 async function refreshModels() {
   const modelList = await fetch("/image-bench/models").then(r => r.json());
-  models.value = modelList.sort((a, b) =>
-    a.model_name.localeCompare(b.model_name, undefined, {numeric: true, sensitivity: "base"}));
+  checkpoints.items.value = sortByName(modelList, m => m.model_name);
+}
+
+async function refreshLoras() {
+  const response = await fetch("/image-bench/loras");
+  loras.items.value = response.ok ? sortByName(await response.json(), loras.labelOf) : [];
 }
 
 async function loadPresets() {
   const response = await fetch("/image-bench/explore_presets");
 
-  if (response.ok && response.headers.get("content-length") > 0) {
-    modelPresets = await response.json();
-  }
+  if (response.ok && response.headers.get("content-length") > 0)
+    explorePresets = await response.json();
   else
-    modelPresets = {};
+    explorePresets = {};
 
-  modelParams.value = modelPresets.model_params || {};
-  presetSelect.value = lastPreset.value = modelPresets.last_preset || "";
-  presetNames.value = modelPresets.presets? Object.keys(modelPresets.presets): [];
-  await activatePreset(lastPreset.value);
+  checkpoints.load();
+  loras.load();
 }
 
 async function loadSamplers() {
@@ -87,57 +138,52 @@ async function loadSamplers() {
 }
 
 async function writePresets() {
-  const presets = JSON.stringify(modelPresets);
+  const presets = JSON.stringify(explorePresets);
   await fetch("/image-bench/explore_presets", {method: "post", body: presets});
 }
 
 onBeforeMount(async () => {
-  await refreshModels();
+  await Promise.all([refreshModels(), refreshLoras()]);
   await loadPresets();
-
-  const firstSelected = models.value.find((m, i) => selected.value.has(i));
-  focusedModel.value = firstSelected?.model_name ?? null;
-
   await loadSamplers();
 });
 
-function onModelCheckChange(e, index) {
-  if (e.target.checked)
-    selected.value.add(index);
-  else
-    selected.value.delete(index);
+function getLoraDefaults(lora) {
+  return {
+    weight: lora?.preferredWeight ?? 1,
+    text: lora?.activationText ?? ""
+  };
 }
 
-function getSelectedModels() {
-  const selectedItems = [];
+/**
+ * Build the prompt string of a LoRA: <lora:alias:weight> followed by the extra text
+ */
+function createLoraPrompt(lora) {
+  const defaults = getLoraDefaults(lora);
+  const weight = lora.params?.weight ?? defaults.weight;
+  const text = lora.params?.text ?? defaults.text;
 
-  for (let i = 0; i < models.value.length; ++i) {
-    if (selected.value.has(i)) {
-      const proxyItem = models.value[i];
-      const model = JSON.parse(JSON.stringify(proxyItem));
-      const params = modelParams.value[model.model_name];
-
-      if (params)
-        model.params = {...params};
-
-      selectedItems.push(model);
-    }
-  }
-
-  return selectedItems;
+  return `<lora:${lora.alias}:${weight}>` + (text ? ` ${text}` : "");
 }
 
 function onExploreClick() {
-  const selectedModels = getSelectedModels();
-
   if (exploreImagesStore.generationInProgress) {
     sendWebUIMessage({type: "STOP_GENERATION"});
   }
   else {
+    const selectedModels = checkpoints.getSelectedItems();
+    const selectedLoras = loras.getSelectedItems().map(lora => ({name: lora.name, prompt: createLoraPrompt(lora)}));
+
     exploreImagesStore.generationProgress = 0;
     exploreImagesStore.generationInProgress = true;
     exploreImagesStore.clear();
-    sendWebUIMessage({type: "EXPLORE_MODELS", models: selectedModels, generateImages: generateImagesNumber.value})
+    sendWebUIMessage({
+      type: "EXPLORE_MODELS",
+      models: selectedModels,
+      loras: selectedLoras,
+      loraFreeImages: appConfigStore.exploreLoraFreeImages,
+      generateImages: generateImagesNumber.value
+    });
   }
 }
 
@@ -145,98 +191,47 @@ async function onCreateClick() {
   const presetName = await promptModal.showPrompt(
     "New preset name:",
     "",
-    "presetName"
+    activeTab.value === TAB_LORAS ? "loraPresetName" : "presetName"
   );
 
-  if (presetName) {
-    lastPreset.value = presetName;
-    modelPresets.presets = modelPresets.presets || {};
-    modelPresets.presets[presetName] = getSelectedModels().map(m => m.model_name);
-    modelPresets.last_preset = presetName;
-
-    if (!presetNames.value.some(m => m === presetName))
-      presetNames.value.push(presetName);
-
-    await writePresets();
-  }
-}
-
-async function onSaveClick() {
-  const presetName = presetSelect.value;
-
-  if (presetName) {
-    modelPresets.presets = modelPresets.presets || {};
-    modelPresets.presets[presetName] = getSelectedModels().map(m => m.model_name);
-    modelPresets.last_preset = presetName;
-    await writePresets();
-  }
-  else
-    alert("No preset is selected.");
+  if (presetName)
+    await activeList.value.createPreset(presetName);
 }
 
 async function onDeleteClick() {
-  if (!confirm("Do you really want to continue?"))
+  if (confirm("Do you really want to continue?"))
+    await activeList.value.deleteCurrentPreset();
+}
+
+function onEditSettings() {
+  if (!activeList.value.focusedKey.value)
     return;
 
-  const presetName = presetSelect.value;
-  const nameIndex = presetNames.value.indexOf(presetName);
-
-  presetNames.value.splice(nameIndex, 1);
-  delete modelPresets.presets[presetName];
-
-  if (presetNames.value.length) {
-    lastPreset.value = presetNames.value[0];
-    modelPresets.last_preset = lastPreset.value;
-    return activatePreset(lastPreset.value);
-  }
-
-  await writePresets();
-}
-
-async function onClearClick() {
-  selected.value = new Set();
-}
-
-function onPresetChange(e) {
-  activatePreset(e.target.value)
-}
-
-function activatePreset(presetName) {
-  selected.value = new Set();
-
-  for (let i = 0; i < models.value.length; ++i) {
-    if (modelPresets.presets[presetName].some(h => h === models.value[i].model_name)) {
-      selected.value.add(i);
-    }
-  }
-
-  lastPreset.value = presetName;
-  modelPresets.last_preset = lastPreset.value;
-  return writePresets();
-}
-
-function onModelNameClick(model) {
-  focusedModel.value = model.model_name;
-}
-
-function onParamsClick() {
-  if (focusedModel.value)
+  if (activeTab.value === TAB_LORAS)
+    showLoraParamsModal.value = true;
+  else
     showParamsModal.value = true;
 }
 
 async function onParamsConfirm(params) {
   showParamsModal.value = false;
+  await checkpoints.setParams(checkpoints.focusedKey.value, params);
+}
 
-  const allParams = {...modelParams.value};
+async function onLoraParamsConfirm(params) {
+  showLoraParamsModal.value = false;
 
-  if (Object.keys(params).length)
-    allParams[focusedModel.value] = params;
-  else
-    delete allParams[focusedModel.value];
+  // Store only values that differ from the LoRA defaults
+  const defaults = getLoraDefaults(focusedLora.value);
+  const changed = {};
 
-  modelParams.value = allParams;
-  modelPresets.model_params = allParams;
-  await writePresets();
+  if (params.weight !== defaults.weight)
+    changed.weight = params.weight;
+
+  if (params.text !== defaults.text)
+    changed.text = params.text;
+
+  await loras.setParams(loras.focusedKey.value, changed);
 }
 
 function onImageClick(image) {
@@ -293,12 +288,20 @@ function onKeydown(e) {
   />
   <ExploreParamsModal
     :show="showParamsModal"
-    :model-name="focusedModel || ''"
+    :model-name="checkpoints.focusedKey.value || ''"
     :params="focusedModelParams"
     :samplers="samplers"
     :schedulers="schedulers"
     @confirm="onParamsConfirm"
     @cancel="showParamsModal = false"
+  />
+  <LoraParamsModal
+    :show="showLoraParamsModal"
+    :lora-name="loras.focusedKey.value || ''"
+    :params="focusedLoraParams"
+    :defaults="getLoraDefaults(focusedLora)"
+    @confirm="onLoraParamsConfirm"
+    @cancel="showLoraParamsModal = false"
   />
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage"
                 @hide-overlay="showImageOverlay = false"/>
@@ -319,34 +322,31 @@ function onKeydown(e) {
     </div>
     <div class="explore-container">
       <div class="model-list">
-        Presets&nbsp;
-        <select class="model-presets" v-model="presetSelect" @change="onPresetChange">
-          <option v-for="name in presetNames" :value="name" :selected="lastPreset === name">{{ name }}</option>
-        </select>
-        <div class="preset-controls">
-          <a class="control-link" href="#" @click="onCreateClick">Create</a
-          >&nbsp;<a class="control-link" href="#" @click="onSaveClick">Save</a
-          >&nbsp;<a class="control-link" href="#" @click="onDeleteClick">Delete</a
-          >&nbsp;<a class="control-link" href="#" @click="onClearClick">Clear</a>
+        <div class="tabs">
+          <a href="#" class="tab" :class="{active: activeTab === 'checkpoints'}"
+             @click.prevent="activeTab = 'checkpoints'">Checkpoints</a>
+          <a href="#" class="tab" :class="{active: activeTab === 'loras'}"
+             @click.prevent="activeTab = 'loras'">Loras<span v-if="loras.selected.value.size"
+              >&nbsp;({{ loras.selected.value.size }})</span></a>
         </div>
-        <div class="model-params">
-          <span class="model-params-summary" :title="paramsSummary">🧪 {{ paramsSummary }}</span>
-          <button class="model-params-button" :disabled="!focusedModel"
-                  :title="focusedModel ? `Set parameters for ${focusedModel}` : 'Click a model name first'"
-                  @click="onParamsClick">⚙</button>
-        </div>
-        <div class="models-container">
-          <div class="models">
-            <div v-for="(model, index) in models" class="model-item"
-                 :class="{focused: focusedModel === model.model_name}">
-              <input type="checkbox"
-                     @change="e => onModelCheckChange(e, index)" :checked="selected.has(index)"
-              >&nbsp;<span class="model-label" @click="onModelNameClick(model)"
-                >{{model.model_name}}<span v-if="modelParams[model.model_name]" class="model-params-marker"
-                                           title="Has custom parameters">&nbsp;🧪</span></span>
-            </div>
-          </div>
-        </div>
+        <ExploreListPanel
+          :items="activeListItems"
+          :selected="activeList.selected.value"
+          :preset-names="activeList.presetNames.value"
+          :current-preset="activeList.currentPreset.value"
+          :focused-key="activeList.focusedKey.value"
+          :params="activeList.params.value"
+          :summary="settingsSummary"
+          :item-kind="activeTab === 'loras' ? 'LoRA' : 'model'"
+          @toggle="activeList.toggle"
+          @focus="activeList.focus"
+          @preset-change="activeList.activatePreset"
+          @create="onCreateClick"
+          @save="activeList.saveCurrentPreset"
+          @delete="onDeleteClick"
+          @clear="activeList.clearSelection"
+          @edit-settings="onEditSettings"
+        />
       </div>
       <div class="generated-images-wrapper">
         <div class="generated-images scrollable" ref="generatedImagesElement">
@@ -398,25 +398,6 @@ function onKeydown(e) {
   padding: 0 10px;
 }
 
-.model-presets {
-  min-width: 100px;
-}
-
-.models-container {
-  position: relative;
-  flex-grow: 1;
-  width: 280px;
-}
-
-.models {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  overflow: auto;
-}
-
 .model-list {
   margin: 0 0 15px 0;
   padding-top: 10px;
@@ -426,53 +407,29 @@ function onKeydown(e) {
   border-right: 1px solid white;
 }
 
-.model-item {
-  white-space: nowrap;
-}
-
-.model-item.focused {
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-.model-label {
-  cursor: pointer;
-}
-
-.model-params {
+.tabs {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 10px;
-  padding-bottom: 4px;
-  border-bottom: solid 1px white;
+  margin-bottom: 8px;
+  border-bottom: 1px solid white;
 }
 
-.model-params-summary {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.model-params-button {
-  flex-shrink: 0;
-  background: none;
-  border: 1px solid #888;
-  border-radius: 3px;
-  color: white;
+.tab {
+  padding: 2px 10px;
   cursor: pointer;
-  padding: 0 5px;
+  text-decoration: none;
+  color: white;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
 }
 
-.model-params-button:hover:not(:disabled) {
+.tab:hover {
   background-color: #f0f0f0;
   color: var(--vt-c-black);
 }
 
-.model-params-button:disabled {
-  opacity: 0.4;
-  cursor: default;
+.tab.active {
+  border-bottom-color: white;
+  font-weight: bold;
 }
 
 .generated-images-wrapper {
@@ -488,24 +445,6 @@ function onKeydown(e) {
   right: 0;
   overflow-y: auto;
   margin: 15px;
-}
-
-.preset-controls {
-  margin-top: 2px;
-  margin-bottom: 4px;
-}
-
-.control-link {
-  padding: 2px 5px;
-  cursor: pointer;
-  text-decoration: none;
-  color: white;
-  white-space: nowrap;
-}
-
-.control-link:hover {
-  background-color: #f0f0f0;
-  color: var(--vt-c-black);
 }
 
 .model-name {

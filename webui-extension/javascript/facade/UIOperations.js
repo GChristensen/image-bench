@@ -237,6 +237,23 @@ export class UIOperations {
     }
 
     /**
+     * Get txt2img prompt
+     * @returns {Promise<string|null>}
+     */
+    async getPrompt() {
+        return this.adapter.getInputValue('TXT2IMG_PROMPT');
+    }
+
+    /**
+     * Set txt2img prompt
+     * @param {string} text
+     * @returns {Promise<void>}
+     */
+    async setPrompt(text) {
+        this.adapter.setInputValue('TXT2IMG_PROMPT', text);
+    }
+
+    /**
      * Apply per-model generation parameters to txt2img
      * Unset (undefined/null/empty) parameters are left untouched
      * @param {Object} params - { sampler, scheduler, steps, shift, cfg, distilledCfg }

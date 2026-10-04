@@ -10,6 +10,9 @@ const appConfigStore = useAppConfigStore();
     <h3>Generation</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.automaticallyClearGeneratedImages"
     >Automatically clear generated images</label>
+    <h3>Model Exploration</h3>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.exploreLoraFreeImages"
+    >Generate LoRA-free images for each model when exploring LoRAs</label>
     <h3>SD WebUI Interface</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.addModelInfoButton"
     >Add 'Civitai Model Info' settings button</label>

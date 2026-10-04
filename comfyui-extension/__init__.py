@@ -258,6 +258,12 @@ async def get_samplers(request):
     })
 
 
+# LoRAs endpoint (LoRA exploration is supported in SD WebUI only)
+@PromptServer.instance.routes.get(BASE_PATH + "/loras")
+async def get_loras(request):
+    return web.json_response([])
+
+
 # Image tray endpoints
 @PromptServer.instance.routes.get(BASE_PATH + "/image_tray")
 async def get_image_tray(request):

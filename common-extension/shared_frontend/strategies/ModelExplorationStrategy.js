@@ -13,12 +13,14 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.uiPresetBeforeExplore = null;
         this.paramsBeforeExplore = null;
         this.paramsBeforeModel = null;
+        this.promptBeforeExplore = null;
+        this.currentLora = null;
         this.invalidated = false;
     }
 
     /**
      * Initialize the exploration queue
-     * @param {Object} options - { models: [], generateImages: number }
+     * @param {Object} options - { models: [], loras: [{name, prompt}], loraFreeImages: boolean, generateImages: number }
      */
     initialize(options) {
         console.log('[ModelExploration] initialize() called with options:', options);
@@ -28,11 +30,17 @@ export class ModelExplorationStrategy extends QueueProcessor {
             throw new Error('No models provided for exploration');
         }
 
-        // Build queue of model entries
+        // Build queue of model x LoRA entries; null is the LoRA-free run,
+        // skipped when LoRAs are explored and LoRA-free images are disabled
+        const loras = options.loras || [];
+        const loraVariants = loras.length && options.loraFreeImages === false ? loras : [null, ...loras];
+
         this.queue = [];
         for (const model of options.models) {
-            for (let i = 0; i < options.generateImages; i++) {
-                this.queue.push(model);
+            for (const lora of loraVariants) {
+                for (let i = 0; i < options.generateImages; i++) {
+                    this.queue.push({model, lora});
+                }
             }
         }
 
@@ -42,7 +50,8 @@ export class ModelExplorationStrategy extends QueueProcessor {
 
         console.log('[ModelExploration] Queue built with', this.totalItems, 'items');
         console.log('[ModelExploration] Models to explore:', options.models.map(m => m.title).join(', '));
-        console.log('[ModelExploration] Images per model:', options.generateImages);
+        console.log('[ModelExploration] LoRAs to explore:', (options.loras || []).map(l => l.name).join(', '));
+        console.log('[ModelExploration] Images per model/LoRA:', options.generateImages);
         console.log('[ModelExploration] Generation ID:', this.generationId);
     }
 
@@ -63,6 +72,11 @@ export class ModelExplorationStrategy extends QueueProcessor {
             console.log('[ModelExploration] Backed up generation params:', this.paramsBeforeExplore);
         }
 
+        if (options.loras?.length) {
+            this.promptBeforeExplore = await this.uiOperations.getPrompt();
+            console.log('[ModelExploration] Backed up prompt:', this.promptBeforeExplore);
+        }
+
         // Set initial model
         console.log('[ModelExploration] Setting initial model to:', this.currentModel.title);
         await this.uiOperations.applyUiPresetForModel(this.currentModel.title);
@@ -79,11 +93,11 @@ export class ModelExplorationStrategy extends QueueProcessor {
     }
 
     /**
-     * Process a single model exploration
-     * @param {Object} model - Model object with title property
+     * Process a single model/LoRA exploration
+     * @param {Object} item - { model: {title, params}, lora: {name, prompt} | null }
      */
-    async processItem(model) {
-        console.log('[ModelExploration] processItem() called for model:', model.title);
+    async processItem({model, lora}) {
+        console.log('[ModelExploration] processItem() called for model:', model.title, 'LoRA:', lora?.name ?? 'none');
         console.log('[ModelExploration] Current model:', this.currentModel.title);
 
         // Switch model if different from current
@@ -97,6 +111,18 @@ export class ModelExplorationStrategy extends QueueProcessor {
         } else {
             console.log('[ModelExploration] Model is already loaded, skipping switch');
         }
+
+        // Set the prompt for every image, so the LoRA string is removed once its combination is done
+        if (this.promptBeforeExplore !== null) {
+            const prompt = lora
+                ? [this.promptBeforeExplore, lora.prompt].filter(Boolean).join(' ')
+                : this.promptBeforeExplore;
+
+            console.log('[ModelExploration] Setting prompt:', prompt);
+            await this.uiOperations.setPrompt(prompt);
+        }
+
+        this.currentLora = lora?.name ?? null;
 
         console.log('[ModelExploration] Waiting 1 second before generation...');
         await this.uiOperations.sleep(1000);
@@ -140,6 +166,14 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.queue = [];
 
         await this.restoreParamsBeforeModel();
+
+        if (this.promptBeforeExplore !== null) {
+            console.log('[ModelExploration] Restoring prompt:', this.promptBeforeExplore);
+            await this.uiOperations.setPrompt(this.promptBeforeExplore);
+            this.promptBeforeExplore = null;
+        }
+
+        this.currentLora = null;
 
         // Restore original model if saved
         if (this.modelBeforeExplore) {
@@ -185,7 +219,8 @@ export class ModelExplorationStrategy extends QueueProcessor {
      */
     getMessageParams() {
         return {
-            generationId: this.generationId
+            generationId: this.generationId,
+            exploreLora: this.currentLora
         };
     }
 }

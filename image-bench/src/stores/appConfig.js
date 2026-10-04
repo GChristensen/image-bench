@@ -34,6 +34,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Generate LoRA-free images for each model when exploring LoRAs (enabled unless set to false)
+    const exploreLoraFreeImages = computed({
+        get() {
+            return _config.exploreLoraFreeImages ?? true;
+        },
+        set(v) {
+            _config.exploreLoraFreeImages = v;
+            return persist();
+        }
+    });
+
     async function init() {
         const response = await fetch("/image-bench/config.json");
 
@@ -51,6 +62,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         init, persist,
         repositionConfigPresetsDropdown,
         addModelInfoButton,
-        automaticallyClearGeneratedImages
+        automaticallyClearGeneratedImages,
+        exploreLoraFreeImages
     };
 });

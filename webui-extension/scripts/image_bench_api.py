@@ -28,7 +28,8 @@ from shared import tray
 
 DEFAULT_CONFIG = """{
   "repositionConfigPresetsDropdown": false,
-  "automaticallyClearGeneratedImages": true
+  "automaticallyClearGeneratedImages": true,
+  "exploreLoraFreeImages": true
 }
 """
 
@@ -77,6 +78,7 @@ class ImageBenchApi():
         self.add_api_route("/concept_tray_upload", self.image_tray_upload, methods=["POST"])
         self.add_api_route("/models", self.get_models, methods=["GET"])
         self.add_api_route("/samplers", self.get_samplers, methods=["GET"])
+        self.add_api_route("/loras", self.get_loras, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
 
@@ -281,6 +283,45 @@ class ImageBenchApi():
             "samplers": sd_samplers.visible_sampler_names(),
             "schedulers": [s.label for s in sd_schedulers.schedulers]
         })
+
+    def get_loras(self):
+        """Get list of available LoRAs with their Forge user metadata (sidecar .json)"""
+        networks = sys.modules.get("networks")  # Module of the built-in sd_forge_lora extension
+
+        if networks is None:
+            return JSONResponse([])
+
+        # LoRA root folders, as scanned by sd_forge_lora (networks.process_network_files)
+        lora_dirs = [getattr(shared.cmd_opts, "lora_dir", None), *(getattr(shared.cmd_opts, "lora_dirs", None) or [])]
+        lora_roots = [os.path.abspath(d) for d in lora_dirs if d]
+
+        def get_lora_folder(filename):
+            """Folder of the LoRA relative to the deepest root containing it, "" if placed in the root itself"""
+            lora_dir = os.path.dirname(os.path.abspath(filename))
+            roots = [r for r in lora_roots
+                     if os.path.normcase(lora_dir) == os.path.normcase(r)
+                     or os.path.normcase(lora_dir).startswith(os.path.normcase(r) + os.sep)]
+
+            if not roots:
+                return os.path.basename(lora_dir)
+
+            folder = os.path.relpath(lora_dir, max(roots, key=len))
+            return "" if folder == "." else folder.replace(os.sep, "/")
+
+        loras_list = []
+        for lora in networks.available_networks.values():
+            metadata_path = os.path.splitext(lora.filename)[0] + ".json"
+            user_metadata = (persist.read_json_file(metadata_path) if os.path.isfile(metadata_path) else None) or {}
+
+            loras_list.append({
+                "name": lora.name,
+                "alias": lora.get_alias(),
+                "filename": lora.filename,
+                "folder": get_lora_folder(lora.filename),
+                "preferredWeight": user_metadata.get("preferred weight") or 1,
+                "activationText": user_metadata.get("activation text") or ""
+            })
+        return JSONResponse(jsonable_encoder(loras_list))
 
     def on_before_config_presets(self, component, *args, **kwargs):
         if kwargs.get("elem_id") == "config_preset_txt2img_dropdown":

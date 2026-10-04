@@ -7,7 +7,7 @@ import {useImageStoreState} from "@/stores/composables/useImageStoreState.js";
 /**
  * Store for model exploration images
  * Uses proper Pinia store pattern with composable for shared logic
- * Groups images by model for comparison
+ * Groups images by model (and explored LoRA) for comparison
  */
 export const useExploreImagesStore = defineStore('exploreImages', () => {
     const state = useImageStoreState(KIND_EXPLORE);
@@ -18,11 +18,13 @@ export const useExploreImagesStore = defineStore('exploreImages', () => {
             const imageData = createImageData(e);
             delete imageData.type;
 
-            let model = state.images.value.find(m => m.name === imageData.parameters["model"]);
+            // Group by model and explored LoRA (if any)
+            const groupName = imageData.parameters["model"] + (e.exploreLora ? ` + ${e.exploreLora}` : "");
+            let model = state.images.value.find(m => m.name === groupName);
 
             if (!model) {
                 model = reactive({
-                    name: imageData.parameters["model"],
+                    name: groupName,
                     hash: imageData.parameters["model hash"],
                     images: []
                 });
