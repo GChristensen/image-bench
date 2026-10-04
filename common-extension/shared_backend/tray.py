@@ -165,7 +165,8 @@ async def save_image_to_tray(
     if os.path.abspath(source_path) != os.path.abspath(dest_path):
         shutil.copy2(source_path, dest_path)
 
-    # Update image data with new paths
+    # Update image data with new paths, keeping the original path for duplicate detection
+    image_data.setdefault("sourcePath", source_path)
     image_data["imagePath"] = dest_path
 
     if platform == "comfyui":

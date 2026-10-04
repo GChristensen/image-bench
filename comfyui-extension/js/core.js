@@ -244,6 +244,7 @@ async function handleExecuted(event) {
                 imageUrl: imageData.imageUrl,
                 imagePath: imageData.imagePath,
                 filename: imageData.filename,
+                batchId: prompt_id,
                 parameters: parameters
             };
 

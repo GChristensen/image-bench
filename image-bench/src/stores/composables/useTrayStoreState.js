@@ -13,7 +13,6 @@ export function useTrayStoreState(kind) {
   
   const colors = ["#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6",
     "#bfef45", "#fabed4", "#469990", "#dcbeff", "#9A6324", "#800000", "#aaffc3", "#808000", "#ffd8b1"];
-  let currentColor = 0;
 
   // Override init to load from server
   async function init() {
@@ -52,23 +51,38 @@ export function useTrayStoreState(kind) {
   // Debounced persist function to reduce server calls
   const persist = debounce(_persistToServer, 500);
 
+  // Strategy generationId spans the whole Image Bench run (several ComfyUI prompts),
+  // batchId identifies a single platform generation (including native Generate clicks)
+  function getBatchKey(image) {
+    return image.generationId || image.batchId;
+  }
+
+  // Images keep their original path in sourcePath after being copied to the tray directory
+  function isInTray(imageData) {
+    return baseStore.images.value.some(i =>
+      (i.sourcePath || i.imagePath) === imageData.imagePath || i.imagePath === imageData.imagePath);
+  }
+
+  function pickColor(imageData) {
+    const images = baseStore.images.value;
+    const batchKey = getBatchKey(imageData);
+
+    if (batchKey) {
+      const batchImage = images.findLast(i => i.tagColor && getBatchKey(i) === batchKey);
+
+      if (batchImage)
+        return batchImage.tagColor;
+    }
+
+    const lastColorIndex = colors.indexOf(images.findLast(i => i.tagColor)?.tagColor);
+    return colors[(lastColorIndex + 1) % colors.length];
+  }
+
   async function addImage(imageData) {
     imageData = { ...imageData };
 
-    if (!baseStore.images.value.some(i => i.imagePath === imageData.imagePath)) {
-      const prevImage = baseStore.images.value.at(-1);
-      let color = colors[currentColor];
-
-      if (prevImage) {
-        const changeColor = !imageData.generationId || !prevImage.generationId
-          || imageData.generationId !== prevImage.generationId;
-
-        if (changeColor) {
-          color = colors[++currentColor % colors.length];
-        }
-      }
-
-      imageData.tagColor = color;
+    if (!isInTray(imageData)) {
+      imageData.tagColor = pickColor(imageData);
       baseStore.images.value.push(imageData);
       await persist();
     }

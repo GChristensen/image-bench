@@ -30,7 +30,9 @@ const paramsOverlayText = ref("");
 let scrolledToBottom = true;
 
 async function refreshModels() {
-  models.value = await fetch("/image-bench/models").then(r => r.json());
+  const modelList = await fetch("/image-bench/models").then(r => r.json());
+  models.value = modelList.sort((a, b) =>
+    a.model_name.localeCompare(b.model_name, undefined, {numeric: true, sensitivity: "base"}));
 }
 
 async function loadPresets() {

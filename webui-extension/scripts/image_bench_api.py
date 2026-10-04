@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 import gradio as gr
 import modules.script_callbacks as script_callbacks
 import modules.sd_models as sd_models
+import modules.shared as shared
 import requests
 
 import websockets
@@ -120,6 +121,8 @@ class ImageBenchApi():
                 "type": "SAVED_IMAGE",
                 "imageUrl": f"/file={filename}",
                 "imagePath": filename,
+                # job_timestamp is shared by all images of a single generation (batch)
+                "batchId": getattr(shared.state, "job_timestamp", None),
                 "parameters": self.pnginfo_to_dict(image_data.p.prompt, image_data.p.negative_prompt,
                                                    image_data.pnginfo)
             }
