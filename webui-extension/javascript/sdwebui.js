@@ -132,11 +132,11 @@ export async function setConfigPreset(preset) {
 
     if (presetDropdown) {
         if (presetDropdown.value === preset) {
-        await adapter.setDropdownValue(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN, "None");
+            await adapter.setDropdownValue('CONFIG_PRESET_TXT2IMG_DROPDOWN', "None");
             await sleep(333);
         }
 
-        await adapter.setDropdownValue(SELECTORS.CONFIG_PRESET_TXT2IMG_DROPDOWN, preset);
+        await adapter.setDropdownValue('CONFIG_PRESET_TXT2IMG_DROPDOWN', preset);
     }
 }
 
@@ -146,10 +146,10 @@ export async function setImageSeed(options) {
 
     const params = options.parameters;
 
-    adapter.setInputValue(SELECTORS.TXT2IMG_SEED, params["seed"]);
+    adapter.setInputValue('TXT2IMG_SEED', params["seed"]);
 
     if ("variation seed" in params)
-        adapter.setInputValue(SELECTORS.TXT2IMG_SUBSEED, params["variation seed"]);
+        adapter.setInputValue('TXT2IMG_SUBSEED', params["variation seed"]);
 }
 
 export async function setImageParams(options) {
@@ -159,58 +159,58 @@ export async function setImageParams(options) {
         return;
 
     if ("model" in params)
-        await adapter.setDropdownValue(SELECTORS.MODEL_CHECKPOINT, params["model"]);
+        await adapter.setDropdownValue('MODEL_CHECKPOINT', params["model"]);
 
     if ("vae" in params)
-        await adapter.setDropdownValue(SELECTORS.SD_VAE, params["vae"]);
+        await adapter.setDropdownValue('SD_VAE', params["vae"]);
 
     if ("prompt" in params)
-        adapter.setInputValue(SELECTORS.TXT2IMG_PROMPT, params["prompt"]);
+        adapter.setInputValue('TXT2IMG_PROMPT', params["prompt"]);
     else
-        adapter.setInputValue(SELECTORS.TXT2IMG_PROMPT, "");
+        adapter.setInputValue('TXT2IMG_PROMPT', "");
 
     if ("negative prompt" in params)
-        adapter.setInputValue(SELECTORS.TXT2IMG_NEG_PROMPT, params["negative prompt"]);
+        adapter.setInputValue('TXT2IMG_NEG_PROMPT', params["negative prompt"]);
     else
-        adapter.setInputValue(SELECTORS.TXT2IMG_NEG_PROMPT, "");
+        adapter.setInputValue('TXT2IMG_NEG_PROMPT', "");
 
     if ("sampler" in params)
-        await adapter.setDropdownValue(SELECTORS.TXT2IMG_SAMPLING, params["sampler"]);
+        await adapter.setDropdownValue('TXT2IMG_SAMPLING', params["sampler"]);
 
     if ("schedule type" in params)
-        await adapter.setDropdownValue(SELECTORS.TXT2IMG_SCHEDULER, params["schedule type"]);
+        await adapter.setDropdownValue('TXT2IMG_SCHEDULER', params["schedule type"]);
 
     if ("steps" in params)
-        adapter.setInputValue(SELECTORS.TXT2IMG_STEPS, params["steps"]);
+        adapter.setInputValue('TXT2IMG_STEPS', params["steps"]);
 
     if ("cfg scale" in params)
-        adapter.setInputValue(SELECTORS.TXT2IMG_CFG_SCALE, params["cfg scale"]);
+        adapter.setInputValue('TXT2IMG_CFG_SCALE', params["cfg scale"]);
 
     if ("seed" in params)
-        adapter.setInputValue(SELECTORS.TXT2IMG_SEED, params["seed"]);
+        adapter.setInputValue('TXT2IMG_SEED', params["seed"]);
 
     if ("variation seed" in params) {
-        adapter.setInputValue(SELECTORS.TXT2IMG_SUBSEED, params["variation seed"]);
-        adapter.setInputValue(SELECTORS.TXT2IMG_SUBSEED_STRENGTH, params["variation seed strength"]);
+        adapter.setInputValue('TXT2IMG_SUBSEED', params["variation seed"]);
+        adapter.setInputValue('TXT2IMG_SUBSEED_STRENGTH', params["variation seed strength"]);
     }
 
     if ("size" in params && params["size"].includes("x")) {
         const sizes = params["size"].split("x");
-        adapter.setInputValue(SELECTORS.TXT2IMG_WIDTH, sizes[0]);
-        adapter.setInputValue(SELECTORS.TXT2IMG_HEIGHT, sizes[1]);
+        adapter.setInputValue('TXT2IMG_WIDTH', sizes[0]);
+        adapter.setInputValue('TXT2IMG_HEIGHT', sizes[1]);
     }
 
     if ("clip skip" in params)
-        adapter.setInputValue(SELECTORS.CLIP_SKIP, params["clip skip"]);
+        adapter.setInputValue('CLIP_SKIP', params["clip skip"]);
 
     if ("denoising strength" in params)
-        adapter.setInputValue(SELECTORS.TXT2IMG_DENOISING, params["denoising strength"]);
+        adapter.setInputValue('TXT2IMG_DENOISING', params["denoising strength"]);
 
     if ("hires steps" in params)
-        adapter.setInputValue(SELECTORS.HIRES_SCALE, params["hires steps"]);
+        adapter.setInputValue('HIRES_SCALE', params["hires steps"]);
 
     if ("hires upscale" in params) {
-        adapter.setInputValue(SELECTORS.HIRES_SCALE, params["hires upscale"]);
+        adapter.setInputValue('HIRES_SCALE', params["hires upscale"]);
         adapter.toggleHiresFix(true);
     }
 }
