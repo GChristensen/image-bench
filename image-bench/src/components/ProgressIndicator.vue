@@ -1,0 +1,54 @@
+<script setup>
+/**
+ * Compact inline progress bar with a monospace label
+ */
+defineProps({
+  value: {
+    type: Number,
+    default: 0
+  },
+  label: {
+    type: String,
+    default: ""
+  }
+});
+</script>
+
+<template>
+  <div class="progress-indicator" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.round(value)">
+    <div class="bar"><i :style="{width: `${Math.min(100, Math.max(0, value))}%`}"></i></div>
+    <span class="label">{{ label || `${Math.round(value)}%` }}</span>
+  </div>
+</template>
+
+<style scoped>
+.progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 6px;
+}
+
+.bar {
+  width: 200px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ib-elev-2);
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ib-accent);
+  transition: width 0.3s;
+}
+
+.label {
+  font-family: var(--ib-mono);
+  font-size: 12px;
+  color: var(--ib-text-2);
+  white-space: nowrap;
+}
+</style>

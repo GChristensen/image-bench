@@ -212,7 +212,6 @@
   .image-stream-container {
     position: relative;
     flex-grow: 1;
-    padding: 0 10px;
   }
 
   .image-stream {
@@ -225,7 +224,9 @@
     flex-wrap: wrap;
     display: flex;
     justify-content: center;
+    align-content: flex-start;
     align-items: center;
-    gap: 0.5%
+    gap: 14px;
+    padding: 16px 22px;
   }
 </style>

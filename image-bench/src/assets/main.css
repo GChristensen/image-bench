@@ -21,29 +21,333 @@ body {
   position: relative;
 }
 
+/* ---------- Toolbar ---------- */
+
 .toolbar {
   display: flex;
-  border-bottom: 1px solid #ccc;
+  align-items: center;
+  gap: 6px;
   width: 100%;
-  gap: 10px;
-  padding: 5px;
+  height: 42px;
+  flex-shrink: 0;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--ib-border);
 }
 
-.tool-item {
-  padding: 10px 15px;
+.toolbar-spacer {
+  flex-grow: 1;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--ib-border);
+  border-radius: 6px;
+  background: var(--ib-surface);
+}
+
+.toolbar-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 6px;
+  color: var(--ib-text-2);
+}
+
+.vsep {
+  width: 1px;
+  align-self: stretch;
+  margin: 8px 4px;
+  background: var(--ib-border);
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  height: 26px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--ib-text-2);
+  font: inherit;
+  font-weight: 500;
   cursor: pointer;
-  text-decoration: none;
-  color: white;
+  white-space: nowrap;
 }
 
-a.tool-item {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+.btn:hover {
+  background: var(--ib-hover);
+  color: var(--ib-text);
 }
 
-a.tool-item:hover {
-  background-color: hsla(160, 100%, 37%, 0.2);
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
+.btn.outline {
+  border-color: var(--ib-border);
+  background: var(--ib-elev);
+  color: var(--ib-text);
+}
+
+.btn.outline:hover {
+  border-color: var(--ib-border-2);
+  background: var(--ib-elev-2);
+}
+
+.btn.primary {
+  background: var(--ib-accent);
+  color: var(--ib-accent-ink);
+  font-weight: 600;
+}
+
+.btn.primary:hover {
+  background: var(--ib-accent-hover);
+}
+
+.btn.stop {
+  background: var(--ib-danger);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn.stop:hover {
+  background: var(--ib-danger-hover);
+}
+
+.btn.small {
+  height: 22px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+
+/* Icon button: 26px framed for toolbars and panels, .sm 22px, .flat without frame */
+.ib {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid var(--ib-border);
+  border-radius: 5px;
+  background: var(--ib-elev);
+  color: var(--ib-text-2);
+  cursor: pointer;
+}
+
+.ib:hover:not(:disabled) {
+  background: var(--ib-elev-2);
+  border-color: var(--ib-border-2);
+  color: var(--ib-text);
+}
+
+.ib:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ib.sm {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.ib.flat {
+  border-color: transparent;
+  background: none;
+}
+
+.ib.flat:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--ib-hover);
+}
+
+.ib.on {
+  background: var(--ib-accent-soft);
+  border-color: var(--ib-accent-border);
+  color: var(--ib-accent);
+}
+
+.ib.danger:hover:not(:disabled) {
+  color: var(--ib-danger-text);
+  border-color: #5b2d30;
+  background: #2a1a1c;
+}
+
+/* ---------- Inputs ---------- */
+
+.select-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.select-wrap select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 26px;
+  padding: 0 26px 0 8px;
+  border: 1px solid var(--ib-border);
+  border-radius: 5px;
+  background: var(--ib-elev);
+  color: var(--ib-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.select-wrap select:hover {
+  border-color: var(--ib-border-2);
+}
+
+.select-wrap .app-icon {
+  position: absolute;
+  right: 7px;
+  top: 6px;
+  pointer-events: none;
+  color: var(--ib-muted);
+}
+
+input[type=checkbox] {
+  accent-color: var(--ib-accent);
+}
+
+/* ---------- Menu ---------- */
+
+.menu {
+  position: absolute;
+  min-width: 170px;
+  padding: 4px;
+  border: 1px solid var(--ib-border-2);
+  border-radius: 6px;
+  background: var(--ib-elev);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 50;
+}
+
+.menu button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ib-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu button:hover {
+  background: var(--ib-hover);
+}
+
+.menu button.danger {
+  color: var(--ib-danger-text);
+}
+
+.menu hr {
+  border: 0;
+  border-top: 1px solid var(--ib-border);
+  margin: 4px 2px;
+}
+
+/* ---------- Chips and badges ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: var(--ib-elev-2);
+  color: var(--ib-text-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.count {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--ib-elev-2);
+  color: var(--ib-text-2);
+  line-height: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge.hr { background: #1f3a56; color: #9ccaff; }
+.badge.i2i { background: #3b2c4e; color: #d2b6ff; }
+.badge.steps { background: #1f3a2a; color: #8ee0a8; }
+.badge.warn { background: #3a2a12; color: var(--ib-warn); }
+
+/* ---------- Segmented control ---------- */
+
+.seg {
+  display: flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--ib-bg);
+  border: 1px solid var(--ib-border);
+  border-radius: 6px;
+}
+
+.seg button {
+  flex: 1;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ib-text-2);
+  font: inherit;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.seg button:hover {
+  color: var(--ib-text);
+}
+
+.seg button.on {
+  background: var(--ib-elev-2);
+  color: #fff;
+}
+
+.label-small {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ib-muted);
+}

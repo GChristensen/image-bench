@@ -1,6 +1,9 @@
 <script setup>
 import {computed, ref} from 'vue';
 import {KIND_GENERATED, KIND_UPSCALED} from "@/consts.js";
+import AppIcon from "@/components/AppIcon.vue";
+import NumberStepper from "@/components/NumberStepper.vue";
+import ProgressIndicator from "@/components/ProgressIndicator.vue";
 
 /**
  * Presentational component for the image toolbar
@@ -73,7 +76,6 @@ const emit = defineEmits([
 ]);
 
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
-const showMarkedText = computed(() => props.isShowingMarked ? 'Show all' : 'Show marked');
 const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clear');
 const generateImagesNumber = ref(256);
 
@@ -82,140 +84,68 @@ defineExpose({generateImagesNumber});
 
 <template>
   <div class="toolbar">
-    <!-- Tray actions -->
-    <a v-if="isTray" href="#" class="tool-item" @click.prevent="$emit('save')">Save</a>
-    <a v-if="isTray" href="#" class="tool-item" @click.prevent="$emit('open')">Open</a>
-    
-    <a v-if="isTray" href="#" class="tool-item" @click.prevent="$emit('select-all')">
-      {{ selectAllText }}
-    </a>
-    <a v-if="isTray" href="#" class="tool-item" @click.prevent="$emit('show-marked')">
-      {{ showMarkedText }}
-    </a>
+    <!-- Tray I/O -->
+    <template v-if="isTray">
+      <button class="ib" title="Download tray (.zip)" aria-label="Download tray" @click="$emit('save')"><AppIcon name="download"/></button>
+      <button class="ib" title="Import images (.png, .zip)" aria-label="Import images" @click="$emit('open')"><AppIcon name="upload"/></button>
+      <div class="vsep"></div>
+      <button class="btn outline select-all" @click="$emit('select-all')"><AppIcon name="checks" :size="14"/>{{ selectAllText }}</button>
+      <button class="ib" :class="{on: isShowingMarked}" :aria-pressed="isShowingMarked"
+              :title="isShowingMarked ? 'Showing marked images: click to show all' : 'Show marked images only'"
+              aria-label="Show marked images only" @click="$emit('show-marked')"><AppIcon name="filter" :size="14"/></button>
+      <div class="vsep"></div>
+      <button v-if="!upscaleInProgress" class="btn primary" :disabled="!isSomeSelected"
+              :title="isSomeSelected ? 'Upscale selected images' : 'Select images to upscale'"
+              @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
+    </template>
 
     <!-- Generated images actions -->
-    <a 
-      v-if="kind === KIND_GENERATED && !generationInProgress"
-      href="#" 
-      class="tool-item" 
-      @click.prevent="$emit('batch-generate')"
-    >Generate</a>
-    
-    <a 
-      v-if="kind === KIND_GENERATED && !generationInProgress"
-      href="#" 
-      class="tool-item" 
-      @click.prevent="$emit('generate-variations')"
-    >Variations</a>
-    
-    <a 
-      v-if="kind === KIND_GENERATED && generationInProgress"
-      href="#" 
-      class="tool-item" 
-      @click.prevent="$emit('stop-generation')"
-    >Stop</a>
+    <template v-if="kind === KIND_GENERATED">
+      <div class="toolbar-group">
+        <button v-if="!generationInProgress" class="btn primary" @click="$emit('batch-generate')"
+          ><AppIcon name="play" :size="13"/>Generate</button>
+        <button v-else class="btn stop" @click="$emit('stop-generation')"><AppIcon name="stop" :size="13"/>Stop</button>
+        <label class="toolbar-group-label">×<NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
+      </div>
+      <button class="btn outline" :disabled="generationInProgress" @click="$emit('generate-variations')"
+        ><AppIcon name="shuffle" :size="14"/>Variations…</button>
+    </template>
 
-    <!-- Upscale actions -->
-    <a 
-      v-if="isTray && !upscaleInProgress" 
-      href="#" 
-      class="tool-item" 
-      @click.prevent="$emit('upscale-selected')"
-    >Upscale selected</a>
-    
-    <a 
-      v-if="kind === KIND_UPSCALED && upscaleInProgress"
-      href="#" 
-      class="tool-item"
-      @click.prevent="$emit('upscale-selected')"
-    >Stop</a>
-
-    <!-- Clear action -->
-    <a href="#" class="tool-item" @click.prevent="$emit('clear')">{{ clearText }}</a>
-
-    <div class="toolbar-spacer"></div>
+    <!-- Upscale stop -->
+    <button v-if="kind === KIND_UPSCALED && upscaleInProgress" class="btn stop" @click="$emit('upscale-selected')"
+      ><AppIcon name="stop" :size="13"/>Stop</button>
 
     <!-- Progress indicator -->
-    <div v-if="generationInProgress" class="generation-progress">
-      Progress:&nbsp;
-      <progress max="100" :value="generationProgress || 0"></progress>
-    </div>
+    <ProgressIndicator v-if="generationInProgress" :value="generationProgress || 0"/>
 
     <div class="toolbar-spacer"></div>
 
     <!-- Preset selector -->
     <div class="preset-selector" v-if="showPresetSelector">
-      Apply preset:
-      <select 
-        class="config-presets" 
-        :value="applyPreset" 
-        @change="$emit('preset-change', $event.target.value)"
-      >
-        <option 
-          v-for="preset in presets" 
-          :key="preset"
-          :value="preset"
-        >{{ preset }}</option>
-      </select>
+      <span>Apply preset</span>
+      <div class="select-wrap">
+        <select :value="applyPreset" @change="$emit('preset-change', $event.target.value)">
+          <option v-for="preset in presets" :key="preset" :value="preset">{{ preset }}</option>
+        </select>
+        <AppIcon name="chevron" :size="14"/>
+      </div>
     </div>
 
-    <!-- Generate image number input -->
-    <div v-if="kind === KIND_GENERATED" class="generate-images-container">
-      <label>Generate images:&nbsp;<input type="number" class="generate-images" v-model="generateImagesNumber"></label>
-    </div>
+    <!-- Clear action -->
+    <button class="btn" @click="$emit('clear')"><AppIcon name="eraser" :size="14"/>{{ clearText }}</button>
   </div>
 </template>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  border-bottom: 1px solid #ccc;
-  width: 100%;
-  align-items: center;
-  padding: 5px;
+.select-all {
+  min-width: 112px;
 }
 
-.tool-item {
-  padding: 5px 5px;
-  cursor: pointer;
-  text-decoration: none;
-  color: white;
-  white-space: nowrap;
-}
-
-.tool-item:hover {
-  background-color: #f0f0f0;
-  color: var(--vt-c-black);
-}
-
-.toolbar-spacer {
-  flex-grow: 1;
-}
-
-.generation-progress {
-  width: 20%;
+.preset-selector {
   display: flex;
   align-items: center;
-}
-
-.generation-progress progress {
-  flex-grow: 1;
-}
-
-.config-presets {
-  margin-left: 5px;
-}
-
-.generate-images-container {
-  display: flex;
-}
-
-.generate-images-container label {
-  display: flex;
-  align-items: center;
-}
-
-input.generate-images {
-  width: 50px;
+  gap: 8px;
+  color: var(--ib-text-2);
+  width: 260px;
 }
 </style>

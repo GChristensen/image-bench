@@ -13,6 +13,9 @@
   import {useLocalStorage} from "@/composables/useLocalStorage.js";
   import {usePromptModal} from "@/composables/usePromptModal.js";
   import PromptModal from "@/components/PromptModal.vue";
+  import AppIcon from "@/components/AppIcon.vue";
+
+  const MARKINGS = ["👍", "👎", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣"];
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams', 
     'select', 'upscaleImage', 'addComment', 'deleteImage']);
@@ -154,18 +157,6 @@
     return result;
   }
 
-  function onImageMouseEnter(e) {
-    const markings = e.target.querySelector(".markings");
-    if (markings)
-      markings.style.display = "block";
-  }
-
-  function onImageMouseLeave(e) {
-    const markings = e.target.querySelector(".markings");
-    if (markings)
-      markings.style.display = "none";
-  }
-
   function onSelectMarkingClick(e) {
     props.image.marking = e.target.textContent;
     emit("setMarking");
@@ -176,13 +167,6 @@
     emit("setMarking");
   }
 
-  function getTagStyle(image) {
-    if (image.tagColor) {
-      return {
-        'border-right': `4px solid ${image.tagColor}`
-      };
-    }
-  }
 </script>
 
 <template>
@@ -194,60 +178,58 @@
   @confirm="promptModal.onConfirm"
   @cancel="promptModal.onCancel"
 />
-<div v-if="displayed" class="selectable-image">
-  <div class="image-wrapper"
-       @mouseenter="onImageMouseEnter"
-       @mouseleave="onImageMouseLeave">
-    <img v-if="!image.separator"
-         :style="getTagStyle(image)"
-         class="selectable-image-preview"
+<div v-if="displayed" class="selectable-image" :class="{selected}">
+  <div class="image-separator" v-if="image.separator">◇</div>
+  <div v-else class="image-frame">
+    <img class="selectable-image-preview"
          :src="imageOps.getImageLink(image)"
          :title="imageOps.createImageTooltip(image)"
          @mousedown.left="$emit('imageClick')"
          @mousedown.middle="$emit('imageOpen')">
-    <div v-if="isTray" class="markings fadeIn">
-      <span class="marking" @click="onSelectMarkingClick">👍</span>
-      <span class="marking" @click="onSelectMarkingClick">👎</span>
-      <span class="marking" @click="onSelectMarkingClick">🔴</span>
-      <span class="marking" @click="onSelectMarkingClick">🟠</span>
-      <span class="marking" @click="onSelectMarkingClick">🟡</span>
-      <span class="marking" @click="onSelectMarkingClick">🟢</span>
-      <span class="marking" @click="onSelectMarkingClick">🔵</span>
-      <span class="marking" @click="onSelectMarkingClick">🟣</span>
+
+    <span v-if="image.tagColor" class="tag-bar" :style="{background: image.tagColor}"></span>
+
+    <label v-if="selectable" class="select-box" title="Select">
+      <input type="checkbox" aria-label="Select image" :checked="selected"
+             @change="$emit('select', $event.target.checked)">
+    </label>
+
+    <div class="image-actions">
+      <button v-if="!image.img2img" class="ib sm" title="Left: reuse seed, Middle: reuse all parameters" aria-label="Reuse seed"
+              @mousedown.left="onReuseSeedClick" @mousedown.middle="onReuseParamsClick"><AppIcon name="seed" :size="13"/></button>
+      <button class="ib sm" title="Generation parameters" aria-label="Generation parameters"
+              @mousedown.left="$emit('showParams')"><AppIcon name="params" :size="13"/></button>
+      <button v-if="isTray && !image.img2img" class="ib sm" title="Generate with steps" aria-label="Generate with steps"
+              @mousedown.left="onGenerateVaryingSteps"><AppIcon name="steps" :size="13"/></button>
+      <button v-if="upscalable && !image.img2img" class="ib sm" :title="getUpscaleButtonTitle(image)" aria-label="Upscale"
+              @mousedown.left="$emit('upscaleImage', image, false)"
+              @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
+      <button v-if="isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
+              @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
+      <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
+              @click="onPlaceToConceptTray"><AppIcon name="concept" :size="13"/></button>
+      <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib sm" title="Place to image tray" aria-label="Place to image tray"
+              @click="onPlaceToTray"><AppIcon name="tray" :size="13"/></button>
+      <button v-if="isTray" class="ib sm" title="Add comment" aria-label="Add comment"
+              @click="$emit('addComment', image)"><AppIcon name="comment" :size="13"/></button>
+      <button v-if="isTray" class="ib sm danger" title="Delete" aria-label="Delete"
+              @mousedown.left="$emit('deleteImage', image)"><AppIcon name="trash" :size="13"/></button>
     </div>
-  </div>
-  <div class="image-separator" v-if="image.separator">◇</div>
-  <div  v-if="!image.separator" class="selectable-image-controls"><!--
-      --><span v-if="image.marking" class="image-marking" title="Left: remove marking, Middle: fiter by"
-               @mousedown.left="onRemoveMarking"
-               @mousedown.middle="$emit('filterMarking', image.marking)">{{image.marking}}&nbsp;</span><!--
-      --><label v-if="selectable" class="select-label"><input class="selectable-emage-checkbox" type="checkbox"
-                  @change="$emit('select', $event.target.checked)" title="Select"
-                  :checked="selected">&nbsp;</label>
-    <div class="control-buttons">
-      <span v-if="!image.img2img" class="reuse-seed" title="Left: reuse seed, Middle: reuse all parameters"
-            @mousedown.left="onReuseSeedClick"
-            @mousedown.middle="onReuseParamsClick">♻️</span>
-      <span class="generation-params" title="Generation parameters"
-            @mousedown.left="$emit('showParams')">📑</span>
-      <span v-if="isTray && !image.img2img" class="generate-steps" title="Generate with steps"
-            @mousedown.left="onGenerateVaryingSteps">📶</span>
-      <span v-if="upscalable && !image.img2img" class="upscale" :title="getUpscaleButtonTitle(image)"
-            @mousedown.left="$emit('upscaleImage', image, false)"
-            @mousedown.middle="$emit('upscaleImage', image, true)">🏞️</span>
-      <span v-if="isTray && !image.img2img" class="upscale-denoising" title="Upscale with denoising"
-            @mousedown.left="onUpscaleVaryingDenoising">📉</span>
-      <span v-if="!isTray || isTray && kind === KIND_IMAGE_TRAY" class="place-to-tray" title="Place to concept tray"
-            @click="onPlaceToConceptTray">💡</span>
-      <span v-if="!isTray || isTray && kind === KIND_CONCEPT_TRAY" class="place-to-tray" title="Place to image tray"
-            @click="onPlaceToTray">🎨</span>
-      <span v-if="isTray" class="add-comment" title="Add comment" @click="$emit('addComment', image)">💬</span>
-      <span v-if="isTray" class="delete" title="Delete" @mousedown.left="$emit('deleteImage', image)">🗑️</span><!--
-      -->&nbsp;<!--
-      --><span v-if="image.parameters['hires upscale']" class="upscale-indicator" title="Upscaled">⬆️</span>
-      <span v-if="image.img2img" class="img2img-indicator" title="Img2Img image">🖼️</span>
-      <span v-if="image.setSteps" class="upscale-steps" :title="`Upscaled with ${image.parameters['steps']} sampling steps`">🐾</span>
-      <span v-if="needShowPromptWarning(image)" class="prompt-warning" title="Image prompt and Txt2Img prompt do not match">⚠️️</span>
+
+    <div class="image-badges">
+      <span v-if="image.parameters['hires upscale']" class="badge hr" title="Upscaled">HR</span>
+      <span v-if="image.img2img" class="badge i2i" title="Img2Img image">I2I</span>
+      <span v-if="image.setSteps" class="badge steps" :title="`Upscaled with ${image.parameters['steps']} sampling steps`">{{ image.parameters['steps'] }} st</span>
+      <span v-if="needShowPromptWarning(image)" class="badge warn" title="Image prompt and Txt2Img prompt do not match"
+        ><AppIcon name="alert" :size="11"/></span>
+    </div>
+
+    <span v-if="image.marking" class="image-marking" title="Left: remove marking, Middle: filter by"
+          @mousedown.left="onRemoveMarking"
+          @mousedown.middle="$emit('filterMarking', image.marking)">{{ image.marking }}</span>
+
+    <div v-if="isTray" class="markings">
+      <span v-for="marking in MARKINGS" :key="marking" class="marking" @click="onSelectMarkingClick">{{ marking }}</span>
     </div>
   </div>
 </div>
@@ -256,78 +238,158 @@
 <style scoped>
 .selectable-image {
   max-width: 30%;
-  max-height: 70vh;
   height: max-content;
-  margin: 15px;
+}
+
+.image-frame {
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  line-height: 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.selectable-image.selected .image-frame {
+  box-shadow: 0 0 0 2px var(--ib-accent);
 }
 
 .selectable-image-preview {
-  width: 100%;
-  height: 100%;
-  max-width: 27vw;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(27vw, 100%);
   max-height: 70vh;
-  object-fit: contain;
   cursor: pointer;
 }
 
-.control-buttons {
-  display: inline-block;
+.tag-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
 }
 
-.selectable-image-controls {
-  text-align: center;
-  color: initial;
+.select-box {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(17, 19, 23, 0.8);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 
-.select-label {
-  color: var(--color-text);
-}
-
-.reuse-seed, .generation-params, .generate-steps, .upscale-denoising, .delete, .upscale, .place-to-tray, .add-comment {
-  text-decoration: none;
+.select-box input {
+  margin: 0;
   cursor: pointer;
 }
 
-.upscale-indicator, .upscale-steps, .prompt-warning, .img2img-indicator {
+.selectable-image.selected .select-box,
+.image-frame:hover .select-box {
+  opacity: 1;
+}
+
+.image-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  left: 34px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
+  line-height: normal;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.image-frame:hover .image-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.image-actions .ib {
+  background: rgba(17, 19, 23, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--ib-text);
+}
+
+.image-actions .ib:hover {
+  background: var(--ib-elev-2);
+  border-color: var(--ib-border-2);
+  color: #fff;
+}
+
+.image-badges {
+  position: absolute;
+  left: 6px;
+  bottom: 7px;
+  display: flex;
+  gap: 3px;
+  line-height: normal;
+  transition: opacity 0.15s;
+}
+
+.image-badges .badge {
   cursor: default;
 }
 
-.upscale-steps {
-  color: transparent;
-  text-shadow: 0 0 0 #57ff00;
-  font-size: 90%;
+.image-frame:hover .image-badges {
+  opacity: 0;
 }
 
-.image-wrapper {
-  position: relative;
+.image-marking {
+  position: absolute;
+  right: 6px;
+  bottom: 7px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(17, 19, 23, 0.8);
+  font-size: 14px;
+  line-height: normal;
+  cursor: pointer;
 }
 
 .markings {
   position: absolute;
-  bottom: 5px;
+  bottom: 7px;
   left: 50%;
   transform: translate(-50%, 0);
-  color: initial;
   display: none;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(17, 19, 23, 0.8);
+  line-height: normal;
+  white-space: nowrap;
 }
 
-.marking, .image-marking {
-  cursor: pointer;
-}
-
-@keyframes fadeIn {
-  from    { opacity: 0; }
-  to      { opacity: 1; }
-}
-
-.fadeIn {
+.image-frame:hover .markings {
+  display: block;
   animation: fadeIn 0.2s both ease-in;
 }
 
+.marking {
+  cursor: pointer;
+  padding: 0 1px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 .image-separator {
-  color: white;
+  color: var(--ib-muted);
   font-size: 120%;
   font-weight: bold;
 }
-
 </style>

@@ -14,6 +14,9 @@ import PromptModal from "@/components/PromptModal.vue";
 import ExploreParamsModal from "@/components/ExploreParamsModal.vue";
 import LoraParamsModal from "@/components/LoraParamsModal.vue";
 import ExploreListPanel from "@/components/ExploreListPanel.vue";
+import AppIcon from "@/components/AppIcon.vue";
+import NumberStepper from "@/components/NumberStepper.vue";
+import ProgressIndicator from "@/components/ProgressIndicator.vue";
 
 const TAB_CHECKPOINTS = "checkpoints";
 const TAB_LORAS = "loras";
@@ -91,6 +94,23 @@ const settingsSummary = computed(() => {
     : [];
 
   return items.length ? items.join(", ") : "default";
+});
+
+const exploreSummary = computed(() => {
+  const models = checkpoints.selected.value.size;
+  const nLoras = loras.selected.value.size;
+  const parts = [`${models} model${models === 1 ? "" : "s"}`];
+
+  if (nLoras)
+    parts.push(`${nLoras} LoRA${nLoras === 1 ? "" : "s"}`);
+
+  parts.push(`${generateImagesNumber.value} image${generateImagesNumber.value == 1 ? "" : "s"} each`);
+  return parts.join(" · ");
+});
+
+const progressLabel = computed(() => {
+  const images = modelImages.value.reduce((n, model) => n + model.images.length, 0);
+  return `${Math.round(exploreImagesStore.generationProgress)}% · ${images} image${images === 1 ? "" : "s"}`;
 });
 
 const generatedImagesElement = ref();
@@ -309,25 +329,26 @@ function onKeydown(e) {
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="wrapper">
     <div class="toolbar">
-      <a href="#" class="tool-item" id="explore-selected" @click="onExploreClick"
-        >{{ exploreImagesStore.generationInProgress? "Stop": "Explore" }}</a>
-      <div class="toolbar-spacer"></div>
-      <div v-if="exploreImagesStore.generationInProgress" class="generation-progress">Progress:&nbsp;
-        <progress max="100" :value="exploreImagesStore.generationProgress"></progress>
+      <div class="toolbar-group">
+        <button v-if="!exploreImagesStore.generationInProgress" id="explore-selected" class="btn primary"
+                @click="onExploreClick"><AppIcon name="play" :size="13"/>Explore</button>
+        <button v-else id="explore-selected" class="btn stop" @click="onExploreClick"><AppIcon name="stop" :size="13"/>Stop</button>
+        <label class="toolbar-group-label" title="Images per model">×<NumberStepper v-model="generateImagesNumber" label="Images per model"/></label>
       </div>
+      <ProgressIndicator v-if="exploreImagesStore.generationInProgress"
+                         :value="exploreImagesStore.generationProgress" :label="progressLabel"/>
+      <span v-else class="explore-summary">{{ exploreSummary }}</span>
       <div class="toolbar-spacer"></div>
-      <div class="generate-images-container">
-        <label>Generate images:&nbsp;<input type="number" class="generate-images" v-model="generateImagesNumber"></label>
-      </div>
+      <button class="btn" :disabled="exploreImagesStore.generationInProgress || !modelImages.length"
+              @click="exploreImagesStore.clear()"><AppIcon name="eraser" :size="14"/>Clear results</button>
     </div>
     <div class="explore-container">
       <div class="model-list">
-        <div class="tabs">
-          <a href="#" class="tab" :class="{active: activeTab === 'checkpoints'}"
-             @click.prevent="activeTab = 'checkpoints'">Checkpoints</a>
-          <a href="#" class="tab" :class="{active: activeTab === 'loras'}"
-             @click.prevent="activeTab = 'loras'">Loras<span v-if="loras.selected.value.size"
-              >&nbsp;({{ loras.selected.value.size }})</span></a>
+        <div class="seg">
+          <button :class="{on: activeTab === TAB_CHECKPOINTS}" @click="activeTab = TAB_CHECKPOINTS"
+            >Checkpoints<span class="count">{{ checkpoints.selected.value.size }}/{{ checkpoints.items.value.length }}</span></button>
+          <button :class="{on: activeTab === TAB_LORAS}" @click="activeTab = TAB_LORAS"
+            >LoRAs<span class="count">{{ loras.selected.value.size }}/{{ loras.items.value.length }}</span></button>
         </div>
         <ExploreListPanel
           :items="activeListItems"
@@ -337,7 +358,7 @@ function onKeydown(e) {
           :focused-key="activeList.focusedKey.value"
           :params="activeList.params.value"
           :summary="settingsSummary"
-          :item-kind="activeTab === 'loras' ? 'LoRA' : 'model'"
+          :item-kind="activeTab === TAB_LORAS ? 'LoRA' : 'model'"
           @toggle="activeList.toggle"
           @focus="activeList.focus"
           @preset-change="activeList.activatePreset"
@@ -350,16 +371,24 @@ function onKeydown(e) {
       </div>
       <div class="generated-images-wrapper">
         <div class="generated-images scrollable" ref="generatedImagesElement">
-          <div class="model-images-wrapper" v-for="model in modelImages">
-            <h3 class="model-name">{{ model.name }}</h3>
+          <section class="model-group" v-for="model in modelImages" :key="model.name">
+            <div class="model-group-header">
+              <h3 class="model-name" :title="model.name">{{ model.name }}</h3>
+              <span class="model-group-count">{{ model.images.length }} image{{ model.images.length === 1 ? "" : "s" }}</span>
+            </div>
             <div class="model-images">
               <GeneratedImage v-for="image in model.images"
+                               kind="explore"
+                               :is-tray="false"
                                :image="image"
                                :displayed="true"
                                @show-params="() => onShowParams(image)"
                                @image-click="() => onImageClick(image)"
                                @image-open="() => onImageOpen(image)"></GeneratedImage>
             </div>
+          </section>
+          <div v-if="!modelImages.length && !exploreImagesStore.generationInProgress" class="empty-state">
+            Check models (and optionally LoRAs) on the left, then press <b>Explore</b>.
           </div>
         </div>
       </div>
@@ -368,23 +397,6 @@ function onKeydown(e) {
 </template>
 
 <style scoped>
-.tool-item {
-  padding: 5px 15px;
-  cursor: pointer;
-  text-decoration: none;
-  color: white;
-  white-space: nowrap;
-}
-
-.tool-item:hover {
-  background-color: #f0f0f0;
-  color: var(--vt-c-black);
-}
-
-.toolbar-spacer {
-  flex-grow: 1;
-}
-
 .wrapper {
   width: 100%;
   height: 100%;
@@ -392,44 +404,28 @@ function onKeydown(e) {
   flex-direction: column;
 }
 
+.explore-summary {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--ib-muted);
+  white-space: nowrap;
+}
+
 .explore-container {
   display: flex;
   flex-grow: 1;
-  padding: 0 10px;
+  min-height: 0;
 }
 
 .model-list {
-  margin: 0 0 15px 0;
-  padding-top: 10px;
+  width: 300px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  padding-right: 10px;
-  border-right: 1px solid white;
-}
-
-.tabs {
-  display: flex;
-  margin-bottom: 8px;
-  border-bottom: 1px solid white;
-}
-
-.tab {
-  padding: 2px 10px;
-  cursor: pointer;
-  text-decoration: none;
-  color: white;
-  white-space: nowrap;
-  border-bottom: 3px solid transparent;
-}
-
-.tab:hover {
-  background-color: #f0f0f0;
-  color: var(--vt-c-black);
-}
-
-.tab.active {
-  border-bottom-color: white;
-  font-weight: bold;
+  gap: 8px;
+  padding: 10px;
+  background: var(--ib-surface);
+  border-right: 1px solid var(--ib-border);
 }
 
 .generated-images-wrapper {
@@ -439,42 +435,61 @@ function onKeydown(e) {
 
 .generated-images {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset: 0;
   overflow-y: auto;
-  margin: 15px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.model-group {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px 10px;
+  background: var(--ib-surface);
+  border: 1px solid var(--ib-border);
+  border-radius: 6px;
+}
+
+.model-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .model-name {
-  font-weight: bold;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ib-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-group-count {
+  font-size: 12px;
+  color: var(--ib-muted);
+  white-space: nowrap;
 }
 
 .model-images {
   display: flex;
-  border-bottom: 1px solid white;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.generate-images-container {
-  display: flex;
+.empty-state {
+  margin: auto;
+  color: var(--ib-muted);
 }
 
-.generate-images-container label {
-  display: flex;
-  align-items: center;
-}
-
-input.generate-images {
-  width: 50px;
-}
-
-.generation-progress {
-  width: 20%;
-  display: flex;
-}
-
-.generation-progress progress {
-  flex-grow: 1;
+.empty-state b {
+  color: var(--ib-text-2);
+  font-weight: 600;
 }
 </style>

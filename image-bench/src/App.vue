@@ -12,6 +12,7 @@ import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import ActionsModal from "@/components/ActionsModal.vue";
+import AppIcon from "@/components/AppIcon.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -102,17 +103,20 @@ async function switchTabAccordingToGenerationMode(e, state) {
 
 <template>
   <div class="tab-container">
-    <div class="tabs">
-      <RouterLink to="/explore" class="tab" ref="exploreTab">Explore</RouterLink>
-      <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab">Generated Images</RouterLink>
-      <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab">Concept Tray</RouterLink>
-      <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab">Image Tray</RouterLink>
-      <RouterLink to="/upscaled-images" class="tab" ref="upscaledImagesTab">Upscaled</RouterLink>
+    <nav class="tabs">
+      <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
+      <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
+      <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab"><AppIcon name="concept" :size="14"/>Concept tray<span v-if="conceptTrayStore.images.length" class="count">{{ conceptTrayStore.images.length }}</span></RouterLink>
+      <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab"><AppIcon name="tray" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
+      <RouterLink to="/upscaled-images" class="tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <div class="tab-spacer"></div>
-      <span v-if="!hasOpener" class="window-warning" title="Lost connection with the SD WebUI">&nbsp;⚠️&nbsp;</span>
-      <RouterLink to="/settings" class="tab" ref="settingsTab">Settings</RouterLink>
-      <button class="actions-button" @click="showActionsModal = true" title="Actions">☢️</button>
-    </div>
+      <span v-if="!hasOpener" class="chip window-warning" title="The opener SD WebUI window is closed or was reloaded"
+        ><AppIcon name="alert" :size="13"/>Disconnected from WebUI</span>
+      <RouterLink to="/settings" class="tab" ref="settingsTab"><AppIcon name="settings" :size="14"/>Settings</RouterLink>
+      <button class="ib flat actions-button" @click="showActionsModal = true"
+              title="Maintenance actions (clear outputs, images)" aria-label="Maintenance actions"
+        ><AppIcon name="more" :size="16"/></button>
+    </nav>
     <div id="tab-content">
       <RouterView v-slot="{ Component }">
         <KeepAlive>
@@ -125,83 +129,66 @@ async function switchTabAccordingToGenerationMode(e, state) {
 </template>
 
 <style scoped>
-  a {
-    text-decoration: none;
-    color: hsla(160, 100%, 37%, 1);
-    transition: 0.4s;
-    padding: 3px;
-  }
-
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-
   .tab-container {
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
+    background: var(--ib-bg);
   }
 
   .tabs {
     display: flex;
-    border-bottom: 1px solid #ccc;
+    align-items: center;
     width: 100%;
+    height: 37px;
+    flex-shrink: 0;
+    padding: 0 6px;
+    background: var(--ib-surface);
+    border-bottom: 1px solid var(--ib-border);
   }
 
   .tab {
-    padding: 10px 15px;
-    cursor: pointer;
+    height: 36px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ib-text-2);
     text-decoration: none;
-    color: white;
-    font-weight: bold;
+    font-weight: 500;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .tab:hover {
+    color: var(--ib-text);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .tab.router-link-exact-active {
+    color: #fff;
+    border-bottom-color: var(--ib-accent);
   }
 
   .tab-spacer {
     flex-grow: 1;
   }
 
-  .tab:hover {
-    background-color: #f0f0f0;
-    color: var(--vt-c-black);
-  }
-
-  .tab.router-link-exact-active {
-    font-weight: bold;
-    background-color: #f0f0f0;
-    color: var(--vt-c-black);
-  }
-
   #tab-content {
     flex-grow: 1;
+    min-height: 0;
   }
 
-  .toolbar-link-container {
-    display: flex;
+  .actions-button {
+    margin-left: 2px;
   }
-
-  .toolbar-link {
-    align-self: center;
-  }
-
-
-.actions-button {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 8px 12px;
-  transition: background-color 0.2s;
-  align-self: center;
-}
-
-.actions-button:hover {
-  background-color: #f0f0f0;
-}
 
   .window-warning {
-    align-self: center;
-    color: initial;
+    margin-right: 6px;
+    background: #3a2a12;
+    color: var(--ib-warn);
     cursor: default;
   }
 </style>

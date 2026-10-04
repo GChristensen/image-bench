@@ -45,7 +45,7 @@ function onClearOutputsClick() {
 }
 
 function onClearGeneratedImagesClick() {
-  if (confirm("This will permanently delete all generated images except saved in Image Bench. Do you want to continue?")) {
+  if (confirm("This will permanently delete all generated images except saved in Image Bench trays. Do you want to continue?")) {
     setTimeout(() => fetch("/image-bench/clear_generated_images"), 500);
     emit('close');
   }
@@ -86,14 +86,14 @@ onUnmounted(() => {
               <button class="close-button" @click="onClose" title="Close (Esc)">✖</button>
             </div>
             <div class="actions-modal-body">
-              <button class="action-button" @click="onClearOutputsClick">
-                ☢️☢️☢️ Clear outputs
+              <button class="action-button" @click="onClearGeneratedImagesClick">
+                ☢️ Clear generated images (UI only)
               </button>
               <button class="action-button" @click="onClearImagesClick">
-                ☢️☢️ Clear images
+                ☢️☢️ Clear all images (UI only)
               </button>
-              <button class="action-button" @click="onClearGeneratedImagesClick">
-                ☢️ Clear generated images
+              <button class="action-button" @click="onClearOutputsClick">
+                ☢️☢️☢️ Clear outputs (remove files)
               </button>
             </div>
           </div>
