@@ -87,6 +87,17 @@ export class ComfyUIOperations {
     }
 
     /**
+     * UI presets are a Forge concept; no-ops in ComfyUI
+     */
+    async backupUiPreset() {
+        return null;
+    }
+
+    async restoreUiPreset(preset) {}
+
+    async applyUiPresetForModel(modelName) {}
+
+    /**
      * Click the generate button (queue the workflow)
      * @returns {boolean} Whether the workflow was queued
      */

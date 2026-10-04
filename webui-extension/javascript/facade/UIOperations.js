@@ -4,6 +4,18 @@
  * Strategies depend on this facade instead of directly using the adapter
  */
 
+import { SELECTORS } from '../adapters/selectors.js';
+
+// Fallback if the preset choices can't be read from the Gradio config
+const DEFAULT_UI_PRESETS = ['sd', 'xl', 'flux', 'klein', 'qwen', 'lumina', 'zit', 'wan', 'anima', 'ernie', 'pid', 'krea'];
+
+// Presets whose value is searched in the model name by a different term
+const UI_PRESET_SEARCH_TERMS = {
+    sd: 'sd/',
+    xl: 'sdxl',
+    zit: 'z-image'
+};
+
 export class UIOperations {
     /**
      * @param {Object} adapter - DOM adapter instance
@@ -145,6 +157,83 @@ export class UIOperations {
      */
     async restoreModel(modelName) {
         await this.adapter.setDropdownValue('MODEL_CHECKPOINT', modelName);
+    }
+
+    /**
+     * Backup current Forge UI preset
+     * @returns {Promise<string|null>} Current preset value or null if absent
+     */
+    async backupUiPreset() {
+        return this.adapter.getInputValue('FORGE_UI_PRESET');
+    }
+
+    /**
+     * Restore/set Forge UI preset
+     * @param {string} preset - Preset value to set
+     * @returns {Promise<void>}
+     */
+    async restoreUiPreset(preset) {
+        if (preset) {
+            await this.setUiPreset(preset);
+        }
+    }
+
+    /**
+     * Select the Forge UI preset matching the given model name
+     * A preset matches if its search term is contained in the model name;
+     * the longest matching term wins (e.g. "klein" over "flux")
+     * @param {string} modelName - Model title as it appears in the model list
+     * @returns {Promise<void>}
+     */
+    async applyUiPresetForModel(modelName) {
+        if (!modelName || !this.adapter.getElement('FORGE_UI_PRESET')) {
+            return;
+        }
+
+        const name = modelName.toLowerCase().replace(/\\/g, '/');
+        let bestPreset = null;
+        let bestTerm = '';
+
+        for (const preset of this.getUiPresetChoices()) {
+            const term = (UI_PRESET_SEARCH_TERMS[preset] ?? preset).toLowerCase();
+
+            if (name.includes(term) && term.length > bestTerm.length) {
+                bestPreset = preset;
+                bestTerm = term;
+            }
+        }
+
+        if (bestPreset) {
+            await this.setUiPreset(bestPreset);
+        }
+    }
+
+    /**
+     * Set Forge UI preset only if it differs from the current value
+     * @param {string} preset - Preset value to set
+     * @returns {Promise<void>}
+     */
+    async setUiPreset(preset) {
+        const current = this.adapter.getInputValue('FORGE_UI_PRESET');
+
+        if (current === null || current === preset) {
+            return;
+        }
+
+        await this.adapter.setDropdownValue('FORGE_UI_PRESET', preset);
+        await this.adapter.sleep(333);
+    }
+
+    /**
+     * Get available Forge UI preset choices from Gradio config
+     * @returns {string[]}
+     */
+    getUiPresetChoices() {
+        const components = window.gradio_config?.components ?? [];
+        const component = components.find(c => c.props?.elem_id === SELECTORS.FORGE_UI_PRESET_ID);
+        const choices = component?.props?.choices?.map(c => Array.isArray(c) ? c[1] : c);
+
+        return choices?.length ? choices : DEFAULT_UI_PRESETS;
     }
 
     /**

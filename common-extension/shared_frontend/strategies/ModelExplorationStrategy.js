@@ -10,6 +10,7 @@ export class ModelExplorationStrategy extends QueueProcessor {
         super(uiOperations, messageBus);
         this.currentModel = null;
         this.modelBeforeExplore = null;
+        this.uiPresetBeforeExplore = null;
         this.invalidated = false;
     }
 
@@ -53,9 +54,11 @@ export class ModelExplorationStrategy extends QueueProcessor {
         console.log('[ModelExploration] Backing up current model...');
         this.modelBeforeExplore = await this.uiOperations.backupModel();
         console.log('[ModelExploration] Backed up model:', this.modelBeforeExplore);
+        this.uiPresetBeforeExplore = await this.uiOperations.backupUiPreset();
 
         // Set initial model
         console.log('[ModelExploration] Setting initial model to:', this.currentModel.title);
+        await this.uiOperations.applyUiPresetForModel(this.currentModel.title);
         await this.uiOperations.restoreModel(this.currentModel.title);
 
         // Configure generation parameters
@@ -79,6 +82,7 @@ export class ModelExplorationStrategy extends QueueProcessor {
         // Switch model if different from current
         if (this.currentModel.title !== model.title) {
             console.log('[ModelExploration] Switching model from', this.currentModel.title, 'to', model.title);
+            await this.uiOperations.applyUiPresetForModel(model.title);
             await this.uiOperations.restoreModel(model.title);
             this.currentModel = model;
             console.log('[ModelExploration] Model switched successfully');
@@ -106,8 +110,10 @@ export class ModelExplorationStrategy extends QueueProcessor {
         // Restore original model if saved
         if (this.modelBeforeExplore) {
             console.log('[ModelExploration] Restoring original model:', this.modelBeforeExplore);
+            await this.uiOperations.restoreUiPreset(this.uiPresetBeforeExplore);
             await this.uiOperations.restoreModel(this.modelBeforeExplore);
             this.modelBeforeExplore = null;
+            this.uiPresetBeforeExplore = null;
         } else {
             console.log('[ModelExploration] No model to restore');
         }

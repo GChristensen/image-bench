@@ -35,6 +35,8 @@ export const SELECTORS = {
     MODEL_CHECKPOINT: '#setting_sd_model_checkpoint input, .model_selection input',
     SD_VAE: '#setting_sd_vae input',
     CLIP_SKIP: '#setting_CLIP_stop_at_last_layers input',
+    FORGE_UI_PRESET: '#forge_ui_preset input',
+    FORGE_UI_PRESET_ID: 'forge_ui_preset',
 
     // Hires fix
     HIRES_CHECKBOX: 'txt2img_hr-visible-checkbox',
