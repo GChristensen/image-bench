@@ -98,6 +98,17 @@ export class ComfyUIOperations {
     async applyUiPresetForModel(modelName) {}
 
     /**
+     * Per-model generation parameters are applied in SD WebUI only; no-ops in ComfyUI
+     */
+    async applyGenerationParams(params) {}
+
+    async backupGenerationParams() {
+        return null;
+    }
+
+    async restoreGenerationParams(backup) {}
+
+    /**
      * Click the generate button (queue the workflow)
      * @returns {boolean} Whether the workflow was queued
      */

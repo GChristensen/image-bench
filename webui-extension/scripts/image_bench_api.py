@@ -76,6 +76,7 @@ class ImageBenchApi():
         self.add_api_route("/image_tray_upload", self.image_tray_upload, methods=["POST"])
         self.add_api_route("/concept_tray_upload", self.image_tray_upload, methods=["POST"])
         self.add_api_route("/models", self.get_models, methods=["GET"])
+        self.add_api_route("/samplers", self.get_samplers, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
 
@@ -270,6 +271,16 @@ class ImageBenchApi():
                 "filename": model.filename
             })
         return JSONResponse(jsonable_encoder(models_list))
+
+    def get_samplers(self):
+        """Get lists of available samplers and schedulers"""
+        import modules.sd_samplers as sd_samplers
+        import modules.sd_schedulers as sd_schedulers
+
+        return JSONResponse({
+            "samplers": sd_samplers.visible_sampler_names(),
+            "schedulers": [s.label for s in sd_schedulers.schedulers]
+        })
 
     def on_before_config_presets(self, component, *args, **kwargs):
         if kwargs.get("elem_id") == "config_preset_txt2img_dropdown":

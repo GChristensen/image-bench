@@ -80,9 +80,10 @@ export class SDWebuiAdapter extends DOMAdapter {
      * Set the value of a dropdown element
      * @param {string} selectorKey - Key from SELECTORS constant
      * @param {string} value - The value to select
+     * @param {boolean} exact - Match the current value and options exactly instead of by substring
      * @returns {Promise<void>}
      */
-    async setDropdownValue(selectorKey, value) {
+    async setDropdownValue(selectorKey, value, exact = false) {
         const selector = SELECTORS[selectorKey];
         const element = document.querySelector(selector);
         
@@ -91,7 +92,7 @@ export class SDWebuiAdapter extends DOMAdapter {
             return;
         }
 
-        if (element.value.includes(value)) {
+        if (exact ? element.value === value : element.value.includes(value)) {
             return;
         }
 
@@ -115,7 +116,7 @@ export class SDWebuiAdapter extends DOMAdapter {
                 const optionName = optionElement.getAttribute('data-value')
                     || optionElement.getAttribute('aria-label');
 
-                if (optionName?.includes(value)) {
+                if (exact ? optionName === value : optionName?.includes(value)) {
                     const mousedownEvent = new MouseEvent('mousedown', {
                         bubbles: true,
                         cancelable: true,

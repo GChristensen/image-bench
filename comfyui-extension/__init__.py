@@ -246,6 +246,18 @@ async def get_models(request):
         return web.Response(text=str(e), status=500)
 
 
+# Samplers endpoint
+@PromptServer.instance.routes.get(BASE_PATH + "/samplers")
+async def get_samplers(request):
+    """Get lists of available samplers and schedulers"""
+    import comfy.samplers
+
+    return web.json_response({
+        "samplers": list(comfy.samplers.KSampler.SAMPLERS),
+        "schedulers": list(comfy.samplers.KSampler.SCHEDULERS)
+    })
+
+
 # Image tray endpoints
 @PromptServer.instance.routes.get(BASE_PATH + "/image_tray")
 async def get_image_tray(request):

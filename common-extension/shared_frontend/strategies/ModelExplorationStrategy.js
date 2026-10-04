@@ -11,6 +11,8 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.currentModel = null;
         this.modelBeforeExplore = null;
         this.uiPresetBeforeExplore = null;
+        this.paramsBeforeExplore = null;
+        this.paramsBeforeModel = null;
         this.invalidated = false;
     }
 
@@ -56,6 +58,11 @@ export class ModelExplorationStrategy extends QueueProcessor {
         console.log('[ModelExploration] Backed up model:', this.modelBeforeExplore);
         this.uiPresetBeforeExplore = await this.uiOperations.backupUiPreset();
 
+        if (options.models.some(m => m.params)) {
+            this.paramsBeforeExplore = await this.uiOperations.backupGenerationParams();
+            console.log('[ModelExploration] Backed up generation params:', this.paramsBeforeExplore);
+        }
+
         // Set initial model
         console.log('[ModelExploration] Setting initial model to:', this.currentModel.title);
         await this.uiOperations.applyUiPresetForModel(this.currentModel.title);
@@ -82,6 +89,7 @@ export class ModelExplorationStrategy extends QueueProcessor {
         // Switch model if different from current
         if (this.currentModel.title !== model.title) {
             console.log('[ModelExploration] Switching model from', this.currentModel.title, 'to', model.title);
+            await this.restoreParamsBeforeModel();
             await this.uiOperations.applyUiPresetForModel(model.title);
             await this.uiOperations.restoreModel(model.title);
             this.currentModel = model;
@@ -93,10 +101,34 @@ export class ModelExplorationStrategy extends QueueProcessor {
         console.log('[ModelExploration] Waiting 1 second before generation...');
         await this.uiOperations.sleep(1000);
 
+        // Apply per-model parameters after the wait, so the Forge UI preset reset doesn't overwrite them
+        if (model.params) {
+            // Back up once per model, on its first image, to restore when its exploration is complete
+            if (!this.paramsBeforeModel) {
+                this.paramsBeforeModel = await this.uiOperations.backupGenerationParams();
+                console.log('[ModelExploration] Backed up generation params before model:', this.paramsBeforeModel);
+            }
+
+            console.log('[ModelExploration] Applying generation params:', model.params);
+            await this.uiOperations.applyGenerationParams(model.params);
+            await this.uiOperations.sleep(333);
+        }
+
         // Click generate button
         console.log('[ModelExploration] Clicking generate button');
         this.uiOperations.clickGenerate();
         console.log('[ModelExploration] Generate button clicked, waiting for image callback...');
+    }
+
+    /**
+     * Restore generation params changed by the per-model params of the current model
+     */
+    async restoreParamsBeforeModel() {
+        if (this.paramsBeforeModel) {
+            console.log('[ModelExploration] Restoring generation params before model:', this.paramsBeforeModel);
+            await this.uiOperations.restoreGenerationParams(this.paramsBeforeModel);
+            this.paramsBeforeModel = null;
+        }
     }
 
     /**
@@ -107,6 +139,8 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.isActive = false;
         this.queue = [];
 
+        await this.restoreParamsBeforeModel();
+
         // Restore original model if saved
         if (this.modelBeforeExplore) {
             console.log('[ModelExploration] Restoring original model:', this.modelBeforeExplore);
@@ -116,6 +150,14 @@ export class ModelExplorationStrategy extends QueueProcessor {
             this.uiPresetBeforeExplore = null;
         } else {
             console.log('[ModelExploration] No model to restore');
+        }
+
+        // Restore after the wait, so the Forge UI preset reset doesn't overwrite them
+        if (this.paramsBeforeExplore) {
+            console.log('[ModelExploration] Restoring generation params:', this.paramsBeforeExplore);
+            await this.uiOperations.sleep(1000);
+            await this.uiOperations.restoreGenerationParams(this.paramsBeforeExplore);
+            this.paramsBeforeExplore = null;
         }
 
         this.generationId = null;

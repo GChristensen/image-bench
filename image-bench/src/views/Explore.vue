@@ -8,6 +8,7 @@ import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {usePromptModal} from "@/composables/usePromptModal.js";
 import PromptModal from "@/components/PromptModal.vue";
+import ExploreParamsModal from "@/components/ExploreParamsModal.vue";
 
 const exploreImagesStore = useExploreImagesStore();
 const promptModal = usePromptModal();
@@ -20,6 +21,31 @@ const presetSelect = ref();
 let modelPresets = {};
 const modelImages = computed(() => exploreImagesStore.images);
 const generateImagesNumber = ref(3);
+
+const PARAM_LABELS = {
+  sampler: "Smp",
+  scheduler: "Sch",
+  steps: "Steps",
+  shift: "Shift",
+  cfg: "CFG",
+  distilledCfg: "DCFG"
+};
+
+const modelParams = ref({});
+const focusedModel = ref(null);
+const samplers = ref([]);
+const schedulers = ref([]);
+const showParamsModal = ref(false);
+
+const focusedModelParams = computed(() => focusedModel.value ? modelParams.value[focusedModel.value] : null);
+const paramsSummary = computed(() => {
+  const params = focusedModelParams.value;
+  const items = params
+    ? Object.keys(PARAM_LABELS).filter(k => k in params).map(k => `${PARAM_LABELS[k]}: ${params[k]}`)
+    : [];
+
+  return items.length ? items.join(", ") : "default";
+});
 
 const showImageOverlay = ref(false);
 const overlayImage = ref(null);
@@ -44,9 +70,20 @@ async function loadPresets() {
   else
     modelPresets = {};
 
+  modelParams.value = modelPresets.model_params || {};
   presetSelect.value = lastPreset.value = modelPresets.last_preset || "";
   presetNames.value = modelPresets.presets? Object.keys(modelPresets.presets): [];
   await activatePreset(lastPreset.value);
+}
+
+async function loadSamplers() {
+  const response = await fetch("/image-bench/samplers");
+
+  if (response.ok) {
+    const data = await response.json();
+    samplers.value = data.samplers || [];
+    schedulers.value = data.schedulers || [];
+  }
 }
 
 async function writePresets() {
@@ -57,6 +94,11 @@ async function writePresets() {
 onBeforeMount(async () => {
   await refreshModels();
   await loadPresets();
+
+  const firstSelected = models.value.find((m, i) => selected.value.has(i));
+  focusedModel.value = firstSelected?.model_name ?? null;
+
+  await loadSamplers();
 });
 
 function onModelCheckChange(e, index) {
@@ -72,8 +114,13 @@ function getSelectedModels() {
   for (let i = 0; i < models.value.length; ++i) {
     if (selected.value.has(i)) {
       const proxyItem = models.value[i];
-      const image = JSON.parse(JSON.stringify(proxyItem));
-      selectedItems.push(image);
+      const model = JSON.parse(JSON.stringify(proxyItem));
+      const params = modelParams.value[model.model_name];
+
+      if (params)
+        model.params = {...params};
+
+      selectedItems.push(model);
     }
   }
 
@@ -168,6 +215,30 @@ function activatePreset(presetName) {
   return writePresets();
 }
 
+function onModelNameClick(model) {
+  focusedModel.value = model.model_name;
+}
+
+function onParamsClick() {
+  if (focusedModel.value)
+    showParamsModal.value = true;
+}
+
+async function onParamsConfirm(params) {
+  showParamsModal.value = false;
+
+  const allParams = {...modelParams.value};
+
+  if (Object.keys(params).length)
+    allParams[focusedModel.value] = params;
+  else
+    delete allParams[focusedModel.value];
+
+  modelParams.value = allParams;
+  modelPresets.model_params = allParams;
+  await writePresets();
+}
+
 function onImageClick(image) {
   overlayImage.value = image;
   showImageOverlay.value = true;
@@ -220,6 +291,15 @@ function onKeydown(e) {
     @confirm="promptModal.onConfirm"
     @cancel="promptModal.onCancel"
   />
+  <ExploreParamsModal
+    :show="showParamsModal"
+    :model-name="focusedModel || ''"
+    :params="focusedModelParams"
+    :samplers="samplers"
+    :schedulers="schedulers"
+    @confirm="onParamsConfirm"
+    @cancel="showParamsModal = false"
+  />
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage"
                 @hide-overlay="showImageOverlay = false"/>
   <ParametersOverlay v-if="showParamsOverlay" :text="paramsOverlayText"
@@ -249,12 +329,21 @@ function onKeydown(e) {
           >&nbsp;<a class="control-link" href="#" @click="onDeleteClick">Delete</a
           >&nbsp;<a class="control-link" href="#" @click="onClearClick">Clear</a>
         </div>
+        <div class="model-params">
+          <span class="model-params-summary" :title="paramsSummary">🧪 {{ paramsSummary }}</span>
+          <button class="model-params-button" :disabled="!focusedModel"
+                  :title="focusedModel ? `Set parameters for ${focusedModel}` : 'Click a model name first'"
+                  @click="onParamsClick">⚙</button>
+        </div>
         <div class="models-container">
           <div class="models">
-            <div v-for="(model, index) in models">
-              <label class="model-label"><input type="checkbox"
-                                                @change="e => onModelCheckChange(e, index)" :checked="selected.has(index)"
-                                            >&nbsp;{{model.model_name}}</label>
+            <div v-for="(model, index) in models" class="model-item"
+                 :class="{focused: focusedModel === model.model_name}">
+              <input type="checkbox"
+                     @change="e => onModelCheckChange(e, index)" :checked="selected.has(index)"
+              >&nbsp;<span class="model-label" @click="onModelNameClick(model)"
+                >{{model.model_name}}<span v-if="modelParams[model.model_name]" class="model-params-marker"
+                                           title="Has custom parameters">&nbsp;🧪</span></span>
             </div>
           </div>
         </div>
@@ -337,8 +426,53 @@ function onKeydown(e) {
   border-right: 1px solid white;
 }
 
-.model-label {
+.model-item {
   white-space: nowrap;
+}
+
+.model-item.focused {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.model-label {
+  cursor: pointer;
+}
+
+.model-params {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: solid 1px white;
+}
+
+.model-params-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-params-button {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #888;
+  border-radius: 3px;
+  color: white;
+  cursor: pointer;
+  padding: 0 5px;
+}
+
+.model-params-button:hover:not(:disabled) {
+  background-color: #f0f0f0;
+  color: var(--vt-c-black);
+}
+
+.model-params-button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .generated-images-wrapper {
@@ -358,8 +492,7 @@ function onKeydown(e) {
 
 .preset-controls {
   margin-top: 2px;
-  margin-bottom: 10px;
-  border-bottom: solid 1px white;
+  margin-bottom: 4px;
 }
 
 .control-link {

@@ -23,6 +23,8 @@ export const SELECTORS = {
     // Parameters
     TXT2IMG_STEPS: '#txt2img_steps input',
     TXT2IMG_CFG_SCALE: '#txt2img_cfg_scale input',
+    TXT2IMG_DISTILLED_CFG: '#txt2img_distilled_cfg_scale input',
+    TXT2IMG_DISTILLED_CFG_ID: 'txt2img_distilled_cfg_scale',
     TXT2IMG_WIDTH: '#txt2img_width input',
     TXT2IMG_HEIGHT: '#txt2img_height input',
     TXT2IMG_BATCH_COUNT: '#txt2img_batch_count input[type="number"]',

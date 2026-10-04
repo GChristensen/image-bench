@@ -237,6 +237,89 @@ export class UIOperations {
     }
 
     /**
+     * Apply per-model generation parameters to txt2img
+     * Unset (undefined/null/empty) parameters are left untouched
+     * @param {Object} params - { sampler, scheduler, steps, shift, cfg, distilledCfg }
+     * @returns {Promise<void>}
+     */
+    async applyGenerationParams(params) {
+        if (!params) {
+            return;
+        }
+
+        const isSet = value => value !== undefined && value !== null && value !== '';
+
+        if (isSet(params.sampler)) {
+            await this.adapter.setDropdownValue('TXT2IMG_SAMPLING', params.sampler, true);
+        }
+
+        if (isSet(params.scheduler)) {
+            await this.adapter.setDropdownValue('TXT2IMG_SCHEDULER', params.scheduler, true);
+        }
+
+        if (isSet(params.steps)) {
+            this.adapter.setInputValue('TXT2IMG_STEPS', params.steps);
+        }
+
+        if (isSet(params.cfg)) {
+            this.adapter.setInputValue('TXT2IMG_CFG_SCALE', params.cfg);
+        }
+
+        // Shift and Distilled CFG share one slider, relabeled (or hidden) by the Forge UI preset
+        const sliderKind = this.getDistilledCfgSliderKind();
+        const sliderValue = sliderKind === 'shift' ? params.shift
+            : sliderKind === 'distilledCfg' ? params.distilledCfg
+            : undefined;
+
+        if (isSet(sliderValue)) {
+            this.adapter.setInputValue('TXT2IMG_DISTILLED_CFG', sliderValue);
+        }
+    }
+
+    /**
+     * Backup txt2img generation parameters affected by applyGenerationParams()
+     * @returns {Promise<Object>}
+     */
+    async backupGenerationParams() {
+        const params = {
+            sampler: this.adapter.getInputValue('TXT2IMG_SAMPLING'),
+            scheduler: this.adapter.getInputValue('TXT2IMG_SCHEDULER'),
+            steps: this.adapter.getInputValue('TXT2IMG_STEPS'),
+            cfg: this.adapter.getInputValue('TXT2IMG_CFG_SCALE')
+        };
+
+        const sliderKind = this.getDistilledCfgSliderKind();
+        if (sliderKind) {
+            params[sliderKind] = this.adapter.getInputValue('TXT2IMG_DISTILLED_CFG');
+        }
+
+        return params;
+    }
+
+    /**
+     * Restore txt2img generation parameters saved by backupGenerationParams()
+     * @param {Object} backup
+     * @returns {Promise<void>}
+     */
+    async restoreGenerationParams(backup) {
+        await this.applyGenerationParams(backup);
+    }
+
+    /**
+     * Determine what the Forge distilled CFG slider currently controls
+     * @returns {'shift'|'distilledCfg'|null} null if the slider is absent or hidden
+     */
+    getDistilledCfgSliderKind() {
+        const block = document.getElementById(SELECTORS.TXT2IMG_DISTILLED_CFG_ID);
+
+        if (!block || getComputedStyle(block).display === 'none') {
+            return null;
+        }
+
+        return block.textContent.includes('Shift') ? 'shift' : 'distilledCfg';
+    }
+
+    /**
      * Click the generate button for the current tab
      * Automatically detects which tab is active and clicks the appropriate button
      * @returns {boolean} Whether the button was clicked
