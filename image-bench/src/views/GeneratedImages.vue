@@ -164,10 +164,18 @@ function onShowParams(image) {
   showParamsOverlay.value = true;
 }
 
+function closeImageOverlay() {
+  if (!showImageOverlay.value)
+    return;
+
+  showImageOverlay.value = false;
+  imageStream.value.revealImage(overlayImage.value);
+}
+
 function onImageSelectOverlay(evt, image) {
   evt.preventDefault();
   imageStream.value.selectImage(image);
-  showImageOverlay.value = false;
+  closeImageOverlay();
 }
 
 function onConfigPresetChange(preset) {
@@ -203,7 +211,7 @@ useKeyboardShortcuts({
 });
 
 function hideOverlay() {
-  showImageOverlay.value = false;
+  closeImageOverlay();
   showParamsOverlay.value = false;
 }
 
@@ -306,7 +314,7 @@ function isComponentTray(kind) {
   <ImageOverlay v-if="showImageOverlay"
                 :image="overlayImage"
                 :is-tray="isComponentTray(kind)"
-                @hide-overlay="showImageOverlay = false"
+                @hide-overlay="closeImageOverlay"
                 @image-select="onImageSelectOverlay"/>
   <ParametersOverlay v-if="showParamsOverlay"
                      :image="paramsOverlayImage"

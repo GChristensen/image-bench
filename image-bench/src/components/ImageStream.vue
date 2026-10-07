@@ -1,6 +1,6 @@
 <script setup>
   import GeneratedImage from "@/components/GeneratedImage.vue";
-  import {computed, ref, watch} from "vue";
+  import {computed, nextTick, ref, shallowRef, toRaw, watch} from "vue";
   import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
   import {useImageSelection} from "@/composables/useImageSelection.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
@@ -156,6 +156,20 @@
       props.imageStore.persist();
   }
 
+  // Highlights the image thumbnail and scrolls it into view
+  const highlightedImage = shallowRef(null);
+
+  async function revealImage(image) {
+    // Reset first so that revealing the same image again re-triggers scrolling
+    highlightedImage.value = null;
+    await nextTick();
+    highlightedImage.value = toRaw(image);
+  }
+
+  function isHighlighted(image) {
+    return !!highlightedImage.value && toRaw(image) === highlightedImage.value;
+  }
+
   function onFilterMarking(marking) {
     props.showMarked = true;
     markingFilter.value = marking;
@@ -171,7 +185,7 @@
   // })
 
   defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, clear, isAllSelected,
-    isSomeSelected, getSelectedImages, getNextImage, getPrevImage});
+    isSomeSelected, getSelectedImages, getNextImage, getPrevImage, revealImage});
 </script>
 
 <template>
@@ -193,6 +207,7 @@
                        :selectable="isTray"
                        :upscalable="isTray || kind === KIND_GENERATED"
                        :selected="image.selected"
+                       :highlighted="isHighlighted(image)"
                        :is-tray="isTray"
                        @image-click="$emit('imageClick', image)"
                        @image-open="$emit('imageOpen', image)"

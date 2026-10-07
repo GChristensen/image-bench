@@ -77,7 +77,7 @@ const emit = defineEmits([
 
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
 const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clear');
-const generateImagesNumber = ref(256);
+const generateImagesNumber = ref(128);
 
 defineExpose({generateImagesNumber});
 </script>

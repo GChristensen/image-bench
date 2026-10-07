@@ -36,6 +36,14 @@
     isFullSize.value = false;
   });
 
+  // Plain click anywhere closes the overlay, Ctrl+click on the image toggles full size
+  function onContainerClick(e) {
+    if ((e.ctrlKey || e.metaKey) && e.target.classList.contains("overlay-image"))
+      toggleFullSize(e);
+    else
+      emit("hideOverlay");
+  }
+
   async function toggleFullSize(e) {
     const container = containerElement.value;
     const img = e.target;
@@ -91,10 +99,10 @@
         <Transition name="zoom">
           <div class="overlay-image-container" ref="containerElement"
                :class="{ 'full-size': isFullSize }"
-               @click.self="$emit('hideOverlay')">
+               @click="onContainerClick">
             <img class="overlay-image" :src="imageLink"
-                 :title="isFullSize ? 'Click to fit to screen' : 'Click to view in full size'"
-                 @click="toggleFullSize" @mousedown="onImageMouseDown">
+                 :title="isFullSize ? 'Click to close, Ctrl+click to fit to screen' : 'Click to close, Ctrl+click to view in full size'"
+                 @mousedown="onImageMouseDown">
           </div>
         </Transition>
         <div class="overlay-emoji-buttons">
@@ -149,6 +157,7 @@
   display: flex;
   overflow: hidden;
   overscroll-behavior: contain;
+  cursor: pointer;
 }
 
 /* Auto margins center the image while it fits, and collapse to zero when it overflows,
@@ -158,7 +167,6 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  cursor: zoom-in;
 }
 
 .overlay-image-container.full-size {
@@ -169,7 +177,6 @@
   max-width: none;
   max-height: none;
   flex-shrink: 0;
-  cursor: zoom-out;
 }
 
 .overlay-emoji-buttons {

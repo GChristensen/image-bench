@@ -1,4 +1,5 @@
 <script setup>
+  import {nextTick, ref, watch} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {animateColors} from "@/utils_html.js";
   import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
@@ -49,6 +50,20 @@
     selected: {
       type: Boolean,
       default: false
+    },
+    highlighted: {
+      type: Boolean,
+      default: false
+    }
+  });
+
+  const rootElement = ref(null);
+
+  // Bring the thumbnail into view when it gets highlighted (e.g. after its preview overlay is closed)
+  watch(() => props.highlighted, async (highlighted) => {
+    if (highlighted) {
+      await nextTick();
+      rootElement.value?.scrollIntoView({block: "nearest", inline: "nearest"});
     }
   });
 
@@ -178,7 +193,7 @@
   @confirm="promptModal.onConfirm"
   @cancel="promptModal.onCancel"
 />
-<div v-if="displayed" class="selectable-image" :class="{selected}">
+<div v-if="displayed" ref="rootElement" class="selectable-image" :class="{selected, highlighted}">
   <div class="image-separator" v-if="image.separator">◇</div>
   <div v-else class="image-frame">
     <img class="selectable-image-preview"
@@ -252,6 +267,17 @@
 
 .selectable-image.selected .image-frame {
   box-shadow: 0 0 0 2px var(--ib-accent);
+}
+
+.selectable-image.highlighted .image-frame {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  animation: highlightFade 2.5s ease-in forwards;
+}
+
+@keyframes highlightFade {
+  0%, 40% { outline-color: var(--ib-info); }
+  100%    { outline-color: transparent; }
 }
 
 .selectable-image-preview {

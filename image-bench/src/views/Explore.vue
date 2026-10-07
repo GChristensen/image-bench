@@ -1,6 +1,6 @@
 <script setup>
 
-import {computed, onBeforeMount, ref, watch} from "vue";
+import {computed, nextTick, onBeforeMount, ref, shallowRef, toRaw, watch} from "vue";
 import GeneratedImage from "@/components/GeneratedImage.vue";
 import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
@@ -116,6 +116,7 @@ const progressLabel = computed(() => {
 const generatedImagesElement = ref();
 const showImageOverlay = ref(false);
 const overlayImage = ref(null);
+const highlightedImage = shallowRef(null);
 const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
 
@@ -259,6 +260,23 @@ function onImageClick(image) {
   showImageOverlay.value = true;
 }
 
+// Closes the preview overlay, highlighting the previewed thumbnail and scrolling it into view
+async function closeImageOverlay() {
+  if (!showImageOverlay.value)
+    return;
+
+  showImageOverlay.value = false;
+
+  // Reset first so that revealing the same image again re-triggers scrolling
+  highlightedImage.value = null;
+  await nextTick();
+  highlightedImage.value = toRaw(overlayImage.value);
+}
+
+function isHighlighted(image) {
+  return !!highlightedImage.value && toRaw(image) === highlightedImage.value;
+}
+
 function onImageOpen(image) {
   const imageLink = createImageLink(image);
   window.open(imageLink, "_blank");
@@ -291,7 +309,7 @@ document.addEventListener("keydown", onKeydown);
 
 function onKeydown(e) {
   if (e.key === "Esc" || e.key === "Escape") {
-    showImageOverlay.value = false;
+    closeImageOverlay();
     showParamsOverlay.value = false;
   }
 }
@@ -324,7 +342,7 @@ function onKeydown(e) {
     @cancel="showLoraParamsModal = false"
   />
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage"
-                @hide-overlay="showImageOverlay = false"/>
+                @hide-overlay="closeImageOverlay"/>
   <ParametersOverlay v-if="showParamsOverlay" :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="wrapper">
@@ -382,6 +400,7 @@ function onKeydown(e) {
                                :is-tray="false"
                                :image="image"
                                :displayed="true"
+                               :highlighted="isHighlighted(image)"
                                @show-params="() => onShowParams(image)"
                                @image-click="() => onImageClick(image)"
                                @image-open="() => onImageOpen(image)"></GeneratedImage>
