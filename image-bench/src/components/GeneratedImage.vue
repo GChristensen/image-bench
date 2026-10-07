@@ -1,5 +1,5 @@
 <script setup>
-  import {nextTick, ref, watch} from "vue";
+  import {computed, nextTick, ref, watch} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {animateColors} from "@/utils_html.js";
   import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
@@ -8,15 +8,13 @@
   import {useUpscaledImagesStore} from "@/stores/upscaled.js";
   import {flashTrayTab} from "@/components/utils.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
-  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_GENERATED, KIND_EXPLORE, MARKINGS} from "@/consts.js";
   import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {useLocalStorage} from "@/composables/useLocalStorage.js";
   import {usePromptModal} from "@/composables/usePromptModal.js";
   import PromptModal from "@/components/PromptModal.vue";
   import AppIcon from "@/components/AppIcon.vue";
-
-  const MARKINGS = ["👍", "👎", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣"];
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams', 
     'select', 'upscaleImage', 'addComment', 'deleteImage']);
@@ -58,6 +56,8 @@
   });
 
   const rootElement = ref(null);
+
+  const splitActions = computed(() => props.kind === KIND_GENERATED || props.kind === KIND_EXPLORE);
 
   // Bring the thumbnail into view when it gets highlighted (e.g. after its preview overlay is closed)
   watch(() => props.highlighted, async (highlighted) => {
@@ -209,7 +209,7 @@
              @change="$emit('select', $event.target.checked)">
     </label>
 
-    <div class="image-actions">
+    <div class="image-actions" :class="{left: splitActions}">
       <button v-if="!image.img2img" class="ib sm" title="Left: reuse seed, Middle: reuse all parameters" aria-label="Reuse seed"
               @mousedown.left="onReuseSeedClick" @mousedown.middle="onReuseParamsClick"><AppIcon name="seed" :size="13"/></button>
       <button class="ib sm" title="Generation parameters" aria-label="Generation parameters"
@@ -221,14 +221,24 @@
               @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
       <button v-if="isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
               @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
-      <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
-              @click="onPlaceToConceptTray"><AppIcon name="concept" :size="13"/></button>
-      <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib sm" title="Place to image tray" aria-label="Place to image tray"
-              @click="onPlaceToTray"><AppIcon name="tray" :size="13"/></button>
+      <template v-if="!splitActions">
+        <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
+                @click="onPlaceToConceptTray"><AppIcon name="concept" :size="13"/></button>
+        <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib sm" title="Place to image tray" aria-label="Place to image tray"
+                @click="onPlaceToTray"><AppIcon name="tray" :size="13"/></button>
+      </template>
       <button v-if="isTray" class="ib sm" title="Add comment" aria-label="Add comment"
               @click="$emit('addComment', image)"><AppIcon name="comment" :size="13"/></button>
       <button v-if="isTray" class="ib sm danger" title="Delete" aria-label="Delete"
               @mousedown.left="$emit('deleteImage', image)"><AppIcon name="trash" :size="13"/></button>
+    </div>
+
+    <!-- Generate/explore tabs: tray buttons stay top-right, the rest move top-left -->
+    <div v-if="splitActions" class="image-actions right">
+      <button class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
+              @click="onPlaceToConceptTray"><AppIcon name="concept" :size="13"/></button>
+      <button class="ib sm" title="Place to image tray" aria-label="Place to image tray"
+              @click="onPlaceToTray"><AppIcon name="tray" :size="13"/></button>
     </div>
 
     <div class="image-badges">
@@ -336,6 +346,16 @@
   opacity: 0;
   transition: opacity 0.15s;
   pointer-events: none;
+}
+
+.image-actions.left {
+  left: 6px;
+  right: 50%;
+  justify-content: flex-start;
+}
+
+.image-actions.right {
+  left: 50%;
 }
 
 .image-frame:hover .image-actions {

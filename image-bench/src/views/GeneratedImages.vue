@@ -315,7 +315,8 @@ function isComponentTray(kind) {
                 :image="overlayImage"
                 :is-tray="isComponentTray(kind)"
                 @hide-overlay="closeImageOverlay"
-                @image-select="onImageSelectOverlay"/>
+                @image-select="onImageSelectOverlay"
+                @set-marking="imageStore.persist()"/>
   <ParametersOverlay v-if="showParamsOverlay"
                      :image="paramsOverlayImage"
                      :text="paramsOverlayText"

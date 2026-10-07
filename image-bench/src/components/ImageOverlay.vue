@@ -4,7 +4,7 @@
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
   import {flashTrayTab} from "@/components/utils.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
-  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, MARKINGS} from "@/consts.js";
 
   const props = defineProps({
     image: {
@@ -21,7 +21,7 @@
     }
   });
 
-  const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray']);
+  const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking']);
 
   const imageTrayStore = useImageTrayStore();
   const conceptTrayStore = useConceptTrayStore();
@@ -82,6 +82,16 @@
     flashTrayTab("concept-tray-tab");
   }
 
+  // Clicking the current marking removes it
+  function onMarkingClick(marking) {
+    if (props.image.marking === marking)
+      delete props.image.marking;
+    else
+      props.image.marking = marking;
+
+    emit("setMarking", props.image);
+  }
+
   function onImageMouseDown(e) {
     if (e.button === 1)
       window.open(e.target.src, "_blank");
@@ -105,6 +115,12 @@
                  @mousedown="onImageMouseDown">
           </div>
         </Transition>
+        <div v-if="isTray" class="overlay-markings">
+          <span v-for="marking in MARKINGS" :key="marking" class="emoji-button"
+                :class="{active: image.marking === marking}"
+                :title="image.marking === marking ? 'Remove marking' : 'Set marking'"
+                @click="onMarkingClick(marking)">{{ marking }}</span>
+        </div>
         <div class="overlay-emoji-buttons">
           <span class="emoji-button" title="Place to concept tray"
                 @click="onPlaceToConceptTray">💡</span>
@@ -186,6 +202,31 @@
   z-index: 1003;
   display: flex;
   gap: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(17, 19, 23, 0.6);
+}
+
+.overlay-markings {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1003;
+  display: flex;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(17, 19, 23, 0.6);
+}
+
+.overlay-markings .emoji-button {
+  font-size: 20px;
+  opacity: 0.45;
+}
+
+.overlay-markings .emoji-button.active {
+  opacity: 1;
+  transform: scale(1.2);
 }
 
 .emoji-button {
