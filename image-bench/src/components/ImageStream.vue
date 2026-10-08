@@ -93,9 +93,10 @@
     }
   }
 
+  // Returns true if the image was deleted
   function onDeleteImage(image) {
     if (!confirm("Do you really want to continue?"))
-      return;
+      return false;
 
     const removedImage = images.value.find(i => i.imagePath === image.imagePath);
 
@@ -107,15 +108,30 @@
         props.imageStore.persist();
       }
     }
+
+    return !!removedImage;
   }
 
+
+  // Tray persist replaces all image objects with the ones returned by the server,
+  // so images held elsewhere (e.g. by the overlay) are located by path, not by identity
+  function isSameImage(a, b) {
+    return a === b || !!a && !!b && !a.separator && a.imagePath === b.imagePath;
+  }
+
+  function findImageIndex(imageView, image) {
+    return imageView.findIndex(i => isSameImage(i, image));
+  }
 
   function getNextImage(image) {
     const imageView = props.showMarked? images.value.filter(i => i.marking): images.value;
 
-    let index = imageView.indexOf(image);
+    let index = findImageIndex(imageView, image);
 
-    while (index < imageView.length) {
+    if (index < 0)
+      return;
+
+    while (index < imageView.length - 1) {
       const result = imageView[++index];
 
       if (!result.separator)
@@ -126,7 +142,7 @@
   function getPrevImage(image) {
     const imageView = props.showMarked? images.value.filter(i => i.marking): images.value;
 
-    let index = imageView.indexOf(image);
+    let index = findImageIndex(imageView, image);
 
     while (index > 0) {
       const result = imageView[--index];
@@ -167,7 +183,7 @@
   }
 
   function isHighlighted(image) {
-    return !!highlightedImage.value && toRaw(image) === highlightedImage.value;
+    return isSameImage(toRaw(image), highlightedImage.value);
   }
 
   function onFilterMarking(marking) {
@@ -185,7 +201,7 @@
   // })
 
   defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, clear, isAllSelected,
-    isSomeSelected, getSelectedImages, getNextImage, getPrevImage, revealImage});
+    isSomeSelected, getSelectedImages, getNextImage, getPrevImage, revealImage, deleteImage: onDeleteImage});
 </script>
 
 <template>

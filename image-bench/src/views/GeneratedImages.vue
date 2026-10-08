@@ -1,6 +1,6 @@
 <script setup>
 
-import {computed, onBeforeMount, ref} from "vue";
+import {computed, onBeforeMount, ref, watch} from "vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ImageStream from "@/components/ImageStream.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
@@ -149,6 +149,15 @@ function onStopGenerationClick() {
   webUI.stopGeneration();
 }
 
+// Tray persist replaces all image objects with the ones returned by the server:
+// keep the overlay on the current object, so that its changes (e.g. markings) are not lost
+watch(() => imageStore.images, images => {
+  const image = overlayImage.value;
+
+  if (image)
+    overlayImage.value = images.find(i => !i.separator && i.imagePath === image.imagePath) || image;
+});
+
 function onImageClick(image) {
   overlayImage.value = image;
   showImageOverlay.value = true;
@@ -176,6 +185,19 @@ function onImageSelectOverlay(evt, image) {
   evt.preventDefault();
   imageStream.value.selectImage(image);
   closeImageOverlay();
+}
+
+// After deleting, the overlay moves on to the neighbouring image, or closes if there is none
+function onDeleteImageOverlay(image) {
+  const neighbour = imageStream.value.getNextImage(image) || imageStream.value.getPrevImage(image);
+
+  if (!imageStream.value.deleteImage(image))
+    return;
+
+  if (neighbour)
+    overlayImage.value = neighbour;
+  else
+    showImageOverlay.value = false;
 }
 
 function onConfigPresetChange(preset) {
@@ -314,9 +336,11 @@ function isComponentTray(kind) {
   <ImageOverlay v-if="showImageOverlay"
                 :image="overlayImage"
                 :is-tray="isComponentTray(kind)"
+                :kind="kind"
                 @hide-overlay="closeImageOverlay"
                 @image-select="onImageSelectOverlay"
-                @set-marking="imageStore.persist()"/>
+                @set-marking="imageStore.persist()"
+                @delete-image="onDeleteImageOverlay"/>
   <ParametersOverlay v-if="showParamsOverlay"
                      :image="paramsOverlayImage"
                      :text="paramsOverlayText"

@@ -1,5 +1,5 @@
 <script setup>
-  import {computed, nextTick, ref, watch} from "vue";
+  import {nextTick, ref, watch} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {animateColors} from "@/utils_html.js";
   import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
@@ -8,7 +8,7 @@
   import {useUpscaledImagesStore} from "@/stores/upscaled.js";
   import {flashTrayTab} from "@/components/utils.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
-  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_GENERATED, KIND_EXPLORE, MARKINGS} from "@/consts.js";
+  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, MARKINGS} from "@/consts.js";
   import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {useLocalStorage} from "@/composables/useLocalStorage.js";
@@ -56,8 +56,6 @@
   });
 
   const rootElement = ref(null);
-
-  const splitActions = computed(() => props.kind === KIND_GENERATED || props.kind === KIND_EXPLORE);
 
   // Bring the thumbnail into view when it gets highlighted (e.g. after its preview overlay is closed)
   watch(() => props.highlighted, async (highlighted) => {
@@ -207,9 +205,10 @@
     <label v-if="selectable" class="select-box" title="Select">
       <input type="checkbox" aria-label="Select image" :checked="selected"
              @change="$emit('select', $event.target.checked)">
+      <span class="select-circle"><AppIcon name="check" :size="12"/></span>
     </label>
 
-    <div class="image-actions" :class="{left: splitActions}">
+    <div class="image-actions left" :class="{selectable}">
       <button v-if="!image.img2img" class="ib sm" title="Left: reuse seed, Middle: reuse all parameters" aria-label="Reuse seed"
               @mousedown.left="onReuseSeedClick" @mousedown.middle="onReuseParamsClick"><AppIcon name="seed" :size="13"/></button>
       <button class="ib sm" title="Generation parameters" aria-label="Generation parameters"
@@ -221,23 +220,17 @@
               @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
       <button v-if="isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
               @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
-      <template v-if="!splitActions">
-        <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
-                @click="onPlaceToConceptTray"><AppIcon name="concept" :size="13"/></button>
-        <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib sm" title="Place to image tray" aria-label="Place to image tray"
-                @click="onPlaceToTray"><AppIcon name="tray" :size="13"/></button>
-      </template>
       <button v-if="isTray" class="ib sm" title="Add comment" aria-label="Add comment"
               @click="$emit('addComment', image)"><AppIcon name="comment" :size="13"/></button>
       <button v-if="isTray" class="ib sm danger" title="Delete" aria-label="Delete"
               @mousedown.left="$emit('deleteImage', image)"><AppIcon name="trash" :size="13"/></button>
     </div>
 
-    <!-- Generate/explore tabs: tray buttons stay top-right, the rest move top-left -->
-    <div v-if="splitActions" class="image-actions right">
-      <button class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
+    <!-- Tray buttons stay top-right, the rest go top-left -->
+    <div class="image-actions right">
+      <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
               @click="onPlaceToConceptTray"><AppIcon name="concept" :size="13"/></button>
-      <button class="ib sm" title="Place to image tray" aria-label="Place to image tray"
+      <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib sm" title="Place to image tray" aria-label="Place to image tray"
               @click="onPlaceToTray"><AppIcon name="tray" :size="13"/></button>
     </div>
 
@@ -261,8 +254,10 @@
 </template>
 
 <style scoped>
+/* The width cap lives here only: a percentage max-width on the img is ignored when sizing
+   this flex item, so a separate vw cap there would leave the frame wider than the image */
 .selectable-image {
-  max-width: 30%;
+  max-width: min(30%, 27vw);
   height: max-content;
 }
 
@@ -294,7 +289,7 @@
   display: block;
   width: auto;
   height: auto;
-  max-width: min(27vw, 100%);
+  max-width: 100%;
   max-height: 70vh;
   cursor: pointer;
 }
@@ -307,25 +302,58 @@
   width: 4px;
 }
 
+/* Circular outline check: deliberately unlike the square filled action buttons */
 .select-box {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 22px;
-  height: 22px;
+  top: 1px;
+  left: 1px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  background: rgba(17, 19, 23, 0.8);
+  line-height: normal;
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s;
 }
 
 .select-box input {
+  position: absolute;
+  width: 0;
+  height: 0;
   margin: 0;
-  cursor: pointer;
+  opacity: 0;
+}
+
+.select-circle {
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.5);
+  color: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.select-box:hover .select-circle {
+  border-color: #fff;
+  transform: scale(1.1);
+}
+
+.selectable-image.selected .select-circle {
+  background: var(--ib-accent);
+  border-color: var(--ib-accent);
+  color: #fff;
+}
+
+.select-box input:focus-visible + .select-circle {
+  outline: 2px solid var(--ib-accent);
+  outline-offset: 2px;
 }
 
 .selectable-image.selected .select-box,
@@ -336,11 +364,8 @@
 .image-actions {
   position: absolute;
   top: 6px;
-  right: 6px;
-  left: 34px;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
   gap: 3px;
   line-height: normal;
   opacity: 0;
@@ -354,8 +379,15 @@
   justify-content: flex-start;
 }
 
+/* Leave room for the select checkbox */
+.image-actions.left.selectable {
+  left: 40px;
+}
+
 .image-actions.right {
   left: 50%;
+  right: 6px;
+  justify-content: flex-end;
 }
 
 .image-frame:hover .image-actions {
