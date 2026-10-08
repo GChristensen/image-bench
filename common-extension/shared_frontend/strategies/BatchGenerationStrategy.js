@@ -84,7 +84,7 @@ export class BatchGenerationStrategy extends QueueProcessor {
      */
     async processItem(item) {
         await this.uiOperations.sleep(500);
-        this.uiOperations.clickGenerate();
+        await this.clickGenerate();
     }
 
     /**

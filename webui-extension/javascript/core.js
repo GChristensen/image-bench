@@ -161,10 +161,27 @@ async function onMessage(msg) {
         await handleUpscaleVaryingDenoising(payload)
 }
 
+/**
+ * Refuse to start a strategy while WebUI is generating or interrupting,
+ * before the strategy changes any UI parameters
+ * @returns {boolean} Whether the strategy may start
+ */
+function checkReadyToGenerate() {
+    if (uiOperations.isReadyToGenerate())
+        return true;
+
+    sendPopupMessage({type: "GENERATION_FINISHED"});
+    alert("Generation is in progress or being interrupted. Please wait until it finishes.");
+    return false;
+}
+
 async function handleExploreModels(options) {
     if (!options.models || !options.models.length) {
         return;
     }
+
+    if (!checkReadyToGenerate())
+        return;
 
     if (explorationStrategy.isInvalidated()) {
         sendPopupMessage({type: "GENERATION_FINISHED"});
@@ -177,26 +194,41 @@ async function handleExploreModels(options) {
 }
 
 async function handleBatchGenerate(options, config) {
+    if (!checkReadyToGenerate())
+        return;
+
     setGenerationState("BATCH_GENERATION");
     return await batchStrategy.process({...options, config});
 }
 
 async function handleGenerateVariations(options, config) {
+    if (!checkReadyToGenerate())
+        return;
+
     setGenerationState("BATCH_GENERATION");
     return await batchStrategy.process({...options, config});
 }
 
 async function handleProcessImages(options) {
+    if (!checkReadyToGenerate())
+        return;
+
     setGenerationState(options?.setSteps ? "SEQUENTIAL_GENERATION" : "HIRES_FIX");
     return await processingStrategy.process(options);
 }
 
 async function handleGenerateVaryingSteps(options) {
+    if (!checkReadyToGenerate())
+        return;
+
     setGenerationState("SEQUENTIAL_GENERATION");
     return await varyingStrategy.process(options);
 }
 
 async function handleUpscaleVaryingDenoising(options) {
+    if (!checkReadyToGenerate())
+        return;
+
     setGenerationState("HIRES_FIX");
     return await varyingStrategy.process(options);
 }

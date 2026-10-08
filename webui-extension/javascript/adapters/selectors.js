@@ -9,6 +9,9 @@ export const SELECTORS = {
     IMG2IMG_GENERATE: 'img2img_generate',
     TXT2IMG_INTERRUPT: 'txt2img_interrupt',
     IMG2IMG_INTERRUPT: 'img2img_interrupt',
+    // "Interrupting..." placeholder shown until an interrupted job ends (absent in older versions)
+    TXT2IMG_INTERRUPTING: 'txt2img_interrupting',
+    IMG2IMG_INTERRUPTING: 'img2img_interrupting',
 
     // Prompts
     TXT2IMG_PROMPT: '#txt2img_prompt textarea',

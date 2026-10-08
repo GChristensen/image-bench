@@ -110,6 +110,23 @@ export class QueueProcessor {
     }
 
     /**
+     * Click generate, or stop the strategy if the UI is not ready to generate,
+     * so it does not wait forever for an image that never comes
+     * @returns {Promise<boolean>} Whether generation was started
+     */
+    async clickGenerate() {
+        if (await this.uiOperations.clickGenerate())
+            return true;
+
+        if (this.isActive) {
+            this.messageBus.publish('STRATEGY_FINISH_REQUEST');
+            this.messageBus.publish('GENERATION_FINISHED', {});
+        }
+
+        return false;
+    }
+
+    /**
      * Report progress to message bus
      */
     reportProgress() {

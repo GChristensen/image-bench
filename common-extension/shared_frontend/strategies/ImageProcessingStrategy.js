@@ -78,7 +78,7 @@ export class ImageProcessingStrategy extends QueueProcessor {
         await this.uiOperations.sleep(500);
 
         // Click generate button
-        this.uiOperations.clickGenerate();
+        await this.clickGenerate();
     }
 
     /**

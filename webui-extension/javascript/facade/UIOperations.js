@@ -337,21 +337,59 @@ export class UIOperations {
     }
 
     /**
-     * Click the generate button for the current tab
-     * Automatically detects which tab is active and clicks the appropriate button
-     * @returns {boolean} Whether the button was clicked
+     * Check that the current tab is ready to generate: the generate button is shown
+     * and neither the interrupt nor the "Interrupting..." button is.
+     * Newer WebUI versions overlay the interrupt button instead of hiding the generate button,
+     * so the generate button alone is not enough. Rendered boxes are checked instead of
+     * the inline style, because the buttons may be hidden by stylesheets.
+     * @returns {boolean}
      */
-    clickGenerate() {
-        const isImg2ImgTab = this.adapter.isImg2ImgTab();
-        const buttonKey = isImg2ImgTab ? 'IMG2IMG_GENERATE' : 'TXT2IMG_GENERATE';
-        const generateButton = this.adapter.getElement(buttonKey);
+    isReadyToGenerate() {
+        const tab = this.adapter.isImg2ImgTab() ? 'IMG2IMG' : 'TXT2IMG';
+        const isShown = (key) => {
+            const element = this.adapter.getElement(key);
+            return !!element && element.getClientRects().length > 0;
+        };
 
-        if (generateButton && this.adapter.isElementVisible(generateButton)) {
-            generateButton.click();
-            return true;
+        return isShown(`${tab}_GENERATE`)
+            && !isShown(`${tab}_INTERRUPT`)
+            && !isShown(`${tab}_INTERRUPTING`);
+    }
+
+    /**
+     * Wait until the current tab is ready to generate
+     * The previous job may still be finishing when its image is saved
+     * @param {number} timeout - Maximum wait in milliseconds
+     * @returns {Promise<boolean>} Whether the UI became ready in time
+     */
+    async waitReadyToGenerate(timeout = 30000) {
+        const deadline = Date.now() + timeout;
+
+        while (!this.isReadyToGenerate()) {
+            if (Date.now() >= deadline)
+                return false;
+
+            await this.sleep(250);
         }
 
-        return false;
+        return true;
+    }
+
+    /**
+     * Click the generate button for the current tab, once it is ready to generate
+     * Automatically detects which tab is active and clicks the appropriate button
+     * @returns {Promise<boolean>} Whether the button was clicked
+     */
+    async clickGenerate() {
+        if (!await this.waitReadyToGenerate()) {
+            console.warn('[UIOperations] Generation is still running or being interrupted, generate is not clicked');
+            return false;
+        }
+
+        const isImg2ImgTab = this.adapter.isImg2ImgTab();
+        const buttonKey = isImg2ImgTab ? 'IMG2IMG_GENERATE' : 'TXT2IMG_GENERATE';
+        this.adapter.getElement(buttonKey).click();
+        return true;
     }
 
     /**

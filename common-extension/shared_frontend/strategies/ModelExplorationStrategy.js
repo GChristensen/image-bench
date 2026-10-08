@@ -142,8 +142,8 @@ export class ModelExplorationStrategy extends QueueProcessor {
 
         // Click generate button
         console.log('[ModelExploration] Clicking generate button');
-        this.uiOperations.clickGenerate();
-        console.log('[ModelExploration] Generate button clicked, waiting for image callback...');
+        if (await this.clickGenerate())
+            console.log('[ModelExploration] Generate button clicked, waiting for image callback...');
     }
 
     /**
