@@ -107,7 +107,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
       <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab"><AppIcon name="concept" :size="14"/>Concept tray<span v-if="conceptTrayStore.images.length" class="count">{{ conceptTrayStore.images.length }}</span></RouterLink>
-      <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab"><AppIcon name="tray" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
+      <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
       <RouterLink to="/upscaled-images" class="tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <div class="tab-spacer"></div>
       <span v-if="!hasOpener" class="chip window-warning" title="The opener SD WebUI window is closed or was reloaded"

@@ -338,11 +338,23 @@ class ImageBenchApi():
         options = json.loads(content)
         output_folder = os.path.join(self.image_bench_dir, "controlnet", options["generation_id"])
 
-        os.makedirs(output_folder, exist_ok=True)
+        # The gallery also contains the generated images; they carry generation parameters,
+        # while ControlNet detected maps do not
+        images = [image for image in options.get("images", [])
+                  if os.path.isfile(image) and not self.has_generation_parameters(image)]
 
-        if "images" in options and len(options["images"]) > 0:
-            for image in options["images"]:
+        if images:
+            os.makedirs(output_folder, exist_ok=True)
+            for image in images:
                 shutil.copy(image, output_folder)
+
+    @staticmethod
+    def has_generation_parameters(image_path):
+        try:
+            with Image.open(image_path) as image:
+                return "parameters" in image.info
+        except Exception:
+            return True
 
     async def get_controlnet_images(self, id: str):
         image_folder = os.path.join(self.image_bench_dir, "controlnet", id)

@@ -204,7 +204,7 @@ export class QueueProcessor {
             for (const image of controlNetImages) {
                 if (image.includes("file=")) {
                     let imagePath = image.split("file=").at(-1);
-                    imagePath = imagePath.replace(/\?.*$/, "");
+                    imagePath = decodeURIComponent(imagePath.replace(/\?.*$/, ""));
                     body.images.push(imagePath);
                 }
             }

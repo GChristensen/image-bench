@@ -110,6 +110,19 @@ export function useExploreList({ keyOf, labelOf = keyOf, section, keys, save }) 
     selected.value = newSelected;
   }
 
+  function setChecked(keys, checked) {
+    const newSelected = new Set(selected.value);
+
+    for (const key of keys) {
+      if (checked)
+        newSelected.add(key);
+      else
+        newSelected.delete(key);
+    }
+
+    selected.value = newSelected;
+  }
+
   function focus(key) {
     focusedKey.value = key;
   }
@@ -166,6 +179,7 @@ export function useExploreList({ keyOf, labelOf = keyOf, section, keys, save }) 
     deleteCurrentPreset,
     clearSelection,
     toggle,
+    setChecked,
     focus,
     setParams,
     getSelectedItems

@@ -378,6 +378,7 @@ function onKeydown(e) {
           :summary="settingsSummary"
           :item-kind="activeTab === TAB_LORAS ? 'LoRA' : 'model'"
           @toggle="activeList.toggle"
+          @toggle-many="activeList.setChecked"
           @focus="activeList.focus"
           @preset-change="activeList.activatePreset"
           @create="onCreateClick"
@@ -437,7 +438,7 @@ function onKeydown(e) {
 }
 
 .model-list {
-  width: 300px;
+  width: 340px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;

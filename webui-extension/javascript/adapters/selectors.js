@@ -69,8 +69,8 @@ export const SELECTORS = {
     CONFIG_PRESET_WRAPPER: (kind) => `config_preset_wrapper_${kind}`,
     RESULTS_DIV: (kind) => `${kind}_results`,
 
-    // Gallery & ControlNet
-    TXT2IMG_GALLERY: '#txt2img_gallery_container .thumbnails .thumbnail-item img[src*="gradio"]',
+    // Gallery & ControlNet (generated images are filtered out by the backend)
+    TXT2IMG_GALLERY: '#txt2img_gallery_container .thumbnail-item img[src*="file="]',
 
     // Progress
     PROGRESS_BAR: '.progressDiv .progress',
