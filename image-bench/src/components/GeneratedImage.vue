@@ -208,7 +208,9 @@
       <span class="select-circle"><AppIcon name="check" :size="12"/></span>
     </label>
 
-    <div class="image-actions left" :class="{selectable}">
+    <!-- One shared row, so the left group wraps only when the whole width runs out -->
+    <div class="image-actions-bar" :class="{selectable}">
+    <div class="image-actions left">
       <button v-if="!image.img2img" class="ib sm" title="Left: reuse seed, Middle: reuse all parameters" aria-label="Reuse seed"
               @mousedown.left="onReuseSeedClick" @mousedown.middle="onReuseParamsClick"><AppIcon name="seed" :size="13"/></button>
       <button class="ib sm" title="Generation parameters" aria-label="Generation parameters"
@@ -231,7 +233,8 @@
       <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
               @click="onPlaceToConceptTray"><AppIcon name="concept" :size="13"/></button>
       <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib sm" title="Place to image tray" aria-label="Place to image tray"
-              @click="onPlaceToTray"><AppIcon name="tray" :size="13"/></button>
+              @click="onPlaceToTray"><AppIcon name="palette" :size="13"/></button>
+    </div>
     </div>
 
     <div class="image-badges">
@@ -361,11 +364,14 @@
   opacity: 1;
 }
 
-.image-actions {
+/* The bar itself never takes clicks, so gaps between the groups fall through to the image */
+.image-actions-bar {
   position: absolute;
   top: 6px;
+  left: 6px;
+  right: 6px;
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 3px;
   line-height: normal;
   opacity: 0;
@@ -373,25 +379,32 @@
   pointer-events: none;
 }
 
-.image-actions.left {
-  left: 6px;
-  right: 50%;
-  justify-content: flex-start;
-}
-
 /* Leave room for the select checkbox */
-.image-actions.left.selectable {
+.image-actions-bar.selectable {
   left: 40px;
 }
 
+.image-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.image-actions.left {
+  flex: 0 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
 .image-actions.right {
-  left: 50%;
-  right: 6px;
-  justify-content: flex-end;
+  flex: none;
+  margin-left: auto;
+}
+
+.image-frame:hover .image-actions-bar {
+  opacity: 1;
 }
 
 .image-frame:hover .image-actions {
-  opacity: 1;
   pointer-events: auto;
 }
 
