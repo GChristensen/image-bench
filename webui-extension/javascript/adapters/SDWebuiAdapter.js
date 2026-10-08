@@ -232,6 +232,52 @@ export class SDWebuiAdapter extends DOMAdapter {
     }
 
     /**
+     * Switch to the inpaint upload tab of img2img using the WebUI's own tab switcher
+     */
+    switchToInpaintUploadTab() {
+        const modeTabs = getElementById(SELECTORS.IMG2IMG_MODE_TABS);
+        const tabItems = Array.from(modeTabs?.querySelectorAll(':scope > .tabitem') ?? []);
+        const index = tabItems.findIndex(tab => tab.id === SELECTORS.IMG2IMG_INPAINT_UPLOAD_TAB);
+
+        // Inpaint upload is the fifth tab: img2img, Sketch, Inpaint, Inpaint sketch, Inpaint upload
+        window.switch_to_img2img_tab?.(index >= 0 ? index : 4);
+    }
+
+    /**
+     * Put a file into an image component, replacing its current image
+     * Reuses the WebUI's drag-and-drop handler, which clears the existing image first
+     * @param {string} selectorKey - Key from SELECTORS constant
+     * @param {File} file - Image file
+     * @returns {boolean} Whether the image component was found
+     */
+    setImageFile(selectorKey, file) {
+        const container = this.getElement(selectorKey);
+
+        if (!container) {
+            console.log(`Image component ${SELECTORS[selectorKey]} not found.`);
+            return false;
+        }
+
+        const files = new DataTransfer();
+        files.items.add(file);
+
+        if (typeof window.dropReplaceImage === 'function') {
+            window.dropReplaceImage(container.querySelector(SELECTORS.IMAGE_COMPONENT) ?? container, files.files);
+        }
+        else {
+            const fileInput = container.querySelector(SELECTORS.FILE_INPUT);
+
+            if (!fileInput)
+                return false;
+
+            fileInput.files = files.files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+
+        return true;
+    }
+
+    /**
      * Get current generation progress percentage
      * @returns {number|null} Progress from 0-100, or null if not available
      */

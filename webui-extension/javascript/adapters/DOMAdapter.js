@@ -97,6 +97,23 @@ export class DOMAdapter {
     }
 
     /**
+     * Switch to the inpaint upload tab of img2img
+     */
+    switchToInpaintUploadTab() {
+        throw new Error('switchToInpaintUploadTab must be implemented');
+    }
+
+    /**
+     * Put a file into an image component, replacing its current image
+     * @param {string} selectorKey - Key from SELECTORS constant
+     * @param {File} file - Image file
+     * @returns {boolean} Whether the image component was found
+     */
+    setImageFile(selectorKey, file) {
+        throw new Error('setImageFile must be implemented');
+    }
+
+    /**
      * Get current generation progress percentage
      * @returns {number|null} Progress from 0-100, or null if not available
      */

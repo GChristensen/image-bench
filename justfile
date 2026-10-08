@@ -12,3 +12,21 @@ test-webui:
 
 test-comfy:
     cd D:/ai/sd/comfyui; cmd //c start _run_nvidia_gpu.bat
+
+ps := "powershell.exe -NoProfile -ExecutionPolicy Bypass -File photoshop-extension/uxp.ps1"
+
+# Enable UXP developer mode for loading the Photoshop plugin from UXP Developer Tool (elevated shell)
+ps-enable:
+    {{ps}} enable
+
+# Package the Photoshop plugin into photoshop-extension/dist/*.ccx
+ps-package:
+    {{ps}} package
+
+# Install the Photoshop plugin without the Creative Cloud app (elevated shell)
+ps-deploy:
+    {{ps}} deploy
+
+# Remove the Photoshop plugin installed by ps-deploy (elevated shell)
+ps-undeploy:
+    {{ps}} undeploy

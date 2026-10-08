@@ -16,6 +16,7 @@ import {UIOperations} from "./facade/UIOperations.js";
 import {messageBus} from "./shared/messaging/MessageBus.js";
 import {SELECTORS} from "./adapters/selectors.js";
 import {restoreUiParams, saveUiParams} from "./persistence.js";
+import {initPhotoshopBridge} from "./photoshop.js";
 
 // Create popup manager instance (no WebSocket integration for WebUI)
 const popupManager = createPopupManager({
@@ -56,6 +57,9 @@ export async function init() {
 
     // Set up message bus event handlers
     setupMessageBusHandlers();
+
+    // Receive images sent from the Photoshop plugin
+    initPhotoshopBridge(uiOperations);
 
     // Only user clicks fire mousedown, strategies click the buttons programmatically
     for (const id of [SELECTORS.TXT2IMG_GENERATE, SELECTORS.IMG2IMG_GENERATE])

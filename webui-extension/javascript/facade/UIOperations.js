@@ -614,6 +614,22 @@ export class UIOperations {
     }
 
     /**
+     * Insert an image into the inpaint upload tab of img2img, switching to it
+     * @param {'image'|'mask'} kind - Whether the file is the image or the inpainting mask
+     * @param {File} file - Image file
+     * @returns {Promise<boolean>} Whether the image component was found
+     */
+    async setInpaintUploadImage(kind, file) {
+        this.adapter.switchToInpaintUploadTab();
+
+        // Let Gradio render the tab before replacing its image
+        await this.sleep(100);
+
+        const selectorKey = kind === 'mask' ? 'IMG2IMG_INPAINT_UPLOAD_MASK' : 'IMG2IMG_INPAINT_UPLOAD_IMAGE';
+        return this.adapter.setImageFile(selectorKey, file);
+    }
+
+    /**
      * Sleep for specified milliseconds
      * @param {number} ms - Milliseconds to sleep
      * @returns {Promise<void>}

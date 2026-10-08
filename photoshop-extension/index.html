@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            padding: 8px;
+            color: var(--uxp-host-text-color);
+            font-size: var(--uxp-host-font-size);
+        }
+
+        .row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        sp-textfield, sp-button {
+            width: 100%;
+        }
+
+        #status {
+            min-height: 2.5em;
+        }
+
+        #status.error {
+            color: #e5615b;
+        }
+    </style>
+</head>
+<body>
+    <div class="row">
+        <sp-label>WebUI URL</sp-label>
+        <sp-textfield id="webui-url" placeholder="http://127.0.0.1:7860"></sp-textfield>
+    </div>
+    <div class="row">
+        <sp-button id="send-image" variant="cta">Send image</sp-button>
+        <sp-button id="send-mask" variant="primary">Send selection as mask</sp-button>
+        <sp-button id="send-image-and-mask" variant="secondary">Send image and mask</sp-button>
+    </div>
+    <sp-detail id="status"></sp-detail>
+    <script src="index.js"></script>
+</body>
+</html>

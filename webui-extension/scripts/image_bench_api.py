@@ -24,6 +24,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import persist
+from shared import photoshop
 from shared import tray
 
 DEFAULT_CONFIG = """{
@@ -48,6 +49,9 @@ class ImageBenchApi():
         webui_config = self.get_webui_config()
 
         self.websocket_queue = asyncio.Queue()
+        # WebUI pages listening for images sent from Photoshop, and the last received image of each kind
+        self.photoshop_websockets = set()
+        self.photoshop_images = {}
         self.config_presets_dropdown = None
         self.outputs_dir = webui_config.get("outdir_samples") or os.path.join(self.get_webui_root_dir(), "outputs")
         self.image_bench_dir = os.path.join(self.outputs_dir, "image-bench")
@@ -81,6 +85,9 @@ class ImageBenchApi():
         self.add_api_route("/loras", self.get_loras, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
+        self.add_api_route("/photoshop/upload", self.photoshop_upload, methods=["POST"])
+        self.add_api_route("/photoshop/image", self.get_photoshop_image, methods=["GET"])
+        self.app.add_websocket_route(self.BASE_PATH + "/photoshop/websocket", self.handle_photoshop_websocket)
 
     def get_path(self, path):
         return f"{self.BASE_PATH}{path}"
@@ -170,6 +177,56 @@ class ImageBenchApi():
     def close_websocket(self):
         self.websocket_queue.put_nowait(TERMINATE_WEBSOCKET)
         return Response("")
+
+    async def handle_photoshop_websocket(self, websocket, *args):
+        """Keep a WebUI page connected to receive images sent from the Photoshop plugin"""
+        await websocket.accept()
+        self.photoshop_websockets.add(websocket)
+
+        try:
+            while True:
+                await websocket.receive_text()
+        except Exception:
+            pass
+        finally:
+            self.photoshop_websockets.discard(websocket)
+
+    async def photoshop_upload(self, request: Request, kind: str, width: int, height: int, components: int):
+        """
+        Receive raw pixels of the document (kind=image) or its selection (kind=mask) from the Photoshop plugin
+        and notify the connected WebUI pages to insert it into the inpaint upload tab
+        """
+        if kind not in photoshop.PHOTOSHOP_IMAGE_KINDS:
+            raise HTTPException(status_code=400, detail=f"Unknown image kind: {kind}")
+
+        try:
+            self.photoshop_images[kind] = photoshop.raw_pixels_to_png(await request.body(), width, height, components)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        msg = json.dumps({
+            "type": "PHOTOSHOP_IMAGE",
+            "kind": kind,
+            "imageUrl": f"{self.BASE_PATH}/photoshop/image?kind={kind}&t={time.time_ns()}"
+        })
+
+        clients = 0
+        for websocket in list(self.photoshop_websockets):
+            try:
+                await websocket.send_text(msg)
+                clients += 1
+            except Exception:
+                self.photoshop_websockets.discard(websocket)
+
+        return JSONResponse({"clients": clients})
+
+    def get_photoshop_image(self, kind: str):
+        image = self.photoshop_images.get(kind)
+
+        if image is None:
+            raise HTTPException(status_code=404, detail="Not found")
+
+        return Response(image, media_type="image/png", headers={"Cache-Control": "no-store"})
 
     def get_explore_presets(self):
         return self.serve_store_file("explore_presets.json")

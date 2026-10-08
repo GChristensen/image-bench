@@ -53,6 +53,14 @@ export const SELECTORS = {
     IMG2IMG_SAMPLING: '#img2img_sampling input',
     IMG2IMG_SCHEDULER: '#img2img_scheduler input',
 
+    // img2img mode tabs and the inpaint upload images
+    IMG2IMG_MODE_TABS: 'mode_img2img',
+    IMG2IMG_INPAINT_UPLOAD_TAB: 'img2img_inpaint_upload_tab',
+    IMG2IMG_INPAINT_UPLOAD_IMAGE: 'img_inpaint_base',
+    IMG2IMG_INPAINT_UPLOAD_MASK: 'img_inpaint_mask',
+    IMAGE_COMPONENT: '[data-testid="image"]',
+    FILE_INPUT: 'input[type="file"]',
+
     // Model/VAE/Settings
     MODEL_CHECKPOINT: '#setting_sd_model_checkpoint input, .model_selection input',
     SD_VAE: '#setting_sd_vae input',
