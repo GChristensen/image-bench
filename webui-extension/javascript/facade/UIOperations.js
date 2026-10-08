@@ -16,6 +16,26 @@ const UI_PRESET_SEARCH_TERMS = {
     zit: 'z-image'
 };
 
+// Parameters remembered across WebUI reloads for both tabs, by selector key suffix
+const TAB_PARAM_SELECTORS = {
+    prompt: 'PROMPT',
+    negativePrompt: 'NEG_PROMPT',
+    sampler: 'SAMPLING',
+    scheduler: 'SCHEDULER',
+    steps: 'STEPS',
+    cfg: 'CFG_SCALE',
+    width: 'WIDTH',
+    height: 'HEIGHT',
+    seed: 'SEED',
+    subseed: 'SUBSEED',
+    subseedStrength: 'SUBSEED_STRENGTH',
+    denoising: 'DENOISING'
+};
+
+const TAB_DROPDOWN_PARAMS = ['sampler', 'scheduler'];
+
+const isSet = value => value !== undefined && value !== null;
+
 export class UIOperations {
     /**
      * @param {Object} adapter - DOM adapter instance
@@ -323,11 +343,118 @@ export class UIOperations {
     }
 
     /**
+     * Capture txt2img and img2img prompts and parameters to be restored after a WebUI reload
+     * Model, VAE and clip skip are omitted, as WebUI persists them in its settings
+     * @returns {Object} { uiPreset, txt2img, img2img }
+     */
+    captureUiParams() {
+        return {
+            uiPreset: this.adapter.getInputValue('FORGE_UI_PRESET'),
+            txt2img: {
+                ...this.captureTabParams('TXT2IMG'),
+                hiresFix: this.adapter.getElement('HIRES_CHECKBOX')?.checked ?? null,
+                hiresScale: this.adapter.getInputValue('HIRES_SCALE')
+            },
+            img2img: this.captureTabParams('IMG2IMG')
+        };
+    }
+
+    /**
+     * Capture prompts and parameters of a generation tab
+     * @param {'TXT2IMG'|'IMG2IMG'} tab - Selector key prefix of the tab
+     * @returns {Object}
+     */
+    captureTabParams(tab) {
+        const params = {};
+
+        for (const [name, suffix] of Object.entries(TAB_PARAM_SELECTORS)) {
+            params[name] = this.adapter.getInputValue(`${tab}_${suffix}`);
+        }
+
+        params.distilledCfg = this.getDistilledCfgSliderKind(tab)
+            ? this.adapter.getInputValue(`${tab}_DISTILLED_CFG`)
+            : null;
+        params.subseedShow = this.adapter.getElement(`${tab}_SUBSEED_SHOW`)?.checked ?? null;
+
+        return params;
+    }
+
+    /**
+     * Apply prompts and parameters captured by captureUiParams()
+     * @param {Object} params
+     * @returns {Promise<void>}
+     */
+    async applyUiParams(params) {
+        if (!params) {
+            return;
+        }
+
+        // The preset relabels or hides the distilled CFG sliders, so it goes first
+        if (isSet(params.uiPreset)
+                && this.adapter.getInputValue('FORGE_UI_PRESET') !== params.uiPreset) {
+            await this.setUiPreset(params.uiPreset);
+        }
+
+        await this.applyTabParams('TXT2IMG', params.txt2img);
+        await this.applyTabParams('IMG2IMG', params.img2img);
+
+        const hiresScale = params.txt2img?.hiresScale;
+        if (isSet(hiresScale) && String(this.adapter.getInputValue('HIRES_SCALE')) !== String(hiresScale)) {
+            this.adapter.setInputValue('HIRES_SCALE', hiresScale);
+        }
+
+        const hiresFix = params.txt2img?.hiresFix;
+        if (isSet(hiresFix)) {
+            this.adapter.toggleHiresFix(hiresFix, !hiresFix);
+        }
+    }
+
+    /**
+     * Apply prompts and parameters captured by captureTabParams()
+     * Unset (undefined/null) parameters and those equal to the current values are left untouched
+     * @param {'TXT2IMG'|'IMG2IMG'} tab - Selector key prefix of the tab
+     * @param {Object} params
+     * @returns {Promise<void>}
+     */
+    async applyTabParams(tab, params) {
+        if (!params) {
+            return;
+        }
+
+        const differs = (key, value) => isSet(value)
+            && String(this.adapter.getInputValue(key)) !== String(value);
+
+        for (const [name, suffix] of Object.entries(TAB_PARAM_SELECTORS)) {
+            const key = `${tab}_${suffix}`;
+
+            if (!differs(key, params[name])) {
+                continue;
+            }
+
+            if (TAB_DROPDOWN_PARAMS.includes(name)) {
+                await this.adapter.setDropdownValue(key, params[name], true);
+            } else {
+                this.adapter.setInputValue(key, params[name]);
+            }
+        }
+
+        if (differs(`${tab}_DISTILLED_CFG`, params.distilledCfg) && this.getDistilledCfgSliderKind(tab)) {
+            this.adapter.setInputValue(`${tab}_DISTILLED_CFG`, params.distilledCfg);
+        }
+
+        // The checkbox setter only acts if the state differs
+        if (isSet(params.subseedShow)) {
+            this.adapter.setCheckboxValue(`${tab}_SUBSEED_SHOW`, params.subseedShow);
+        }
+    }
+
+    /**
      * Determine what the Forge distilled CFG slider currently controls
+     * @param {'TXT2IMG'|'IMG2IMG'} tab - Selector key prefix of the tab
      * @returns {'shift'|'distilledCfg'|null} null if the slider is absent or hidden
      */
-    getDistilledCfgSliderKind() {
-        const block = document.getElementById(SELECTORS.TXT2IMG_DISTILLED_CFG_ID);
+    getDistilledCfgSliderKind(tab = 'TXT2IMG') {
+        const block = document.getElementById(SELECTORS[`${tab}_DISTILLED_CFG_ID`]);
 
         if (!block || getComputedStyle(block).display === 'none') {
             return null;

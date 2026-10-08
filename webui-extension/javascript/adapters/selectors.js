@@ -36,6 +36,23 @@ export const SELECTORS = {
     TXT2IMG_SAMPLING: '#txt2img_sampling input',
     TXT2IMG_SCHEDULER: '#txt2img_scheduler input',
 
+    // img2img prompts and parameters
+    IMG2IMG_PROMPT: '#img2img_prompt textarea',
+    IMG2IMG_NEG_PROMPT: '#img2img_neg_prompt textarea',
+    IMG2IMG_SEED: '#img2img_seed input',
+    IMG2IMG_SUBSEED: '#img2img_subseed input',
+    IMG2IMG_SUBSEED_STRENGTH: '#img2img_subseed_strength input',
+    IMG2IMG_SUBSEED_SHOW: '#img2img_subseed_show input',
+    IMG2IMG_STEPS: '#img2img_steps input',
+    IMG2IMG_CFG_SCALE: '#img2img_cfg_scale input',
+    IMG2IMG_DISTILLED_CFG: '#img2img_distilled_cfg_scale input',
+    IMG2IMG_DISTILLED_CFG_ID: 'img2img_distilled_cfg_scale',
+    IMG2IMG_WIDTH: '#img2img_width input',
+    IMG2IMG_HEIGHT: '#img2img_height input',
+    IMG2IMG_DENOISING: '#img2img_denoising_strength input',
+    IMG2IMG_SAMPLING: '#img2img_sampling input',
+    IMG2IMG_SCHEDULER: '#img2img_scheduler input',
+
     // Model/VAE/Settings
     MODEL_CHECKPOINT: '#setting_sd_model_checkpoint input, .model_selection input',
     SD_VAE: '#setting_sd_vae input',

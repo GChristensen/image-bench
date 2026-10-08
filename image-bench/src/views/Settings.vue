@@ -18,6 +18,8 @@ const appConfigStore = useAppConfigStore();
     >Add 'Civitai Model Info' settings button</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.repositionConfigPresetsDropdown"
     >Bring up the dropdown of the 'Config Presets' extension</label>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.persistGenerationParams"
+    >Remember prompts and generation parameters across WebUI reloads</label>
   </div>
 </div>
 </template>

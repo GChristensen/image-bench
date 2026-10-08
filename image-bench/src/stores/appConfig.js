@@ -45,6 +45,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Remember txt2img prompts and parameters across WebUI reloads (disabled unless set to true)
+    const persistGenerationParams = computed({
+        get() {
+            return _config.persistGenerationParams ?? false;
+        },
+        set(v) {
+            _config.persistGenerationParams = v;
+            return persist();
+        }
+    });
+
     async function init() {
         const response = await fetch("/image-bench/config.json");
 
@@ -63,6 +74,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         repositionConfigPresetsDropdown,
         addModelInfoButton,
         automaticallyClearGeneratedImages,
-        exploreLoraFreeImages
+        exploreLoraFreeImages,
+        persistGenerationParams
     };
 });

@@ -1,4 +1,4 @@
-import {loadAppConfig, sleep} from "./shared/utils.js";
+import {loadAppConfig} from "./shared/utils.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager} from "./shared/popup.js";
@@ -14,6 +14,8 @@ import {
 import {adapter} from "./adapters/adapter.js";
 import {UIOperations} from "./facade/UIOperations.js";
 import {messageBus} from "./shared/messaging/MessageBus.js";
+import {SELECTORS} from "./adapters/selectors.js";
+import {restoreUiParams, saveUiParams} from "./persistence.js";
 
 // Create popup manager instance (no WebSocket integration for WebUI)
 const popupManager = createPopupManager({
@@ -54,6 +56,22 @@ export async function init() {
 
     // Set up message bus event handlers
     setupMessageBusHandlers();
+
+    // Only user clicks fire mousedown, strategies click the buttons programmatically
+    for (const id of [SELECTORS.TXT2IMG_GENERATE, SELECTORS.IMG2IMG_GENERATE])
+        document.getElementById(id)?.addEventListener("mousedown", onGenerateStarted);
+}
+
+/**
+ * Save txt2img and img2img prompts and parameters when the user starts a generation
+ * The config is reloaded, since the setting may be changed in the popup
+ */
+async function onGenerateStarted() {
+    const params = uiOperations.captureUiParams();
+    appConfig = await loadAppConfig() || appConfig;
+
+    if (appConfig.persistGenerationParams)
+        saveUiParams(params);
 }
 
 /**
@@ -100,11 +118,15 @@ function setupMessageBusHandlers() {
 async function initUI() {
     //window.name = "sd-webui-main-window";
     //console.log(appConfig)
-    if (appConfig?.repositionConfigPresetsDropdown) {
-        await sleep(2000);
-        await repositionConfigPresetsDropdown("txt2img");
-        await repositionConfigPresetsDropdown("img2img");
-    }
+    // Let Gradio finish initializing its components before restoring
+    if (appConfig?.persistGenerationParams)
+        setTimeout(() => restoreUiParams(uiOperations), 1500);
+
+    if (appConfig?.repositionConfigPresetsDropdown)
+        setTimeout(async () => {
+            await repositionConfigPresetsDropdown("txt2img");
+            await repositionConfigPresetsDropdown("img2img");
+        }, 2000);
 
     createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
     popupManager.dispose();
