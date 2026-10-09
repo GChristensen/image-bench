@@ -7,13 +7,17 @@
  */
 
 import {
-    parseNodeMarker,
+    MARKER_ROLES,
     getNodeByType,
     getNodesByType,
-    getMarkedNode,
-    getMarkedNodeWidget,
     getNodeWidget,
     setNodeWidgetValue,
+    createNodeTarget,
+    isSameTarget,
+    getMarkerTargets,
+    getRoleWidgetName,
+    getTargetWidget,
+    setTargetWidgetValue,
     getWorkflow,
     loadWorkflow
 } from '../workflow.js';
@@ -33,41 +37,135 @@ export class ComfyUIOperations {
     // ==================== NODE DISCOVERY METHODS ====================
 
     /**
-     * Get sampler node using marker-based discovery with fallback
-     * @returns {Object|null} The sampler node or null
+     * Get the first target of a marker role (see MarkerTarget in workflow.js)
+     * The negative prompt skips the positive prompt target, so one subgraph node marked
+     * "ib:pp ib:np" yields its first promoted text encoder as positive and the second as negative
+     * @param {Object} role - Entry of MARKER_ROLES
+     * @returns {Object|null}
      */
-    getSamplerNode() {
-        // Try marker-based discovery first
-        const result = getMarkedNodeWidget(this.app, 'smp', this.nodeConfig, 'sampler');
-        if (result && result.node) {
-            return result.node;
+    getRoleTarget(role) {
+        const targets = getMarkerTargets(this.app, role, this.nodeConfig);
+
+        if (role === MARKER_ROLES.negativePrompt) {
+            const positive = this.getRoleTarget(MARKER_ROLES.positivePrompt);
+            return targets.find(target => !isSameTarget(target, positive)) ?? null;
         }
 
-        // Fallback: standard KSampler
-        return getNodeByType(this.app, 'KSampler');
+        return targets[0] ?? null;
+    }
+
+    /**
+     * Get the sampler target using marker-based discovery with fallback to the first KSampler
+     * @returns {Object|null}
+     */
+    getSamplerTarget() {
+        return this.getRoleTarget(MARKER_ROLES.sampler)
+            ?? createNodeTarget(getNodeByType(this.app, 'KSampler'));
+    }
+
+    /**
+     * Set a sampler widget value
+     * @param {string} widgetName - Widget name on the sampler node
+     * @param {any} value
+     */
+    setSamplerValue(widgetName, value) {
+        const target = this.getSamplerTarget();
+        if (!target) {
+            console.warn(`[ComfyUIOperations] No sampler node found (marked with ib:smp or KSampler) to set ${widgetName}`);
+            return;
+        }
+        setTargetWidgetValue(target, widgetName, value);
+    }
+
+    /**
+     * Get a sampler widget value
+     * @param {string} widgetName - Widget name on the sampler node
+     * @returns {any|null}
+     */
+    getSamplerValue(widgetName) {
+        return getTargetWidget(this.getSamplerTarget(), widgetName)?.value ?? null;
+    }
+
+    /**
+     * Get the model widget of the node marked with ib:cp
+     * @returns {Object|null}
+     */
+    getCheckpointWidget() {
+        const role = MARKER_ROLES.checkpoint;
+        const target = this.getRoleTarget(role);
+        const widgetName = target && getRoleWidgetName(role, this.nodeConfig, target);
+
+        if (!widgetName) {
+            if (target) {
+                console.warn(`No checkpoint widget name configured for node type ${target.source.type}`);
+            }
+            return null;
+        }
+
+        return getTargetWidget(target, widgetName);
+    }
+
+    /**
+     * Set the model on the node marked with ib:cp
+     * @param {string} modelName
+     * @returns {boolean} Whether the model was set
+     */
+    setCheckpoint(modelName) {
+        const widget = this.getCheckpointWidget();
+        if (!widget) {
+            return false;
+        }
+
+        widget.value = modelName;
+        widget.callback?.(modelName);
+        return true;
+    }
+
+    /**
+     * Set the text of a prompt role
+     * @param {Object} role - MARKER_ROLES.positivePrompt or MARKER_ROLES.negativePrompt
+     * @param {Object|null} fallbackNode - CLIPTextEncode node used when nothing is marked
+     * @param {string} text
+     * @returns {boolean} Whether the prompt was set
+     */
+    setPromptText(role, fallbackNode, text) {
+        const target = this.getRoleTarget(role) ?? createNodeTarget(fallbackNode);
+        if (!target) {
+            return false;
+        }
+
+        const widgetName = getRoleWidgetName(role, this.nodeConfig, target) ?? 'text';
+        return setTargetWidgetValue(target, widgetName, text);
+    }
+
+    /**
+     * Get the execution ids of the current marker targets, used to find them in /history
+     * @returns {Object} Execution ids keyed by MARKER_ROLES key
+     */
+    getMarkerExecutionIds() {
+        return Object.fromEntries(Object.entries(MARKER_ROLES)
+            .map(([key, role]) => [key, this.getRoleTarget(role)?.executionId]));
     }
 
     // ==================== HIGH-LEVEL OPERATIONS ====================
 
     /**
      * Backup current model
-     * Uses marker-based discovery to find the marked checkpoint node
-     * Searches for node containing "ib:cp:0" marker in its name
+     * Uses marker-based discovery to find the node marked with ib:cp
      * @returns {Promise<string>} Current model name
      */
     async backupModel() {
-        const result = getMarkedNodeWidget(this.app, 'cp', this.nodeConfig, 'checkpoint');
-        if (!result || !result.widget) {
-            console.warn('backupModel: No marked checkpoint node found (looking for "ib:cp:0" in node name)');
+        const widget = this.getCheckpointWidget();
+        if (!widget) {
+            console.warn('backupModel: No marked checkpoint node found (looking for "ib:cp" in node title)');
             return null;
         }
-        return result.widget.value;
+        return widget.value;
     }
 
     /**
      * Restore/set model
-     * Uses marker-based discovery to set the marked checkpoint node
-     * Searches for node containing "ib:cp:0" marker in its name
+     * Uses marker-based discovery to set the node marked with ib:cp
      * @param {string} modelName - Model name to set
      * @returns {Promise<void>}
      */
@@ -77,13 +175,9 @@ export class ComfyUIOperations {
             return;
         }
 
-        const result = getMarkedNodeWidget(this.app, 'cp', this.nodeConfig, 'checkpoint');
-        if (!result || !result.node || !result.widgetName) {
-            console.error('restoreModel: No marked checkpoint node found (looking for "ib:cp:0" in node name)');
-            return;
+        if (!this.setCheckpoint(modelName)) {
+            console.error('restoreModel: No marked checkpoint node found (looking for "ib:cp" in node title)');
         }
-
-        setNodeWidgetValue(result.node, result.widgetName, modelName);
     }
 
     /**
@@ -151,16 +245,15 @@ export class ComfyUIOperations {
 
     /**
      * Set the seed value
-     * Uses marker-based discovery (ib:smp:0) or falls back to KSampler
+     * Uses marker-based discovery (ib:smp) or falls back to KSampler
      * @param {number} seed - The seed value
      */
     setSeed(seed) {
-        const sampler = this.getSamplerNode();
-        if (sampler) {
-            setNodeWidgetValue(sampler, 'seed', seed);
-        } else {
-            console.warn('[ComfyUIOperations] No sampler node found for setSeed');
+        // -1 means a random seed (SD WebUI convention), but ComfyUI rejects negative seeds
+        if (seed < 0) {
+            seed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         }
+        this.setSamplerValue('seed', seed);
     }
 
     /**
@@ -168,26 +261,16 @@ export class ComfyUIOperations {
      * @returns {number|null} The seed value or null
      */
     getSeed() {
-        const sampler = this.getSamplerNode();
-        if (sampler) {
-            const widget = getNodeWidget(sampler, 'seed');
-            return widget?.value;
-        }
-        return null;
+        return this.getSamplerValue('seed');
     }
 
     /**
      * Set control_after_generate on sampler
+     * For a subgraph node the control widget stays on the inner sampler and drives the promoted seed
      * @param {string} value - Control mode ("fixed", "increment", "decrement", "randomize")
      */
     setControlAfterGenerate(value) {
-        const sampler = this.getSamplerNode();
-        console.log(sampler);
-        if (sampler) {
-            setNodeWidgetValue(sampler, 'control_after_generate', value);
-        } else {
-            console.warn('[ComfyUIOperations] No sampler node found for setControlAfterGenerate');
-        }
+        this.setSamplerValue('control_after_generate', value);
     }
 
     /**
@@ -195,34 +278,18 @@ export class ComfyUIOperations {
      * @returns {string|null} The control mode or null
      */
     getControlAfterGenerate() {
-        const sampler = this.getSamplerNode();
-        if (sampler) {
-            const widget = getNodeWidget(sampler, 'control_after_generate');
-            return widget?.value;
-        }
-        return null;
+        return this.getSamplerValue('control_after_generate');
     }
 
     /**
      * Set the steps value
-     * Uses marker-based discovery (ib:smp:0) or falls back to KSampler
+     * Uses marker-based discovery (ib:smp) or falls back to KSampler
      * @param {number} steps - Number of steps
      */
     setSteps(steps) {
-        // Try marker-based discovery first
-        const result = getMarkedNodeWidget(this.app, 'smp', this.nodeConfig, 'sampler');
-        if (result && result.node && result.widgetName) {
-            setNodeWidgetValue(result.node, result.widgetName, steps);
-            return;
-        }
-
-        // Fallback: try standard KSampler
-        const sampler = getNodeByType(this.app, 'KSampler');
-        if (sampler) {
-            setNodeWidgetValue(sampler, 'steps', steps);
-        } else {
-            console.warn('[ComfyUIOperations] No sampler node found (marked with ib:smp:0 or KSampler)');
-        }
+        const target = this.getSamplerTarget();
+        const widgetName = (target && getRoleWidgetName(MARKER_ROLES.sampler, this.nodeConfig, target)) ?? 'steps';
+        this.setSamplerValue(widgetName, steps);
     }
 
     /**
@@ -230,12 +297,7 @@ export class ComfyUIOperations {
      * @returns {number|null} The steps value or null
      */
     getSteps() {
-        const sampler = this.getSamplerNode();
-        if (sampler) {
-            const widget = getNodeWidget(sampler, 'steps');
-            return widget?.value;
-        }
-        return null;
+        return this.getSamplerValue('steps');
     }
 
     /**
@@ -243,10 +305,7 @@ export class ComfyUIOperations {
      * @param {number} cfg - CFG scale value
      */
     setCFG(cfg) {
-        const sampler = getNodeByType(this.app, 'KSampler');
-        if (sampler) {
-            setNodeWidgetValue(sampler, 'cfg', cfg);
-        }
+        this.setSamplerValue('cfg', cfg);
     }
 
     /**
@@ -254,10 +313,7 @@ export class ComfyUIOperations {
      * @param {number} denoise - Denoise value (0-1)
      */
     setDenoise(denoise) {
-        const sampler = getNodeByType(this.app, 'KSampler');
-        if (sampler) {
-            setNodeWidgetValue(sampler, 'denoise', denoise);
-        }
+        this.setSamplerValue('denoise', denoise);
     }
 
     /**
@@ -265,10 +321,7 @@ export class ComfyUIOperations {
      * @param {string} samplerName - Sampler name
      */
     setSampler(samplerName) {
-        const sampler = getNodeByType(this.app, 'KSampler');
-        if (sampler) {
-            setNodeWidgetValue(sampler, 'sampler_name', samplerName);
-        }
+        this.setSamplerValue('sampler_name', samplerName);
     }
 
     /**
@@ -276,53 +329,30 @@ export class ComfyUIOperations {
      * @param {string} scheduler - Scheduler name
      */
     setScheduler(scheduler) {
-        const sampler = getNodeByType(this.app, 'KSampler');
-        if (sampler) {
-            setNodeWidgetValue(sampler, 'scheduler', scheduler);
-        }
+        this.setSamplerValue('scheduler', scheduler);
     }
 
     /**
      * Set the positive prompt
-     * Uses marker-based discovery (ib:pp:0) or falls back to first CLIPTextEncode
+     * Uses marker-based discovery (ib:pp) or falls back to first CLIPTextEncode
      * @param {string} prompt - The prompt text
      */
     setPrompt(prompt) {
-        // Try marker-based discovery first
-        const result = getMarkedNodeWidget(this.app, 'pp', this.nodeConfig, 'positive_prompt');
-        if (result && result.node && result.widgetName) {
-            setNodeWidgetValue(result.node, result.widgetName, prompt);
-            return;
-        }
-
-        // Fallback: use first CLIPTextEncode node
-        const promptNodes = getNodesByType(this.app, 'CLIPTextEncode');
-        if (promptNodes.length > 0) {
-            setNodeWidgetValue(promptNodes[0], 'text', prompt);
-        } else {
-            console.warn('[ComfyUIOperations] No marked positive prompt node found (looking for "ib:pp:0" in node title) and no CLIPTextEncode nodes found');
+        const fallbackNode = getNodesByType(this.app, 'CLIPTextEncode')[0];
+        if (!this.setPromptText(MARKER_ROLES.positivePrompt, fallbackNode, prompt)) {
+            console.warn('[ComfyUIOperations] No marked positive prompt node found (looking for "ib:pp" in node title) and no CLIPTextEncode nodes found');
         }
     }
 
     /**
      * Set the negative prompt
-     * Uses marker-based discovery (ib:np:0) or falls back to second CLIPTextEncode
+     * Uses marker-based discovery (ib:np) or falls back to second CLIPTextEncode
      * @param {string} prompt - The negative prompt text
      */
     setNegativePrompt(prompt) {
-        // Try marker-based discovery first
-        const result = getMarkedNodeWidget(this.app, 'np', this.nodeConfig, 'negative_prompt');
-        if (result && result.node && result.widgetName) {
-            setNodeWidgetValue(result.node, result.widgetName, prompt);
-            return;
-        }
-
-        // Fallback: use second CLIPTextEncode node
-        const promptNodes = getNodesByType(this.app, 'CLIPTextEncode');
-        if (promptNodes.length > 1) {
-            setNodeWidgetValue(promptNodes[1], 'text', prompt);
-        } else {
-            console.warn('[ComfyUIOperations] No marked negative prompt node found (looking for "ib:np:0" in node title) and no second CLIPTextEncode node found');
+        const fallbackNode = getNodesByType(this.app, 'CLIPTextEncode')[1];
+        if (!this.setPromptText(MARKER_ROLES.negativePrompt, fallbackNode, prompt)) {
+            console.warn('[ComfyUIOperations] No marked negative prompt node found (looking for "ib:np" in node title) and no second CLIPTextEncode node found');
         }
     }
 
@@ -336,12 +366,12 @@ export class ComfyUIOperations {
     getInputValue(selectorKey) {
         // Handle special selector keys with marker-based discovery
         if (selectorKey === 'MODEL_CHECKPOINT') {
-            const result = getMarkedNodeWidget(this.app, 'cp', this.nodeConfig, 'checkpoint');
-            if (!result || !result.widget) {
-                console.warn('MODEL_CHECKPOINT: No marked checkpoint node found (looking for "ib:cp:0" in node name)');
+            const widget = this.getCheckpointWidget();
+            if (!widget) {
+                console.warn('MODEL_CHECKPOINT: No marked checkpoint node found (looking for "ib:cp" in node title)');
                 return null;
             }
-            return result.widget.value;
+            return widget.value;
         }
 
         const [nodeType, widgetName] = selectorKey.split(':');
@@ -382,12 +412,9 @@ export class ComfyUIOperations {
     async setDropdownValue(selectorKey, value) {
         // Handle special selector keys with marker-based discovery
         if (selectorKey === 'MODEL_CHECKPOINT') {
-            const result = getMarkedNodeWidget(this.app, 'cp', this.nodeConfig, 'checkpoint');
-            if (!result || !result.node || !result.widgetName) {
-                console.error('MODEL_CHECKPOINT: No marked checkpoint node found (looking for "ib:cp:0" in node name)');
-                return;
+            if (!this.setCheckpoint(value)) {
+                console.error('MODEL_CHECKPOINT: No marked checkpoint node found (looking for "ib:cp" in node title)');
             }
-            setNodeWidgetValue(result.node, result.widgetName, value);
             return;
         }
 

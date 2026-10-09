@@ -75,7 +75,7 @@ app.registerExtension({
  */
 async function loadNodeConfig() {
     try {
-        const response = await fetch('/image-bench/node_config.json');
+        const response = await fetch('/image-bench/node_config.json', {cache: 'no-store'});
         if (!response.ok) {
             console.warn('[Image Bench] Failed to load node_config.json, using defaults');
             return null;
@@ -226,7 +226,8 @@ async function handleExecuted(event) {
             if (historyData && historyData.prompt) {
                 // Extract from history (no race conditions!)
                 console.log(historyData)
-                parameters = extractParametersFromHistory(prompt_id, historyData.prompt, nodeConfig);
+                parameters = extractParametersFromHistory(prompt_id, historyData.prompt, nodeConfig,
+                    uiOperations?.getMarkerExecutionIds());
                 console.log('[Image Bench] Parameters extracted from history API');
             } else {
                 console.warn('[Image Bench] History data incomplete');

@@ -122,19 +122,21 @@ async def get_node_config(request):
                 "nodeTypes": [
                     "CheckpointLoaderSimple",
                     "CheckpointLoader",
-                    "unCLIPCheckpointLoader"
+                    "unCLIPCheckpointLoader",
+                    "UNETLoader"
                 ],
                 "widgetNames": {
                     "CheckpointLoaderSimple": "ckpt_name",
                     "CheckpointLoader": "ckpt_name",
-                    "unCLIPCheckpointLoader": "ckpt_name"
+                    "unCLIPCheckpointLoader": "ckpt_name",
+                    "UNETLoader": "unet_name"
                 }
             }
         }
         with open(node_config_path, 'w') as f:
             json.dump(default_node_config, f, indent=2)
 
-    return web.FileResponse(node_config_path)
+    return web.FileResponse(node_config_path, headers={"Cache-Control": "no-cache"})
 
 
 # System information endpoint

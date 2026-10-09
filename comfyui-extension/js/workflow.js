@@ -32,29 +32,65 @@ export async function extractImageInfo(nodeId, output, promptId) {
 }
 
 /**
- * Parse node marker from node title
- * Searches for marker pattern anywhere in the node name
+ * Marker roles: the marker type that tags a node and the node_config.json section describing it.
+ * A `marker` set in node_config.json overrides the default type.
+ * `requireWidget` - a subgraph node only counts if the role's configured widget is promoted to it.
+ */
+export const MARKER_ROLES = {
+    checkpoint: {marker: 'cp', configKey: 'checkpoint', requireWidget: true},
+    sampler: {marker: 'smp', configKey: 'sampler', requireWidget: false},
+    positivePrompt: {marker: 'pp', configKey: 'positive_prompt', requireWidget: true},
+    negativePrompt: {marker: 'np', configKey: 'negative_prompt', requireWidget: true}
+};
+
+/**
+ * Parse all node markers from a node title
+ * Markers may appear anywhere in the title, and one title may carry several (e.g. "Text to Image ib:pp ib:smp ib:cp")
+ * @param {string} title - Node title
+ * @returns {Array<{prefix: string, type: string, index: number|null}>}
+ */
+export function parseNodeMarkers(title) {
+    if (!title || typeof title !== 'string') {
+        return [];
+    }
+
+    // Match "ib:<type>" or "ib:<type>:<index>" anywhere in the string
+    const markerRegex = /\bib:([a-z]+)(?::(\d+))?\b/gi;
+
+    return [...title.matchAll(markerRegex)].map(match => ({
+        prefix: 'ib',
+        type: match[1].toLowerCase(),
+        index: match[2] ? parseInt(match[2], 10) : null
+    }));
+}
+
+/**
+ * Parse the first node marker from a node title
  * @param {string} title - Node title (e.g., "My Checkpoint ib:cp:0" or "ib:cp:0 - Main")
  * @returns {Object|null} - {prefix, type, index} or null
  */
 export function parseNodeMarker(title) {
-    if (!title || typeof title !== 'string') {
-        return null;
-    }
+    return parseNodeMarkers(title)[0] ?? null;
+}
 
-    // Match "ib:<type>:<index>" anywhere in the string
-    const markerRegex = /\bib:([a-z]+)(:((\d+))\b)?/i;
-    const match = title.match(markerRegex);
+/**
+ * Check whether a node title carries a marker of the given type
+ * @param {string} title - Node title
+ * @param {string} typeMarker - Marker type (e.g., "cp")
+ * @returns {boolean}
+ */
+export function hasNodeMarker(title, typeMarker) {
+    return parseNodeMarkers(title).some(marker => marker.type === typeMarker);
+}
 
-    if (!match) {
-        return null;
-    }
-
-    return {
-        prefix: 'ib',
-        type: match[1],
-        index: match[4] ? parseInt(match[4], 10) : null
-    };
+/**
+ * Get the marker type of a role, honoring an override in node_config.json
+ * @param {Object} role - Entry of MARKER_ROLES
+ * @param {Object} nodeConfig - Node configuration object
+ * @returns {string}
+ */
+export function getRoleMarker(role, nodeConfig) {
+    return nodeConfig?.[role.configKey]?.marker || role.marker;
 }
 
 /**
@@ -107,15 +143,9 @@ export function extractParameters(promptId, capturedSeed) {
         }
 
         // Find marked prompt nodes using marker-based discovery
-        const positivePromptNode = nodes.find(n => {
-            const marker = parseNodeMarker(n.title);
-            return marker && marker.type === 'pp';
-        });
+        const positivePromptNode = nodes.find(n => hasNodeMarker(n.title, 'pp'));
 
-        const negativePromptNode = nodes.find(n => {
-            const marker = parseNodeMarker(n.title);
-            return marker && marker.type === 'np';
-        });
+        const negativePromptNode = nodes.find(n => hasNodeMarker(n.title, 'np'));
 
         if (positivePromptNode && positivePromptNode.widgets_values) {
             params.prompt = positivePromptNode.widgets_values[0] || '';
@@ -161,57 +191,198 @@ export function getNodesByType(app, nodeType) {
     return app.graph.nodes.filter(node => node.type === nodeType);
 }
 
-/**
- * Find a node by its marker (e.g., "cp" finds node with "ib:cp:0" in its name)
- * The marker can appear anywhere in the node's title
- * Examples: "ib:cp:0", "My Checkpoint ib:cp:0", "ib:cp:0 - Main Model"
- * @param {Object} app - ComfyUI app instance
- * @param {string} typeMarker - Type marker (e.g., "cp" for checkpoint)
- * @returns {Object|null} The marked node or null
- */
-export function getMarkedNode(app, typeMarker) {
-    if (!app?.graph?.nodes) {
-        return null;
-    }
+// ==================== MARKER TARGETS ====================
 
-    // Find node whose title contains the marker pattern
-    return app.graph.nodes.find(node => {
-        const marker = parseNodeMarker(node.title);
-        return marker && marker.type === typeMarker;
-    });
+/**
+ * A marker target describes where a role's values live.
+ * `source` is the node of the role's type (e.g. a KSampler). `host` is the node whose widgets the user edits:
+ * the source itself for a plain node, or the subgraph node a marker was put on, in which case the source is
+ * the inner node its promoted widgets come from.
+ * `executionId` is the source's id in the queued prompt and in /history ("<subgraph node id>:<inner id>" for subgraphs).
+ * @typedef {{host: Object, source: Object, executionId: string}} MarkerTarget
+ */
+
+function isSubgraphNode(node) {
+    return !!node?.isSubgraphNode?.();
 }
 
 /**
- * Get widget from a marked node using configuration
- * @param {Object} app - ComfyUI app instance
- * @param {string} typeMarker - Type marker (e.g., "cp")
- * @param {Object} nodeConfig - Node configuration object
- * @param {string} configKey - Config key (e.g., "checkpoint")
- * @returns {Object|null} Object with {node, widget, widgetName} or null
+ * Create a target for a plain (non-subgraph) node
+ * @param {Object|null} node
+ * @returns {MarkerTarget|null}
  */
-export function getMarkedNodeWidget(app, typeMarker, nodeConfig, configKey) {
-    const markedNode = getMarkedNode(app, typeMarker);
-    if (!markedNode) {
+export function createNodeTarget(node) {
+    return node ? {host: node, source: node, executionId: String(node.id)} : null;
+}
+
+/**
+ * Check whether two targets point to the same source node
+ */
+export function isSameTarget(a, b) {
+    return !!a && !!b && a.host === b.host && a.source === b.source;
+}
+
+/**
+ * Resolve the inner node and widget a subgraph node input is promoted from, following nested subgraphs
+ * @param {Object} hostNode - Subgraph node
+ * @param {Object} input - Widget input of the subgraph node
+ * @returns {{node: Object, widget: Object, path: Array}|null} path - node ids from inside the host down to the source
+ */
+function resolvePromotedSource(hostNode, input) {
+    const subgraph = hostNode.subgraph;
+
+    for (const linkId of input?._subgraphSlot?.linkIds ?? []) {
+        const link = subgraph?.getLink?.(linkId);
+        const inner = link && subgraph.getNodeById(link.target_id);
+        const innerInput = inner?.inputs?.[link.target_slot];
+        if (!innerInput) {
+            continue;
+        }
+
+        if (isSubgraphNode(inner)) {
+            const nested = resolvePromotedSource(inner, innerInput);
+            if (nested) {
+                return {...nested, path: [inner.id, ...nested.path]};
+            }
+            continue;
+        }
+
+        const widget = inner.getWidgetFromSlot?.(innerInput) ?? getNodeWidget(inner, innerInput.widget?.name);
+        if (widget) {
+            return {node: inner, widget, path: [inner.id]};
+        }
+    }
+
+    return null;
+}
+
+/**
+ * List the widgets promoted to a subgraph node together with the inner widgets they drive
+ * Inputs connected to an outer link are skipped: their value does not come from the widget
+ * @param {Object} hostNode - Subgraph node
+ * @returns {Array<{hostWidget: Object, sourceNode: Object, sourceWidget: Object, path: Array}>}
+ */
+function getPromotedWidgets(hostNode) {
+    const promoted = [];
+
+    for (const input of hostNode.inputs ?? []) {
+        // Promoted inputs carry a widgetId (also those migrated from legacy properties.proxyWidgets)
+        if (!(input.widget || input.widgetId) || input.link != null) {
+            continue;
+        }
+
+        const hostWidget = hostNode.getWidgetFromSlot?.(input) ?? getNodeWidget(hostNode, input.widget?.name ?? input.name);
+        const source = resolvePromotedSource(hostNode, input);
+        if (hostWidget && source) {
+            promoted.push({hostWidget, sourceNode: source.node, sourceWidget: source.widget, path: source.path});
+        }
+    }
+
+    return promoted;
+}
+
+/**
+ * Find all targets of a marker role, in graph order
+ * A plain node is a target when its title carries the role's marker.
+ * A marked subgraph node yields one target per inner node of an accepted type that has widgets promoted to it
+ * (with role.requireWidget, the role's configured widget must be among them).
+ * @param {Object} app - ComfyUI app instance
+ * @param {Object} role - Entry of MARKER_ROLES
+ * @param {Object} nodeConfig - Node configuration object
+ * @returns {Array<MarkerTarget>}
+ */
+export function getMarkerTargets(app, role, nodeConfig) {
+    const typeMarker = getRoleMarker(role, nodeConfig);
+    const roleConfig = nodeConfig?.[role.configKey];
+    const targets = [];
+
+    for (const node of app?.graph?.nodes ?? []) {
+        if (!hasNodeMarker(node.title, typeMarker)) {
+            continue;
+        }
+
+        if (!isSubgraphNode(node)) {
+            targets.push(createNodeTarget(node));
+            continue;
+        }
+
+        const seen = new Set();
+        for (const {sourceNode, sourceWidget, path} of getPromotedWidgets(node)) {
+            if (seen.has(sourceNode) || (roleConfig && !roleConfig.nodeTypes?.includes(sourceNode.type))) {
+                continue;
+            }
+            if (role.requireWidget && roleConfig && roleConfig.widgetNames?.[sourceNode.type] !== sourceWidget.name) {
+                continue;
+            }
+
+            seen.add(sourceNode);
+            targets.push({host: node, source: sourceNode, executionId: [node.id, ...path].join(':')});
+        }
+
+        if (!seen.size) {
+            console.warn(`[Image Bench] Subgraph node "${node.title}" is marked ib:${typeMarker}, but no matching widget is promoted to it`);
+        }
+    }
+
+    return targets;
+}
+
+/**
+ * Get the role's configured widget name for a target's source node type
+ * @param {Object} role - Entry of MARKER_ROLES
+ * @param {Object} nodeConfig - Node configuration object
+ * @param {MarkerTarget} target
+ * @returns {string|null}
+ */
+export function getRoleWidgetName(role, nodeConfig, target) {
+    return nodeConfig?.[role.configKey]?.widgetNames?.[target.source.type] ?? null;
+}
+
+/**
+ * Get the widget that holds a source widget's value for a target:
+ * the node's own widget, the subgraph node widget promoted from it, or, if it is not promoted,
+ * the inner widget itself (unless its input is linked)
+ * @param {MarkerTarget} target
+ * @param {string} widgetName - Widget name on the source node
+ * @returns {Object|null}
+ */
+export function getTargetWidget(target, widgetName) {
+    if (!target) {
         return null;
     }
 
-    // If no config, return just the node
-    if (!nodeConfig || !nodeConfig[configKey]) {
-        return { node: markedNode, widget: null, widgetName: null };
+    if (target.host === target.source) {
+        return getNodeWidget(target.source, widgetName);
     }
 
-    const config = nodeConfig[configKey];
-    const widgetNames = config.widgetNames || {};
-
-    // Find the widget name for this node type
-    const widgetName = widgetNames[markedNode.type];
-    if (!widgetName) {
-        console.warn(`No widget name configured for node type ${markedNode.type}`);
-        return { node: markedNode, widget: null, widgetName: null };
+    const promoted = getPromotedWidgets(target.host)
+        .find(p => p.sourceNode === target.source && p.sourceWidget.name === widgetName);
+    if (promoted) {
+        return promoted.hostWidget;
     }
 
-    const widget = getNodeWidget(markedNode, widgetName);
-    return { node: markedNode, widget, widgetName };
+    const widget = getNodeWidget(target.source, widgetName);
+    const slot = widget && target.source.getSlotFromWidget?.(widget);
+    return slot?.link != null ? null : widget;
+}
+
+/**
+ * Set a widget value on a target
+ * @param {MarkerTarget} target
+ * @param {string} widgetName - Widget name on the source node
+ * @param {any} value
+ * @returns {boolean} Whether the value was set
+ */
+export function setTargetWidgetValue(target, widgetName, value) {
+    const widget = getTargetWidget(target, widgetName);
+
+    if (!widget) {
+        console.warn(`Widget ${widgetName} not found on node ${target?.source?.type}`);
+        return false;
+    }
+
+    setWidgetValue(widget, value);
+    return true;
 }
 
 // ==================== LOW-LEVEL WIDGET MANIPULATION ====================
@@ -245,14 +416,22 @@ export function setNodeWidgetValue(node, widgetName, value) {
         return false;
     }
 
+    setWidgetValue(widget, value);
+    return true;
+}
+
+/**
+ * Set a widget value and trigger its callback
+ * @param {Object} widget - The widget
+ * @param {any} value - Value to set
+ */
+function setWidgetValue(widget, value) {
     widget.value = value;
 
     // Trigger widget callback if it exists
     if (widget.callback) {
         widget.callback(value);
     }
-
-    return true;
 }
 
 // ==================== LOW-LEVEL WORKFLOW OPERATIONS ====================
@@ -285,15 +464,22 @@ export async function loadWorkflow(app, workflow) {
 // For setting values in live workflows, use the functions above
 
 /**
- * Find a node in history prompt by marker or node types
+ * Find a node in history prompt by execution id, marker or node types
  * @param {Object} historyPrompt - History prompt object from api.getHistory()[prompt_id].prompt
  * @param {string} [markerType] - Optional marker type to search for (e.g., "smp", "pp", "np", "cp")
  * @param {Array<string>} [nodeTypes] - Optional array of node types to search for (fallback)
+ * @param {string} [executionId] - Optional execution id of the marker target resolved in the live graph
+ *                                 (the only way to find nodes marked through a subgraph node)
  * @returns {Object|null} Node data with {nodeId, class_type, inputs} or null
  */
-function findNodeInHistory(historyPrompt, markerType, nodeTypes) {
+function findNodeInHistory(historyPrompt, markerType, nodeTypes, executionId) {
     if (!historyPrompt) {
         return null;
+    }
+
+    if (executionId && historyPrompt[executionId]) {
+        console.log(`[Image Bench] Found node by marker target '${markerType}':`, executionId);
+        return { nodeId: executionId, ...historyPrompt[executionId] };
     }
 
     // Try marker-based discovery first (if marker provided)
@@ -301,8 +487,7 @@ function findNodeInHistory(historyPrompt, markerType, nodeTypes) {
         for (const [nodeId, nodeData] of Object.entries(historyPrompt)) {
             const title = nodeData._meta?.title;
             if (title) {
-                const marker = parseNodeMarker(title);
-                if (marker && marker.type === markerType) {
+                if (hasNodeMarker(title, markerType)) {
                     console.log(`[Image Bench] Found node by marker '${markerType}':`, nodeId, title);
                     return { nodeId, ...nodeData };
                 }
@@ -328,9 +513,10 @@ function findNodeInHistory(historyPrompt, markerType, nodeTypes) {
  * Uses marker-based discovery (ib:smp:*) with type-based fallback
  * @param {Object} historyPrompt - History prompt object
  * @param {Object} nodeConfig - Node configuration
+ * @param {Object} [executionIds] - Execution ids of the live marker targets
  * @returns {Object} Sampler parameters (seed, steps, cfg, etc.)
  */
-function extractSamplerFromHistory(historyPrompt, nodeConfig) {
+function extractSamplerFromHistory(historyPrompt, nodeConfig, executionIds) {
     const params = {};
 
     // Get sampler marker and types from config
@@ -338,7 +524,7 @@ function extractSamplerFromHistory(historyPrompt, nodeConfig) {
     const samplerTypes = nodeConfig?.sampler?.nodeTypes || ['KSampler'];
 
     // Try marker-based first, fall back to type-based
-    const samplerNode = findNodeInHistory(historyPrompt, samplerMarker, samplerTypes);
+    const samplerNode = findNodeInHistory(historyPrompt, samplerMarker, samplerTypes, executionIds?.sampler);
 
     if (samplerNode && samplerNode.inputs) {
         const inputs = samplerNode.inputs;
@@ -364,9 +550,10 @@ function extractSamplerFromHistory(historyPrompt, nodeConfig) {
  * Uses marker-based discovery (ib:cp:*) with type-based fallback
  * @param {Object} historyPrompt - History prompt object
  * @param {Object} nodeConfig - Node configuration
+ * @param {Object} [executionIds] - Execution ids of the live marker targets
  * @returns {Object} Checkpoint parameters {model}
  */
-function extractCheckpointFromHistory(historyPrompt, nodeConfig) {
+function extractCheckpointFromHistory(historyPrompt, nodeConfig, executionIds) {
     const params = {};
 
     // Get checkpoint marker and types from config
@@ -374,7 +561,7 @@ function extractCheckpointFromHistory(historyPrompt, nodeConfig) {
     const checkpointTypes = nodeConfig?.checkpoint?.nodeTypes || ['CheckpointLoaderSimple'];
 
     // Try marker-based first, fall back to type-based
-    const checkpointNode = findNodeInHistory(historyPrompt, checkpointMarker, checkpointTypes);
+    const checkpointNode = findNodeInHistory(historyPrompt, checkpointMarker, checkpointTypes, executionIds?.checkpoint);
 
     if (checkpointNode && checkpointNode.inputs) {
         // Get widget name for this node type
@@ -397,9 +584,10 @@ function extractCheckpointFromHistory(historyPrompt, nodeConfig) {
  * Uses marker-based discovery (ib:pp:* and ib:np:*) with type-based fallback
  * @param {Object} historyPrompt - History prompt object
  * @param {Object} nodeConfig - Node configuration
+ * @param {Object} [executionIds] - Execution ids of the live marker targets
  * @returns {Object} Prompt parameters {prompt, "negative prompt"}
  */
-function extractPromptsFromHistory(historyPrompt, nodeConfig) {
+function extractPromptsFromHistory(historyPrompt, nodeConfig, executionIds) {
     const params = {};
     console.log(historyPrompt)
     // Get prompt markers and types from config
@@ -409,7 +597,7 @@ function extractPromptsFromHistory(historyPrompt, nodeConfig) {
     const negativeTypes = nodeConfig?.negative_prompt?.nodeTypes || ['CLIPTextEncode'];
 
     // Extract positive prompt (marker-based first, type-based fallback)
-    const positiveNode = findNodeInHistory(historyPrompt, positiveMarker, positiveTypes);
+    const positiveNode = findNodeInHistory(historyPrompt, positiveMarker, positiveTypes, executionIds?.positivePrompt);
     if (positiveNode && positiveNode.inputs) {
         // Get widget name for this node type from config
         const positiveWidgetNames = nodeConfig?.positive_prompt?.widgetNames || {};
@@ -424,7 +612,7 @@ function extractPromptsFromHistory(historyPrompt, nodeConfig) {
     }
 
     // Extract negative prompt (marker-based first, type-based fallback)
-    const negativeNode = findNodeInHistory(historyPrompt, negativeMarker, negativeTypes);
+    const negativeNode = findNodeInHistory(historyPrompt, negativeMarker, negativeTypes, executionIds?.negativePrompt);
     if (negativeNode && negativeNode.inputs) {
         // Get widget name for this node type from config
         const negativeWidgetNames = nodeConfig?.negative_prompt?.widgetNames || {};
@@ -445,9 +633,10 @@ function extractPromptsFromHistory(historyPrompt, nodeConfig) {
  * @param {string} promptId - The ComfyUI prompt ID
  * @param {Object|Array} historyPrompt - History prompt from api.getHistory()[promptId].prompt (may be array)
  * @param {Object} nodeConfig - Node configuration for node type discovery
+ * @param {Object} [executionIds] - Execution ids of the live marker targets, keyed by MARKER_ROLES key
  * @returns {Object} Parameters object with all extracted values
  */
-export function extractParametersFromHistory(promptId, historyPrompt, nodeConfig) {
+export function extractParametersFromHistory(promptId, historyPrompt, nodeConfig, executionIds) {
     console.log('[Image Bench] Extracting parameters from history for prompt:', promptId);
 
     const params = {
@@ -480,13 +669,13 @@ export function extractParametersFromHistory(promptId, historyPrompt, nodeConfig
 
     try {
         // Extract sampler parameters (seed, steps, cfg, etc.)
-        Object.assign(params, extractSamplerFromHistory(nodesObject, nodeConfig));
+        Object.assign(params, extractSamplerFromHistory(nodesObject, nodeConfig, executionIds));
 
         // Extract checkpoint/model
-        Object.assign(params, extractCheckpointFromHistory(nodesObject, nodeConfig));
+        Object.assign(params, extractCheckpointFromHistory(nodesObject, nodeConfig, executionIds));
 
         // Extract prompts (positive and negative)
-        Object.assign(params, extractPromptsFromHistory(nodesObject, nodeConfig));
+        Object.assign(params, extractPromptsFromHistory(nodesObject, nodeConfig, executionIds));
 
         console.log('[Image Bench] Successfully extracted parameters from history:', params);
     } catch (error) {

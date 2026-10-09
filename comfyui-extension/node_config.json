@@ -4,12 +4,14 @@
     "nodeTypes": [
       "CheckpointLoaderSimple",
       "CheckpointLoader",
-      "unCLIPCheckpointLoader"
+      "unCLIPCheckpointLoader",
+      "UNETLoader"
     ],
     "widgetNames": {
       "CheckpointLoaderSimple": "ckpt_name",
       "CheckpointLoader": "ckpt_name",
-      "unCLIPCheckpointLoader": "ckpt_name"
+      "unCLIPCheckpointLoader": "ckpt_name",
+      "UNETLoader": "unet_name"
     }
   },
   "sampler": {

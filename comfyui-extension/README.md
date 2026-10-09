@@ -43,6 +43,82 @@ ln -s /path/to/image-bench/comfyui-extension /path/to/ComfyUI/custom_nodes/image
 3. Click the button to open the Image Bench popup window
 4. Generate images in ComfyUI - they will automatically appear in the Image Bench window
 
+## Node Markers
+
+An arbitrary workflow may contain several checkpoint loaders, samplers or text encoders, so Image Bench
+cannot reliably guess which node it should drive. Tell it by adding a **marker** to the node's title
+(right-click the node → *Title*, or double-click the title bar).
+
+A marker has the form `ib:<type>:<index>`:
+
+| Marker     | Node role        | Accepted node types                                                                                 | Widget written           |
+|------------|------------------|-----------------------------------------------------------------------------------------------------|--------------------------|
+| `ib:cp:0`  | Checkpoint loader | `CheckpointLoaderSimple`, `CheckpointLoader`, `unCLIPCheckpointLoader`, `UNETLoader`               | `ckpt_name` (`unet_name` for `UNETLoader`) |
+| `ib:smp:0` | Sampler          | `KSampler`, `KSamplerAdvanced`, `SamplerCustom`, `SamplerCustomAdvanced`                             | `seed`, `control_after_generate`, `steps`, `cfg`, `denoise`, `sampler_name`, `scheduler` (those the node has) |
+| `ib:pp:0`  | Positive prompt  | `String Literal`, `CLIPTextEncode`, `CLIPTextEncodeSDXL`, `CLIPTextEncodeFlux`, `CLIPTextEncodeSD3` | `text` (`string` for `String Literal`) |
+| `ib:np:0`  | Negative prompt  | same as positive prompt                                                                              | `text` (`string` for `String Literal`) |
+
+Rules:
+
+- The marker may appear anywhere in the title and is case-insensitive, so `ib:cp:0`, `Main model ib:cp:0`
+  and `IB:CP:0 - base` all work. It must be a separate word (`xib:cp:0` does not match).
+- One title may carry several markers, e.g. `Text to Image ib:pp ib:smp ib:cp`.
+- The `:<index>` part is optional (`ib:pp` is accepted). Indices are reserved for future multi-node support;
+  currently the first node in the graph carrying a given marker type is used, so mark only one node per type.
+- Mark the node that actually holds the prompt text. If the encoder's `text` is converted to an input fed by a
+  `String Literal` node, mark the `String Literal` node.
+
+What each marker is needed for and what happens without it:
+
+| Marker | Used by | Fallback when absent |
+|--------|---------|----------------------|
+| `ib:cp` | Model exploration (switching checkpoints, restoring the original one afterwards); reading the model of a finished generation | **None for model exploration** — it fails with "No marked checkpoint node found". Reading generation info falls back to the first node of an accepted type. |
+| `ib:smp` | Setting seed, `control_after_generate` and steps (batch generation, varying parameters, upscaling/hires); reading sampler parameters of a finished generation | The first `KSampler` node (for reading generation info: the first node of any accepted sampler type). |
+| `ib:pp` | Writing the prompt (batch generation, varying parameters, applying image parameters); reading the prompt of a finished generation | The first `CLIPTextEncode` node in the graph. |
+| `ib:np` | Writing/reading the negative prompt | The second `CLIPTextEncode` node in the graph. |
+
+The `CLIPTextEncode` fallbacks depend on node creation order, which is easy to get wrong in anything but
+the default workflow, so marking `ib:pp` and `ib:np` explicitly is recommended.
+
+### Subgraphs
+
+A marker can be put on a **subgraph node** instead of the nodes inside it. Image Bench then works through
+the widgets promoted to the subgraph node: for each marker it looks for a promoted widget whose inner node
+has an accepted type (for `ib:cp`, `ib:pp` and `ib:np` the promoted widget must also be the role's widget,
+e.g. `text` of a `CLIPTextEncode`) and writes that promoted widget, which is the value ComfyUI actually queues.
+Nested subgraphs are followed.
+
+- Promote every widget Image Bench should drive. A sampler widget that is not promoted (e.g. `control_after_generate`,
+  or `cfg` when only `seed` and `steps` are promoted) is written on the inner node, which changes the subgraph
+  definition shared by all of its instances. A widget whose inner input is linked to something else is not written.
+- If one subgraph node is marked both `ib:pp` and `ib:np`, the first promoted text widget is the positive prompt
+  and the second one the negative prompt.
+- Markers on nodes *inside* a subgraph are not searched; mark the subgraph node.
+- Generation info of finished images is read from the inner nodes of the queued prompt
+  (`/history` ids of the form `<subgraph node id>:<inner node id>`).
+
+### Supporting Other Node Types
+
+Accepted node types and the widget each one exposes are configured in `node_config.json`
+(served as `/image-bench/node_config.json`). To support a custom loader, sampler or text node, add its
+type to `nodeTypes` and map it to the relevant widget name in `widgetNames`:
+
+```json
+"checkpoint": {
+  "marker": "cp",
+  "nodeTypes": ["CheckpointLoaderSimple", "MyCustomLoader"],
+  "widgetNames": {
+    "CheckpointLoaderSimple": "ckpt_name",
+    "MyCustomLoader": "model_name"
+  }
+}
+```
+
+For samplers, `widgetNames` names the *steps* widget; the other sampler widgets are looked up by their standard
+names. `marker` changes the marker type of a role (e.g. `"marker": "model"` makes it `ib:model`).
+The file is read when the ComfyUI page loads, so reload the page after editing it.
+Model exploration offers the checkpoint list; a `UNETLoader` works only when its models have the same names.
+
 ## How It Works
 
 ### Image Capture
@@ -175,6 +251,7 @@ cp -f dist/index.html ../comfyui-extension/js/
 
 ### Workflow modification doesn't work
 
+- Check that the target nodes carry the right markers (see [Node Markers](#node-markers))
 - Verify node types match your workflow (KSampler, etc.)
 - Check that widget names are correct
 - Use `app.graph.nodes` to inspect available nodes
