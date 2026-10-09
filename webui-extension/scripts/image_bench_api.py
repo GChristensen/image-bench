@@ -67,6 +67,7 @@ class ImageBenchApi():
     def start(self, _: gr.Blocks, app: FastAPI):
         self.app = app
         self.add_api_route("/window", self.get_window, methods=["GET"])
+        self.add_api_route("/js/{path:path}", self.get_extension_js, methods=["GET"])
         self.add_api_route("/config.json", self.get_config, methods=["GET"])
         self.add_api_route("/config.json", self.write_config, methods=["POST"])
         self.add_api_route("/explore_presets", self.get_explore_presets, methods=["GET"])
@@ -119,7 +120,21 @@ class ImageBenchApi():
 
     def get_window(self):
         index_html_path = self.get_file_path("index.html")
-        return FileResponse(index_html_path)
+        return FileResponse(index_html_path, headers={"Cache-Control": "no-cache"})
+
+    def get_extension_js(self, path: str):
+        # Serves the extension's ES module graph with revalidation, since Gradio's file= route
+        # lets browsers cache modules imported without the mtime query
+        base_dir = os.path.normpath(self.get_file_path("../javascript"))
+        file_path = os.path.normpath(os.path.join(base_dir, path))
+
+        # Check the unresolved path: javascript/shared is a symlink outside of base_dir
+        if (not path.endswith(".js") or ".." in path.replace("\\", "/").split("/")
+                or os.path.commonpath([base_dir, file_path]) != base_dir
+                or not os.path.isfile(file_path)):
+            raise HTTPException(status_code=404)
+
+        return FileResponse(file_path, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
     def on_image_saved(self, image_data):
         filename = image_data.filename

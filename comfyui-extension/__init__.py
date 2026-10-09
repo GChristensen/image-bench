@@ -70,7 +70,7 @@ async def serve_window(request):
             status=404
         )
 
-    return web.FileResponse(html_path)
+    return web.FileResponse(html_path, headers={"Cache-Control": "no-cache"})
 
 
 # Serve config.json
