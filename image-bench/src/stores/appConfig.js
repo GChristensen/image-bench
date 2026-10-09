@@ -1,8 +1,9 @@
 import {defineStore} from "pinia";
-import {computed} from "vue";
+import {computed, reactive} from "vue";
+import {ACCENT_COLORS, DEFAULT_ACCENT_COLOR} from "@/consts.js";
 
 export const useAppConfigStore = defineStore('appConfig', () => {
-    const _config = {};
+    const _config = reactive({});
 
     const automaticallyClearGeneratedImages = computed({
         get() {
@@ -56,12 +57,35 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    const accentColor = computed({
+        get() {
+            return ACCENT_COLORS[_config.accentColor] ? _config.accentColor : DEFAULT_ACCENT_COLOR;
+        },
+        set(v) {
+            _config.accentColor = v;
+            applyAccentColor();
+            return persist();
+        }
+    });
+
+    function applyAccentColor() {
+        const color = ACCENT_COLORS[accentColor.value];
+        const style = document.documentElement.style;
+        style.setProperty("--ib-accent", color.accent);
+        style.setProperty("--ib-accent-hover", color.hover);
+        style.setProperty("--ib-accent-ink", color.ink);
+        style.setProperty("--ib-accent-soft", `rgba(${color.rgb}, 0.13)`);
+        style.setProperty("--ib-accent-border", `rgba(${color.rgb}, 0.4)`);
+    }
+
     async function init() {
         const response = await fetch("/image-bench/config.json");
 
         if (response.ok && response.headers.get("content-length") > 0) {
             Object.assign(_config, await response.json())         ;
         }
+
+        applyAccentColor();
     }
 
     async function persist() {
@@ -75,6 +99,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         addModelInfoButton,
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,
-        persistGenerationParams
+        persistGenerationParams,
+        accentColor
     };
 });
