@@ -265,6 +265,23 @@ input[type=checkbox] {
   margin: 4px 2px;
 }
 
+/* Spinning ring shown in place of an icon while waiting, e.g. for the Civitai lookup */
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
 /* ---------- Chips and badges ---------- */
 
 .chip {

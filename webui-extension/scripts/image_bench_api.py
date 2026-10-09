@@ -24,6 +24,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import persist
+from shared import civitai
 from shared import photoshop
 from shared import tray
 
@@ -87,6 +88,7 @@ class ImageBenchApi():
         self.add_api_route("/models", self.get_models, methods=["GET"])
         self.add_api_route("/samplers", self.get_samplers, methods=["GET"])
         self.add_api_route("/loras", self.get_loras, methods=["GET"])
+        self.add_api_route("/civitai/model_info", self.get_civitai_model_info, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
         self.add_api_route("/photoshop/upload", self.photoshop_upload, methods=["POST"])
@@ -439,6 +441,33 @@ class ImageBenchApi():
                 "activationText": user_metadata.get("activation text") or ""
             })
         return JSONResponse(jsonable_encoder(loras_list))
+
+    def get_civitai_model_info(self, kind: str = "checkpoint", name: str = "", hash: str = ""):
+        """Civitai page and metadata of a checkpoint or LoRA, by name and/or hash
+        (no name and hash: the selected checkpoint)"""
+        import modules.hashes as hashes
+
+        file_hash = None
+
+        if kind == "lora":
+            networks = sys.modules.get("networks")
+            available = networks.available_networks if networks else {}
+            lora = available.get(name) or next((n for key, n in available.items() if key.lower() == name.lower()), None)
+
+            if lora:
+                file_hash = lambda: hashes.sha256(lora.filename, f"lora/{lora.name}")
+        else:
+            info = sd_models.get_closet_checkpoint_match(name or shared.opts.sd_model_checkpoint)
+
+            if info:
+                name = name or info.name
+
+                def file_hash():
+                    info.calculate_shorthash()
+                    return info.sha256
+
+        store_dir = persist.get_store_file_path(self.get_file_path("", upper=True), "")
+        return JSONResponse(civitai.model_info(name, hash, file_hash, store_dir))
 
     def on_before_config_presets(self, component, *args, **kwargs):
         if kwargs.get("elem_id") == "config_preset_txt2img_dropdown":

@@ -64,6 +64,22 @@ export const dialog = {
    */
   prompt(message, options = {}) {
     return open('prompt', message, options, null);
+  },
+
+  /**
+   * Civitai model info (preview, base model, trained words) with "Open on Civitai" and extra actions
+   * @param {Object} info - Found result of /image-bench/civitai/model_info
+   * @param {{actions?: {id: string, label: string}[]}} options
+   * @returns {Promise<string|null>} "open", the id of an extra action, or null if closed
+   */
+  modelInfo(info, options = {}) {
+    return open('modelInfo', '', {
+      title: info.modelName || 'Civitai',
+      okText: 'Open on Civitai',
+      cancelText: 'Close',
+      ...options,
+      info
+    }, null);
   }
 };
 

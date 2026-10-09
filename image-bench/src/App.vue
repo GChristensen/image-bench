@@ -15,6 +15,7 @@ import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
 import {dialog} from "@/dialogs/useDialog.js";
+import {showModelInfo} from "@/civitai.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -55,6 +56,12 @@ async function onSDEvent(e) {
   // Messages from the host page, which must not open dialogs in its own window
   if (e.type === "SHOW_ALERT") {
     dialog.alert(e.message);
+    return;
+  }
+
+  if (e.type === "SHOW_MODEL_INFO") {
+    window.focus();
+    showModelInfo({kind: e.kind}, {info: e.info});
     return;
   }
 

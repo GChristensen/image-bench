@@ -4,7 +4,7 @@ import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager} from "./shared/popup.js";
 import {createWebSocket, isConnectionClosed} from "./shared/websocket.js";
 import {
-    getCivitaiModelUrl,
+    fetchCurrentModelInfo,
     hookIntoSDWebUI,
     initializePopupPrompts,
     repositionConfigPresetsDropdown,
@@ -43,6 +43,7 @@ const {exploration: explorationStrategy, batch: batchStrategy, processing: proce
         varying: varyingStrategy} = strategies;
 
 let appConfig;
+let modelInfoButton;
 
 export async function init() {
     setGenerationState("BATCH_GENERATION");
@@ -134,21 +135,64 @@ async function initUI() {
             await repositionConfigPresetsDropdown("img2img");
         }, 2000);
 
-    if (appConfig?.addModelInfoButton)
-        createHeaderButton('Civitai Model Info', "ℹ️", {}, onShowModelInfo,
-            document.querySelector(SELECTORS.MODEL_REFRESH_BUTTON));
+    modelInfoButton = createHeaderButton('Civitai Model Info', "ℹ️", {}, onShowModelInfo,
+        document.querySelector(SELECTORS.MODEL_REFRESH_BUTTON));
+    updateModelInfoButton();
+    // The setting may be changed in the popup, the user then returns to this window
+    window.addEventListener("focus", async () => {
+        appConfig = await loadAppConfig() || appConfig;
+        updateModelInfoButton();
+    });
 
     createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
     popupManager.dispose();
 }
 
-async function onShowModelInfo() {
-    const {url, error} = await getCivitaiModelUrl();
+function updateModelInfoButton() {
+    modelInfoButton.style.display = appConfig?.addModelInfoButton ? "" : "none";
+}
 
-    if (url)
-        window.open(url, "_blank");
-    else
-        showAlert(error);
+/**
+ * Show the Civitai info of the selected checkpoint: in the popup's dialog if it is open,
+ * otherwise open the Civitai page (or the search by name if the model is unknown to Civitai).
+ * The button shows a spinner while the backend hashes the model and queries Civitai.
+ */
+async function onShowModelInfo() {
+    if (modelInfoButton.disabled)
+        return;
+
+    // Opened before the request, so that it is not blocked as a popup without a user gesture
+    const civitaiWindow = popupManager.isOpen() ? null : window.open("about:blank", "_blank");
+
+    const icon = modelInfoButton.innerHTML;
+
+    modelInfoButton.disabled = true;
+    modelInfoButton.innerHTML = '<span class="image-bench-spinner"></span>';
+
+    try {
+        const info = await fetchCurrentModelInfo();
+
+        if (!civitaiWindow && sendPopupMessage({type: "SHOW_MODEL_INFO", kind: "checkpoint", info}))
+            return;
+
+        if (info.found) {
+            if (civitaiWindow)
+                civitaiWindow.location = info.url;
+            else
+                window.open(info.url, "_blank");
+        }
+        else {
+            civitaiWindow?.close();
+
+            if (info.error)
+                alert(info.error);
+            else if (info.searchUrl && confirm(`'${info.name}' is not found on Civitai. Search by name?`))
+                window.open(info.searchUrl, "_blank");
+        }
+    } finally {
+        modelInfoButton.disabled = false;
+        modelInfoButton.innerHTML = icon;
+    }
 }
 
 async function onShowWindow() {

@@ -128,33 +128,20 @@ export async function repositionConfigPresetsDropdown(kind) {
 }
 
 /**
- * Find the Civitai page of the current checkpoint by its SHA256 hash
- * @returns {Promise<{url?: string, error?: string}>}
+ * Civitai page and metadata of the selected checkpoint (the backend hashes it if needed)
+ * @returns {Promise<{found: boolean, url?: string, searchUrl?: string, error?: string}>}
  */
-export async function getCivitaiModelUrl() {
-    let hash;
-
+export async function fetchCurrentModelInfo() {
     try {
-        const response = await fetch("/sdapi/v1/options");
-        hash = (await response.json()).sd_checkpoint_hash;
+        const response = await fetch("/image-bench/civitai/model_info?kind=checkpoint");
+
+        if (response.ok)
+            return await response.json();
+
+        return {found: false, error: `Request failed: ${response.status} ${response.statusText}`};
     } catch (e) {
-        console.error("[Image Bench] Error fetching the model hash:", e);
+        return {found: false, error: `Request failed: ${e.message}`};
     }
-
-    if (!hash)
-        return {error: "The model is not hashed yet."};
-
-    const response = await fetch(`https://civitai.com/api/v1/model-versions/by-hash/${hash}`);
-
-    if (response.ok) {
-        const modelInfo = await response.json();
-        return {url: `https://civitai.com/models/${modelInfo.modelId}?modelVersionId=${modelInfo.id}`};
-    }
-
-    if (response.status === 404)
-        return {error: "The model is not found on Civitai."};
-
-    return {error: `Civitai request failed: ${response.status} ${response.statusText}`};
 }
 
 export async function setConfigPreset(preset) {

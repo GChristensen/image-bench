@@ -13,7 +13,7 @@ from aiohttp import web
 from server import PromptServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import persist, photoshop
+from shared import civitai, persist, photoshop
 from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler, save_image_to_tray
 
 # Tell ComfyUI to serve files from the js/ directory
@@ -270,6 +270,29 @@ async def get_samplers(request):
 @PromptServer.instance.routes.get(BASE_PATH + "/loras")
 async def get_loras(request):
     return web.json_response([])
+
+
+@PromptServer.instance.routes.get(BASE_PATH + "/civitai/model_info")
+async def get_civitai_model_info(request):
+    """Civitai page and metadata of a checkpoint or LoRA, by name and/or hash"""
+    import folder_paths
+
+    kind = request.query.get("kind", "checkpoint")
+    name = request.query.get("name", "")
+    hash_value = request.query.get("hash", "")
+    file_hash = None
+    store_dir = persist.get_store_file_path(get_extension_root(), "")
+
+    if name:
+        path = folder_paths.get_full_path("loras" if kind == "lora" else "checkpoints", name)
+
+        if path:
+            cache_path = os.path.join(store_dir, "model_hashes.json")
+            file_hash = lambda: civitai.file_sha256(path, cache_path)
+
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(None, civitai.model_info, name, hash_value, file_hash, store_dir)
+    return web.json_response(result)
 
 
 # Image tray endpoints

@@ -5,6 +5,7 @@ import GeneratedImage from "@/components/GeneratedImage.vue";
 import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
+import {fetchModelInfo, showModelInfo} from "@/civitai.js";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useExploreList} from "@/composables/useExploreList.js";
@@ -117,6 +118,7 @@ const overlayImage = ref(null);
 const highlightedImage = shallowRef(null);
 const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
+const paramsOverlayImage = ref(null);
 
 let scrolledToBottom = true;
 
@@ -257,6 +259,25 @@ async function onLoraParamsConfirm(params) {
   await loras.setParams(loras.focusedKey.value, changed);
 }
 
+const modelInfoBusy = ref(false);
+
+async function onModelInfo() {
+  const isLora = activeTab.value === TAB_LORAS;
+  const key = activeList.value.focusedKey.value;
+  const query = {kind: isLora ? "lora" : "checkpoint", name: key};
+
+  // The first request for a model may take a while: the backend hashes the file
+  modelInfoBusy.value = true;
+  const info = await fetchModelInfo(query);
+  modelInfoBusy.value = false;
+
+  const actions = isLora && info.trainedWords?.length ? [{id: "activation-text", label: "Use as activation text"}] : [];
+  const result = await showModelInfo(query, {actions, info});
+
+  if (result?.action === "activation-text")
+    await loras.setParams(key, {...loras.params.value[key], text: result.info.trainedWords.join(", ")});
+}
+
 function onImageClick(image) {
   overlayImage.value = image;
   showImageOverlay.value = true;
@@ -286,6 +307,7 @@ function onImageOpen(image) {
 
 function onShowParams(image) {
   paramsOverlayText.value = createImageGenerationParams(image);
+  paramsOverlayImage.value = image;
   showParamsOverlay.value = true;
 }
 
@@ -337,7 +359,7 @@ function onKeydown(e) {
   />
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage"
                 @hide-overlay="closeImageOverlay"/>
-  <ParametersOverlay v-if="showParamsOverlay" :text="paramsOverlayText"
+  <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage" :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="wrapper">
     <div class="toolbar">
@@ -371,6 +393,7 @@ function onKeydown(e) {
           :params="activeList.params.value"
           :summary="settingsSummary"
           :item-kind="activeTab === TAB_LORAS ? 'LoRA' : 'model'"
+          :info-busy="modelInfoBusy"
           @toggle="activeList.toggle"
           @toggle-many="activeList.setChecked"
           @focus="activeList.focus"
@@ -380,6 +403,7 @@ function onKeydown(e) {
           @delete="onDeleteClick"
           @clear="activeList.clearSelection"
           @edit-settings="onEditSettings"
+          @info="onModelInfo"
         />
       </div>
       <div class="generated-images-wrapper">

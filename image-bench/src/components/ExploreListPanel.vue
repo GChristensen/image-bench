@@ -41,10 +41,14 @@ const props = defineProps({
   itemKind: {
     type: String,
     default: "item"
+  },
+  infoBusy: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['toggle', 'toggle-many', 'focus', 'preset-change', 'create', 'save', 'delete', 'clear', 'edit-settings']);
+const emit = defineEmits(['toggle', 'toggle-many', 'focus', 'preset-change', 'create', 'save', 'delete', 'clear', 'edit-settings', 'info']);
 
 const storage = useLocalStorage();
 
@@ -212,6 +216,10 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onDocumentMoused
         <AppIcon name="flask" :size="14" class="item-settings-icon"/>
         <span v-if="focusedKey" class="item-settings-name" :title="focusedLabel">{{ focusedLabel }}</span>
         <span v-else class="item-settings-hint">Click a {{ itemKind }} name to set its parameters</span>
+        <button class="ib sm" :class="{busy: infoBusy}" :disabled="!focusedKey || infoBusy"
+                :title="focusedKey ? `Show ${focusedLabel} on Civitai` : `Click a ${itemKind} name first`"
+                aria-label="Civitai info" @click="emit('info')"
+          ><span v-if="infoBusy" class="spinner"></span><AppIcon v-else name="info" :size="13"/></button>
         <button class="ib sm" :disabled="!focusedKey"
                 :title="focusedKey ? `Set parameters for ${focusedLabel}` : `Click a ${itemKind} name first`"
                 aria-label="Edit parameters" @click="emit('edit-settings')"><AppIcon name="sliders" :size="13"/></button>
@@ -405,6 +413,11 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onDocumentMoused
   flex: 1;
   color: var(--ib-muted);
   font-size: 12px;
+}
+
+/* Disabled while busy, but not dimmed, so that the spinner stays visible */
+.ib.busy:disabled {
+  opacity: 1;
 }
 
 .item-settings-chips {

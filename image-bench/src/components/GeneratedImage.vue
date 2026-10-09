@@ -158,15 +158,17 @@
   }
 
   function getUpscaleButtonTitle(image) {
-    let result = "Left: " + "upscale";
+    // let result = "Left: " + "upscale";
+    //
+    // if (image.setSteps)
+    //   result += ` using ${image.parameters['steps']} sampling steps`;
+    // else
+    //   result += ' using WebUI settings';
+    //
+    // if (!image.setSteps)
+    //   result += ", Middle: upscale using image tray preset";
 
-    if (image.setSteps)
-      result += ` using ${image.parameters['steps']} sampling steps`;
-    else
-      result += ' using WebUI settings';
-
-    if (!image.setSteps)
-      result += ", Middle: upscale using image tray preset";
+    let result = "Upscale using the current WebUI settings";
 
     return result;
   }

@@ -1,5 +1,7 @@
 <script setup>
-import {onBeforeMount, ref} from "vue";
+import {computed, onBeforeMount, ref} from "vue";
+import AppIcon from "@/components/AppIcon.vue";
+import {fetchModelInfo, showModelInfo} from "@/civitai.js";
 
   const props = defineProps({
     image: {
@@ -15,6 +17,40 @@ import {onBeforeMount, ref} from "vue";
   const emit = defineEmits(['hideOverlay']);
 
   const controlnetImages = ref([]);
+
+  // Checkpoint and LoRAs of the image that can be looked up on Civitai by their hashes
+  // ("lora hashes" is parsed into {name: hash}, or left as "name: hash, ..." if unquoted)
+  const models = computed(() => {
+    const params = props.image.parameters || {};
+    const result = [];
+
+    if (params["model hash"])
+      result.push({kind: "checkpoint", name: params["model"] || params["model hash"], hash: params["model hash"]});
+
+    let loraHashes = params["lora hashes"];
+
+    if (typeof loraHashes === "string")
+      loraHashes = Object.fromEntries(loraHashes.split(",").map(part => part.split(":").map(s => s.trim())));
+
+    for (const [name, hash] of Object.entries(loraHashes || {}))
+      if (name && hash)
+        result.push({kind: "lora", name, hash});
+
+    return result;
+  });
+
+  const busyModel = ref(null);
+
+  async function onModelClick(model) {
+    if (busyModel.value)
+      return;
+
+    busyModel.value = model;
+    const info = await fetchModelInfo(model);
+    busyModel.value = null;
+
+    await showModelInfo(model, {info});
+  }
 
   onBeforeMount(async () => {
     const response = await fetch(`/image-bench/get_controlnet_images?id=${props.image.generationId}`);
@@ -42,6 +78,13 @@ import {onBeforeMount, ref} from "vue";
         <Transition name="slide-down">
           <div class="overlay-text-container">
             <h3 class="parameters-title">Generation parameters</h3>
+            <div v-if="models.length" class="models">
+              <button v-for="model in models" :key="`${model.kind}:${model.name}`" class="chip model-chip"
+                      :title="`Show the ${model.kind === 'lora' ? 'LoRA' : 'checkpoint'} on Civitai`"
+                      @click="onModelClick(model)">
+                <span v-if="busyModel === model" class="spinner"></span><AppIcon v-else name="info" :size="12"/>{{ model.kind === "lora" ? "LoRA: " : "" }}{{ model.name }}
+              </button>
+            </div>
             <textarea class="overlay-text" autofocus>{{ text }}</textarea>
             <div v-if="controlnetImages.length" class="controlnet-container">
               <h3 class="controlnet-title">ControlNet</h3>
@@ -112,6 +155,24 @@ import {onBeforeMount, ref} from "vue";
 .controlnet-image {
   max-height: 100px;
   margin-right: 15px;
+}
+
+.models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.model-chip {
+  border: 1px solid transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.model-chip:hover {
+  color: var(--ib-text);
+  border-color: var(--ib-accent-border);
 }
 
 .overlay-text{

@@ -2,12 +2,13 @@
 import { computed, onMounted, ref } from 'vue';
 import { useLocalStorage } from '@/composables/useLocalStorage.js';
 import ComboInput from '@/dialogs/ComboInput.vue';
+import ModelInfoContent from '@/dialogs/ModelInfoContent.vue';
 
 const props = defineProps({
   entry: {
     type: Object,
     required: true,
-    validator: (value) => ['alert', 'confirm', 'prompt'].includes(value.kind)
+    validator: (value) => ['alert', 'confirm', 'prompt', 'modelInfo'].includes(value.kind)
   }
 });
 
@@ -51,6 +52,9 @@ function confirm() {
   }
   else if (props.entry.kind === 'confirm') {
     emit('close', true);
+  }
+  else if (props.entry.kind === 'modelInfo') {
+    emit('close', 'open');
   }
   else {
     const value = String(inputValue.value).trim();
@@ -105,6 +109,7 @@ defineExpose({onEnterKey, onEscapeKey});
       </div>
       <div class="dialog-body">
         <label v-if="isPrompt" class="dialog-message" :for="`dialog-input-${entry.id}`">{{ entry.message }}</label>
+        <ModelInfoContent v-else-if="entry.kind === 'modelInfo'" :info="options.info"/>
         <p v-else class="dialog-message">{{ entry.message }}</p>
         <ComboInput v-if="isPrompt && options.dropdown"
                     :id="`dialog-input-${entry.id}`"
@@ -126,6 +131,8 @@ defineExpose({onEnterKey, onEscapeKey});
         </template>
       </div>
       <div class="dialog-footer">
+        <button v-for="action in options.actions || []" :key="action.id" class="btn outline"
+                @click="emit('close', action.id)">{{ action.label }}</button>
         <button v-if="entry.kind !== 'alert'" class="btn outline" @click="cancel">{{ options.cancelText || 'Cancel' }}</button>
         <button ref="okRef" class="btn" :class="options.danger ? 'stop' : 'primary'" @click="confirm">{{ options.okText || 'OK' }}</button>
       </div>
