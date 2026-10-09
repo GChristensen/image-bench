@@ -4,6 +4,7 @@ import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager} from "./shared/popup.js";
 import {createWebSocket, isConnectionClosed} from "./shared/websocket.js";
 import {
+    getCivitaiModelUrl,
     hookIntoSDWebUI,
     initializePopupPrompts,
     repositionConfigPresetsDropdown,
@@ -17,6 +18,7 @@ import {messageBus} from "./shared/messaging/MessageBus.js";
 import {SELECTORS} from "./adapters/selectors.js";
 import {restoreUiParams, saveUiParams} from "./persistence.js";
 import {initPhotoshopBridge} from "./photoshop.js";
+import {createHeaderButton} from "./utils_html.js";
 
 // Create popup manager instance (no WebSocket integration for WebUI)
 const popupManager = createPopupManager({
@@ -132,8 +134,21 @@ async function initUI() {
             await repositionConfigPresetsDropdown("img2img");
         }, 2000);
 
+    if (appConfig?.addModelInfoButton)
+        createHeaderButton('Civitai Model Info', "ℹ️", {}, onShowModelInfo,
+            document.querySelector(SELECTORS.MODEL_REFRESH_BUTTON));
+
     createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
     popupManager.dispose();
+}
+
+async function onShowModelInfo() {
+    const {url, error} = await getCivitaiModelUrl();
+
+    if (url)
+        window.open(url, "_blank");
+    else
+        showAlert(error);
 }
 
 async function onShowWindow() {

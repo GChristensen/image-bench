@@ -63,6 +63,7 @@ export const SELECTORS = {
 
     // Model/VAE/Settings
     MODEL_CHECKPOINT: '#setting_sd_model_checkpoint input, .model_selection input',
+    MODEL_REFRESH_BUTTON: '#refresh_sd_model_checkpoint, #forge_refresh_checkpoint',
     SD_VAE: '#setting_sd_vae input',
     CLIP_SKIP: '#setting_CLIP_stop_at_last_layers input',
     FORGE_UI_PRESET: '#forge_ui_preset input',
