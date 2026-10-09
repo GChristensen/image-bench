@@ -7,12 +7,13 @@ import os
 import sys
 import asyncio
 import json
+import time
 import aiohttp
 from aiohttp import web
 from server import PromptServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import persist
+from shared import persist, photoshop
 from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler, save_image_to_tray
 
 # Tell ComfyUI to serve files from the js/ directory
@@ -20,6 +21,11 @@ WEB_DIRECTORY = "./js"
 
 # WebSocket clients for broadcasting image events
 websocket_clients = set()
+
+# Photoshop plugins listening for images sent from the Image Bench window
+photoshop_plugin_websockets = set()
+# Images exchanged with the Photoshop plugin: kind -> (content, media type)
+photoshop_images = {}
 
 # Base path for all routes
 BASE_PATH = "/image-bench"
@@ -464,6 +470,75 @@ async def websocket_handler(request):
         websocket_clients.discard(ws)
 
     return ws
+
+
+# Photoshop plugin WebSocket: receives notifications about images sent from the Image Bench window
+@PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin-websocket")
+async def photoshop_plugin_websocket_handler(request):
+    """Keep the Photoshop plugin connected to receive images sent from the Image Bench window"""
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    photoshop_plugin_websockets.add(ws)
+
+    try:
+        async for msg in ws:
+            pass
+    finally:
+        photoshop_plugin_websockets.discard(ws)
+
+    return ws
+
+
+def get_photoshop_image_url(kind):
+    return f"{BASE_PATH}/photoshop/image?kind={kind}&t={time.time_ns()}"
+
+
+# Send an image to Photoshop
+@PromptServer.instance.routes.post(BASE_PATH + "/photoshop/send")
+async def photoshop_send(request):
+    """Receive an image file from the Image Bench window and notify the Photoshop plugin to open it"""
+    media_type = request.content_type
+
+    if media_type not in photoshop.SENDABLE_MEDIA_TYPES:
+        return web.Response(text=f"Unsupported image type: {media_type}", status=400)
+
+    kind = photoshop.OUTGOING_IMAGE_KIND
+    photoshop_images[kind] = (await request.read(), media_type)
+
+    message = {
+        "type": "OPEN_IMAGE",
+        "name": photoshop.get_image_file_name(request.query.get("name", "image.png"), media_type),
+        "imageUrl": get_photoshop_image_url(kind)
+    }
+
+    clients = 0
+    for ws in list(photoshop_plugin_websockets):
+        try:
+            await ws.send_json(message)
+            clients += 1
+        except Exception:
+            photoshop_plugin_websockets.discard(ws)
+
+    return web.json_response({"clients": clients})
+
+
+# Images sent from Photoshop are inserted into the SD WebUI inpaint tab, which ComfyUI does not have
+@PromptServer.instance.routes.post(BASE_PATH + "/photoshop/upload")
+async def photoshop_upload(request):
+    return web.Response(text="Sending images from Photoshop is supported in SD WebUI only", status=501)
+
+
+# Image downloaded by the Photoshop plugin
+@PromptServer.instance.routes.get(BASE_PATH + "/photoshop/image")
+async def get_photoshop_image(request):
+    image = photoshop_images.get(request.query.get("kind"))
+
+    if image is None:
+        return web.Response(text="Not found", status=404)
+
+    content, media_type = image
+    return web.Response(body=content, content_type=media_type, headers={"Cache-Control": "no-store"})
 
 
 # Close all WebSocket connections
