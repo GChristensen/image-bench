@@ -150,6 +150,18 @@
     }
   }
 
+  // The Photoshop plugin connects to WebUI only
+  const canSendToPhotoshop = import.meta.env.MODE !== "comfy";
+
+  async function onSendToPhotoshop(e) {
+    e.preventDefault();
+
+    const error = await imageOps.sendToPhotoshop(props.image);
+
+    if (error)
+      alert(error);
+  }
+
   function needShowPromptWarning(image) {
     return import.meta.env.webui
         && (image.parameters["prompt"] != sdWebUIStore.prompt
@@ -222,6 +234,8 @@
               @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
       <button v-if="isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
               @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
+      <button v-if="canSendToPhotoshop" class="ib sm" title="Send to Photoshop" aria-label="Send to Photoshop"
+              @mousedown.left="onSendToPhotoshop"><AppIcon name="external" :size="13"/></button>
       <button v-if="isTray" class="ib sm" title="Add comment" aria-label="Add comment"
               @click="$emit('addComment', image)"><AppIcon name="comment" :size="13"/></button>
       <button v-if="isTray" class="ib sm danger" title="Delete" aria-label="Delete"

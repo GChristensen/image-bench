@@ -37,6 +37,7 @@
   "requiredPermissions": {
     "network": {
       "domains": "all"
-    }
+    },
+    "localFileSystem": "plugin"
   }
 }

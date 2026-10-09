@@ -23,7 +23,12 @@
             min-height: 2.5em;
         }
 
-        #status.error {
+        #connection {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        #status.error, #connection.error {
             color: #e5615b;
         }
     </style>
@@ -38,6 +43,7 @@
         <sp-button id="send-mask" variant="primary">Send selection as mask</sp-button>
         <sp-button id="send-image-and-mask" variant="secondary">Send image and mask</sp-button>
     </div>
+    <sp-detail id="connection" class="error">Not connected to WebUI</sp-detail>
     <sp-detail id="status"></sp-detail>
     <script src="index.js"></script>
 </body>

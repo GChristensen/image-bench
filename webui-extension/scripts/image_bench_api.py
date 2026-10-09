@@ -49,8 +49,11 @@ class ImageBenchApi():
         webui_config = self.get_webui_config()
 
         self.websocket_queue = asyncio.Queue()
-        # WebUI pages listening for images sent from Photoshop, and the last received image of each kind
+        # WebUI pages listening for images sent from Photoshop
         self.photoshop_websockets = set()
+        # Photoshop plugins listening for images sent from the Image Bench window
+        self.photoshop_plugin_websockets = set()
+        # Last image of each kind as (content, media type)
         self.photoshop_images = {}
         self.config_presets_dropdown = None
         self.outputs_dir = webui_config.get("outdir_samples") or os.path.join(self.get_webui_root_dir(), "outputs")
@@ -86,8 +89,11 @@ class ImageBenchApi():
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
         self.add_api_route("/photoshop/upload", self.photoshop_upload, methods=["POST"])
+        self.add_api_route("/photoshop/send", self.photoshop_send, methods=["POST"])
         self.add_api_route("/photoshop/image", self.get_photoshop_image, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/photoshop/websocket", self.handle_photoshop_websocket)
+        self.app.add_websocket_route(self.BASE_PATH + "/photoshop/plugin-websocket",
+                                     self.handle_photoshop_plugin_websocket)
 
     def get_path(self, path):
         return f"{self.BASE_PATH}{path}"
@@ -180,8 +186,16 @@ class ImageBenchApi():
 
     async def handle_photoshop_websocket(self, websocket, *args):
         """Keep a WebUI page connected to receive images sent from the Photoshop plugin"""
+        await self.keep_websocket(websocket, self.photoshop_websockets)
+
+    async def handle_photoshop_plugin_websocket(self, websocket, *args):
+        """Keep the Photoshop plugin connected to receive images sent from the Image Bench window"""
+        await self.keep_websocket(websocket, self.photoshop_plugin_websockets)
+
+    @staticmethod
+    async def keep_websocket(websocket, clients):
         await websocket.accept()
-        self.photoshop_websockets.add(websocket)
+        clients.add(websocket)
 
         try:
             while True:
@@ -189,7 +203,25 @@ class ImageBenchApi():
         except Exception:
             pass
         finally:
-            self.photoshop_websockets.discard(websocket)
+            clients.discard(websocket)
+
+    @staticmethod
+    async def broadcast(clients, msg):
+        """Send a message to the connected websockets, returning the number of the receivers"""
+        text = json.dumps(msg)
+        receivers = 0
+
+        for websocket in list(clients):
+            try:
+                await websocket.send_text(text)
+                receivers += 1
+            except Exception:
+                clients.discard(websocket)
+
+        return receivers
+
+    def get_photoshop_image_url(self, kind):
+        return f"{self.BASE_PATH}/photoshop/image?kind={kind}&t={time.time_ns()}"
 
     async def photoshop_upload(self, request: Request, kind: str, width: int, height: int, components: int):
         """
@@ -200,23 +232,35 @@ class ImageBenchApi():
             raise HTTPException(status_code=400, detail=f"Unknown image kind: {kind}")
 
         try:
-            self.photoshop_images[kind] = photoshop.raw_pixels_to_png(await request.body(), width, height, components)
+            png = photoshop.raw_pixels_to_png(await request.body(), width, height, components)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
-        msg = json.dumps({
+        self.photoshop_images[kind] = (png, "image/png")
+
+        clients = await self.broadcast(self.photoshop_websockets, {
             "type": "PHOTOSHOP_IMAGE",
             "kind": kind,
-            "imageUrl": f"{self.BASE_PATH}/photoshop/image?kind={kind}&t={time.time_ns()}"
+            "imageUrl": self.get_photoshop_image_url(kind)
         })
 
-        clients = 0
-        for websocket in list(self.photoshop_websockets):
-            try:
-                await websocket.send_text(msg)
-                clients += 1
-            except Exception:
-                self.photoshop_websockets.discard(websocket)
+        return JSONResponse({"clients": clients})
+
+    async def photoshop_send(self, request: Request, name: str = "image.png"):
+        """Receive an image file from the Image Bench window and notify the Photoshop plugin to open it"""
+        media_type = request.headers.get("content-type", "").split(";")[0].strip()
+
+        if media_type not in photoshop.SENDABLE_MEDIA_TYPES:
+            raise HTTPException(status_code=400, detail=f"Unsupported image type: {media_type}")
+
+        kind = photoshop.OUTGOING_IMAGE_KIND
+        self.photoshop_images[kind] = (await request.body(), media_type)
+
+        clients = await self.broadcast(self.photoshop_plugin_websockets, {
+            "type": "OPEN_IMAGE",
+            "name": photoshop.get_image_file_name(name, media_type),
+            "imageUrl": self.get_photoshop_image_url(kind)
+        })
 
         return JSONResponse({"clients": clients})
 
@@ -226,7 +270,8 @@ class ImageBenchApi():
         if image is None:
             raise HTTPException(status_code=404, detail="Not found")
 
-        return Response(image, media_type="image/png", headers={"Cache-Control": "no-store"})
+        content, media_type = image
+        return Response(content, media_type=media_type, headers={"Cache-Control": "no-store"})
 
     def get_explore_presets(self):
         return self.serve_store_file("explore_presets.json")

@@ -1,14 +1,19 @@
 /**
  * Image Bench Photoshop plugin
  * Sends the active document and its selection (as a black and white mask)
- * to the inpaint upload tab of img2img in SD WebUI with the Image Bench extension
+ * to the inpaint upload tab of img2img in SD WebUI with the Image Bench extension,
+ * and places images sent from the Image Bench window into Photoshop
  */
 
-const {entrypoints} = require("uxp");
-const {app, core, imaging} = require("photoshop");
+const {entrypoints, storage} = require("uxp");
+const {action, app, core, imaging} = require("photoshop");
+
+const fs = storage.localFileSystem;
 
 const DEFAULT_WEBUI_URL = "http://127.0.0.1:7860";
 const WEBUI_URL_KEY = "webuiUrl";
+const PLUGIN_WEBSOCKET_PATH = "/image-bench/photoshop/plugin-websocket";
+const RECONNECT_DELAY = 5000;
 
 function getWebuiUrl() {
     return (localStorage.getItem(WEBUI_URL_KEY) || DEFAULT_WEBUI_URL).replace(/\/+$/, "");
@@ -137,14 +142,123 @@ async function sendImageAndMask() {
     return "Image and mask sent";
 }
 
+// ==================== RECEIVING ====================
+
+let socket = null;
+let reconnectTimer = null;
+
+/**
+ * Connect to WebUI to receive images sent from the Image Bench window.
+ * The connection lives as long as the plugin is loaded, regardless of the panel visibility,
+ * and is restored if lost (e.g. when WebUI restarts)
+ */
+function connect() {
+    clearTimeout(reconnectTimer);
+
+    let websocket;
+    try {
+        websocket = new WebSocket(getWebuiUrl().replace(/^http/i, "ws") + PLUGIN_WEBSOCKET_PATH);
+    } catch (error) {
+        console.error(error);
+        setStatus(`Invalid WebUI URL: ${getWebuiUrl()}`, true);
+        return;
+    }
+
+    socket = websocket;
+
+    websocket.onopen = () => setConnected(true);
+    websocket.onmessage = onWebuiMessage;
+    websocket.onclose = () => {
+        // A replaced connection is closed deliberately
+        if (socket === websocket) {
+            setConnected(false);
+            reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
+        }
+    };
+}
+
+function reconnect() {
+    const websocket = socket;
+    socket = null;
+    websocket?.close();
+    setConnected(false);
+    connect();
+}
+
+async function onWebuiMessage(e) {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type !== "OPEN_IMAGE")
+        return;
+
+    try {
+        await openImage(msg);
+        setStatus(`Received ${msg.name}`);
+    } catch (error) {
+        console.error(error);
+        setStatus(error.message, true);
+
+        if (!panelVisible)
+            await app.showAlert(`Image Bench: ${error.message}`);
+    }
+}
+
+/**
+ * Place a received image as a new layer of the active document, or open it if there is no document
+ * @param {{name: string, imageUrl: string}} msg - Image file name and its URL relative to WebUI
+ */
+async function openImage({name, imageUrl}) {
+    const response = await fetch(getWebuiUrl() + imageUrl);
+
+    if (!response.ok)
+        throw new Error(`Unable to download ${name}: WebUI responded with ${response.status}`);
+
+    const folder = await fs.getTemporaryFolder();
+    const file = await folder.createFile(name, {overwrite: true});
+    await file.write(await response.arrayBuffer(), {format: storage.formats.binary});
+
+    await core.executeAsModal(async () => {
+        if (app.documents.length)
+            await placeAsLayer(file);
+        else
+            await app.open(file);
+    }, {commandName: "Image Bench: Open Image"});
+}
+
+/**
+ * Place a file as a smart object layer centered in the active document, named after the file
+ */
+async function placeAsLayer(file) {
+    const [result] = await action.batchPlay([{
+        _obj: "placeEvent",
+        null: {_path: fs.createSessionToken(file), _kind: "local"},
+        freeTransformCenterState: {_enum: "quadCenterState", _value: "QCSAverage"},
+        offset: {
+            _obj: "offset",
+            horizontal: {_unit: "pixelsUnit", _value: 0},
+            vertical: {_unit: "pixelsUnit", _value: 0}
+        }
+    }], {});
+
+    if (result?._obj === "error")
+        throw new Error(`Unable to place ${file.name}: ${result.message}`);
+}
+
 // ==================== UI ====================
 
 let panelReady = false;
+let panelVisible = false;
 
 function setStatus(text, isError = false) {
     const status = document.getElementById("status");
     status.textContent = text;
     status.classList.toggle("error", isError);
+}
+
+function setConnected(connected) {
+    const connection = document.getElementById("connection");
+    connection.textContent = connected ? "Connected to WebUI" : "Not connected to WebUI";
+    connection.classList.toggle("error", !connected);
 }
 
 /**
@@ -177,7 +291,10 @@ function initPanel() {
 
     const urlField = document.getElementById("webui-url");
     urlField.value = getWebuiUrl();
-    urlField.addEventListener("change", () => localStorage.setItem(WEBUI_URL_KEY, urlField.value.trim()));
+    urlField.addEventListener("change", () => {
+        localStorage.setItem(WEBUI_URL_KEY, urlField.value.trim());
+        reconnect();
+    });
 
     document.getElementById("send-image").addEventListener("click", () => run(sendImage, true));
     document.getElementById("send-mask").addEventListener("click", () => run(sendMask, true));
@@ -196,7 +313,13 @@ entrypoints.setup({
         imageBenchPanel: {
             show() {
                 initPanel();
+                panelVisible = true;
+            },
+            hide() {
+                panelVisible = false;
             }
         }
     }
 });
+
+connect();

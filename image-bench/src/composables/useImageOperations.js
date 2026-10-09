@@ -80,6 +80,35 @@ export function useImageOperations() {
     window.open(imageLink, '_blank');
   };
 
+  /**
+   * Send image to the Image Bench Photoshop plugin, which places it as a layer of the active document
+   * @returns {Promise<string|null>} Error message, or null on success
+   */
+  const sendToPhotoshop = async (image) => {
+    try {
+      const imageResponse = await fetch(createImageLink(image));
+
+      if (!imageResponse.ok)
+        return `Unable to read the image: ${imageResponse.status}`;
+
+      const blob = await imageResponse.blob();
+      const name = encodeURIComponent(image.imagePath || createImageLink(image));
+      const response = await fetch(`/image-bench/photoshop/send?name=${name}`, {
+        method: 'POST',
+        headers: {'Content-Type': blob.type},
+        body: blob
+      });
+
+      if (!response.ok)
+        return `Unable to send the image: ${await response.text()}`;
+
+      const {clients} = await response.json();
+      return clients ? null : 'Photoshop is not connected. Please open the Image Bench panel in Photoshop.';
+    } catch (error) {
+      return `Unable to send the image: ${error.message}`;
+    }
+  };
+
   return {
     getImageLink,
     getImageParams,
@@ -88,6 +117,7 @@ export function useImageOperations() {
     isImg2ImgImage,
     isUpscaledImage,
     hasCustomSteps,
-    openImageInNewWindow
+    openImageInNewWindow,
+    sendToPhotoshop
   };
 }
