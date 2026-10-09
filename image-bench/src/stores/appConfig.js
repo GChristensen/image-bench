@@ -25,6 +25,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Civitai domain of the model pages: "com" or "red"
+    const civitaiDomain = computed({
+        get() {
+            return _config.civitaiDomain === "red" ? "red" : "com";
+        },
+        set(v) {
+            _config.civitaiDomain = v;
+            return persist();
+        }
+    });
+
     const repositionConfigPresetsDropdown = computed({
         get() {
             return _config.repositionConfigPresetsDropdown;
@@ -97,6 +108,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         init, persist,
         repositionConfigPresetsDropdown,
         addModelInfoButton,
+        civitaiDomain,
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,
         persistGenerationParams,

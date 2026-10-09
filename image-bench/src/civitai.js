@@ -1,6 +1,7 @@
 import {dialog} from "@/dialogs/useDialog.js";
+import {useAppConfigStore} from "@/stores/appConfig.js";
 
-// Query string -> found or not-found result; errors and the current checkpoint are not cached
+// Query string and Civitai domain -> found or not-found result; errors and the current checkpoint are not cached
 const cache = new Map();
 
 /**
@@ -13,9 +14,10 @@ const cache = new Map();
 export async function fetchModelInfo({kind = "checkpoint", name = "", hash = ""} = {}) {
   const query = new URLSearchParams({kind, name, hash}).toString();
   const cacheable = !!(name || hash);
+  const cacheKey = `${useAppConfigStore().civitaiDomain}:${query}`;  // the backend builds URLs for the domain
 
-  if (cacheable && cache.has(query))
-    return cache.get(query);
+  if (cacheable && cache.has(cacheKey))
+    return cache.get(cacheKey);
 
   try {
     const response = await fetch(`/image-bench/civitai/model_info?${query}`);
@@ -26,7 +28,7 @@ export async function fetchModelInfo({kind = "checkpoint", name = "", hash = ""}
     const info = await response.json();
 
     if (cacheable && !info.error)
-      cache.set(query, info);
+      cache.set(cacheKey, info);
 
     return info;
   } catch (e) {

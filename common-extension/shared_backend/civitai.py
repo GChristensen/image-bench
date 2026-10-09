@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional
 from .persist import read_json_file
 
 CIVITAI_API = "https://civitai.com/api/v1/model-versions/by-hash/"
+CIVITAI_DOMAINS = ("com", "red")  # civitai.red also shows mature content
 CIVITAI_TIMEOUT = 10
 USER_AGENT = "image-bench"
 
@@ -31,12 +32,17 @@ _re_hash = re.compile(r"[0-9A-F]{8,64}")
 _hash_cache_lock = threading.Lock()
 
 
-def search_url(name: str) -> str:
+def site_url(domain: str = "com") -> str:
+    """Base URL of the Civitai site pages for a domain from CIVITAI_DOMAINS (the API always uses civitai.com)"""
+    return f"https://civitai.{domain if domain in CIVITAI_DOMAINS else 'com'}"
+
+
+def search_url(name: str, domain: str = "com") -> str:
     """Civitai model search by the file name without folders and extension"""
     query = os.path.basename(name.replace("\\", "/"))
     query = re.sub(r"\.(safetensors|ckpt|pt|pth|bin|gguf)$", "", query, flags=re.IGNORECASE)
     query = re.sub(r"\s*\[[0-9a-fA-F]+]$", "", query)  # WebUI title hash suffix
-    return "https://civitai.com/search/models?" + urllib.parse.urlencode({"query": query})
+    return site_url(domain) + "/search/models?" + urllib.parse.urlencode({"query": query})
 
 
 def _normalize(data: Dict[str, Any], hash_value: str) -> Dict[str, Any]:
@@ -47,7 +53,7 @@ def _normalize(data: Dict[str, Any], hash_value: str) -> Dict[str, Any]:
     return {
         "found": True,
         "hash": hash_value,
-        "url": f"https://civitai.com/models/{data.get('modelId')}?modelVersionId={data.get('id')}",
+        "url": f"/models/{data.get('modelId')}?modelVersionId={data.get('id')}",  # site_url() is prepended by model_info()
         "modelName": model.get("name") or "",
         "versionName": data.get("name") or "",
         "type": model.get("type") or "",
@@ -157,7 +163,8 @@ def file_sha256(path: str, cache_path: str) -> str:
     return sha256
 
 
-def model_info(name: str = "", hash_value: str = "", file_hash=None, store_dir: Optional[str] = None) -> Dict[str, Any]:
+def model_info(name: str = "", hash_value: str = "", file_hash=None, store_dir: Optional[str] = None,
+               domain: str = "com") -> Dict[str, Any]:
     """
     Endpoint payload: the Civitai lookup result plus a search URL to fall back on.
 
@@ -169,6 +176,7 @@ def model_info(name: str = "", hash_value: str = "", file_hash=None, store_dir: 
         hash_value: Known hash of the model, may be empty
         file_hash: Callable returning the SHA256 of the local model file, or None if the model is not found
         store_dir: Extension store directory for the stored Civitai info, see lookup()
+        domain: Civitai domain of the page URLs, see CIVITAI_DOMAINS
     """
     result: Optional[Dict[str, Any]] = None
 
@@ -186,4 +194,9 @@ def model_info(name: str = "", hash_value: str = "", file_hash=None, store_dir: 
     if not result:
         result = {"found": False, "error": "The model is not found."}
 
-    return {**result, "name": name, "searchUrl": search_url(name) if name else None}
+    result = {**result, "name": name, "searchUrl": search_url(name, domain) if name else None}
+
+    if result.get("url"):
+        result["url"] = site_url(domain) + result["url"]
+
+    return result

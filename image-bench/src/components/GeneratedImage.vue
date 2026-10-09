@@ -142,10 +142,10 @@
     }
   }
 
-  async function onSendToPhotoshop(e) {
+  async function onSendToPhotoshop(e, newDocument) {
     e.preventDefault();
 
-    const error = await imageOps.sendToPhotoshop(props.image);
+    const error = await imageOps.sendToPhotoshop(props.image, newDocument);
 
     if (error)
       await dialog.alert(error, {title: "Send to Photoshop"});
@@ -217,8 +217,8 @@
               @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
       <button v-if="isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
               @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
-      <button class="ib sm" title="Send to Photoshop" aria-label="Send to Photoshop"
-              @mousedown.left="onSendToPhotoshop"><AppIcon name="external" :size="13"/></button>
+      <button class="ib sm" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
+              @mousedown.left="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)"><AppIcon name="external" :size="13"/></button>
       <button v-if="isTray" class="ib sm" title="Add comment" aria-label="Add comment"
               @click="$emit('addComment', image)"><AppIcon name="comment" :size="13"/></button>
       <button v-if="isTray" class="ib sm danger" title="Delete" aria-label="Delete"

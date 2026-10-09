@@ -32,6 +32,13 @@ const appConfigStore = useAppConfigStore();
     <h3>SD WebUI Interface</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.addModelInfoButton"
     >Add 'Civitai Model Info' settings button</label>
+    <label class="setting-label civitai-setting"><input type="checkbox" class="checkbox-spacer"
+                                                       aria-hidden="true" tabindex="-1">Open models on
+      <select v-model="appConfigStore.civitaiDomain">
+        <option value="com">civitai.com</option>
+        <option value="red">civitai.red</option>
+      </select>
+    </label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.repositionConfigPresetsDropdown"
     >Bring up the dropdown of the 'Config Presets' extension</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.persistGenerationParams"
@@ -65,6 +72,15 @@ a:hover {
 
 .setting-label input {
   margin-right: 5px;
+}
+
+/* Invisible checkbox that aligns the text with the checkbox labels */
+.checkbox-spacer {
+  visibility: hidden;
+}
+
+.civitai-setting select {
+  margin-left: 5px;
 }
 
 .accent-setting {

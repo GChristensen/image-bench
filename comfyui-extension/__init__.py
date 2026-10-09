@@ -305,8 +305,11 @@ async def get_civitai_model_info(request):
             cache_path = os.path.join(store_dir, "model_hashes.json")
             file_hash = lambda: civitai.file_sha256(path, cache_path)
 
+    config = persist.read_json_file(get_config_path()) or {}
+    domain = config.get("civitaiDomain", "com")
+
     loop = asyncio.get_running_loop()
-    result = await loop.run_in_executor(None, civitai.model_info, name, hash_value, file_hash, store_dir)
+    result = await loop.run_in_executor(None, civitai.model_info, name, hash_value, file_hash, store_dir, domain)
     return web.json_response(result)
 
 
@@ -547,7 +550,8 @@ async def photoshop_send(request):
     message = {
         "type": "OPEN_IMAGE",
         "name": photoshop.get_image_file_name(request.query.get("name", "image.png"), media_type),
-        "imageUrl": get_photoshop_image_url(kind)
+        "imageUrl": get_photoshop_image_url(kind),
+        "newDocument": request.query.get("new_document") == "true"
     }
 
     clients = 0

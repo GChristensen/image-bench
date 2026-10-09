@@ -83,10 +83,10 @@
     flashTrayTab("concept-tray-tab");
   }
 
-  async function onSendToPhotoshop(e) {
+  async function onSendToPhotoshop(e, newDocument) {
     e.preventDefault();
 
-    const error = await imageOps.sendToPhotoshop(props.image);
+    const error = await imageOps.sendToPhotoshop(props.image, newDocument);
 
     if (error)
       await dialog.alert(error, {title: "Send to Photoshop"});
@@ -136,8 +136,8 @@
                 @click="onPlaceToConceptTray">💡</span>
           <span v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="emoji-button" title="Add to image tray"
                 @click="onPlaceToImageTray">🎨</span>
-          <span class="emoji-button" title="Send to Photoshop"
-                @click="onSendToPhotoshop">📤</span>
+          <span class="emoji-button" title="Left: send to Photoshop, Middle: send to Photoshop as a new image"
+                @click="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)">📤</span>
           <span v-if="isTray" class="emoji-button" title="Delete"
                 @click="$emit('deleteImage', image)">🗑️</span>
         </div>

@@ -205,9 +205,11 @@ async function onWebuiMessage(e) {
 
 /**
  * Place a received image as a new layer of the active document, or open it if there is no document
- * @param {{name: string, imageUrl: string}} msg - Image file name and its URL relative to WebUI
+ * or a new document is requested
+ * @param {{name: string, imageUrl: string, newDocument?: boolean}} msg - Image file name, its URL relative to WebUI
+ *   and whether to open it as a new document
  */
-async function openImage({name, imageUrl}) {
+async function openImage({name, imageUrl, newDocument}) {
     const response = await fetch(getWebuiUrl() + imageUrl);
 
     if (!response.ok)
@@ -218,7 +220,7 @@ async function openImage({name, imageUrl}) {
     await file.write(await response.arrayBuffer(), {format: storage.formats.binary});
 
     await core.executeAsModal(async () => {
-        if (app.documents.length)
+        if (app.documents.length && !newDocument)
             await placeAsLayer(file);
         else
             await app.open(file);

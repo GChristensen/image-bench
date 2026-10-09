@@ -264,7 +264,7 @@ class ImageBenchApi():
 
         return JSONResponse({"clients": clients})
 
-    async def photoshop_send(self, request: Request, name: str = "image.png"):
+    async def photoshop_send(self, request: Request, name: str = "image.png", new_document: bool = False):
         """Receive an image file from the Image Bench window and notify the Photoshop plugin to open it"""
         media_type = request.headers.get("content-type", "").split(";")[0].strip()
 
@@ -277,7 +277,8 @@ class ImageBenchApi():
         clients = await self.broadcast(self.photoshop_plugin_websockets, {
             "type": "OPEN_IMAGE",
             "name": photoshop.get_image_file_name(name, media_type),
-            "imageUrl": self.get_photoshop_image_url(kind)
+            "imageUrl": self.get_photoshop_image_url(kind),
+            "newDocument": new_document
         })
 
         return JSONResponse({"clients": clients})
@@ -464,7 +465,9 @@ class ImageBenchApi():
                     return info.sha256
 
         store_dir = persist.get_store_file_path(self.get_file_path("", upper=True), "")
-        return JSONResponse(civitai.model_info(name, hash, file_hash, store_dir))
+        config = persist.read_json_file(self.get_file_path(EXTENSION_CONFIG_FILE, upper=True)) or {}
+        domain = config.get("civitaiDomain", "com")
+        return JSONResponse(civitai.model_info(name, hash, file_hash, store_dir, domain))
 
     def on_before_config_presets(self, component, *args, **kwargs):
         if kwargs.get("elem_id") == "config_preset_txt2img_dropdown":

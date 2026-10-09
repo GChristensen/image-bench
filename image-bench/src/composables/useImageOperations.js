@@ -82,9 +82,10 @@ export function useImageOperations() {
 
   /**
    * Send image to the Image Bench Photoshop plugin, which places it as a layer of the active document
+   * @param {boolean} newDocument - Open the image as a new document even if there is an active one
    * @returns {Promise<string|null>} Error message, or null on success
    */
-  const sendToPhotoshop = async (image) => {
+  const sendToPhotoshop = async (image, newDocument = false) => {
     try {
       const imageResponse = await fetch(createImageLink(image));
 
@@ -93,7 +94,7 @@ export function useImageOperations() {
 
       const blob = await imageResponse.blob();
       const name = encodeURIComponent(image.imagePath || createImageLink(image));
-      const response = await fetch(`/image-bench/photoshop/send?name=${name}`, {
+      const response = await fetch(`/image-bench/photoshop/send?name=${name}&new_document=${newDocument}`, {
         method: 'POST',
         headers: {'Content-Type': blob.type},
         body: blob
