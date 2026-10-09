@@ -4,8 +4,7 @@
   import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
   import {useImageSelection} from "@/composables/useImageSelection.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
-  import {usePromptModal} from "@/composables/usePromptModal.js";
-  import PromptModal from "@/components/PromptModal.vue";
+  import {dialog} from "@/dialogs/useDialog.js";
 
   const props = defineProps({
     kind: {
@@ -49,7 +48,6 @@
 
   // Composables
   const imageOps = useImageOperations();
-  const promptModal = usePromptModal();
   const {
     isAllSelected,
     isSomeSelected,
@@ -77,8 +75,12 @@
     return imageOps.getImageLink(images.value[index]);
   }
 
-  function clear(e) {
-    if (!confirm("Do you really want to continue?"))
+  async function clear(e) {
+    const message = isNoneSelected.value
+      ? "Remove all images from this view?"
+      : `Remove ${props.imageStore.images.filter(i => i.selected).length} selected image(s) from this view?`;
+
+    if (!await dialog.confirm(message, {okText: "Remove", danger: true}))
       return;
 
     if (isNoneSelected.value) {
@@ -93,9 +95,9 @@
     }
   }
 
-  // Returns true if the image was deleted
-  function onDeleteImage(image) {
-    if (!confirm("Do you really want to continue?"))
+  // Resolves to true if the image was deleted
+  async function onDeleteImage(image) {
+    if (!await dialog.confirm("Remove this image from the tray?", {okText: "Remove", danger: true}))
       return false;
 
     const removedImage = images.value.find(i => i.imagePath === image.imagePath);
@@ -153,11 +155,8 @@
   }
 
   async function onAddComment(image) {
-    let comment = await promptModal.showPrompt(
-      "Comment:",
-      image.comment || "",
-      "imageComment"
-    );
+    let comment = await dialog.prompt("Comment:",
+      {defaultValue: image.comment || "", storageKey: "imageComment"});
 
     if (comment) {
       image.comment = comment;
@@ -205,14 +204,6 @@
 </script>
 
 <template>
-  <PromptModal
-    :show="promptModal.showModal.value"
-    :message="promptModal.modalMessage.value"
-    :default-value="promptModal.modalDefaultValue.value"
-    :storage-key="promptModal.modalStorageKey.value"
-    @confirm="promptModal.onConfirm"
-    @cancel="promptModal.onCancel"
-  />
   <div class="image-stream-container">
     <div class="image-stream scrollable" ref="imageStreamElement">
       <GeneratedImage v-for="(image, index) in images"

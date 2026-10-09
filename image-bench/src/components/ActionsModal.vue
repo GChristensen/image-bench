@@ -5,6 +5,7 @@ import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useImageTrayStore} from "@/stores/imageTray.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
+import {dialog} from "@/dialogs/useDialog.js";
 
 const props = defineProps({
   show: {
@@ -29,23 +30,26 @@ function clearImageStores() {
   upscaledImageStore.clear();
 }
 
-function onClearImagesClick() {
-  if (confirm("This will clear all images from the UI. The image files will remain on disk. Do you want to continue?")) {
+async function onClearImagesClick() {
+  if (await dialog.confirm("This will clear all images from the UI. The image files will remain on disk. Do you want to continue?",
+      {title: "Clear all images", okText: "Clear", danger: true})) {
     clearImageStores();
     emit('close');
   }
 }
 
-function onClearOutputsClick() {
-  if (confirm("This will permanently delete all files and folders in the outputs dir. Do you want to continue?")) {
+async function onClearOutputsClick() {
+  if (await dialog.confirm("This will permanently delete all files and folders in the outputs dir. Do you want to continue?",
+      {title: "Clear outputs", okText: "Delete files", danger: true})) {
     clearImageStores();
     setTimeout(() => fetch("/image-bench/clear_outputs_dir"), 500);
     emit('close');
   }
 }
 
-function onClearGeneratedImagesClick() {
-  if (confirm("This will permanently delete all generated images except saved in Image Bench trays. Do you want to continue?")) {
+async function onClearGeneratedImagesClick() {
+  if (await dialog.confirm("This will permanently delete all generated images except saved in Image Bench trays. Do you want to continue?",
+      {title: "Clear generated images", okText: "Delete", danger: true})) {
     setTimeout(() => fetch("/image-bench/clear_generated_images"), 500);
     emit('close');
   }

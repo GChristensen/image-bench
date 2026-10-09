@@ -12,8 +12,7 @@
   import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {useLocalStorage} from "@/composables/useLocalStorage.js";
-  import {usePromptModal} from "@/composables/usePromptModal.js";
-  import PromptModal from "@/components/PromptModal.vue";
+  import {dialog} from "@/dialogs/useDialog.js";
   import AppIcon from "@/components/AppIcon.vue";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams', 
@@ -76,7 +75,6 @@
   const webUI = useWebUIBridge();
   const imageOps = useImageOperations();
   const storage = useLocalStorage();
-  const promptModal = usePromptModal();
 
   function onReuseSeedClick(e) {
     e.preventDefault();
@@ -112,11 +110,8 @@
 
   async function onGenerateVaryingSteps(e) {
     const storedSteps = storage.getVaryingSteps();
-    const steps = await promptModal.showPrompt(
-      "Apply step values:",
-      storedSteps,
-      "varyingSteps"
-    );
+    const steps = await dialog.prompt("Apply step values:",
+      {defaultValue: storedSteps, storageKey: "varyingSteps"});
 
     if (steps) {
       if (config.automaticallyClearGeneratedImages)
@@ -132,11 +127,8 @@
 
   async function onUpscaleVaryingDenoising(e) {
     const storedSteps = storage.getVaryingDenoising();
-    const denoising = await promptModal.showPrompt(
-      "Apply denoising values:",
-      storedSteps,
-      "varyingDenoising"
-    );
+    const denoising = await dialog.prompt("Apply denoising values:",
+      {defaultValue: storedSteps, storageKey: "varyingDenoising"});
 
     if (denoising) {
       if (config.automaticallyClearGeneratedImages)
@@ -159,7 +151,7 @@
     const error = await imageOps.sendToPhotoshop(props.image);
 
     if (error)
-      alert(error);
+      await dialog.alert(error, {title: "Send to Photoshop"});
   }
 
   function needShowPromptWarning(image) {
@@ -195,14 +187,6 @@
 </script>
 
 <template>
-<PromptModal
-  :show="promptModal.showModal.value"
-  :message="promptModal.modalMessage.value"
-  :default-value="promptModal.modalDefaultValue.value"
-  :storage-key="promptModal.modalStorageKey.value"
-  @confirm="promptModal.onConfirm"
-  @cancel="promptModal.onCancel"
-/>
 <div v-if="displayed" ref="rootElement" class="selectable-image" :class="{selected, highlighted}">
   <div class="image-separator" v-if="image.separator">◇</div>
   <div v-else class="image-frame">

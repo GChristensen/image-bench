@@ -13,6 +13,8 @@ import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
+import DialogHost from "@/dialogs/DialogHost.vue";
+import {dialog} from "@/dialogs/useDialog.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -50,6 +52,12 @@ onBeforeMount(async () => {
 });
 
 async function onSDEvent(e) {
+  // Messages from the host page, which must not open dialogs in its own window
+  if (e.type === "SHOW_ALERT") {
+    dialog.alert(e.message);
+    return;
+  }
+
   const state = window.getGenerationState();
   await switchTabAccordingToGenerationMode(e, state);
 
@@ -125,6 +133,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       </RouterView>
     </div>
   <ActionsModal :show="showActionsModal" @close="showActionsModal = false" />
+  <DialogHost />
   </div>
 </template>
 

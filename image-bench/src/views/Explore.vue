@@ -6,11 +6,10 @@ import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {useExploreImagesStore} from "@/stores/explore.js";
-import {usePromptModal} from "@/composables/usePromptModal.js";
+import {dialog} from "@/dialogs/useDialog.js";
 import {useExploreList} from "@/composables/useExploreList.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
-import PromptModal from "@/components/PromptModal.vue";
 import ExploreParamsModal from "@/components/ExploreParamsModal.vue";
 import LoraParamsModal from "@/components/LoraParamsModal.vue";
 import ExploreListPanel from "@/components/ExploreListPanel.vue";
@@ -37,7 +36,6 @@ const LORA_PARAM_LABELS = {
 };
 
 const exploreImagesStore = useExploreImagesStore();
-const promptModal = usePromptModal();
 const storage = useLocalStorage();
 const appConfigStore = useAppConfigStore();
 
@@ -209,18 +207,22 @@ function onExploreClick() {
 }
 
 async function onCreateClick() {
-  const presetName = await promptModal.showPrompt(
-    "New preset name:",
-    "",
-    activeTab.value === TAB_LORAS ? "loraPresetName" : "presetName"
-  );
+  const presetName = await dialog.prompt("New preset name:",
+    {storageKey: activeTab.value === TAB_LORAS ? "loraPresetName" : "presetName"});
 
   if (presetName)
     await activeList.value.createPreset(presetName);
 }
 
 async function onDeleteClick() {
-  if (confirm("Do you really want to continue?"))
+  const presetName = activeList.value.currentPreset.value;
+
+  if (!presetName) {
+    await dialog.alert("No preset is selected.");
+    return;
+  }
+
+  if (await dialog.confirm(`Delete preset "${presetName}"?`, {okText: "Delete", danger: true}))
     await activeList.value.deleteCurrentPreset();
 }
 
@@ -316,14 +318,6 @@ function onKeydown(e) {
 </script>
 
 <template>
-  <PromptModal
-    :show="promptModal.showModal.value"
-    :message="promptModal.modalMessage.value"
-    :default-value="promptModal.modalDefaultValue.value"
-    :storage-key="promptModal.modalStorageKey.value"
-    @confirm="promptModal.onConfirm"
-    @cancel="promptModal.onCancel"
-  />
   <ExploreParamsModal
     :show="showParamsModal"
     :model-name="checkpoints.focusedKey.value || ''"

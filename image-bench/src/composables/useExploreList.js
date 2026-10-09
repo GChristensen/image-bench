@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { dialog } from '@/dialogs/useDialog.js';
 
 /**
  * Composable for an explorable item list (checkpoints, LoRAs) with presets and per-item params
@@ -69,7 +70,7 @@ export function useExploreList({ keyOf, labelOf = keyOf, section, keys, save }) 
     const presetName = currentPreset.value;
 
     if (!presetName) {
-      alert("No preset is selected.");
+      await dialog.alert("No preset is selected.");
       return;
     }
 

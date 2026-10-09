@@ -188,6 +188,15 @@ async function onMessage(msg) {
 }
 
 /**
+ * Show a message in the popup's dialog; native alert only if the popup is gone
+ * @param {string} message
+ */
+function showAlert(message) {
+    if (!sendPopupMessage({type: "SHOW_ALERT", message}))
+        alert(message);
+}
+
+/**
  * Refuse to start a strategy while WebUI is generating or interrupting,
  * before the strategy changes any UI parameters
  * @returns {boolean} Whether the strategy may start
@@ -197,7 +206,7 @@ function checkReadyToGenerate() {
         return true;
 
     sendPopupMessage({type: "GENERATION_FINISHED"});
-    alert("Generation is in progress or being interrupted. Please wait until it finishes.");
+    showAlert("Generation is in progress or being interrupted. Please wait until it finishes.");
     return false;
 }
 
@@ -211,7 +220,7 @@ async function handleExploreModels(options) {
 
     if (explorationStrategy.isInvalidated()) {
         sendPopupMessage({type: "GENERATION_FINISHED"});
-        alert("'Send to Txt2Img' was used. Please reload WebUI to explore models.");
+        showAlert("'Send to Txt2Img' was used. Please reload WebUI to explore models.");
         return;
     }
 

@@ -17,8 +17,7 @@ import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useKeyboardShortcuts} from "@/composables/useKeyboardShortcuts.js";
-import {usePromptModal} from "@/composables/usePromptModal.js";
-import PromptModal from "@/components/PromptModal.vue";
+import {dialog} from "@/dialogs/useDialog.js";
 
 const props = defineProps({
   kind: {
@@ -57,7 +56,6 @@ const openFileInput = ref()
 const webUI = useWebUIBridge();
 const imageOps = useImageOperations();
 const storage = useLocalStorage();
-const promptModal = usePromptModal();
 
 function getImageStore() {
   switch (props.kind) {
@@ -126,11 +124,8 @@ function onBatchGenerateClick() {
 
 async function onGenerateVariationsClick() {
   const variationStrength = storage.getVariationStrength();
-  const strength = await promptModal.showPrompt(
-    "Variation strength:",
-    variationStrength,
-    "variationStrength"
-  );
+  const strength = await dialog.prompt("Variation strength:",
+    {defaultValue: variationStrength, storageKey: "variationStrength"});
 
   if (strength) {
     if (config.automaticallyClearGeneratedImages)
@@ -188,10 +183,10 @@ function onImageSelectOverlay(evt, image) {
 }
 
 // After deleting, the overlay moves on to the neighbouring image, or closes if there is none
-function onDeleteImageOverlay(image) {
+async function onDeleteImageOverlay(image) {
   const neighbour = imageStream.value.getNextImage(image) || imageStream.value.getPrevImage(image);
 
-  if (!imageStream.value.deleteImage(image))
+  if (!await imageStream.value.deleteImage(image))
     return;
 
   if (neighbour)
@@ -276,7 +271,7 @@ function onOpenClick() {
 
 async function onOpenFileInputChange(e) {
   if (!e.target.files[0]) {
-    alert('Please select a file.');
+    await dialog.alert('Please select a file.');
     return;
   }
 
@@ -293,7 +288,7 @@ async function onOpenFileInputChange(e) {
       const result = await response.json();
 
       if (result.error) {
-        alert(result.error);
+        await dialog.alert(result.error, {title: "Upload failed"});
       } else {
         imageStream.value.beforeAddImage();
 
@@ -325,14 +320,6 @@ function isComponentTray(kind) {
 </script>
 
 <template>
-  <PromptModal
-    :show="promptModal.showModal.value"
-    :message="promptModal.modalMessage.value"
-    :default-value="promptModal.modalDefaultValue.value"
-    :storage-key="promptModal.modalStorageKey.value"
-    @confirm="promptModal.onConfirm"
-    @cancel="promptModal.onCancel"
-  />
   <ImageOverlay v-if="showImageOverlay"
                 :image="overlayImage"
                 :is-tray="isComponentTray(kind)"

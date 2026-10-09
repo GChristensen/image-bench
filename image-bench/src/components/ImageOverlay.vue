@@ -122,9 +122,9 @@
                 @click="onMarkingClick(marking)">{{ marking }}</span>
         </div>
         <div class="overlay-emoji-buttons">
-          <span v-if="!isTray || kind === KIND_IMAGE_TRAY" class="emoji-button" title="Place to concept tray"
+          <span v-if="!isTray || kind === KIND_IMAGE_TRAY" class="emoji-button" title="Add to concept tray"
                 @click="onPlaceToConceptTray">💡</span>
-          <span v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="emoji-button" title="Place to image tray"
+          <span v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="emoji-button" title="Add to image tray"
                 @click="onPlaceToImageTray">🎨</span>
           <span v-if="isTray" class="emoji-button" title="Delete"
                 @click="$emit('deleteImage', image)">🗑️</span>
