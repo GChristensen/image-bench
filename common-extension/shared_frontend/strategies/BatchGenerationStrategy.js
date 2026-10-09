@@ -30,8 +30,8 @@ export class BatchGenerationStrategy extends QueueProcessor {
         this.nImagesToGenerate = options.generateImages || 100;
         this.generationId = this.createGenerationId();
         this.savedImages = 0;
-        // -1 images: WebUI "Generate forever", until stopped
-        this.isForever = this.nImagesToGenerate === -1 && this.isWebUI();
+        // -1 images: generate until stopped (WebUI "Generate forever", ComfyUI re-queues an item per image)
+        this.isForever = this.nImagesToGenerate === -1;
 
         // Detect platform to determine queue structure
         const platform = this.uiOperations.getPlatform();
@@ -40,7 +40,8 @@ export class BatchGenerationStrategy extends QueueProcessor {
             // ComfyUI: Create N queue items (one per image)
             // Each processItem() call queues one workflow
             this.queue = [];
-            for (let i = 0; i < this.nImagesToGenerate; i++) {
+            const nItems = this.isForever ? 1 : this.nImagesToGenerate;
+            for (let i = 0; i < nItems; i++) {
                 this.queue.push({ index: i });
             }
             this.totalItems = this.queue.length;
@@ -90,7 +91,7 @@ export class BatchGenerationStrategy extends QueueProcessor {
     async processItem(item) {
         await this.uiOperations.sleep(500);
 
-        if (this.isForever)
+        if (this.isForever && this.isWebUI())
             await this.startGenerateForever();
         else
             await this.clickGenerate();
@@ -114,7 +115,8 @@ export class BatchGenerationStrategy extends QueueProcessor {
     /**
      * On WebUI the whole batch is a single generation: processNext() is called on each saved image,
      * which only advances the progress. The strategy is finished by BATCH_GENERATION_FINISHED
-     * when the interrupt button is hidden
+     * when the interrupt button is hidden.
+     * On ComfyUI generating forever queues the next item, so the queue never runs out until stopped
      */
     async processNext() {
         if (this.isWebUI() && this.queue.length === 0) {
@@ -123,6 +125,9 @@ export class BatchGenerationStrategy extends QueueProcessor {
             return;
         }
 
+        if (this.isForever && this.isActive && this.queue.length === 0)
+            this.queue.push({ index: ++this.savedImages });
+
         await super.processNext();
     }
 
@@ -130,12 +135,12 @@ export class BatchGenerationStrategy extends QueueProcessor {
      * On WebUI report the overall progress over the batch: saved images / batch count
      */
     reportProgress() {
-        if (!this.isWebUI())
-            return super.reportProgress();
-
         // The popup shows an indeterminate progress when generating forever
         if (this.isForever)
             return;
+
+        if (!this.isWebUI())
+            return super.reportProgress();
 
         const completed = Math.min(this.savedImages, this.nImagesToGenerate);
         const progress = (completed / this.nImagesToGenerate) * 100;
@@ -153,7 +158,8 @@ export class BatchGenerationStrategy extends QueueProcessor {
 
         if (this.isForever) {
             this.isForever = false;
-            this.uiOperations.setGenerateForever(false);
+            if (platform === 'webui')
+                this.uiOperations.setGenerateForever(false);
         }
 
         // Reset batch count (only for WebUI)

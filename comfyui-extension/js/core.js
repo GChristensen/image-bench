@@ -58,6 +58,7 @@ app.registerExtension({
         api.addEventListener("executed", handleExecuted);
         api.addEventListener("execution_start", handleExecutionStart);
         api.addEventListener("execution_error", handleExecutionError);
+        api.addEventListener("image-bench.photoshop", handlePhotoshopImage);
 
         // Listen for postMessage from popup window
         window.addEventListener("message", handlePostMessage);
@@ -294,6 +295,27 @@ function handleExecutionError(event) {
         prompt_id: prompt_id,
         error: exception_message
     });
+}
+
+/**
+ * Load an image or a mask sent from Photoshop into the node marked with ib:img or ib:mask
+ * The backend has already saved it to the input directory
+ */
+function handlePhotoshopImage(event) {
+    const {kind, filename} = event.detail;
+
+    if (uiOperations?.setInpaintUploadImage(kind, filename))
+        return;
+
+    const message = kind === "mask"
+        ? 'Unable to insert the mask from Photoshop: no node is marked "ib:mask" apart from the "ib:img" node.'
+        : 'Unable to insert the image from Photoshop: no node is marked "ib:img".';
+    const toast = app.extensionManager?.toast;
+
+    if (toast)
+        toast.add({severity: "warn", summary: "Image Bench", detail: message, life: 5000});
+    else
+        console.warn(`[Image Bench] ${message}`);
 }
 
 /**

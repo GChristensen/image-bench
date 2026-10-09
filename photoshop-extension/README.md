@@ -1,7 +1,7 @@
 # Image Bench for Photoshop
 
-A UXP plugin that sends the active document to the **img2img → Inpaint upload** tab of SD WebUI (Forge / Forge Neo)
-with the Image Bench extension installed:
+A UXP plugin that sends the active document to the **img2img → Inpaint upload** tab of SD WebUI (Forge / Forge Neo),
+or to marked load nodes in ComfyUI, with the Image Bench extension installed:
 
 - **Send image** — the composite document image goes to the inpaint upload image.
 - **Send selection as mask** — the current selection, as a black and white image of the document size,
@@ -13,11 +13,18 @@ shortcuts in **Edit → Keyboard Shortcuts → Plugins**.
 
 Any open WebUI page receives the images; the Image Bench popup doesn't need to be open.
 
+With ComfyUI, the images are saved to the ComfyUI `input` directory (`image_bench_photoshop_image.png`,
+`image_bench_photoshop_mask.png`) and loaded into the nodes whose titles contain the markers:
+
+- `ib:img` — a `LoadImage` node receives the image.
+- `ib:mask` — a `LoadImageMask` node (any channel) or the `MASK` output of a `LoadImage` node receives the mask.
+  The mask file carries the selection in its color channels and the inverse in its alpha channel.
+
 In the other direction, the **Send to Photoshop** button on an image in the Image Bench window places it
-as a new layer of the active document (or opens it, if no document is open). The plugin stays connected to WebUI
-while Photoshop runs, even with the panel closed; the panel shows the connection state. After a Photoshop restart
-the plugin connects once its panel is shown (a docked panel is shown on startup) or a command is used.
-The WebUI URL (default `http://127.0.0.1:7860`) is set in the panel.
+as a new layer of the active document (or opens it, if no document is open). The plugin stays connected to
+the server while Photoshop runs, even with the panel closed; the panel shows the connection state. After a Photoshop
+restart the plugin connects once its panel is shown (a docked panel is shown on startup) or a command is used.
+The server URL (default `http://127.0.0.1:7860`, ComfyUI usually `http://127.0.0.1:8188`) is set in the panel.
 
 Requires Photoshop 2024 (25.0) or newer.
 

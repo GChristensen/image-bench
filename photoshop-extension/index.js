@@ -1,7 +1,8 @@
 /**
  * Image Bench Photoshop plugin
  * Sends the active document and its selection (as a black and white mask)
- * to the inpaint upload tab of img2img in SD WebUI with the Image Bench extension,
+ * to SD WebUI (the inpaint upload tab of img2img) or ComfyUI (the nodes marked ib:img and ib:mask)
+ * with the Image Bench extension,
  * and places images sent from the Image Bench window into Photoshop
  */
 
@@ -90,7 +91,7 @@ async function readSelectionMask(doc) {
 }
 
 /**
- * Send pixels to the WebUI backend, which forwards them to the connected WebUI pages
+ * Send pixels to the Image Bench backend, which forwards them to the connected WebUI or ComfyUI pages
  * @param {'image'|'mask'} kind - Image kind
  * @param {{data: Uint8Array, width: number, height: number, components: number}} pixels
  */
@@ -109,16 +110,16 @@ async function upload(kind, pixels) {
             body
         });
     } catch (error) {
-        throw new Error(`Unable to connect to WebUI at ${getWebuiUrl()}`);
+        throw new Error(`Unable to connect to ${getWebuiUrl()}`);
     }
 
     if (!response.ok)
-        throw new Error(`WebUI responded with ${response.status}: ${await response.text()}`);
+        throw new Error(`The server responded with ${response.status}: ${await response.text()}`);
 
     const {clients} = await response.json();
 
     if (!clients)
-        throw new Error("No WebUI page is open");
+        throw new Error("No WebUI or ComfyUI page is open");
 }
 
 async function sendImage() {
@@ -148,9 +149,9 @@ let socket = null;
 let reconnectTimer = null;
 
 /**
- * Connect to WebUI to receive images sent from the Image Bench window.
+ * Connect to WebUI or ComfyUI to receive images sent from the Image Bench window.
  * The connection lives as long as the plugin is loaded, regardless of the panel visibility,
- * and is restored if lost (e.g. when WebUI restarts)
+ * and is restored if lost (e.g. when the server restarts)
  */
 function connect() {
     clearTimeout(reconnectTimer);
@@ -160,7 +161,7 @@ function connect() {
         websocket = new WebSocket(getWebuiUrl().replace(/^http/i, "ws") + PLUGIN_WEBSOCKET_PATH);
     } catch (error) {
         console.error(error);
-        setStatus(`Invalid WebUI URL: ${getWebuiUrl()}`, true);
+        setStatus(`Invalid server URL: ${getWebuiUrl()}`, true);
         return;
     }
 
@@ -206,14 +207,14 @@ async function onWebuiMessage(e) {
 /**
  * Place a received image as a new layer of the active document, or open it if there is no document
  * or a new document is requested
- * @param {{name: string, imageUrl: string, newDocument?: boolean}} msg - Image file name, its URL relative to WebUI
+ * @param {{name: string, imageUrl: string, newDocument?: boolean}} msg - Image file name, its URL relative to the server
  *   and whether to open it as a new document
  */
 async function openImage({name, imageUrl, newDocument}) {
     const response = await fetch(getWebuiUrl() + imageUrl);
 
     if (!response.ok)
-        throw new Error(`Unable to download ${name}: WebUI responded with ${response.status}`);
+        throw new Error(`Unable to download ${name}: the server responded with ${response.status}`);
 
     const folder = await fs.getTemporaryFolder();
     const file = await folder.createFile(name, {overwrite: true});
@@ -259,7 +260,7 @@ function setStatus(text, isError = false) {
 
 function setConnected(connected) {
     const connection = document.getElementById("connection");
-    connection.textContent = connected ? "Connected to WebUI" : "Not connected to WebUI";
+    connection.textContent = connected ? "Connected to the server" : "Not connected to the server";
     connection.classList.toggle("error", !connected);
 }
 

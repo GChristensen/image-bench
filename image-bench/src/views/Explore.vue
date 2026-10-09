@@ -181,7 +181,9 @@ function getLoraWeight(lora) {
 }
 
 /**
- * Build the prompt string of a LoRA: <lora:alias:weight> followed by the extra text
+ * Build the prompt string of a LoRA: <lora:name:weight> followed by the extra text
+ * The file name is used rather than the alias: aliases come from the ss_output_name metadata,
+ * which trainers often leave generic (e.g. AI Toolkit's "aitk_lora"), and WebUI rejects shared aliases
  * ComfyUI loads the LoRA in the node marked ib:lora, so its prompt string is only the extra text
  */
 function createLoraPrompt(lora) {
@@ -190,7 +192,7 @@ function createLoraPrompt(lora) {
   if (import.meta.env.MODE === "comfy")
     return text;
 
-  return `<lora:${lora.alias}:${getLoraWeight(lora)}>` + (text ? ` ${text}` : "");
+  return `<lora:${lora.name}:${getLoraWeight(lora)}>` + (text ? ` ${text}` : "");
 }
 
 function onExploreClick() {
@@ -312,6 +314,43 @@ function onImageOpen(image) {
   window.open(imageLink, "_blank");
 }
 
+/**
+ * Save the results as a single HTML page. The backend streams the page as an attachment
+ * and the form posts into a hidden frame, so the download goes to disk without buffering here
+ */
+function onSaveResults() {
+  const groups = modelImages.value.map(model => ({
+    name: model.name,
+    images: model.images.map(({imagePath, imageUrl, parameters}) => ({imagePath, imageUrl, parameters}))
+  }));
+  const title = `Exploration · ${exploreSummary.value} · ${new Date().toLocaleString()}`;
+
+  let frame = document.querySelector("iframe[name='ib-export-frame']");
+
+  if (!frame) {
+    frame = document.createElement("iframe");
+    frame.name = "ib-export-frame";
+    frame.hidden = true;
+    document.body.appendChild(frame);
+  }
+
+  const form = document.createElement("form");
+  form.method = "post";
+  form.action = "/image-bench/explore_export";
+  form.target = frame.name;
+  form.hidden = true;
+
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "data";
+  input.value = JSON.stringify({title, groups});
+  form.appendChild(input);
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
 function onShowParams(image) {
   paramsOverlayText.value = createImageGenerationParams(image);
   paramsOverlayImage.value = image;
@@ -380,6 +419,9 @@ function onKeydown(e) {
                          :value="exploreImagesStore.generationProgress" :label="progressLabel"/>
       <span v-else class="explore-summary">{{ exploreSummary }}</span>
       <div class="toolbar-spacer"></div>
+      <button class="btn" :disabled="exploreImagesStore.generationInProgress || !modelImages.length"
+              title="Save the results as a single HTML page"
+              @click="onSaveResults"><AppIcon name="download" :size="14"/>Save results</button>
       <button class="btn" :disabled="exploreImagesStore.generationInProgress || !modelImages.length"
               @click="exploreImagesStore.clear()"><AppIcon name="eraser" :size="14"/>Clear results</button>
     </div>

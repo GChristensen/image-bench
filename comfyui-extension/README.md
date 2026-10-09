@@ -58,6 +58,8 @@ A marker has the form `ib:<type>:<index>`:
 | `ib:pp:0`  | Positive prompt  | `String Literal`, `CLIPTextEncode`, `CLIPTextEncodeSDXL`, `CLIPTextEncodeFlux`, `CLIPTextEncodeSD3` | `text` (`string` for `String Literal`) |
 | `ib:np:0`  | Negative prompt  | same as positive prompt                                                                              | `text` (`string` for `String Literal`) |
 | `ib:lora`  | LoRA loader      | `LoraLoader`, `LoraLoaderModelOnly`                                                                  | `lora_name`, `strength_model`, `strength_clip` (those the node has) |
+| `ib:img`   | Inpaint image    | `LoadImage`                                                                                          | `image` |
+| `ib:mask`  | Inpaint mask     | `LoadImageMask`, `LoadImage` (use its `MASK` output)                                                 | `image` |
 
 Rules:
 
@@ -78,15 +80,39 @@ What each marker is needed for and what happens without it:
 | `ib:pp` | Writing the prompt (batch generation, varying parameters, applying image parameters); reading the prompt of a finished generation | The first `CLIPTextEncode` node in the graph. |
 | `ib:np` | Writing/reading the negative prompt | The second `CLIPTextEncode` node in the graph. |
 | `ib:lora` | LoRA exploration: sets `lora_name` and both strengths to the LoRA's weight for each explored LoRA; the LoRA-free run sets the strengths to 0, which skips loading the LoRA. A bypassed or muted marked node is enabled during exploration. Its LoRA, strengths and mode are restored afterwards. The LoRA's activation text is appended to the prompt. | **None** — exploration with LoRAs selected is refused with an alert. |
+| `ib:img` / `ib:mask` | Receiving the document image / selection mask sent from the Image Bench Photoshop plugin. They are saved to the ComfyUI `input` directory as `image_bench_photoshop_image.png` / `image_bench_photoshop_mask.png` and selected in the marked node. The mask file holds the selection in its color channels and the inverse in alpha, so `LoadImageMask` with any channel and the `MASK` output of `LoadImage` both read it. | **None** — the file is saved, and a toast reports that no node is marked. See [Inpaint Images from Photoshop](#inpaint-images-from-photoshop). |
 
 The `CLIPTextEncode` fallbacks depend on node creation order, which is easy to get wrong in anything but
 the default workflow, so marking `ib:pp` and `ib:np` explicitly is recommended.
+
+### Inpaint Images from Photoshop
+
+Image Bench only selects the file in the marked loader; what the workflow does with the image and the mask is up
+to it (`VAEEncode` + `SetLatentNoiseMask`, `VAEEncodeForInpaint`, `InpaintModelConditioning`, `ImageCompositeMasked`...).
+Supported combinations:
+
+| `ib:img` | `ib:mask` | Notes |
+|----------|-----------|-------|
+| `LoadImage` | `LoadImageMask` | The usual setup; any `channel` works. |
+| `LoadImage` | another `LoadImage` | Use the `MASK` output of the mask node; its `IMAGE` output is the mask picture. |
+| `LoadImage` | — | Image only (img2img). A sent mask has nowhere to go and is reported with a toast. |
+| — | `LoadImageMask` or `LoadImage` | Mask only; the image comes from elsewhere in the workflow. |
+
+- The mask never goes to the `ib:img` node: `ib:mask` skips the node the image is loaded into. A single `LoadImage`
+  marked `ib:img ib:mask` therefore receives only the image (the mask is reported with a toast). Use the `MASK`
+  output of the `ib:img` node only for a mask painted into the image's own alpha channel.
+- In a subgraph node marked `ib:img ib:mask`, the image goes to the first promoted `LoadImage` `image` widget and
+  the mask to the next promoted loader widget (a `LoadImageMask`, or a second `LoadImage`).
+- Only the first node carrying each marker is updated; mark one node per marker.
+- A bypassed or muted marked node is updated but not enabled.
+- Other loaders that pick a file from the `input` directory by name can be added to the `image` / `mask` sections
+  of `node_config.json` (see below).
 
 ### Subgraphs
 
 A marker can be put on a **subgraph node** instead of the nodes inside it. Image Bench then works through
 the widgets promoted to the subgraph node: for each marker it looks for a promoted widget whose inner node
-has an accepted type (for `ib:cp`, `ib:pp` and `ib:np` the promoted widget must also be the role's widget,
+has an accepted type (for every marker except `ib:smp` the promoted widget must also be the role's widget,
 e.g. `text` of a `CLIPTextEncode`) and writes that promoted widget, which is the value ComfyUI actually queues.
 Nested subgraphs are followed.
 
@@ -126,9 +152,15 @@ Forge / A1111 sidecar `.json` next to the LoRA when present.
 
 ### Example Workflows
 
-`example_workflows/` (listed in ComfyUI's template browser under this extension) contains
-`image_anima_lora.json`: a flat Anima text-to-image workflow with every node already marked
-(`ib:cp`, `ib:lora`, `ib:pp`, `ib:np`, `ib:smp`).
+`example_workflows/` (listed in ComfyUI's template browser under this extension) contains:
+
+- `image_anima_lora.json`: a flat Anima text-to-image workflow with every node already marked
+  (`ib:cp`, `ib:lora`, `ib:pp`, `ib:np`, `ib:smp`).
+- `image_anima_inpaint.json`: Anima inpainting of a Photoshop selection. `Load Image ib:img` and
+  `Load Image Mask ib:mask` receive the image and the mask from the Photoshop plugin; the mask, grown by 8 px,
+  limits the re-noised latent area (`Set Latent Noise Mask`, `denoise` 0.9), and the result is pasted back
+  into the original through the original selection (`Image Composite Masked`), so nothing outside it changes.
+  Send the image and mask once before queueing, since the loaders refer to the files the plugin writes.
 
 ## How It Works
 

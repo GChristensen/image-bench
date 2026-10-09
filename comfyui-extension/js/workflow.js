@@ -41,7 +41,9 @@ export const MARKER_ROLES = {
     sampler: {marker: 'smp', configKey: 'sampler', requireWidget: false},
     positivePrompt: {marker: 'pp', configKey: 'positive_prompt', requireWidget: true},
     negativePrompt: {marker: 'np', configKey: 'negative_prompt', requireWidget: true},
-    lora: {marker: 'lora', configKey: 'lora', requireWidget: true}
+    lora: {marker: 'lora', configKey: 'lora', requireWidget: true},
+    image: {marker: 'img', configKey: 'image', requireWidget: true},
+    mask: {marker: 'mask', configKey: 'mask', requireWidget: true}
 };
 
 /**

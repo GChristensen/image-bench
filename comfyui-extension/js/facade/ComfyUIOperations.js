@@ -25,6 +25,12 @@ import {
 // Strength widgets of LoRA loaders (LoraLoaderModelOnly has only strength_model)
 const LORA_STRENGTH_WIDGETS = ['strength_model', 'strength_clip'];
 
+// Roles that skip the target of another role accepting the same node types
+const PRECEDING_ROLES = new Map([
+    [MARKER_ROLES.negativePrompt, MARKER_ROLES.positivePrompt],
+    [MARKER_ROLES.mask, MARKER_ROLES.image]
+]);
+
 export class ComfyUIOperations {
     /**
      * @param {Object} app - ComfyUI app instance
@@ -42,16 +48,18 @@ export class ComfyUIOperations {
     /**
      * Get the first target of a marker role (see MarkerTarget in workflow.js)
      * The negative prompt skips the positive prompt target, so one subgraph node marked
-     * "ib:pp ib:np" yields its first promoted text encoder as positive and the second as negative
+     * "ib:pp ib:np" yields its first promoted text encoder as positive and the second as negative.
+     * Likewise the mask skips the image target, so the mask never replaces the image in a shared node
      * @param {Object} role - Entry of MARKER_ROLES
      * @returns {Object|null}
      */
     getRoleTarget(role) {
         const targets = getMarkerTargets(this.app, role, this.nodeConfig);
+        const precedingRole = PRECEDING_ROLES.get(role);
 
-        if (role === MARKER_ROLES.negativePrompt) {
-            const positive = this.getRoleTarget(MARKER_ROLES.positivePrompt);
-            return targets.find(target => !isSameTarget(target, positive)) ?? null;
+        if (precedingRole) {
+            const preceding = this.getRoleTarget(precedingRole);
+            return targets.find(target => !isSameTarget(target, preceding)) ?? null;
         }
 
         return targets[0] ?? null;
@@ -249,6 +257,34 @@ export class ComfyUIOperations {
         }
 
         this.app.graph.setDirtyCanvas(true, true);
+    }
+
+    // ==================== INPAINT IMAGES ====================
+
+    /**
+     * Load an image sent from Photoshop into the node marked with ib:img (kind=image) or ib:mask (kind=mask)
+     * @param {'image'|'mask'} kind - Image kind
+     * @param {string} filename - Name of the file in the ComfyUI input directory
+     * @returns {boolean} Whether a marked node was found
+     */
+    setInpaintUploadImage(kind, filename) {
+        const role = kind === 'mask' ? MARKER_ROLES.mask : MARKER_ROLES.image;
+        const target = this.getRoleTarget(role);
+        const widgetName = target && (getRoleWidgetName(role, this.nodeConfig, target) ?? 'image');
+        const widget = widgetName && getTargetWidget(target, widgetName);
+        if (!widget) {
+            return false;
+        }
+
+        // The file may be new to the combo options loaded with the node definitions
+        const values = widget.options?.values;
+        if (Array.isArray(values) && !values.includes(filename)) {
+            values.push(filename);
+        }
+
+        setTargetWidgetValue(target, widgetName, filename);
+        this.app.graph.setDirtyCanvas(true, true);
+        return true;
     }
 
     // ==================== HIGH-LEVEL OPERATIONS ====================

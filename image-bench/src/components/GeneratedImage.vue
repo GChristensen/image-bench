@@ -70,6 +70,8 @@
   const sdWebUIStore = useSDWebUIStateStore();
   const generatedImagesStore = useGeneratedImagesStore();
   const upscaledImageStore = useUpscaledImagesStore();
+  // Upscaling is not implemented for ComfyUI
+  const isWebUI = import.meta.env.MODE === 'webui';
 
   // Composables
   const webUI = useWebUIBridge();
@@ -212,10 +214,10 @@
               @mousedown.left="$emit('showParams')"><AppIcon name="params" :size="13"/></button>
       <button v-if="isTray && !image.img2img" class="ib sm" title="Generate with steps" aria-label="Generate with steps"
               @mousedown.left="onGenerateVaryingSteps"><AppIcon name="steps" :size="13"/></button>
-      <button v-if="upscalable && !image.img2img" class="ib sm" :title="getUpscaleButtonTitle(image)" aria-label="Upscale"
+      <button v-if="isWebUI && upscalable && !image.img2img" class="ib sm" :title="getUpscaleButtonTitle(image)" aria-label="Upscale"
               @mousedown.left="$emit('upscaleImage', image, false)"
               @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
-      <button v-if="isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
+      <button v-if="isWebUI && isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
               @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
       <button class="ib sm" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
               @mousedown.left="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)"><AppIcon name="external" :size="13"/></button>

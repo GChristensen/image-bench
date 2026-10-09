@@ -79,10 +79,10 @@ const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Sel
 const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clear');
 const generateImagesNumber = ref(128);
 const isWebUI = import.meta.env.MODE === 'webui';
-const generateForever = computed(() => isWebUI && generateImagesNumber.value === -1);
+const generateForever = computed(() => generateImagesNumber.value === -1);
 let finiteImagesNumber = generateImagesNumber.value;
 
-// -1 images: generate until stopped (WebUI "Generate forever")
+// -1 images: generate until stopped
 function toggleGenerateForever() {
   if (generateForever.value)
     generateImagesNumber.value = finiteImagesNumber;
@@ -106,8 +106,8 @@ defineExpose({generateImagesNumber});
       <button class="ib" :class="{on: isShowingMarked}" :aria-pressed="isShowingMarked"
               :title="isShowingMarked ? 'Showing marked images: click to show all' : 'Show marked images only'"
               aria-label="Show marked images only" @click="$emit('show-marked')"><AppIcon name="filter" :size="14"/></button>
-      <div class="vsep"></div>
-      <button v-if="!upscaleInProgress" class="btn primary" :disabled="!isSomeSelected"
+      <div v-if="isWebUI" class="vsep"></div>
+      <button v-if="isWebUI && !upscaleInProgress" class="btn primary" :disabled="!isSomeSelected"
               :title="isSomeSelected ? 'Upscale selected images' : 'Select images to upscale'"
               @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
     </template>
@@ -119,7 +119,7 @@ defineExpose({generateImagesNumber});
           ><AppIcon name="play" :size="13"/>Generate</button>
         <button v-else class="btn stop" @click="$emit('stop-generation')"><AppIcon name="stop" :size="13"/>Stop</button>
         <label class="toolbar-group-label">×<NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
-        <button v-if="isWebUI" class="ib" :class="{on: generateForever}" :aria-pressed="generateForever"
+        <button class="ib" :class="{on: generateForever}" :aria-pressed="generateForever"
                 :disabled="generationInProgress"
                 :title="generateForever ? 'Generating forever: click to restore the number of images' : 'Generate forever (until stopped)'"
                 aria-label="Generate forever" @click="toggleGenerateForever"><AppIcon name="infinity" :size="14"/></button>

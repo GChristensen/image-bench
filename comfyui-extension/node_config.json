@@ -73,5 +73,25 @@
       "LoraLoader": "lora_name",
       "LoraLoaderModelOnly": "lora_name"
     }
+  },
+  "image": {
+    "marker": "img",
+    "nodeTypes": [
+      "LoadImage"
+    ],
+    "widgetNames": {
+      "LoadImage": "image"
+    }
+  },
+  "mask": {
+    "marker": "mask",
+    "nodeTypes": [
+      "LoadImageMask",
+      "LoadImage"
+    ],
+    "widgetNames": {
+      "LoadImageMask": "image",
+      "LoadImage": "image"
+    }
   }
 }

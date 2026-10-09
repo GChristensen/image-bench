@@ -3,6 +3,7 @@ import {useAppConfigStore} from "@/stores/appConfig.js";
 import {ACCENT_COLORS} from "@/consts.js";
 
 const appConfigStore = useAppConfigStore();
+const isWebUI = import.meta.env.MODE === 'webui';
 </script>
 
 <template>
@@ -31,7 +32,7 @@ const appConfigStore = useAppConfigStore();
     >Generate LoRA-free images for each model when exploring LoRAs</label>
     <h3>SD WebUI Interface</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.addModelInfoButton"
-    >Add 'Civitai Model Info' settings button</label>
+    >Add 'Civitai Model Info' settings button (restart required)</label>
     <label class="setting-label civitai-setting"><input type="checkbox" class="checkbox-spacer"
                                                        aria-hidden="true" tabindex="-1">Open models on
       <select v-model="appConfigStore.civitaiDomain">
@@ -39,9 +40,9 @@ const appConfigStore = useAppConfigStore();
         <option value="red">civitai.red</option>
       </select>
     </label>
-    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.repositionConfigPresetsDropdown"
+    <label v-if="isWebUI" class="setting-label"><input type="checkbox" v-model="appConfigStore.repositionConfigPresetsDropdown"
     >Bring up the dropdown of the 'Config Presets' extension</label>
-    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.persistGenerationParams"
+    <label v-if="isWebUI" class="setting-label"><input type="checkbox" v-model="appConfigStore.persistGenerationParams"
     >Remember prompts and generation parameters across WebUI reloads</label>
   </div>
 </div>

@@ -9,7 +9,7 @@ import zipfile
 
 from fastapi import FastAPI, Body, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 import gradio as gr
 import modules.script_callbacks as script_callbacks
@@ -25,6 +25,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import persist
 from shared import civitai
+from shared import explore_export
 from shared import loras
 from shared import photoshop
 from shared import tray
@@ -84,6 +85,7 @@ class ImageBenchApi():
         self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
         self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
         self.add_api_route("/download_image_tray", self.download_image_tray, methods=["GET"])
+        self.add_api_route("/explore_export", self.explore_export, methods=["POST"])
         self.add_api_route("/image_tray_upload", self.image_tray_upload, methods=["POST"])
         self.add_api_route("/concept_tray_upload", self.image_tray_upload, methods=["POST"])
         self.add_api_route("/models", self.get_models, methods=["GET"])
@@ -535,6 +537,35 @@ class ImageBenchApi():
             return Response(status_code=HTTP_204_NO_CONTENT)
         else:  # 404
             raise HTTPException(status_code=404, detail="Not found")
+
+    async def explore_export(self, request: Request):
+        form = await request.form()
+        data = json.loads(form.get("data") or "{}")
+        roots = self.get_image_output_dirs()
+
+        def resolve_path(image):
+            path = image.get("imagePath")
+            return path if explore_export.is_allowed_image(path, roots) else None
+
+        content = explore_export.generate_explore_html(data.get("groups") or [], resolve_path,
+                                                       data.get("title") or "Image Bench exploration")
+        return StreamingResponse(content, media_type="text/html; charset=utf-8",
+                                 headers={"Content-Disposition": explore_export.content_disposition()})
+
+    def get_image_output_dirs(self):
+        """Directories that generated images may be read from"""
+        root_dir = self.get_webui_root_dir()
+        option_names = ["outdir_samples", "outdir_txt2img_samples", "outdir_img2img_samples",
+                        "outdir_extras_samples", "outdir_grids", "outdir_txt2img_grids",
+                        "outdir_img2img_grids", "outdir_save"]
+        dirs = [self.outputs_dir, os.path.join(root_dir, "outputs")]
+
+        for name in option_names:
+            value = getattr(shared.opts, name, None)
+            if value:
+                dirs.append(value if os.path.isabs(value) else os.path.join(root_dir, value))
+
+        return dirs
 
     def import_image_tray(self, archive_path):
         result = tray.import_image_tray(archive_path, self.image_bench_dir, IMAGE_TRAY_FILE)

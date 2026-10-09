@@ -8,12 +8,14 @@ import sys
 import asyncio
 import json
 import time
+from urllib.parse import parse_qs, urlparse
 import aiohttp
 from aiohttp import web
 from server import PromptServer
+import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, loras, persist, photoshop
+from shared import civitai, explore_export, loras, persist, photoshop
 from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler, save_image_to_tray
 
 # Tell ComfyUI to serve files from the js/ directory
@@ -437,6 +439,43 @@ async def download_tray(request):
         return web.Response(text=str(e), status=500)
 
 
+@PromptServer.instance.routes.post(BASE_PATH + "/explore_export")
+async def explore_export_handler(request):
+    """Stream the exploration results as a single self-contained HTML page"""
+    form = await request.post()
+    data = json.loads(form.get("data") or "{}")
+    roots = [folder_paths.get_output_directory(), folder_paths.get_temp_directory()]
+
+    def resolve_path(image):
+        # Resolve like /view does: imagePath lacks the subfolder
+        query = parse_qs(urlparse(image.get("imageUrl") or "").query)
+        filename = (query.get("filename") or [""])[0]
+        subfolder = (query.get("subfolder") or [""])[0]
+        base_dir = folder_paths.get_directory_by_type((query.get("type") or ["output"])[0])
+
+        if not filename or not base_dir:
+            return None
+
+        path = os.path.join(base_dir, subfolder, filename)
+        return path if explore_export.is_allowed_image(path, roots) else None
+
+    response = web.StreamResponse(headers={
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Disposition": explore_export.content_disposition()
+    })
+    await response.prepare(request)
+
+    content = explore_export.generate_explore_html(data.get("groups") or [], resolve_path,
+                                                   data.get("title") or "Image Bench exploration")
+
+    # File reads happen in the generator, so advance it off the event loop
+    while (chunk := await asyncio.to_thread(next, content, None)) is not None:
+        await response.write(chunk)
+
+    await response.write_eof()
+    return response
+
+
 @PromptServer.instance.routes.post(BASE_PATH + "/image_tray_upload")
 async def upload_image_tray(request):
     """Upload image(s) to image tray"""
@@ -565,10 +604,34 @@ async def photoshop_send(request):
     return web.json_response({"clients": clients})
 
 
-# Images sent from Photoshop are inserted into the SD WebUI inpaint tab, which ComfyUI does not have
+# Receive an image or a mask from Photoshop
 @PromptServer.instance.routes.post(BASE_PATH + "/photoshop/upload")
 async def photoshop_upload(request):
-    return web.Response(text="Sending images from Photoshop is supported in SD WebUI only", status=501)
+    """
+    Receive raw pixels of the document (kind=image) or its selection (kind=mask) from the Photoshop plugin,
+    save them to the input directory and notify the ComfyUI pages to load them into the node marked ib:img or ib:mask
+    """
+    kind = request.query.get("kind")
+
+    if kind not in photoshop.PHOTOSHOP_IMAGE_KINDS:
+        return web.Response(text=f"Unknown image kind: {kind}", status=400)
+
+    try:
+        width, height, components = (int(request.query.get(name, "")) for name in ("width", "height", "components"))
+        to_png = photoshop.raw_mask_to_png if kind == "mask" else photoshop.raw_pixels_to_png
+        png = to_png(await request.read(), width, height, components)
+    except ValueError as e:
+        return web.Response(text=str(e), status=400)
+
+    filename = photoshop.COMFYUI_INPUT_FILES[kind]
+
+    with open(os.path.join(folder_paths.get_input_directory(), filename), "wb") as file:
+        file.write(png)
+
+    server = PromptServer.instance
+    await server.send("image-bench.photoshop", {"kind": kind, "filename": filename})
+
+    return web.json_response({"clients": len(server.sockets)})
 
 
 # Image downloaded by the Photoshop plugin
