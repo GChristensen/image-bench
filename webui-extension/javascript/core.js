@@ -115,6 +115,15 @@ function setupMessageBusHandlers() {
     
     // Handle batch generation finished notification
     messageBus.subscribe('BATCH_GENERATION_FINISHED', async () => {
+        // "Generate forever" starts the next generation shortly after the previous one,
+        // it has finished only if it was cancelled from the WebUI context menu
+        if (batchStrategy.isProcessing() && batchStrategy.isForever) {
+            await uiOperations.sleep(1500);
+
+            if (!batchStrategy.isProcessing() || !uiOperations.isReadyToGenerate())
+                return;
+        }
+
         if (batchStrategy.isProcessing()) {
             await batchStrategy.finish();
         }

@@ -13,6 +13,7 @@ export class BatchGenerationStrategy extends QueueProcessor {
         this.nImagesToGenerate = 100;
         this.config = null;
         this.savedImages = 0;
+        this.isForever = false;
     }
 
     isWebUI() {
@@ -29,6 +30,8 @@ export class BatchGenerationStrategy extends QueueProcessor {
         this.nImagesToGenerate = options.generateImages || 100;
         this.generationId = this.createGenerationId();
         this.savedImages = 0;
+        // -1 images: WebUI "Generate forever", until stopped
+        this.isForever = this.nImagesToGenerate === -1 && this.isWebUI();
 
         // Detect platform to determine queue structure
         const platform = this.uiOperations.getPlatform();
@@ -69,7 +72,9 @@ export class BatchGenerationStrategy extends QueueProcessor {
 
         // Set batch count (only for WebUI, no-op in ComfyUI)
         if (platform === 'webui') {
-            const nImagesToGenerate = this.nImagesToGenerate || this.config.defaultBatches || 100;
+            const nImagesToGenerate = this.isForever
+                ? 1
+                : this.nImagesToGenerate || this.config.defaultBatches || 100;
             await this.uiOperations.setBatchCount(nImagesToGenerate);
         }
 
@@ -84,7 +89,26 @@ export class BatchGenerationStrategy extends QueueProcessor {
      */
     async processItem(item) {
         await this.uiOperations.sleep(500);
-        await this.clickGenerate();
+
+        if (this.isForever)
+            await this.startGenerateForever();
+        else
+            await this.clickGenerate();
+    }
+
+    /**
+     * Start WebUI "Generate forever", or stop the strategy if it is not available
+     */
+    async startGenerateForever() {
+        if (await this.uiOperations.waitReadyToGenerate() && this.uiOperations.setGenerateForever(true))
+            return;
+
+        console.warn('[BatchGenerationStrategy] Unable to start "Generate forever"');
+
+        if (this.isActive) {
+            this.messageBus.publish('STRATEGY_FINISH_REQUEST');
+            this.messageBus.publish('GENERATION_FINISHED', {});
+        }
     }
 
     /**
@@ -109,6 +133,10 @@ export class BatchGenerationStrategy extends QueueProcessor {
         if (!this.isWebUI())
             return super.reportProgress();
 
+        // The popup shows an indeterminate progress when generating forever
+        if (this.isForever)
+            return;
+
         const completed = Math.min(this.savedImages, this.nImagesToGenerate);
         const progress = (completed / this.nImagesToGenerate) * 100;
 
@@ -122,6 +150,11 @@ export class BatchGenerationStrategy extends QueueProcessor {
         this.isActive = false;
 
         const platform = this.uiOperations.getPlatform();
+
+        if (this.isForever) {
+            this.isForever = false;
+            this.uiOperations.setGenerateForever(false);
+        }
 
         // Reset batch count (only for WebUI)
         if (platform === 'webui') {

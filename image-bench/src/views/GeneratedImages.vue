@@ -133,7 +133,7 @@ async function onGenerateVariationsClick() {
 
     generatedImagesStore.startingGeneration();
 
-    const nImagesToGenerate = imageToolbar.value.generateImagesNumber.value;
+    const nImagesToGenerate = imageToolbar.value.generateImagesNumber;
 
     storage.setVariationStrength(strength);
     webUI.generateVariations(strength, nImagesToGenerate);

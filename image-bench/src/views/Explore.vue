@@ -176,15 +176,21 @@ function getLoraDefaults(lora) {
   };
 }
 
+function getLoraWeight(lora) {
+  return lora.params?.weight ?? getLoraDefaults(lora).weight;
+}
+
 /**
  * Build the prompt string of a LoRA: <lora:alias:weight> followed by the extra text
+ * ComfyUI loads the LoRA in the node marked ib:lora, so its prompt string is only the extra text
  */
 function createLoraPrompt(lora) {
-  const defaults = getLoraDefaults(lora);
-  const weight = lora.params?.weight ?? defaults.weight;
-  const text = lora.params?.text ?? defaults.text;
+  const text = lora.params?.text ?? getLoraDefaults(lora).text;
 
-  return `<lora:${lora.alias}:${weight}>` + (text ? ` ${text}` : "");
+  if (import.meta.env.MODE === "comfy")
+    return text;
+
+  return `<lora:${lora.alias}:${getLoraWeight(lora)}>` + (text ? ` ${text}` : "");
 }
 
 function onExploreClick() {
@@ -193,7 +199,8 @@ function onExploreClick() {
   }
   else {
     const selectedModels = checkpoints.getSelectedItems();
-    const selectedLoras = loras.getSelectedItems().map(lora => ({name: lora.name, prompt: createLoraPrompt(lora)}));
+    const selectedLoras = loras.getSelectedItems()
+      .map(lora => ({name: lora.name, prompt: createLoraPrompt(lora), weight: getLoraWeight(lora)}));
 
     exploreImagesStore.generationProgress = 0;
     exploreImagesStore.generationInProgress = true;

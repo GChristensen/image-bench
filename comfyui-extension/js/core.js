@@ -346,6 +346,12 @@ async function handleExploreModels(options) {
         return;
     }
 
+    if (options.loras?.length && !uiOperations.getLoraTarget()) {
+        sendPopupMessage({type: "GENERATION_FINISHED"});
+        sendPopupMessage({type: "SHOW_ALERT", message: 'LoRA exploration needs a LoRA loader node marked "ib:lora".'});
+        return;
+    }
+
     // Set generation state
     setGenerationState("EXPLORE_MODELS");
     console.log('[Image Bench] Generation state set to: EXPLORE_MODELS');
@@ -369,6 +375,10 @@ async function handleExploreModels(options) {
     } catch (error) {
         console.error('[Image Bench] Failed to start model exploration:', error);
         console.error('[Image Bench] Error stack:', error.stack);
+        setGenerationState("BATCH_GENERATION");
+        currentStrategy = null;
+        sendPopupMessage({type: "GENERATION_FINISHED"});
+        sendPopupMessage({type: "SHOW_ALERT", message: `Model exploration failed: ${error.message}`});
     }
 }
 

@@ -274,6 +274,17 @@ export class UIOperations {
     }
 
     /**
+     * LoRA loader nodes are a ComfyUI concept; SD WebUI applies explored LoRAs through the prompt (<lora:...>)
+     */
+    async backupLora() {
+        return null;
+    }
+
+    async setLora(lora) {}
+
+    async restoreLora(backup) {}
+
+    /**
      * Apply per-model generation parameters to txt2img
      * Unset (undefined/null/empty) parameters are left untouched
      * @param {Object} params - { sampler, scheduler, steps, shift, cfg, distilledCfg }
@@ -517,6 +528,41 @@ export class UIOperations {
         const buttonKey = isImg2ImgTab ? 'IMG2IMG_GENERATE' : 'TXT2IMG_GENERATE';
         this.adapter.getElement(buttonKey).click();
         return true;
+    }
+
+    /**
+     * Start WebUI "Generate forever" on the current tab, or cancel it on both tabs.
+     * Its implementation differs between WebUI versions and is not exposed globally,
+     * so the entry of the generate button context menu is clicked instead
+     * @param {boolean} enable - Start or cancel
+     * @returns {boolean} Whether the menu entry was found
+     */
+    setGenerateForever(enable) {
+        const currentTab = this.adapter.isImg2ImgTab() ? 'IMG2IMG' : 'TXT2IMG';
+        const tabs = enable ? [currentTab] : ['TXT2IMG', 'IMG2IMG'];
+        const entryName = enable ? 'Generate forever' : 'Cancel generate forever';
+        const root = window.gradioApp?.() || document;
+        let found = false;
+
+        for (const tab of tabs) {
+            const button = this.adapter.getElement(`${tab}_GENERATE`);
+
+            if (!button)
+                continue;
+
+            button.dispatchEvent(new MouseEvent('contextmenu',
+                {bubbles: true, cancelable: true, composed: true, view: window}));
+
+            const menu = root.querySelector('#context-menu');
+            const entry = Array.from(menu?.querySelectorAll('a') || [])
+                .find(a => a.textContent.trim() === entryName);
+
+            entry?.click();
+            menu?.remove();
+            found ||= !!entry;
+        }
+
+        return found;
     }
 
     /**

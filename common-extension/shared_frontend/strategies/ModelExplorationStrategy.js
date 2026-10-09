@@ -15,12 +15,15 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.paramsBeforeModel = null;
         this.promptBeforeExplore = null;
         this.currentLora = null;
+        this.exploringLoras = false;
+        this.loraBeforeExplore = null;
         this.invalidated = false;
     }
 
     /**
      * Initialize the exploration queue
-     * @param {Object} options - { models: [], loras: [{name, prompt}], loraFreeImages: boolean, generateImages: number }
+     * @param {Object} options - { models: [], loras: [{name, prompt, weight}], loraFreeImages: boolean, generateImages: number }
+     *                           SD WebUI applies a LoRA through its prompt, ComfyUI through the node marked ib:lora
      */
     initialize(options) {
         console.log('[ModelExploration] initialize() called with options:', options);
@@ -75,6 +78,8 @@ export class ModelExplorationStrategy extends QueueProcessor {
         if (options.loras?.length) {
             this.promptBeforeExplore = await this.uiOperations.getPrompt();
             console.log('[ModelExploration] Backed up prompt:', this.promptBeforeExplore);
+            this.loraBeforeExplore = await this.uiOperations.backupLora();
+            this.exploringLoras = true;
         }
 
         // Set initial model
@@ -120,6 +125,10 @@ export class ModelExplorationStrategy extends QueueProcessor {
 
             console.log('[ModelExploration] Setting prompt:', prompt);
             await this.uiOperations.setPrompt(prompt);
+        }
+
+        if (this.exploringLoras) {
+            await this.uiOperations.setLora(lora);
         }
 
         this.currentLora = lora?.name ?? null;
@@ -171,6 +180,13 @@ export class ModelExplorationStrategy extends QueueProcessor {
             console.log('[ModelExploration] Restoring prompt:', this.promptBeforeExplore);
             await this.uiOperations.setPrompt(this.promptBeforeExplore);
             this.promptBeforeExplore = null;
+        }
+
+        if (this.exploringLoras) {
+            console.log('[ModelExploration] Restoring LoRA:', this.loraBeforeExplore);
+            await this.uiOperations.restoreLora(this.loraBeforeExplore);
+            this.loraBeforeExplore = null;
+            this.exploringLoras = false;
         }
 
         this.currentLora = null;

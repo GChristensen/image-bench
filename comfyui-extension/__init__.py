@@ -13,7 +13,7 @@ from aiohttp import web
 from server import PromptServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, persist, photoshop
+from shared import civitai, loras, persist, photoshop
 from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler, save_image_to_tray
 
 # Tell ComfyUI to serve files from the js/ directory
@@ -266,10 +266,25 @@ async def get_samplers(request):
     })
 
 
-# LoRAs endpoint (LoRA exploration is supported in SD WebUI only)
+# LoRAs endpoint; LoRA exploration drives the LoRA loader node marked ib:lora
 @PromptServer.instance.routes.get(BASE_PATH + "/loras")
 async def get_loras(request):
-    return web.json_response([])
+    """Get list of available LoRAs; the name is the lora_name widget value (path relative to the LoRA folder)"""
+    import folder_paths
+
+    loras_list = []
+    for name in folder_paths.get_filename_list("loras"):
+        path = folder_paths.get_full_path("loras", name)
+
+        loras_list.append({
+            "name": name,
+            "alias": os.path.splitext(os.path.basename(name))[0],
+            "filename": path,
+            "folder": "",  # Already part of the name
+            **(loras.read_user_metadata(path) if path else {"preferredWeight": 1, "activationText": ""})
+        })
+
+    return web.json_response(loras_list)
 
 
 @PromptServer.instance.routes.get(BASE_PATH + "/civitai/model_info")

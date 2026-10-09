@@ -22,6 +22,9 @@ import {
     loadWorkflow
 } from '../workflow.js';
 
+// Strength widgets of LoRA loaders (LoraLoaderModelOnly has only strength_model)
+const LORA_STRENGTH_WIDGETS = ['strength_model', 'strength_clip'];
+
 export class ComfyUIOperations {
     /**
      * @param {Object} app - ComfyUI app instance
@@ -145,6 +148,107 @@ export class ComfyUIOperations {
     getMarkerExecutionIds() {
         return Object.fromEntries(Object.entries(MARKER_ROLES)
             .map(([key, role]) => [key, this.getRoleTarget(role)?.executionId]));
+    }
+
+    // ==================== LORA ====================
+
+    /**
+     * Get the LoRA loader target (node marked with ib:lora)
+     * @returns {Object|null}
+     */
+    getLoraTarget() {
+        return this.getRoleTarget(MARKER_ROLES.lora);
+    }
+
+    /**
+     * Get the strength widgets of a LoRA loader target, keyed by widget name
+     * @param {Object} target
+     * @returns {Object}
+     */
+    getLoraStrengthWidgets(target) {
+        return Object.fromEntries(LORA_STRENGTH_WIDGETS
+            .map(name => [name, getTargetWidget(target, name)])
+            .filter(([, widget]) => widget));
+    }
+
+    /**
+     * Backup the LoRA, strengths and mode of the node marked with ib:lora
+     * @returns {Promise<Object|null>}
+     */
+    async backupLora() {
+        const target = this.getLoraTarget();
+        if (!target) {
+            return null;
+        }
+
+        const widgetName = getRoleWidgetName(MARKER_ROLES.lora, this.nodeConfig, target) ?? 'lora_name';
+        const strengths = Object.fromEntries(Object.entries(this.getLoraStrengthWidgets(target))
+            .map(([name, widget]) => [name, widget.value]));
+
+        return {
+            name: getTargetWidget(target, widgetName)?.value ?? null,
+            strengths,
+            // The mode of a subgraph host is left alone: bypassing it would bypass the whole subgraph
+            mode: target.host === target.source ? target.host.mode : undefined
+        };
+    }
+
+    /**
+     * Set the LoRA of the node marked with ib:lora
+     * A null LoRA (the LoRA-free run) sets the strengths to 0, which makes ComfyUI skip loading the LoRA
+     * @param {Object|null} lora - {name, weight} or null
+     * @returns {Promise<boolean>} Whether the LoRA was set
+     */
+    async setLora(lora) {
+        const target = this.getLoraTarget();
+        if (!target) {
+            console.warn('setLora: No marked LoRA loader node found (looking for "ib:lora" in node title)');
+            return false;
+        }
+
+        // Make sure a bypassed or muted loader runs
+        if (target.host === target.source) {
+            target.host.mode = 0;
+        }
+
+        if (lora) {
+            const widgetName = getRoleWidgetName(MARKER_ROLES.lora, this.nodeConfig, target) ?? 'lora_name';
+            setTargetWidgetValue(target, widgetName, lora.name);
+        }
+
+        const strength = lora ? Number(lora.weight ?? 1) : 0;
+        for (const name of Object.keys(this.getLoraStrengthWidgets(target))) {
+            setTargetWidgetValue(target, name, strength);
+        }
+
+        this.app.graph.setDirtyCanvas(true, true);
+        return true;
+    }
+
+    /**
+     * Restore the node marked with ib:lora from a backupLora() result
+     * @param {Object|null} backup
+     */
+    async restoreLora(backup) {
+        const target = backup && this.getLoraTarget();
+        if (!target) {
+            return;
+        }
+
+        if (backup.mode !== undefined && target.host === target.source) {
+            target.host.mode = backup.mode;
+        }
+
+        if (backup.name !== null) {
+            const widgetName = getRoleWidgetName(MARKER_ROLES.lora, this.nodeConfig, target) ?? 'lora_name';
+            setTargetWidgetValue(target, widgetName, backup.name);
+        }
+
+        for (const [name, value] of Object.entries(backup.strengths)) {
+            setTargetWidgetValue(target, name, value);
+        }
+
+        this.app.graph.setDirtyCanvas(true, true);
     }
 
     // ==================== HIGH-LEVEL OPERATIONS ====================
@@ -330,6 +434,22 @@ export class ComfyUIOperations {
      */
     setScheduler(scheduler) {
         this.setSamplerValue('scheduler', scheduler);
+    }
+
+    /**
+     * Get the positive prompt
+     * Uses marker-based discovery (ib:pp) or falls back to first CLIPTextEncode
+     * @returns {Promise<string|null>}
+     */
+    async getPrompt() {
+        const role = MARKER_ROLES.positivePrompt;
+        const target = this.getRoleTarget(role) ?? createNodeTarget(getNodesByType(this.app, 'CLIPTextEncode')[0]);
+        if (!target) {
+            return null;
+        }
+
+        const widgetName = getRoleWidgetName(role, this.nodeConfig, target) ?? 'text';
+        return getTargetWidget(target, widgetName)?.value ?? null;
     }
 
     /**

@@ -62,5 +62,16 @@
       "CLIPTextEncodeFlux": "text",
       "CLIPTextEncodeSD3": "text"
     }
+  },
+  "lora": {
+    "marker": "lora",
+    "nodeTypes": [
+      "LoraLoader",
+      "LoraLoaderModelOnly"
+    ],
+    "widgetNames": {
+      "LoraLoader": "lora_name",
+      "LoraLoaderModelOnly": "lora_name"
+    }
   }
 }

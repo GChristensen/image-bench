@@ -40,7 +40,8 @@ export const MARKER_ROLES = {
     checkpoint: {marker: 'cp', configKey: 'checkpoint', requireWidget: true},
     sampler: {marker: 'smp', configKey: 'sampler', requireWidget: false},
     positivePrompt: {marker: 'pp', configKey: 'positive_prompt', requireWidget: true},
-    negativePrompt: {marker: 'np', configKey: 'negative_prompt', requireWidget: true}
+    negativePrompt: {marker: 'np', configKey: 'negative_prompt', requireWidget: true},
+    lora: {marker: 'lora', configKey: 'lora', requireWidget: true}
 };
 
 /**

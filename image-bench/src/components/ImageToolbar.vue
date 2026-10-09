@@ -78,6 +78,19 @@ const emit = defineEmits([
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
 const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clear');
 const generateImagesNumber = ref(128);
+const isWebUI = import.meta.env.MODE === 'webui';
+const generateForever = computed(() => isWebUI && generateImagesNumber.value === -1);
+let finiteImagesNumber = generateImagesNumber.value;
+
+// -1 images: generate until stopped (WebUI "Generate forever")
+function toggleGenerateForever() {
+  if (generateForever.value)
+    generateImagesNumber.value = finiteImagesNumber;
+  else {
+    finiteImagesNumber = generateImagesNumber.value;
+    generateImagesNumber.value = -1;
+  }
+}
 
 defineExpose({generateImagesNumber});
 </script>
@@ -106,6 +119,10 @@ defineExpose({generateImagesNumber});
           ><AppIcon name="play" :size="13"/>Generate</button>
         <button v-else class="btn stop" @click="$emit('stop-generation')"><AppIcon name="stop" :size="13"/>Stop</button>
         <label class="toolbar-group-label">×<NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
+        <button v-if="isWebUI" class="ib" :class="{on: generateForever}" :aria-pressed="generateForever"
+                :disabled="generationInProgress"
+                :title="generateForever ? 'Generating forever: click to restore the number of images' : 'Generate forever (until stopped)'"
+                aria-label="Generate forever" @click="toggleGenerateForever"><AppIcon name="infinity" :size="14"/></button>
       </div>
       <button class="btn outline" :disabled="generationInProgress" @click="$emit('generate-variations')"
         ><AppIcon name="shuffle" :size="14"/>Variations…</button>
@@ -116,7 +133,8 @@ defineExpose({generateImagesNumber});
       ><AppIcon name="stop" :size="13"/>Stop</button>
 
     <!-- Progress indicator -->
-    <ProgressIndicator v-if="generationInProgress" :value="generationProgress || 0"/>
+    <ProgressIndicator v-if="generationInProgress" :value="generateForever ? 100 : generationProgress || 0"
+                       :label="generateForever ? '∞' : ''"/>
 
     <div class="toolbar-spacer"></div>
 

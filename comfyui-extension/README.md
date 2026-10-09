@@ -57,6 +57,7 @@ A marker has the form `ib:<type>:<index>`:
 | `ib:smp:0` | Sampler          | `KSampler`, `KSamplerAdvanced`, `SamplerCustom`, `SamplerCustomAdvanced`                             | `seed`, `control_after_generate`, `steps`, `cfg`, `denoise`, `sampler_name`, `scheduler` (those the node has) |
 | `ib:pp:0`  | Positive prompt  | `String Literal`, `CLIPTextEncode`, `CLIPTextEncodeSDXL`, `CLIPTextEncodeFlux`, `CLIPTextEncodeSD3` | `text` (`string` for `String Literal`) |
 | `ib:np:0`  | Negative prompt  | same as positive prompt                                                                              | `text` (`string` for `String Literal`) |
+| `ib:lora`  | LoRA loader      | `LoraLoader`, `LoraLoaderModelOnly`                                                                  | `lora_name`, `strength_model`, `strength_clip` (those the node has) |
 
 Rules:
 
@@ -76,6 +77,7 @@ What each marker is needed for and what happens without it:
 | `ib:smp` | Setting seed, `control_after_generate` and steps (batch generation, varying parameters, upscaling/hires); reading sampler parameters of a finished generation | The first `KSampler` node (for reading generation info: the first node of any accepted sampler type). |
 | `ib:pp` | Writing the prompt (batch generation, varying parameters, applying image parameters); reading the prompt of a finished generation | The first `CLIPTextEncode` node in the graph. |
 | `ib:np` | Writing/reading the negative prompt | The second `CLIPTextEncode` node in the graph. |
+| `ib:lora` | LoRA exploration: sets `lora_name` and both strengths to the LoRA's weight for each explored LoRA; the LoRA-free run sets the strengths to 0, which skips loading the LoRA. A bypassed or muted marked node is enabled during exploration. Its LoRA, strengths and mode are restored afterwards. The LoRA's activation text is appended to the prompt. | **None** — exploration with LoRAs selected is refused with an alert. |
 
 The `CLIPTextEncode` fallbacks depend on node creation order, which is easy to get wrong in anything but
 the default workflow, so marking `ib:pp` and `ib:np` explicitly is recommended.
@@ -118,6 +120,15 @@ For samplers, `widgetNames` names the *steps* widget; the other sampler widgets 
 names. `marker` changes the marker type of a role (e.g. `"marker": "model"` makes it `ib:model`).
 The file is read when the ComfyUI page loads, so reload the page after editing it.
 Model exploration offers the checkpoint list; a `UNETLoader` works only when its models have the same names.
+LoRA strength widgets are looked up by the standard names `strength_model` / `strength_clip`.
+LoRA exploration offers the `loras` folder list. Preferred weight and activation text are read from the
+Forge / A1111 sidecar `.json` next to the LoRA when present.
+
+### Example Workflows
+
+`example_workflows/` (listed in ComfyUI's template browser under this extension) contains
+`image_anima_lora.json`: a flat Anima text-to-image workflow with every node already marked
+(`ib:cp`, `ib:lora`, `ib:pp`, `ib:np`, `ib:smp`).
 
 ## How It Works
 

@@ -25,6 +25,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import persist
 from shared import civitai
+from shared import loras
 from shared import photoshop
 from shared import tray
 
@@ -429,16 +430,12 @@ class ImageBenchApi():
 
         loras_list = []
         for lora in networks.available_networks.values():
-            metadata_path = os.path.splitext(lora.filename)[0] + ".json"
-            user_metadata = (persist.read_json_file(metadata_path) if os.path.isfile(metadata_path) else None) or {}
-
             loras_list.append({
                 "name": lora.name,
                 "alias": lora.get_alias(),
                 "filename": lora.filename,
                 "folder": get_lora_folder(lora.filename),
-                "preferredWeight": user_metadata.get("preferred weight") or 1,
-                "activationText": user_metadata.get("activation text") or ""
+                **loras.read_user_metadata(lora.filename)
             })
         return JSONResponse(jsonable_encoder(loras_list))
 
