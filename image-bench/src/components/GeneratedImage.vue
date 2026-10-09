@@ -111,7 +111,7 @@
   async function onGenerateVaryingSteps(e) {
     const storedSteps = storage.getVaryingSteps();
     const steps = await dialog.prompt("Apply step values:",
-      {defaultValue: storedSteps, storageKey: "varyingSteps"});
+      {defaultValue: storedSteps, storageKey: "varyingSteps", dropdown: true, historySize: 5});
 
     if (steps) {
       if (config.automaticallyClearGeneratedImages)
@@ -128,7 +128,7 @@
   async function onUpscaleVaryingDenoising(e) {
     const storedSteps = storage.getVaryingDenoising();
     const denoising = await dialog.prompt("Apply denoising values:",
-      {defaultValue: storedSteps, storageKey: "varyingDenoising"});
+      {defaultValue: storedSteps, storageKey: "varyingDenoising", dropdown: true, historySize: 5});
 
     if (denoising) {
       if (config.automaticallyClearGeneratedImages)

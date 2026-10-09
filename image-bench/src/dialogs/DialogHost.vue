@@ -28,9 +28,9 @@ function onKeydown(e) {
   const top = windows.get(stack[stack.length - 1].id);
 
   if (e.key === 'Escape')
-    top?.cancel();
+    top?.onEscapeKey();
   else
-    top?.confirm();
+    top?.onEnterKey();
 }
 
 onMounted(() => {

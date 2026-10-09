@@ -55,9 +55,11 @@ export const dialog = {
   },
 
   /**
-   * Text input with a dropdown history of the last 10 values per storageKey
+   * Text input with a history of the last values per storageKey (10 unless historySize is given).
+   * The history is shown as browser autocomplete, or as an editable dropdown when dropdown is true.
    * @param {string} message
-   * @param {{defaultValue?: string, storageKey?: string, placeholder?: string, title?: string}} options
+   * @param {{defaultValue?: string, storageKey?: string, placeholder?: string, title?: string,
+   *          dropdown?: boolean, historySize?: number}} options
    * @returns {Promise<string|null>} Trimmed input value, or null if cancelled or empty
    */
   prompt(message, options = {}) {

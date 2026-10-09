@@ -5,6 +5,7 @@
   import {flashTrayTab} from "@/components/utils.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, MARKINGS} from "@/consts.js";
+  import {dialog} from "@/dialogs/useDialog.js";
 
   const props = defineProps({
     image: {
@@ -82,6 +83,15 @@
     flashTrayTab("concept-tray-tab");
   }
 
+  async function onSendToPhotoshop(e) {
+    e.preventDefault();
+
+    const error = await imageOps.sendToPhotoshop(props.image);
+
+    if (error)
+      await dialog.alert(error, {title: "Send to Photoshop"});
+  }
+
   // Clicking the current marking removes it
   function onMarkingClick(marking) {
     if (props.image.marking === marking)
@@ -126,6 +136,8 @@
                 @click="onPlaceToConceptTray">💡</span>
           <span v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="emoji-button" title="Add to image tray"
                 @click="onPlaceToImageTray">🎨</span>
+          <span class="emoji-button" title="Send to Photoshop"
+                @click="onSendToPhotoshop">📤</span>
           <span v-if="isTray" class="emoji-button" title="Delete"
                 @click="$emit('deleteImage', image)">🗑️</span>
         </div>

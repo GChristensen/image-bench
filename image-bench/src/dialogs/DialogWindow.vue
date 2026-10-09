@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useLocalStorage } from '@/composables/useLocalStorage.js';
+import ComboInput from '@/dialogs/ComboInput.vue';
 
 const props = defineProps({
   entry: {
@@ -20,14 +21,27 @@ const title = computed(() => options.value.title || (isPrompt.value ? '' : props
 
 const inputValue = ref(options.value.defaultValue ?? '');
 const inputRef = ref(null);
+const comboRef = ref(null);
 const okRef = ref(null);
 
 const historyKey = computed(() => `imageBench_promptHistory_${options.value.storageKey || 'default'}`);
+const historySize = computed(() => options.value.historySize || 10);
 const datalistId = computed(() => `dialog-history-${props.entry.id}`);
-const history = ref(isPrompt.value ? storage.getJsonItem(historyKey.value, []) : []);
+const history = ref(isPrompt.value ? readHistory() : []);
+
+// The default value is usually the last submitted one, which may predate the history
+const dropdownItems = computed(() => {
+  const defaultValue = String(options.value.defaultValue ?? '').trim();
+  const items = defaultValue && !history.value.includes(defaultValue) ? [defaultValue, ...history.value] : history.value;
+  return items.slice(0, historySize.value);
+});
+
+function readHistory() {
+  return storage.getJsonItem(historyKey.value, []).slice(0, historySize.value);
+}
 
 function saveToHistory(value) {
-  const items = [value, ...storage.getJsonItem(historyKey.value, []).filter(item => item !== value)].slice(0, 10);
+  const items = [value, ...readHistory().filter(item => item !== value)].slice(0, historySize.value);
   storage.setJsonItem(historyKey.value, items);
 }
 
@@ -54,18 +68,32 @@ function cancel() {
   emit('close', props.entry.cancelValue);
 }
 
+// Enter/Escape are captured by DialogHost, so an open dropdown gets them first here
+function onEnterKey() {
+  if (!comboRef.value?.pickHighlighted())
+    confirm();
+}
+
+function onEscapeKey() {
+  if (comboRef.value?.isOpen)
+    comboRef.value.close();
+  else
+    cancel();
+}
+
 // Deferred to a macrotask: dialogs opened from a mousedown handler would otherwise
 // lose focus to the button's default mousedown action
 onMounted(() => setTimeout(() => {
   if (isPrompt.value) {
-    inputRef.value?.focus();
-    inputRef.value?.select();
+    const input = comboRef.value || inputRef.value;
+    input?.focus();
+    input?.select();
   }
   else
     okRef.value?.focus();
 }));
 
-defineExpose({confirm, cancel});
+defineExpose({onEnterKey, onEscapeKey});
 </script>
 
 <template>
@@ -78,7 +106,13 @@ defineExpose({confirm, cancel});
       <div class="dialog-body">
         <label v-if="isPrompt" class="dialog-message" :for="`dialog-input-${entry.id}`">{{ entry.message }}</label>
         <p v-else class="dialog-message">{{ entry.message }}</p>
-        <template v-if="isPrompt">
+        <ComboInput v-if="isPrompt && options.dropdown"
+                    :id="`dialog-input-${entry.id}`"
+                    ref="comboRef"
+                    v-model="inputValue"
+                    :items="dropdownItems"
+                    :placeholder="options.placeholder || 'Enter value...'"/>
+        <template v-else-if="isPrompt">
           <input :id="`dialog-input-${entry.id}`"
                  ref="inputRef"
                  v-model="inputValue"
