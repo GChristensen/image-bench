@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { dialog } from '@/dialogs/useDialog.js';
 
 /**
@@ -9,7 +9,7 @@ import { dialog } from '@/dialogs/useDialog.js';
  * @param {Function} options.keyOf - Returns the unique key of an item
  * @param {Function} [options.labelOf] - Returns the displayed label of an item (defaults to the key)
  * @param {Function} options.section - Returns the (mutable) storage object of this list
- * @param {Object} options.keys - Property names in the section: { presets, lastPreset, params }
+ * @param {Object} options.keys - Property names in the section: { presets, lastPreset, params, selection }
  * @param {Function} options.save - Persists the explore presets object
  */
 export function useExploreList({ keyOf, labelOf = keyOf, section, keys, save }) {
@@ -19,6 +19,9 @@ export function useExploreList({ keyOf, labelOf = keyOf, section, keys, save }) 
   const currentPreset = ref("");
   const params = ref({});
   const focusedKey = ref(null);
+
+  let loaded = false;
+  let saveSelectionTimeout = null;
 
   function getPresets() {
     const data = section();
@@ -30,13 +33,18 @@ export function useExploreList({ keyOf, labelOf = keyOf, section, keys, save }) 
     return items.value.map(keyOf).filter(key => selected.value.has(key));
   }
 
+  function selectKeys(selectedKeys) {
+    const keySet = new Set(selectedKeys || []);
+    selected.value = new Set(items.value.map(keyOf).filter(key => keySet.has(key)));
+  }
+
   function selectPresetItems(presetName) {
-    const presetKeys = new Set(section()[keys.presets]?.[presetName] || []);
-    selected.value = new Set(items.value.map(keyOf).filter(key => presetKeys.has(key)));
+    selectKeys(section()[keys.presets]?.[presetName]);
   }
 
   /**
    * Initialize state from the storage section; call after items are set
+   * The last selection is restored if it was stored, otherwise the items of the last preset are selected
    */
   function load() {
     const data = section();
@@ -44,9 +52,31 @@ export function useExploreList({ keyOf, labelOf = keyOf, section, keys, save }) 
     params.value = data[keys.params] || {};
     presetNames.value = Object.keys(data[keys.presets] || {});
     currentPreset.value = data[keys.lastPreset] || "";
-    selectPresetItems(currentPreset.value);
+
+    if (Array.isArray(data[keys.selection]))
+      selectKeys(data[keys.selection]);
+    else
+      selectPresetItems(currentPreset.value);
+
     focusedKey.value = getSelectedKeys()[0] ?? null;
+    loaded = true;
   }
+
+  // Persist the selection so that it survives restarts (debounced, checkbox toggles come in bursts)
+  watch(selected, () => {
+    if (!loaded)
+      return;
+
+    const selectedKeys = [...selected.value];
+    const stored = section()[keys.selection];
+
+    if (Array.isArray(stored) && stored.length === selectedKeys.length && stored.every(key => selected.value.has(key)))
+      return;
+
+    section()[keys.selection] = selectedKeys;
+    clearTimeout(saveSelectionTimeout);
+    saveSelectionTimeout = setTimeout(save, 500);
+  });
 
   async function activatePreset(presetName) {
     selectPresetItems(presetName);

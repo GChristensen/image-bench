@@ -5,6 +5,9 @@ export function useImageStoreState(kind) {
   const images = ref([]);
   const generationInProgress = ref(false);
   const generationProgress = ref(0);
+  // Completed/total images, when the strategy knows the number of images to generate
+  const generationCompleted = ref(0);
+  const generationTotal = ref(0);
   const applyPreset = ref(null);
 
   // Actions
@@ -21,15 +24,26 @@ export function useImageStoreState(kind) {
 
       addImage(e, images);
     } else if (e.type === 'GENERATION_PROGRESS') {
-      generationProgress.value = e.progress;
+      setProgress(e);
     } else if (e.type === 'GENERATION_FINISHED') {
       generationProgress.value = 100;
       generationInProgress.value = false;
     }
   }
 
+  function setProgress(e) {
+    generationProgress.value = e.progress;
+
+    if (e.total) {
+      generationCompleted.value = e.completed;
+      generationTotal.value = e.total;
+    }
+  }
+
   function startingGeneration() {
     generationProgress.value = 0;
+    generationCompleted.value = 0;
+    generationTotal.value = 0;
     generationInProgress.value = true;
   }
 
@@ -39,6 +53,8 @@ export function useImageStoreState(kind) {
 
   function resetProgress() {
     generationProgress.value = 0;
+    generationCompleted.value = 0;
+    generationTotal.value = 0;
     generationInProgress.value = false;
   }
 
@@ -48,6 +64,8 @@ export function useImageStoreState(kind) {
     images,
     generationInProgress,
     generationProgress,
+    generationCompleted,
+    generationTotal,
     applyPreset,
     
     // Actions
@@ -55,6 +73,7 @@ export function useImageStoreState(kind) {
     clear,
     startingGeneration,
     onSDEvent,
+    setProgress,
     resetProgress
   };
 }

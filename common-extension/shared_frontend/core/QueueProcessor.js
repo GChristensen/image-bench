@@ -127,6 +127,14 @@ export class QueueProcessor {
     }
 
     /**
+     * Number of completed items: progress is reported after an item is dispatched, so it is still in flight
+     * @returns {number}
+     */
+    getCompletedItems() {
+        return Math.max(0, this.totalItems - this.queue.length - 1);
+    }
+
+    /**
      * Report progress to message bus
      */
     reportProgress() {
@@ -135,10 +143,10 @@ export class QueueProcessor {
             return;
         }
 
-        const completed = this.totalItems - this.queue.length;
+        const completed = this.getCompletedItems();
         const progress = (completed / this.totalItems) * 100;
         console.log('[QueueProcessor] Progress:', completed, '/', this.totalItems, '=', progress.toFixed(1) + '%');
-        this.messageBus.publish('GENERATION_PROGRESS', { progress });
+        this.messageBus.publish('GENERATION_PROGRESS', { progress, completed, total: this.totalItems });
     }
 
     /**

@@ -44,6 +44,14 @@ const props = defineProps({
     type: Number,
     default: 0
   },
+  generationCompleted: {
+    type: Number,
+    default: 0
+  },
+  generationTotal: {
+    type: Number,
+    default: 0
+  },
   upscaleInProgress: {
     type: Boolean,
     default: false
@@ -115,9 +123,11 @@ defineExpose({generateImagesNumber});
     <!-- Generated images actions -->
     <template v-if="kind === KIND_GENERATED">
       <div class="toolbar-group">
-        <button v-if="!generationInProgress" class="btn primary" @click="$emit('batch-generate')"
-          ><AppIcon name="play" :size="13"/>Generate</button>
-        <button v-else class="btn stop" @click="$emit('stop-generation')"><AppIcon name="stop" :size="13"/>Stop</button>
+        <button class="btn swap" :class="generationInProgress ? 'stop' : 'primary'"
+                @click="$emit(generationInProgress ? 'stop-generation' : 'batch-generate')">
+          <span :class="{off: generationInProgress}"><AppIcon name="play" :size="13"/>Generate</span>
+          <span :class="{off: !generationInProgress}"><AppIcon name="stop" :size="13"/>Stop</span>
+        </button>
         <label class="toolbar-group-label">×<NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
         <button class="ib" :class="{on: generateForever}" :aria-pressed="generateForever"
                 :disabled="generationInProgress"
@@ -134,7 +144,8 @@ defineExpose({generateImagesNumber});
 
     <!-- Progress indicator -->
     <ProgressIndicator v-if="generationInProgress" :value="generateForever ? 100 : generationProgress || 0"
-                       :label="generateForever ? '∞' : ''"/>
+                       :label="generateForever ? '∞' : ''"
+                       :completed="generationCompleted" :total="generationTotal"/>
 
     <div class="toolbar-spacer"></div>
 

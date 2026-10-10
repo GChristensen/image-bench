@@ -162,8 +162,7 @@ function updateModelInfoButton() {
 }
 
 /**
- * Show the Civitai info of the selected checkpoint: in the popup's dialog if it is open,
- * otherwise open the Civitai page (or the search by name if the model is unknown to Civitai).
+ * Open the Civitai page of the selected checkpoint (or the search by name if the model is unknown to Civitai).
  * The button shows a spinner while the backend hashes the model and queries Civitai.
  */
 async function onShowModelInfo() {
@@ -171,7 +170,7 @@ async function onShowModelInfo() {
         return;
 
     // Opened before the request, so that it is not blocked as a popup without a user gesture
-    const civitaiWindow = popupManager.isOpen() ? null : window.open("about:blank", "_blank");
+    const civitaiWindow = window.open("about:blank", "_blank");
 
     const icon = modelInfoButton.innerHTML;
 
@@ -180,9 +179,6 @@ async function onShowModelInfo() {
 
     try {
         const info = await fetchCurrentModelInfo();
-
-        if (!civitaiWindow && sendPopupMessage({type: "SHOW_MODEL_INFO", kind: "checkpoint", info}))
-            return;
 
         if (info.found) {
             if (civitaiWindow)

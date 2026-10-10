@@ -145,7 +145,7 @@ export class BatchGenerationStrategy extends QueueProcessor {
         const completed = Math.min(this.savedImages, this.nImagesToGenerate);
         const progress = (completed / this.nImagesToGenerate) * 100;
 
-        this.messageBus.publish('GENERATION_PROGRESS', { progress });
+        this.messageBus.publish('GENERATION_PROGRESS', { progress, completed, total: this.nImagesToGenerate });
     }
 
     /**

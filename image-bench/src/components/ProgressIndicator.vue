@@ -2,7 +2,9 @@
 /**
  * Compact inline progress bar with a monospace label
  */
-defineProps({
+import {computed} from "vue";
+
+const props = defineProps({
   value: {
     type: Number,
     default: 0
@@ -10,14 +12,28 @@ defineProps({
   label: {
     type: String,
     default: ""
+  },
+  // Completed/total images, shown when the total is known
+  completed: {
+    type: Number,
+    default: 0
+  },
+  total: {
+    type: Number,
+    default: 0
   }
+});
+
+const defaultLabel = computed(() => {
+  const percent = `${Math.round(props.value)}%`;
+  return props.total > 0 ? `${props.completed}/${props.total} · ${percent}` : percent;
 });
 </script>
 
 <template>
   <div class="progress-indicator" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.round(value)">
     <div class="bar"><i :style="{width: `${Math.min(100, Math.max(0, value))}%`}"></i></div>
-    <span class="label">{{ label || `${Math.round(value)}%` }}</span>
+    <span class="label">{{ label || defaultLabel }}</span>
   </div>
 </template>
 

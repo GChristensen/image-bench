@@ -46,7 +46,7 @@ let explorePresets = {};
 const checkpoints = useExploreList({
   keyOf: model => model.model_name,
   section: () => explorePresets,
-  keys: {presets: "presets", lastPreset: "last_preset", params: "model_params"},
+  keys: {presets: "presets", lastPreset: "last_preset", params: "model_params", selection: "last_selection"},
   save: writePresets
 });
 
@@ -54,7 +54,7 @@ const loras = useExploreList({
   keyOf: lora => lora.name,
   labelOf: lora => lora.folder ? `${lora.folder}/${lora.name}` : lora.name,
   section: () => explorePresets.loras = explorePresets.loras || {},
-  keys: {presets: "presets", lastPreset: "last_preset", params: "params"},
+  keys: {presets: "presets", lastPreset: "last_preset", params: "params", selection: "last_selection"},
   save: writePresets
 });
 
@@ -103,13 +103,22 @@ const exploreSummary = computed(() => {
   if (nLoras)
     parts.push(`${nLoras} LoRA${nLoras === 1 ? "" : "s"}`);
 
-  parts.push(`${generateImagesNumber.value} image${generateImagesNumber.value == 1 ? "" : "s"} each`);
+  // The same variants as in ModelExplorationStrategy: each LoRA, plus a LoRA-free run unless disabled
+  const variants = nLoras + (nLoras && appConfigStore.exploreLoraFreeImages === false ? 0 : 1);
+  const total = models * variants * generateImagesNumber.value;
+
+  parts.push(`${generateImagesNumber.value} image${generateImagesNumber.value == 1 ? "" : "s"} each (${total})`);
   return parts.join(" · ");
 });
 
 const progressLabel = computed(() => {
+  const percent = `${Math.round(exploreImagesStore.generationProgress)}%`;
+
+  if (exploreImagesStore.generationTotal > 0)
+    return `${exploreImagesStore.generationCompleted}/${exploreImagesStore.generationTotal} · ${percent}`;
+
   const images = modelImages.value.reduce((n, model) => n + model.images.length, 0);
-  return `${Math.round(exploreImagesStore.generationProgress)}% · ${images} image${images === 1 ? "" : "s"}`;
+  return `${percent} · ${images} image${images === 1 ? "" : "s"}`;
 });
 
 const generatedImagesElement = ref();
@@ -205,6 +214,8 @@ function onExploreClick() {
       .map(lora => ({name: lora.name, prompt: createLoraPrompt(lora), weight: getLoraWeight(lora)}));
 
     exploreImagesStore.generationProgress = 0;
+    exploreImagesStore.generationCompleted = 0;
+    exploreImagesStore.generationTotal = 0;
     exploreImagesStore.generationInProgress = true;
     exploreImagesStore.clear();
     sendWebUIMessage({
@@ -410,9 +421,11 @@ function onKeydown(e) {
   <div class="wrapper">
     <div class="toolbar">
       <div class="toolbar-group">
-        <button v-if="!exploreImagesStore.generationInProgress" id="explore-selected" class="btn primary"
-                @click="onExploreClick"><AppIcon name="play" :size="13"/>Explore</button>
-        <button v-else id="explore-selected" class="btn stop" @click="onExploreClick"><AppIcon name="stop" :size="13"/>Stop</button>
+        <button id="explore-selected" class="btn swap"
+                :class="exploreImagesStore.generationInProgress ? 'stop' : 'primary'" @click="onExploreClick">
+          <span :class="{off: exploreImagesStore.generationInProgress}"><AppIcon name="play" :size="13"/>Explore</span>
+          <span :class="{off: !exploreImagesStore.generationInProgress}"><AppIcon name="stop" :size="13"/>Stop</span>
+        </button>
         <label class="toolbar-group-label" title="Images per model">×<NumberStepper v-model="generateImagesNumber" label="Images per model"/></label>
       </div>
       <ProgressIndicator v-if="exploreImagesStore.generationInProgress"

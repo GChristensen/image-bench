@@ -347,6 +347,8 @@ function isComponentTray(kind) {
       :is-showing-marked="isShowingMarked"
       :generation-in-progress="imageStore.generationInProgress"
       :generation-progress="imageStore.generationProgress"
+      :generation-completed="imageStore.generationCompleted"
+      :generation-total="imageStore.generationTotal"
       :upscale-in-progress="upscaledImageStore.generationInProgress"
       :apply-preset="imageStore.applyPreset"
       :presets="configPresetsStore.presets"

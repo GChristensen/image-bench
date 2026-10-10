@@ -34,7 +34,7 @@ export const useExploreImagesStore = defineStore('exploreImages', () => {
             model.images.push(imageData);
         }
         else if (e.type === "GENERATION_PROGRESS")
-            state.generationProgress.value = e.progress;
+            state.setProgress(e);
         else if (e.type === "GENERATION_FINISHED") {
             state.generationProgress.value = 100;
             state.generationInProgress.value = false;

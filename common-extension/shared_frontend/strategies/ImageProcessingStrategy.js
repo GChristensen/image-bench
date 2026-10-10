@@ -88,7 +88,8 @@ export class ImageProcessingStrategy extends QueueProcessor {
         if (this.totalItems === 0) return;
 
         const chunk = 1 / this.totalItems;
-        let progress = (this.totalItems - this.queue.length - 1) * chunk * 100;
+        const completed = this.getCompletedItems();
+        let progress = completed * chunk * 100;
 
         // Add current generation progress
         const currentProgress = this.uiOperations.getGenerationProgress();
@@ -96,7 +97,7 @@ export class ImageProcessingStrategy extends QueueProcessor {
             progress += currentProgress * chunk;
         }
 
-        this.messageBus.publish('GENERATION_PROGRESS', { progress });
+        this.messageBus.publish('GENERATION_PROGRESS', { progress, completed, total: this.totalItems });
     }
 
     /**

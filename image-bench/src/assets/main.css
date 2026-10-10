@@ -122,6 +122,24 @@ body {
   background: var(--ib-danger-hover);
 }
 
+/* Button toggling between two labels (e.g. Generate/Stop): both labels share one grid cell,
+   so the button keeps the width of the wider one; the inactive label is .off */
+.btn.swap {
+  display: inline-grid;
+  justify-items: center;
+}
+
+.btn.swap > span {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn.swap > .off {
+  visibility: hidden;
+}
+
 .btn.small {
   height: 22px;
   padding: 0 6px;
