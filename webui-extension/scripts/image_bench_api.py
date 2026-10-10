@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse, StreamingResponse
 
 import gradio as gr
+import modules.images as webui_images
 import modules.script_callbacks as script_callbacks
 import modules.sd_models as sd_models
 import modules.shared as shared
@@ -486,10 +487,11 @@ class ImageBenchApi():
         options = json.loads(content)
         output_folder = os.path.join(self.image_bench_dir, "controlnet", options["generation_id"])
 
-        # The gallery also contains the generated images; they carry generation parameters,
-        # while ControlNet detected maps do not
+        # The gallery also contains the generated images and grids; they carry generation parameters
+        # (or are saved to a grids directory), while ControlNet detected maps do not
         images = [image for image in options.get("images", [])
-                  if os.path.isfile(image) and not self.has_generation_parameters(image)]
+                  if os.path.isfile(image) and not self.is_grid_image(image)
+                  and not self.has_generation_parameters(image)]
 
         if images:
             os.makedirs(output_folder, exist_ok=True)
@@ -498,11 +500,31 @@ class ImageBenchApi():
 
     @staticmethod
     def has_generation_parameters(image_path):
+        # read_info_from_image also finds parameters stored in EXIF (JPEG/WebP grids and images)
         try:
             with Image.open(image_path) as image:
-                return "parameters" in image.info
+                geninfo, _ = webui_images.read_info_from_image(image)
+                return bool(geninfo)
         except Exception:
             return True
+
+    def is_grid_image(self, image_path):
+        root_dir = self.get_webui_root_dir()
+        grid_dirs = [os.path.join(root_dir, "outputs", "txt2img-grids"), os.path.join(root_dir, "outputs", "img2img-grids")]
+
+        for name in ["outdir_grids", "outdir_txt2img_grids", "outdir_img2img_grids"]:
+            value = getattr(shared.opts, name, None)
+            if value:
+                grid_dirs.append(value if os.path.isabs(value) else os.path.join(root_dir, value))
+
+        image_path = os.path.normcase(os.path.abspath(image_path))
+
+        for grid_dir in grid_dirs:
+            grid_dir = os.path.normcase(os.path.abspath(grid_dir))
+            if image_path.startswith(grid_dir + os.sep):
+                return True
+
+        return False
 
     async def get_controlnet_images(self, id: str):
         image_folder = os.path.join(self.image_bench_dir, "controlnet", id)
