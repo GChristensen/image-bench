@@ -16,6 +16,9 @@ import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
 import {dialog} from "@/dialogs/useDialog.js";
 
+// Messages too frequent to log
+const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS"];
+
 const route = useRoute();
 const router = useRouter();
 
@@ -51,6 +54,10 @@ onBeforeMount(async () => {
   await configPresetsStore.init();
 
   webUI.initializePrompts();
+
+  // The WebUI prompts are unlocked when the popup closes; lock them again if the user left them locked
+  if (isWebUI && sdWebUIStateStore.isPromptsLockRemembered())
+    webUI.lockWebUIPrompts(true);
 });
 
 async function onSDEvent(e) {
@@ -63,7 +70,9 @@ async function onSDEvent(e) {
   const state = window.getGenerationState();
   await switchTabAccordingToGenerationMode(e, state);
 
-  console.log(e);
+  // The Generate tab receives the WebUI state several times per second
+  if (!QUIET_EVENTS.includes(e.type))
+    console.log(e);
 
   // Notify child component if it has handlers
   try {
@@ -96,7 +105,8 @@ onUnmounted(() => {
 });
 
 async function switchTabAccordingToGenerationMode(e, state) {
-  if (e.type === "BEGIN_PROCESSING") {
+  // A single image generated from the Generate tab is shown there
+  if (e.type === "BEGIN_PROCESSING" && !e.single) {
     if (state === "BATCH_GENERATION" || state === "SEQUENTIAL_GENERATION") {
       if (route.fullPath !== "/generated-images") {
         await router.push("/generated-images");
@@ -114,6 +124,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
 <template>
   <div class="tab-container">
     <nav class="tabs">
+      <RouterLink v-if="isWebUI" to="/generate" class="tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
       <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab"><AppIcon name="concept" :size="14"/>Concept tray<span v-if="conceptTrayStore.images.length" class="count">{{ conceptTrayStore.images.length }}</span></RouterLink>

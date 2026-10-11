@@ -1,6 +1,6 @@
 import {defineStore} from "pinia";
 import {computed, reactive} from "vue";
-import {ACCENT_COLORS, DEFAULT_ACCENT_COLOR} from "@/consts.js";
+import {ACCENT_COLORS, DEFAULT_ACCENT_COLOR, DEFAULT_GENERATE_PRESET_IMAGES, DEFAULT_GENERATE_UI_PRESETS} from "@/consts.js";
 
 export const useAppConfigStore = defineStore('appConfig', () => {
     const _config = reactive({});
@@ -68,6 +68,33 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // The four UI presets shown as buttons in the Generate tab
+    const generateUiPresets = computed({
+        get() {
+            const presets = _config.generateUiPresets;
+            return Array.isArray(presets) && presets.length === DEFAULT_GENERATE_UI_PRESETS.length
+                ? presets
+                : DEFAULT_GENERATE_UI_PRESETS;
+        },
+        set(v) {
+            _config.generateUiPresets = v;
+            return persist();
+        }
+    });
+
+    // Number of images set by the preset count button of the Generate tab
+    const generatePresetImages = computed({
+        get() {
+            const images = parseInt(_config.generatePresetImages);
+            return images > 1 ? images : DEFAULT_GENERATE_PRESET_IMAGES;
+        },
+        set(v) {
+            const images = parseInt(v);
+            _config.generatePresetImages = images > 1 ? images : DEFAULT_GENERATE_PRESET_IMAGES;
+            return persist();
+        }
+    });
+
     const accentColor = computed({
         get() {
             return ACCENT_COLORS[_config.accentColor] ? _config.accentColor : DEFAULT_ACCENT_COLOR;
@@ -112,6 +139,8 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,
         persistGenerationParams,
+        generateUiPresets,
+        generatePresetImages,
         accentColor
     };
 });

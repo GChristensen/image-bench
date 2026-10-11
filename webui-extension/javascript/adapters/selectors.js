@@ -9,6 +9,8 @@ export const SELECTORS = {
     IMG2IMG_GENERATE: 'img2img_generate',
     TXT2IMG_INTERRUPT: 'txt2img_interrupt',
     IMG2IMG_INTERRUPT: 'img2img_interrupt',
+    TXT2IMG_SKIP: 'txt2img_skip',
+    IMG2IMG_SKIP: 'img2img_skip',
     // "Interrupting..." placeholder shown until an interrupted job ends (absent in older versions)
     TXT2IMG_INTERRUPTING: 'txt2img_interrupting',
     IMG2IMG_INTERRUPTING: 'img2img_interrupting',
@@ -72,6 +74,18 @@ export const SELECTORS = {
     // Hires fix
     HIRES_CHECKBOX: 'txt2img_hr-visible-checkbox',
     HIRES_SCALE: '#txt2img_hr_scale input',
+    HIRES_STEPS: '#txt2img_hires_steps input',
+    HIRES_UPSCALER: '#txt2img_hr_upscaler input',
+    HIRES_UPSCALER_ID: 'txt2img_hr_upscaler',
+
+    // txt2img extras mirrored in the Generate tab of the popup
+    TXT2IMG_PROMPT_ID: 'txt2img_prompt',
+    TXT2IMG_NEG_PROMPT_ID: 'txt2img_neg_prompt',
+    TXT2IMG_TOKEN_COUNTER: 'txt2img_token_counter',
+    TXT2IMG_NEG_TOKEN_COUNTER: 'txt2img_negative_token_counter',
+    TXT2IMG_REUSE_SEED: 'txt2img_reuse_seed',
+    TXT2IMG_REUSE_SUBSEED: 'txt2img_reuse_subseed',
+    TXT2IMG_LIVE_PREVIEW: '#txt2img_gallery .livePreview img',
 
     // Config presets
     CONFIG_PRESET_TXT2IMG_DROPDOWN: '#config_preset_txt2img_dropdown input',

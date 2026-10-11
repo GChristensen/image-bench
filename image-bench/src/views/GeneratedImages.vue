@@ -352,6 +352,7 @@ function isComponentTray(kind) {
       :upscale-in-progress="upscaledImageStore.generationInProgress"
       :apply-preset="imageStore.applyPreset"
       :presets="configPresetsStore.presets"
+      :preset-images="config.generatePresetImages"
       @save="onSaveClick"
       @open="onOpenClick"
       @select-all="onSelectAllClick"

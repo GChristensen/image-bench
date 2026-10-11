@@ -1,9 +1,24 @@
 <script setup>
 import {useAppConfigStore} from "@/stores/appConfig.js";
-import {ACCENT_COLORS} from "@/consts.js";
+import {computed} from "vue";
+import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
+import {ACCENT_COLORS, KNOWN_UI_PRESETS} from "@/consts.js";
 
 const appConfigStore = useAppConfigStore();
+const sdWebUIStateStore = useSDWebUIStateStore();
 const isWebUI = import.meta.env.MODE === 'webui';
+
+// The presets reported by WebUI once the Generate tab was shown, the known ones until then
+const uiPresetChoices = computed(() => {
+  const reported = sdWebUIStateStore.options.uiPresets;
+  return reported.length ? reported : KNOWN_UI_PRESETS;
+});
+
+function setGenerateUiPreset(index, value) {
+  const presets = [...appConfigStore.generateUiPresets];
+  presets[index] = value;
+  appConfigStore.generateUiPresets = presets;
+}
 </script>
 
 <template>
@@ -27,6 +42,21 @@ const isWebUI = import.meta.env.MODE === 'webui';
     <h3>Generation</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.automaticallyClearGeneratedImages"
     >Automatically clear generated images</label>
+    <template v-if="isWebUI">
+      <h3>Generate Tab</h3>
+      <div class="setting-label generate-setting">
+        <span>UI preset buttons</span>
+        <select v-for="(preset, index) in appConfigStore.generateUiPresets" :key="index" :value="preset"
+                :aria-label="`UI preset button ${index + 1}`" @change="e => setGenerateUiPreset(index, e.target.value)">
+          <option v-for="choice in [...new Set([preset, ...uiPresetChoices])]" :key="choice" :value="choice">{{ choice }}</option>
+        </select>
+      </div>
+      <label class="setting-label generate-setting">
+        <span>Images set by the count button</span>
+        <input type="number" min="2" :value="appConfigStore.generatePresetImages"
+               @change="e => appConfigStore.generatePresetImages = e.target.value">
+      </label>
+    </template>
     <h3>Model Exploration</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.exploreLoraFreeImages"
     >Generate LoRA-free images for each model when exploring LoRAs</label>
@@ -82,6 +112,21 @@ a:hover {
 
 .civitai-setting select {
   margin-left: 5px;
+}
+
+.generate-setting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.generate-setting span {
+  min-width: 200px;
+}
+
+.generate-setting input {
+  width: 80px;
 }
 
 .accent-setting {

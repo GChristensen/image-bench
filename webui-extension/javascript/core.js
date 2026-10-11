@@ -10,6 +10,7 @@ import {
     repositionConfigPresetsDropdown,
     setImageParams,
     setImageSeed,
+    skipGeneration,
     stopGeneration
 } from "./sdwebui.js";
 import {adapter} from "./adapters/adapter.js";
@@ -19,6 +20,7 @@ import {SELECTORS} from "./adapters/selectors.js";
 import {restoreUiParams, saveUiParams} from "./persistence.js";
 import {initControlNetPreviewButtons, initPhotoshopBridge} from "./photoshop.js";
 import {createHeaderButton} from "./utils_html.js";
+import {createWebUIMirror} from "./mirror.js";
 
 // Create popup manager instance (no WebSocket integration for WebUI)
 const popupManager = createPopupManager({
@@ -41,6 +43,9 @@ const strategies = createStrategies(uiOperations, sendPopupMessage);
 // Extract strategy instances
 const {exploration: explorationStrategy, batch: batchStrategy, processing: processingStrategy,
         varying: varyingStrategy} = strategies;
+
+// txt2img parameters mirrored in the Generate tab of the popup
+const mirror = createWebUIMirror(uiOperations, adapter, {sendMessage: sendPopupMessage, isOpen: popupManager.isOpen});
 
 let appConfig;
 let modelInfoButton;
@@ -234,6 +239,8 @@ async function onMessage(msg) {
         initializePopupPrompts(sendPopupMessage);
     else if (payload.type === "STOP_GENERATION")
         stopGeneration();
+    else if (payload.type === "SKIP_GENERATION")
+        skipGeneration();
     else if (payload.type === "EXPLORE_MODELS")
         await handleExploreModels(payload);
     else if (payload.type === "BATCH_GENERATE")
@@ -250,6 +257,16 @@ async function onMessage(msg) {
         await handleGenerateVaryingSteps(payload)
     else if (payload.type === "UPSCALE_VARYING_DENOISING")
         await handleUpscaleVaryingDenoising(payload)
+    else if (payload.type === "GENERATE_IMAGE")
+        await handleGenerateImage()
+    else if (payload.type === "MIRROR_SUBSCRIBE")
+        mirror.subscribe(payload.active)
+    else if (payload.type === "SET_WEBUI_PARAMS")
+        await mirror.applyParams(payload.params)
+    else if (payload.type === "REUSE_SEED")
+        mirror.reuseSeed(payload.which)
+    else if (payload.type === "LOCK_WEBUI_PROMPTS")
+        mirror.setPromptsLocked(payload.locked)
 }
 
 /**
@@ -297,13 +314,58 @@ async function handleBatchGenerate(options, config) {
     if (!checkReadyToGenerate())
         return;
 
+    if (options.txt2img)
+        await prepareTxt2Img();
+
     setGenerationState("BATCH_GENERATION");
     return await batchStrategy.process({...options, config});
+}
+
+/**
+ * Generate a single txt2img image from the Generate tab with the parameters as they are (seed included).
+ * BEGIN_PROCESSING is marked single, so that the popup stays on the tab and shows the live preview.
+ */
+async function handleGenerateImage() {
+    if (!checkReadyToGenerate())
+        return;
+
+    await mirror.settled();
+    await switchToTxt2Img();
+    setGenerationState("BATCH_GENERATION");
+    await uiOperations.setBatchCount(1);
+    await onGenerateStarted();
+    sendPopupMessage({type: "BEGIN_PROCESSING", single: true});
+
+    if (!await uiOperations.clickGenerate())
+        sendPopupMessage({type: "GENERATION_FINISHED"});
+}
+
+/**
+ * The Generate tab of the popup mirrors txt2img and may have just sent its parameters:
+ * apply them and show txt2img for the batch strategy
+ */
+async function prepareTxt2Img() {
+    await mirror.settled();
+    await switchToTxt2Img();
+}
+
+/**
+ * Show the txt2img tab, on which the strategies then detect and use the txt2img controls
+ */
+async function switchToTxt2Img() {
+    if (!uiOperations.isImg2ImgTab())
+        return;
+
+    window.switch_to_txt2img?.();
+    await uiOperations.sleep(200);
 }
 
 async function handleGenerateVariations(options, config) {
     if (!checkReadyToGenerate())
         return;
+
+    if (options.txt2img)
+        await prepareTxt2Img();
 
     setGenerationState("BATCH_GENERATION");
     return await batchStrategy.process({...options, config});

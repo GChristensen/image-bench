@@ -116,6 +116,14 @@ export async function stopGeneration() {
         interruptButton.click();
 }
 
+/**
+ * Skip the image being generated; WebUI continues with the next image of the batch
+ */
+export function skipGeneration() {
+    const skipButton = getElementById(adapter.isImg2ImgTab() ? SELECTORS.IMG2IMG_SKIP : SELECTORS.TXT2IMG_SKIP);
+    skipButton?.click();
+}
+
 export async function repositionConfigPresetsDropdown(kind) {
     const configPresetsDiv = getElementById(SELECTORS.CONFIG_PRESET_WRAPPER(kind));
 

@@ -25,3 +25,58 @@ export const ACCENT_COLORS = {
     blue: {name: "Light Blue", accent: "#38bdf8", hover: "#5ccbfa", ink: "#03141d", rgb: "56, 189, 248"},
 };
 export const DEFAULT_ACCENT_COLOR = "green";
+
+// Forge UI presets shown as buttons in the Generate tab by default (configurable in the settings);
+// the other presets of the WebUI are in the menu next to them
+export const DEFAULT_GENERATE_UI_PRESETS = ["xl", "anima", "klein", "flux"];
+
+// Forge and Forge Neo UI presets, offered in the settings before the WebUI reports its own
+export const KNOWN_UI_PRESETS = ["sd", "xl", "flux", "klein", "qwen", "lumina", "zit", "wan", "anima", "ernie", "pid",
+    "krea", "all"];
+
+// Shortened button labels of UI presets
+export const UI_PRESET_LABELS = {anima: "ani", lumina: "lum", ernie: "ern"};
+
+// Images generated when the preset count button of the Generate tab is used (configurable in the settings)
+export const DEFAULT_GENERATE_PRESET_IMAGES = 128;
+
+// Image sizes offered in the Generate tab, grouped by the models they are meant for;
+// note: the aspect ratio and/or a remark, ratios are flipped with the size in the portrait orientation
+export const SIZE_PRESET_GROUPS = [
+    {name: "General", sizes: [
+        {width: 864, height: 616, note: "A4"},
+        {width: 960, height: 544, note: "16:9"},
+        {width: 1536, height: 640, note: "12:5"},
+        {width: 1344, height: 768, note: "7:4"},
+        {width: 1216, height: 832, note: "19:13"},
+        {width: 1152, height: 896, note: "9:7"},
+        {width: 1024, height: 1024, note: ""},
+        {width: 1152, height: 864, note: "4:3"},
+        {width: 1248, height: 832, note: "3:2"},
+        {width: 1280, height: 720, note: "16:9"},
+        {width: 2048, height: 2048, note: "2K"}
+    ]},
+    {name: "Z-Image", sizes: [
+        {width: 1344, height: 576, note: "21:9"},
+        {width: 2048, height: 1152, note: "16:9 2K"}
+    ]},
+    {name: "Qwen-Image", sizes: [
+        {width: 1328, height: 1328, note: "1:1"},
+        {width: 1472, height: 1104, note: "4:3"},
+        {width: 1584, height: 1056, note: "3:2"},
+        {width: 1664, height: 928, note: "16:9"}
+    ]},
+    {name: "Qwen-Image-2.1", sizes: [
+        {width: 1536, height: 864, note: "16:9"},
+        {width: 2400, height: 1792, note: "4:3"},
+        {width: 2528, height: 1696, note: "3:2"},
+        {width: 2752, height: 1536, note: "16:9"}
+    ]},
+    {name: "Ideogram 4", sizes: [
+        {width: 1536, height: 1024, note: "3:2"}
+    ]},
+    {name: "WAN 2.2", sizes: [
+        {width: 1280, height: 704, note: "20:11 5B"},
+        {width: 832, height: 480, note: "16:9 480p"}
+    ]}
+];

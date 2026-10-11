@@ -2,6 +2,7 @@
 /**
  * Compact number input with -/+ buttons
  */
+import {computed} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 
 const model = defineModel({type: [Number, String], required: true});
@@ -11,22 +12,35 @@ const props = defineProps({
     type: Number,
     default: 1
   },
+  max: {
+    type: Number,
+    default: Infinity
+  },
+  // Increment of the buttons; its decimal places are kept, e.g. 0.01 -> 0.35
+  step: {
+    type: Number,
+    default: 1
+  },
   label: {
     type: String,
     default: ""
   }
 });
 
-function step(delta) {
-  model.value = Math.max(props.min, (parseInt(model.value) || 0) + delta);
+const decimals = computed(() => (String(props.step).split(".")[1] || "").length);
+
+function increment(direction) {
+  const value = (parseFloat(model.value) || 0) + direction * props.step;
+  model.value = Number(Math.min(props.max, Math.max(props.min, value)).toFixed(decimals.value));
 }
 </script>
 
 <template>
   <span class="stepper">
-    <button type="button" :aria-label="`Decrease ${label}`" @click="step(-1)"><AppIcon name="minus" :size="12"/></button>
-    <input type="number" :min="min" :aria-label="label" v-model="model">
-    <button type="button" :aria-label="`Increase ${label}`" @click="step(1)"><AppIcon name="plus" :size="12"/></button>
+    <button type="button" :aria-label="`Decrease ${label}`" @click="increment(-1)"><AppIcon name="minus" :size="12"/></button>
+    <input type="number" :min="min" :max="max === Infinity ? undefined : max" :step="step" :aria-label="label"
+           v-model="model">
+    <button type="button" :aria-label="`Increase ${label}`" @click="increment(1)"><AppIcon name="plus" :size="12"/></button>
   </span>
 </template>
 

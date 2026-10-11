@@ -17,6 +17,7 @@ import ExploreListPanel from "@/components/ExploreListPanel.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
+import {createLoraPrompt, getLoraDefaults, getLoraWeight} from "@/loras.js";
 
 const TAB_CHECKPOINTS = "checkpoints";
 const TAB_LORAS = "loras";
@@ -177,32 +178,6 @@ onBeforeMount(async () => {
   await loadPresets();
   await loadSamplers();
 });
-
-function getLoraDefaults(lora) {
-  return {
-    weight: lora?.preferredWeight ?? 1,
-    text: lora?.activationText ?? ""
-  };
-}
-
-function getLoraWeight(lora) {
-  return lora.params?.weight ?? getLoraDefaults(lora).weight;
-}
-
-/**
- * Build the prompt string of a LoRA: <lora:name:weight> followed by the extra text
- * The file name is used rather than the alias: aliases come from the ss_output_name metadata,
- * which trainers often leave generic (e.g. AI Toolkit's "aitk_lora"), and WebUI rejects shared aliases
- * ComfyUI loads the LoRA in the node marked ib:lora, so its prompt string is only the extra text
- */
-function createLoraPrompt(lora) {
-  const text = lora.params?.text ?? getLoraDefaults(lora).text;
-
-  if (import.meta.env.MODE === "comfy")
-    return text;
-
-  return `<lora:${lora.name}:${getLoraWeight(lora)}>` + (text ? ` ${text}` : "");
-}
 
 function onExploreClick() {
   if (exploreImagesStore.generationInProgress) {

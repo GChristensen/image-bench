@@ -3,6 +3,7 @@ import Explore from "@/views/Explore.vue";
 import GeneratedImages from "@/views/GeneratedImages.vue";
 import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
 import Settings from "@/views/Settings.vue";
+import Generate from "@/views/Generate.vue";
 
 const scrollBehavior = (to, from) => {
   if (to.name === from.name) {
@@ -29,7 +30,13 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/explore'
+      // The Generate tab is WebUI-only
+      redirect: import.meta.env.MODE === 'webui' ? '/generate' : '/explore'
+    },
+    {
+      path: '/generate',
+      name: 'generate',
+      component: Generate
     },
     {
       path: '/explore',

@@ -1,5 +1,5 @@
 <script setup>
-import {computed, ref} from 'vue';
+import {computed, ref, watch} from 'vue';
 import {KIND_GENERATED, KIND_UPSCALED} from "@/consts.js";
 import AppIcon from "@/components/AppIcon.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
@@ -67,6 +67,11 @@ const props = defineProps({
   showPresetSelector: {
     type: Boolean,
     default: false
+  },
+  // Number of images of the count button, also the initial number of images to generate
+  presetImages: {
+    type: Number,
+    default: 128
   }
 });
 
@@ -85,10 +90,20 @@ const emit = defineEmits([
 
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
 const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clear');
-const generateImagesNumber = ref(128);
+const generateImagesNumber = ref(props.presetImages);
 const isWebUI = import.meta.env.MODE === 'webui';
 const generateForever = computed(() => generateImagesNumber.value === -1);
 let finiteImagesNumber = generateImagesNumber.value;
+
+// The setting arrives after the toolbar is created, or is changed: follow it unless the number was edited
+watch(() => props.presetImages, (images, previous) => {
+  if (generateImagesNumber.value === previous)
+    generateImagesNumber.value = images;
+});
+
+function setPresetImages() {
+  generateImagesNumber.value = props.presetImages;
+}
 
 // -1 images: generate until stopped
 function toggleGenerateForever() {
@@ -129,12 +144,17 @@ defineExpose({generateImagesNumber});
           <span :class="{off: !generationInProgress}"><AppIcon name="stop" :size="13"/>Stop</span>
         </button>
         <label class="toolbar-group-label">×<NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
+        <button class="btn preset-count" :class="{on: generateImagesNumber === presetImages}"
+                :disabled="generationInProgress" :title="`Generate ${presetImages} images (set in the settings)`"
+                @click="setPresetImages">{{ presetImages }}</button>
         <button class="ib" :class="{on: generateForever}" :aria-pressed="generateForever"
                 :disabled="generationInProgress"
                 :title="generateForever ? 'Generating forever: click to restore the number of images' : 'Generate forever (until stopped)'"
                 aria-label="Generate forever" @click="toggleGenerateForever"><AppIcon name="infinity" :size="14"/></button>
       </div>
-      <button class="btn outline" :disabled="generationInProgress" @click="$emit('generate-variations')"
+      <button class="btn outline" :disabled="generationInProgress"
+              title="Generate variations of the current seed; the variation seed and strength are set for the batch and cleared afterwards automatically"
+              @click="$emit('generate-variations')"
         ><AppIcon name="shuffle" :size="14"/>Variations…</button>
     </template>
 
@@ -168,6 +188,18 @@ defineExpose({generateImagesNumber});
 <style scoped>
 .select-all {
   min-width: 112px;
+}
+
+.preset-count {
+  min-width: 26px;
+  padding: 0 6px;
+  font-family: var(--ib-mono);
+  font-size: 12px;
+}
+
+.preset-count.on {
+  background: var(--ib-accent-soft);
+  color: var(--ib-accent);
 }
 
 .preset-selector {
