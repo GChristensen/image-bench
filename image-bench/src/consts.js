@@ -24,7 +24,7 @@ export const ACCENT_COLORS = {
     green: {name: "Green", accent: "#2cbf8a", hover: "#3ad39b", ink: "#05150e", rgb: "44, 191, 138"},
     blue: {name: "Light Blue", accent: "#38bdf8", hover: "#5ccbfa", ink: "#03141d", rgb: "56, 189, 248"},
 };
-export const DEFAULT_ACCENT_COLOR = "green";
+export const DEFAULT_ACCENT_COLOR = "orange";
 
 // Forge UI presets shown as buttons in the Generate tab by default (configurable in the settings);
 // the other presets of the WebUI are in the menu next to them

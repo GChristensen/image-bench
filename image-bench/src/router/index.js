@@ -5,6 +5,7 @@ import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from 
 import Settings from "@/views/Settings.vue";
 import Generate from "@/views/Generate.vue";
 import ControlNet from "@/views/ControlNet.vue";
+import Manual from "@/views/Manual.vue";
 
 const scrollBehavior = (to, from) => {
   if (to.name === from.name) {
@@ -106,6 +107,11 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: Settings
+    },
+    {
+      path: '/manual',
+      name: 'manual',
+      component: Manual
     }
   ]
 })

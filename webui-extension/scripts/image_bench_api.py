@@ -29,6 +29,7 @@ from shared import civitai
 from shared import explore_export
 from shared import loras
 from shared import photoshop
+from shared import photoshop_plugin
 from shared import tray
 
 DEFAULT_CONFIG = """{
@@ -101,6 +102,9 @@ class ImageBenchApi():
         self.add_api_route("/photoshop/upload", self.photoshop_upload, methods=["POST"])
         self.add_api_route("/photoshop/send", self.photoshop_send, methods=["POST"])
         self.add_api_route("/photoshop/image", self.get_photoshop_image, methods=["GET"])
+        self.add_api_route("/photoshop/plugin", self.get_photoshop_plugin_status, methods=["GET"])
+        self.add_api_route("/photoshop/plugin.ccx", self.download_photoshop_plugin, methods=["GET"])
+        self.add_api_route("/photoshop/plugin/install", self.install_photoshop_plugin, methods=["POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/photoshop/websocket", self.handle_photoshop_websocket)
         self.app.add_websocket_route(self.BASE_PATH + "/photoshop/plugin-websocket",
                                      self.handle_photoshop_plugin_websocket)
@@ -302,6 +306,29 @@ class ImageBenchApi():
 
         content, media_type = image
         return Response(content, media_type=media_type, headers={"Cache-Control": "no-store"})
+
+    @staticmethod
+    def get_photoshop_plugin_status():
+        """Version of the supplied Photoshop plugin and of the one installed on the server computer"""
+        return JSONResponse(photoshop_plugin.get_status())
+
+    @staticmethod
+    def download_photoshop_plugin():
+        try:
+            name, content = photoshop_plugin.build_ccx()
+        except photoshop_plugin.PluginError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+
+        return Response(content, media_type="application/octet-stream",
+                        headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    @staticmethod
+    def install_photoshop_plugin():
+        """Install the Photoshop plugin on the server computer (see photoshop_plugin.install_or_elevate)"""
+        try:
+            return JSONResponse(photoshop_plugin.install_or_elevate())
+        except (photoshop_plugin.PluginError, OSError) as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
     def get_controlnet_choices(type: str = "All", all_models: bool = False):

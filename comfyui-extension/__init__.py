@@ -15,7 +15,7 @@ from server import PromptServer
 import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, explore_export, loras, persist, photoshop
+from shared import civitai, explore_export, loras, persist, photoshop, photoshop_plugin
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler, save_image_to_tray
 
@@ -673,6 +673,32 @@ async def get_photoshop_image(request):
 
     content, media_type = image
     return web.Response(body=content, content_type=media_type, headers={"Cache-Control": "no-store"})
+
+
+# Version of the supplied Photoshop plugin and of the one installed on the server computer
+@PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin")
+async def get_photoshop_plugin_status(request):
+    return web.json_response(photoshop_plugin.get_status())
+
+
+@PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin.ccx")
+async def download_photoshop_plugin(request):
+    try:
+        name, content = photoshop_plugin.build_ccx()
+    except photoshop_plugin.PluginError as e:
+        return web.Response(text=str(e), status=404)
+
+    return web.Response(body=content, content_type="application/octet-stream",
+                        headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
+# Install the Photoshop plugin on the server computer (see photoshop_plugin.install_or_elevate)
+@PromptServer.instance.routes.post(BASE_PATH + "/photoshop/plugin/install")
+async def install_photoshop_plugin(request):
+    try:
+        return web.json_response(photoshop_plugin.install_or_elevate())
+    except (photoshop_plugin.PluginError, OSError) as e:
+        return web.json_response({"detail": str(e)}, status=500)
 
 
 # Close all WebSocket connections

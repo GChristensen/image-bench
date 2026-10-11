@@ -57,6 +57,7 @@ const GLOBAL_PARAMS = ["uiPreset", "checkpoint"];
 const NEGATIVE_HEIGHT_KEY = "imageBench_generateNegativeHeight";
 const SIDE_TAB_KEY = "imageBench_generateSideTab";
 const PHOTOSHOP_TARGET_KEY = "imageBench_generatePhotoshopTarget";
+const PARAMS_COLLAPSED_KEY = "imageBench_generateParamsCollapsed";
 const NEGATIVE_HEIGHT = {min: 40, max: 320, default: 62, keyStep: 20};
 
 const sdWebUI = useSDWebUIStateStore();
@@ -505,6 +506,13 @@ async function onModelInfo() {
     window.open(info.searchUrl, "_blank");
 }
 
+// ---------- Collapsed parameter groups ----------
+
+// Collapsed, the prompts take the height of the parameter groups
+const paramsCollapsed = ref(storage.getItem(PARAMS_COLLAPSED_KEY) === "true");
+
+watch(paramsCollapsed, collapsed => storage.setItem(PARAMS_COLLAPSED_KEY, String(collapsed)));
+
 // ---------- Negative prompt height ----------
 
 const clampHeight = height => Math.round(Math.min(NEGATIVE_HEIGHT.max, Math.max(NEGATIVE_HEIGHT.min, height)));
@@ -679,7 +687,17 @@ function onGripKeydown(e) {
                        :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"/>
         </template>
 
-        <div class="groups">
+        <div v-if="paramsCollapsed" class="groups-collapsed">
+          <span class="label-small">Parameters</span>
+          <button type="button" class="params-toggle restore" title="Show the generation parameters"
+                  aria-label="Show the generation parameters" :aria-expanded="false"
+                  @click="paramsCollapsed = false"><AppIcon name="chevron" :size="14"/></button>
+        </div>
+
+        <div v-else class="groups">
+          <button type="button" class="params-toggle" title="Hide the generation parameters"
+                  aria-label="Hide the generation parameters" :aria-expanded="true"
+                  @click="paramsCollapsed = true"><AppIcon name="chevron" :size="14"/></button>
           <SamplingGroup :form="form" :samplers="samplerChoices" :schedulers="schedulerChoices"
                          :slider-kind="sdWebUI.sliderKind" :has="has" @set="setParam"/>
           <SeedGroup :form="form" :has="has" @set="setParam" @reuse="onReuseSeed"/>
@@ -906,9 +924,48 @@ function onGripKeydown(e) {
 }
 
 .groups {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+}
+
+/* At the right end of the group headers; the collapsed groups leave a header line with it */
+.groups > .params-toggle {
+  position: absolute;
+  top: -3px;
+  right: 0;
+}
+
+.groups-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--ib-border);
+}
+
+.params-toggle {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ib-text-2);
+  cursor: pointer;
+}
+
+.params-toggle:hover {
+  background: var(--ib-elev-2);
+  color: var(--ib-text);
+}
+
+.params-toggle.restore :deep(svg) {
+  transform: rotate(180deg);
 }
 
 .inline-field :deep(.stepper) {

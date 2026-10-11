@@ -61,11 +61,11 @@
   --ib-text: #e3e6ea;
   --ib-text-2: #a7aeb8;
   --ib-muted: #7d8590;
-  --ib-accent: #2cbf8a;
-  --ib-accent-hover: #3ad39b;
-  --ib-accent-ink: #05150e;
-  --ib-accent-soft: rgba(44, 191, 138, 0.13);
-  --ib-accent-border: rgba(44, 191, 138, 0.4);
+  --ib-accent: #f97316;
+  --ib-accent-hover: #fb8a3c;
+  --ib-accent-ink: #1a0b00;
+  --ib-accent-soft: rgba(249, 115, 22, 0.13);
+  --ib-accent-border: rgba(249, 115, 22, 0.4);
   --ib-danger: #e5484d;
   --ib-danger-hover: #f05a5e;
   --ib-danger-text: #ff7a7d;

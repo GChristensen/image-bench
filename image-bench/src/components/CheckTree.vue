@@ -180,7 +180,7 @@ const rows = computed(() => {
 }
 
 .item.focused {
-  background: rgba(44, 191, 138, 0.09);
+  background: color-mix(in srgb, var(--ib-accent) 9%, transparent);
   color: #fff;
   box-shadow: inset 2px 0 0 var(--ib-accent);
 }

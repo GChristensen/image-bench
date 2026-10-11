@@ -139,6 +139,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <span v-if="!hasOpener" class="chip window-warning" title="The opener SD WebUI window is closed or was reloaded"
         ><AppIcon name="alert" :size="13"/>Disconnected from WebUI</span>
       <RouterLink to="/settings" class="tab" ref="settingsTab"><AppIcon name="settings" :size="14"/>Settings</RouterLink>
+      <RouterLink to="/manual" class="tab"><AppIcon name="book" :size="14"/>Manual</RouterLink>
       <button class="ib flat actions-button" @click="showActionsModal = true"
               title="Maintenance actions (clear outputs, images)" aria-label="Maintenance actions"
         ><AppIcon name="more" :size="16"/></button>
