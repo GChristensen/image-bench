@@ -31,8 +31,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      // The Generate tab is WebUI-only
-      redirect: import.meta.env.MODE === 'webui' ? '/generate' : '/explore'
+      redirect: '/generate'
     },
     {
       path: '/generate',
@@ -40,7 +39,6 @@ const router = createRouter({
       component: Generate
     },
     {
-      // WebUI-only, like Generate
       path: '/controlnet',
       name: 'controlnet',
       component: ControlNet

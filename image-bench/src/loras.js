@@ -1,3 +1,5 @@
+import {isComfy} from "@/host.js";
+
 /**
  * LoRA prompt strings, shared by the Explore and Generate tabs
  * A LoRA is {name, preferredWeight?, activationText?} as returned by /image-bench/loras,
@@ -19,12 +21,15 @@ export function getLoraWeight(lora) {
  * Build the prompt string of a LoRA: <lora:name:weight> followed by the extra text
  * The file name is used rather than the alias: aliases come from the ss_output_name metadata,
  * which trainers often leave generic (e.g. AI Toolkit's "aitk_lora"), and WebUI rejects shared aliases
- * ComfyUI loads the LoRA in the node marked ib:lora, so its prompt string is only the extra text
+ * ComfyUI explores the LoRA in the node marked ib:lora, so its prompt string there is only the extra text;
+ * the Generate tab always writes the tag, which the Image Bench Prompt node applies in ComfyUI
+ * @param {Object} lora
+ * @param {{tag?: boolean}} options - tag: include the <lora:...> tag
  */
-export function createLoraPrompt(lora) {
+export function createLoraPrompt(lora, {tag = !isComfy} = {}) {
   const text = lora.params?.text ?? getLoraDefaults(lora).text;
 
-  if (import.meta.env.MODE === "comfy")
+  if (!tag)
     return text;
 
   return `<lora:${lora.name}:${getLoraWeight(lora)}>` + (text ? ` ${text}` : "");
@@ -57,7 +62,7 @@ export function hasLoraTag(prompt, name) {
  */
 export function addLoraToPrompt(prompt, lora) {
   const trimmed = (prompt || "").replace(/[\s,]+$/, "");
-  return (trimmed ? `${trimmed}, ` : "") + createLoraPrompt(lora);
+  return (trimmed ? `${trimmed}, ` : "") + createLoraPrompt(lora, {tag: true});
 }
 
 /**

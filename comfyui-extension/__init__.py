@@ -16,6 +16,7 @@ import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from shared import civitai, explore_export, loras, persist, photoshop
+from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler, save_image_to_tray
 
 # Tell ComfyUI to serve files from the js/ directory
@@ -215,45 +216,17 @@ async def update_explore_presets(request):
 # Models endpoint
 @PromptServer.instance.routes.get(BASE_PATH + "/models")
 async def get_models(request):
-    """Get list of available checkpoints from ComfyUI"""
-    try:
-        # Get ComfyUI's object_info to find available checkpoints
-        # ComfyUI typically runs on port 8188, but we can get the port from the PromptServer
-        async with aiohttp.ClientSession() as session:
-            # Use localhost since we're running inside ComfyUI
-            async with session.get('http://localhost:8188/object_info/CheckpointLoaderSimple') as resp:
-                if resp.status != 200:
-                    return web.Response(text="Failed to fetch model list from ComfyUI", status=500)
+    """Get list of available checkpoints, in the shape of the SD WebUI response"""
+    models_list = [{
+        "title": name,
+        "model_name": name,
+        "hash": "",  # ComfyUI does not hash the models
+        "sha256": "",
+        "filename": name,
+        "config": None
+    } for name in folder_paths.get_filename_list("checkpoints")]
 
-                data = await resp.json()
-
-                # Extract checkpoint names from the response
-                # ComfyUI's object_info structure: { "CheckpointLoaderSimple": { "input": { "required": { "ckpt_name": [array of names] } } } }
-                checkpoint_names = []
-                if 'CheckpointLoaderSimple' in data:
-                    node_info = data['CheckpointLoaderSimple']
-                    if 'input' in node_info and 'required' in node_info['input']:
-                        if 'ckpt_name' in node_info['input']['required']:
-                            checkpoint_names = node_info['input']['required']['ckpt_name'][0]
-
-                # Format to match SD WebUI's response structure
-                models_list = []
-                for name in checkpoint_names:
-                    models_list.append({
-                        "title": name,
-                        "model_name": name,
-                        "hash": "",  # ComfyUI doesn't provide hash in object_info
-                        "sha256": "",
-                        "filename": name,
-                        "config": None
-                    })
-
-                return web.json_response(models_list)
-    except Exception as e:
-        import traceback
-        print(f"Error in get_models: {e}")
-        print(traceback.format_exc())
-        return web.Response(text=str(e), status=500)
+    return web.json_response(models_list)
 
 
 # Samplers endpoint
@@ -609,15 +582,17 @@ async def photoshop_send(request):
 async def photoshop_upload(request):
     """
     Receive raw pixels of the document (kind=image) or its selection (kind=mask) from the Photoshop plugin,
-    save them to the input directory and notify the ComfyUI pages to load them into the node marked ib:img or ib:mask
+    save them to the input directory and notify the ComfyUI pages to load them into the node marked ib:img or ib:mask,
+    or into the ControlNet unit shown in the ControlNet tab (target cn_*)
     """
     kind = request.query.get("kind")
+    target = request.query.get("target", "input")
 
     if kind not in photoshop.PHOTOSHOP_IMAGE_KINDS:
         return web.Response(text=f"Unknown image kind: {kind}", status=400)
 
-    if request.query.get("target", "input") != "input":
-        return web.Response(text="ControlNet is supported only in SD WebUI", status=400)
+    if kind not in photoshop.PHOTOSHOP_TARGET_KINDS.get(target, ()):
+        return web.Response(text=f"Unknown target {target} of {kind}", status=400)
 
     try:
         width, height, components = (int(request.query.get(name, "")) for name in ("width", "height", "components"))
@@ -626,15 +601,66 @@ async def photoshop_upload(request):
     except ValueError as e:
         return web.Response(text=str(e), status=400)
 
-    filename = photoshop.COMFYUI_INPUT_FILES[kind]
+    filename = photoshop.COMFYUI_INPUT_FILES[target][kind]
 
     with open(os.path.join(folder_paths.get_input_directory(), filename), "wb") as file:
         file.write(png)
 
     server = PromptServer.instance
-    await server.send("image-bench.photoshop", {"kind": kind, "filename": filename})
+    await server.send("image-bench.photoshop", {"kind": kind, "filename": filename, "target": target})
 
     return web.json_response({"clients": len(server.sockets)})
+
+
+# Mask uploaded from the Generate or ControlNet tab
+@PromptServer.instance.routes.post(BASE_PATH + "/input_mask")
+async def upload_input_mask(request):
+    """
+    Save a mask image (white or transparent where masked) to the input directory as an RGBA image
+    readable as a mask by any ComfyUI loader
+    """
+    name = os.path.basename(request.query.get("name", ""))
+
+    if not name.lower().endswith(".png"):
+        return web.Response(text="The mask name must be a .png file name", status=400)
+
+    try:
+        png = photoshop.image_file_to_mask_png(await request.read())
+    except Exception as e:
+        return web.Response(text=f"Unable to read the mask: {e}", status=400)
+
+    with open(os.path.join(folder_paths.get_input_directory(), name), "wb") as file:
+        file.write(png)
+
+    return web.json_response({"name": name})
+
+
+# Preprocessors and models of the ControlNet tab
+@PromptServer.instance.routes.get(BASE_PATH + "/controlnet/choices")
+async def get_controlnet_choices(request):
+    """
+    ControlNet preprocessors (of AIO_Preprocessor, comfyui_controlnet_aux, if it is installed) and models.
+    ComfyUI has no control types, so all of them are listed
+    """
+    import nodes
+
+    preprocessors = []
+    aio = nodes.NODE_CLASS_MAPPINGS.get("AIO_Preprocessor")
+
+    if aio:
+        try:
+            inputs = aio.INPUT_TYPES()
+            spec = inputs.get("optional", {}).get("preprocessor") or inputs.get("required", {}).get("preprocessor")
+            choices = spec[0] if spec else []
+            preprocessors = list(choices) if isinstance(choices, (list, tuple)) else []
+        except Exception as e:
+            print(f"[Image Bench] Unable to read the AIO_Preprocessor choices: {e}")
+
+    return web.json_response({
+        "preprocessors": preprocessors,
+        "models": folder_paths.get_filename_list("controlnet"),
+        "aux": aio is not None
+    })
 
 
 # Image downloaded by the Photoshop plugin
@@ -693,11 +719,7 @@ def on_prompt_execution(prompt_id, outputs, status):
         }))
 
 
-# Register extension metadata
-NODE_CLASS_MAPPINGS = {}
-NODE_DISPLAY_NAME_MAPPINGS = {}
-
-# Extension metadata
+# Extension metadata (the node mappings come from image_bench_nodes)
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
 
 print("✓ Image Bench ComfyUI Extension loaded")

@@ -1,10 +1,11 @@
 <script setup>
 /**
- * ControlNet tab (SD WebUI): a unit of Forge "ControlNet Integrated" in the txt2img or img2img tab, mirrored both ways
- * with WebUI like the Generate tab. The host page polls the unit while the tab is shown (CONTROLNET_STATE,
- * CONTROLNET_IMAGES) and applies the edits made here (SET_CONTROLNET_PARAMS). The unit shown here also receives
- * the images sent to ControlNet from Photoshop.
- * In img2img a unit uses the img2img image unless it has an independent image, which an image set here turns on.
+ * ControlNet tab: a unit of Forge "ControlNet Integrated" in the txt2img or img2img tab of WebUI, or a ControlNet
+ * apply node marked ib:cn:<unit> in ComfyUI, mirrored both ways like the Generate tab. The host page polls the unit
+ * while the tab is shown (CONTROLNET_STATE, CONTROLNET_IMAGES) and applies the edits made here (SET_CONTROLNET_PARAMS).
+ * The unit shown here also receives the images sent to ControlNet from Photoshop.
+ * In WebUI img2img a unit uses the img2img image unless it has an independent image, which an image set here turns on.
+ * ComfyUI reports which parts the workflow has (features, see src/host.js).
  */
 import {computed, onActivated, onDeactivated, reactive, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
@@ -12,6 +13,8 @@ import ControlNetImagePane from "@/components/ControlNetImagePane.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import {useControlNetStore} from "@/stores/controlnet.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
+import {useFeatures} from "@/composables/useFeatures.js";
+import {HOST_NAME, isComfy} from "@/host.js";
 import {copyImageToClipboard, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {sendUrlToPhotoshop} from "@/photoshop.js";
 import {dialog} from "@/dialogs/useDialog.js";
@@ -32,6 +35,9 @@ const TABS = [
 
 const cn = useControlNetStore();
 const webUI = useWebUIBridge();
+const has = useFeatures("controlnet", () => cn.features);
+
+const NOT_FOUND_TEXT = isComfy ? 'No ControlNet node is marked "ib:cn"' : "ControlNet is not found in WebUI";
 
 // ---------- Unit and tab ----------
 
@@ -174,11 +180,12 @@ async function loadChoices(type) {
   }
 }
 
+// Without control types (ComfyUI) all preprocessors and models are listed
 watch(() => form.controlType, (type, oldType) => {
   if (oldType)
     allModels.value = false;
 
-  if (type)
+  if (type || !has("controlType"))
     loadChoices(type);
 }, {immediate: true});
 
@@ -287,7 +294,7 @@ function onSavePreview() {
 <template>
   <div class="view-container controlnet">
     <div class="toolbar">
-      <button class="btn primary" :disabled="!connected || !ownImage || !images.image || cn.running"
+      <button v-if="has('preprocessor')" class="btn primary" :disabled="!connected || !ownImage || !images.image || cn.running"
               :title="ownImage ? 'Run the preprocessor on the control image' : 'The unit uses the img2img image'"
               @click="onRun">
         <span v-if="cn.running" class="spinner"></span><AppIcon v-else name="zap" :size="13"/>Run preprocessor</button>
@@ -304,10 +311,10 @@ function onSavePreview() {
 
       <div class="toolbar-spacer"></div>
 
-      <span v-if="cn.available === false" class="chip warn">ControlNet is not found in WebUI</span>
-      <span v-else-if="!connected" class="chip">Waiting for WebUI…</span>
-      <span class="toolbar-divider"></span>
-      <div class="seg tabs" role="radiogroup" aria-label="Generation tab">
+      <span v-if="cn.available === false" class="chip warn">{{ NOT_FOUND_TEXT }}</span>
+      <span v-else-if="!connected" class="chip">Waiting for {{ HOST_NAME }}…</span>
+      <span v-if="has('tabSwitch')" class="toolbar-divider"></span>
+      <div v-if="has('tabSwitch')" class="seg tabs" role="radiogroup" aria-label="Generation tab">
         <button v-for="item in TABS" :key="item.value" type="button" role="radio" :class="{on: tab === item.value}"
                 :aria-checked="tab === item.value" :title="`ControlNet of the ${item.label} tab`"
                 @click="onTabSelect(item.value)">{{ item.label }}</button>
@@ -315,7 +322,7 @@ function onSavePreview() {
     </div>
 
     <div class="controlnet-grid">
-      <div class="images">
+      <div class="images" :class="{single: !has('preprocessor')}">
         <!-- Control image or its mask -->
         <ControlNetImagePane :image="shownSourceView === 'mask' ? images.mask : images.image"
                              :dark="shownSourceView === 'mask'" :droppable="connected"
@@ -338,7 +345,8 @@ function onSavePreview() {
                     :title="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
                     :aria-label="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
                     @click="onUpload(shownSourceView)"><AppIcon name="upload" :size="14"/></button>
-            <button class="ib flat" :disabled="!connected || !(shownSourceView === 'mask' ? images.mask : images.image)"
+            <button v-if="shownSourceView === 'mask' || has('clearImage')" class="ib flat"
+                    :disabled="!connected || !(shownSourceView === 'mask' ? images.mask : images.image)"
                     title="Clear" :aria-label="shownSourceView === 'mask' ? 'Clear the mask' : 'Clear the control image'"
                     @click="webUI.controlNetAction(unit, shownSourceView === 'mask' ? 'clearMask' : 'clearImage')"
               ><AppIcon name="close" :size="14"/></button>
@@ -346,12 +354,12 @@ function onSavePreview() {
           <button v-if="shownSourceView === 'image' && form.useMask && images.mask" type="button" class="pip"
                   title="Mask: ControlNet applies where it is white" aria-label="Show the mask"
                   @click="sourceView = 'mask'"><img :src="images.mask" alt=""></button>
-          <button v-if="!ownImage && connected" type="button" class="btn outline independent"
+          <button v-if="!ownImage && connected && has('independent')" type="button" class="btn outline independent"
                   @click="setParam('independent', true)">Use an independent image</button>
         </ControlNetImagePane>
 
         <!-- Preprocessor preview -->
-        <ControlNetImagePane :image="images.preview" dark
+        <ControlNetImagePane v-if="has('preprocessor')" :image="images.preview" dark
                              :empty-text="cn.running ? 'Preprocessing…' : 'Run the preprocessor to see its result'">
           <template #label>
             <span class="label-small">Preview</span>
@@ -375,19 +383,19 @@ function onSavePreview() {
         <div class="checks">
           <label class="check enable"><input type="checkbox" :checked="!!form.enabled"
                                              @change="e => setParam('enabled', e.target.checked)">Enable</label>
-          <label class="check"><input type="checkbox" :checked="!!form.pixelPerfect"
+          <label v-if="has('pixelPerfect')" class="check"><input type="checkbox" :checked="!!form.pixelPerfect"
                                       @change="e => setParam('pixelPerfect', e.target.checked)">Pixel Perfect</label>
-          <label class="check" :class="{off: !ownImage}"><input type="checkbox" :checked="!!form.allowPreview"
+          <label v-if="has('allowPreview')" class="check" :class="{off: !ownImage}"><input type="checkbox" :checked="!!form.allowPreview"
                  :disabled="!ownImage" @change="e => setParam('allowPreview', e.target.checked)">Allow Preview</label>
-          <label class="check" :class="{off: !ownImage}"><input type="checkbox" :checked="!!form.useMask"
+          <label v-if="has('mask')" class="check" :class="{off: !ownImage}"><input type="checkbox" :checked="!!form.useMask"
                  :disabled="!ownImage" @change="e => setParam('useMask', e.target.checked)">Use Mask</label>
-          <label v-if="tab === 'img2img'" class="check wide"
+          <label v-if="tab === 'img2img' && has('independent')" class="check wide"
                  title="The unit uses its own image instead of the img2img image"><input type="checkbox"
                  :checked="!!form.independent" @change="e => setParam('independent', e.target.checked)"
                  >Upload independent control image</label>
         </div>
 
-        <label class="field">Control type
+        <label v-if="has('controlType')" class="field">Control type
           <span class="select-wrap">
             <select :value="form.controlType" @change="e => setParam('controlType', e.target.value)">
               <option v-for="name in withCurrent(cn.options.controlType, form.controlType)" :key="name"
@@ -396,7 +404,7 @@ function onSavePreview() {
             <AppIcon name="chevron" :size="14"/>
           </span>
         </label>
-        <label class="field">Preprocessor
+        <label v-if="has('preprocessor')" class="field">Preprocessor
           <span class="select-wrap">
             <select :value="form.preprocessor" @change="e => setParam('preprocessor', e.target.value)">
               <option v-for="name in withCurrent(choices.preprocessors, form.preprocessor)" :key="name"
@@ -434,15 +442,15 @@ function onSavePreview() {
                          label="Ending control step" @update:model-value="v => setGuidance('guidanceEnd', v)"/>
         </label>
 
-        <div class="group-header label-small">Mode</div>
-        <div class="field">Control mode
+        <div v-if="has('controlMode') || has('resizeMode')" class="group-header label-small">Mode</div>
+        <div v-if="has('controlMode')" class="field">Control mode
           <div class="seg control-mode" role="radiogroup" aria-label="Control mode">
             <button v-for="name in cn.options.controlMode" :key="name" type="button" role="radio"
                     :class="{on: form.controlMode === name}" :aria-checked="form.controlMode === name"
                     @click="setParam('controlMode', name)">{{ name }}</button>
           </div>
         </div>
-        <label class="field" :class="{off: !ownImage}">Resize mode
+        <label v-if="has('resizeMode')" class="field" :class="{off: !ownImage}">Resize mode
           <span class="select-wrap">
             <select :value="form.resizeMode" :disabled="!ownImage" @change="e => setParam('resizeMode', e.target.value)">
               <option v-for="name in withCurrent(cn.options.resizeMode, form.resizeMode)" :key="name"
@@ -471,6 +479,11 @@ function onSavePreview() {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   min-height: 0;
+}
+
+/* Without a preprocessor there is no preview pane */
+.images.single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .controls {

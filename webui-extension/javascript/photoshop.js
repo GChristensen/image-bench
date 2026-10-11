@@ -4,6 +4,7 @@
  */
 
 import {createWebSocket} from "./shared/websocket.js";
+import {sendImageToPhotoshop} from "./shared/photoshop-send.js";
 
 const ENDPOINT = '/image-bench/photoshop/websocket';
 const RECONNECT_DELAY = 5000;
@@ -87,35 +88,6 @@ async function sendControlNetPreview(link, showAlert) {
 
     if (error)
         showAlert(error);
-}
-
-/**
- * Send an image to the Photoshop plugin, which places it as a layer of the active document
- * @param {string} src - Image URL (also a data URL)
- * @param {string} name - Name of the layer or document
- * @param {boolean} newDocument - Open the image as a new document even if there is an active one
- * @returns {Promise<string|null>} Error message, null on success
- */
-export async function sendImageToPhotoshop(src, name, newDocument = false) {
-    try {
-        const blob = await (await fetch(src)).blob();
-        const response = await fetch(`/image-bench/photoshop/send?name=${encodeURIComponent(name)}`
-            + `&new_document=${newDocument}`, {
-            method: "POST",
-            headers: {"Content-Type": blob.type},
-            body: blob
-        });
-
-        if (!response.ok)
-            return `Unable to send the image: ${await response.text()}`;
-
-        if (!(await response.json()).clients)
-            return "Photoshop is not connected. Please open the Image Bench panel in Photoshop.";
-
-        return null;
-    } catch (error) {
-        return `Unable to send the image: ${error.message}`;
-    }
 }
 
 async function onPhotoshopMessage(onImage, e) {

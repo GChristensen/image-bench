@@ -1,0 +1,963 @@
+{
+  "id": "8bfabaa4-9f0d-5306-8403-cbf9516e5995",
+  "revision": 0,
+  "last_node_id": 18,
+  "last_link_id": 21,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        380,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "flux-2-klein-9b-fp8.safetensors",
+            "url": "https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-fp8/resolve/main/flux-2-klein-9b-fp8.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "flux-2-klein-9b-fp8.safetensors",
+        "default"
+      ],
+      "title": "Load Diffusion Model ib:cp"
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        0,
+        130
+      ],
+      "size": [
+        380,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen_3_8b_fp8mixed.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/flux2-klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen_3_8b_fp8mixed.safetensors",
+        "flux2",
+        "default"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        0,
+        290
+      ],
+      "size": [
+        380,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 0,
+          "links": [
+            15
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "full_encoder_small_decoder.safetensors",
+            "url": "https://huggingface.co/black-forest-labs/FLUX.2-small-decoder/resolve/main/full_encoder_small_decoder.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "full_encoder_small_decoder.safetensors"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        0,
+        400
+      ],
+      "size": [
+        380,
+        82
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "flux2_lora.safetensors",
+        1
+      ],
+      "title": "Load LoRA ib:lora"
+    },
+    {
+      "id": 5,
+      "type": "ImageBenchPrompt",
+      "pos": [
+        440,
+        0
+      ],
+      "size": [
+        460,
+        260
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "shape": 7,
+          "type": "CLIP",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            17
+          ]
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            4
+          ]
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageBenchPrompt"
+      },
+      "widgets_values": [
+        "A red vintage bicycle leaning against a pastel blue wall in a quiet Mediterranean alley at golden hour. Long soft shadows stretch across worn cobblestones, a terracotta pot of geraniums sits on the windowsill above, and warm sunlight grazes the wall from the right. Eye-level travel photograph, natural light, crisp detail, gentle film grain."
+      ],
+      "title": "Prompt ib:pp"
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        960,
+        0
+      ],
+      "size": [
+        300,
+        54
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 4
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            16,
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "title": "CLIP Text Encode (Prompt)"
+    },
+    {
+      "id": 7,
+      "type": "RandomNoise",
+      "pos": [
+        960,
+        430
+      ],
+      "size": [
+        300,
+        82
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "NOISE",
+          "name": "NOISE",
+          "type": "NOISE",
+          "links": [
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RandomNoise"
+      },
+      "widgets_values": [
+        380562001475786,
+        "randomize"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "KSamplerSelect",
+      "pos": [
+        960,
+        560
+      ],
+      "size": [
+        300,
+        58
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "SAMPLER",
+          "name": "SAMPLER",
+          "type": "SAMPLER",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSamplerSelect"
+      },
+      "widgets_values": [
+        "euler"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "PrimitiveInt",
+      "pos": [
+        440,
+        330
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "INT",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            6,
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        1024,
+        "fixed"
+      ],
+      "title": "Width"
+    },
+    {
+      "id": 10,
+      "type": "PrimitiveInt",
+      "pos": [
+        440,
+        450
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "INT",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            8,
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        1024,
+        "fixed"
+      ],
+      "title": "Height"
+    },
+    {
+      "id": 11,
+      "type": "Flux2Scheduler",
+      "pos": [
+        960,
+        660
+      ],
+      "size": [
+        300,
+        106
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 6
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "SIGMAS",
+          "name": "SIGMAS",
+          "type": "SIGMAS",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Flux2Scheduler"
+      },
+      "widgets_values": [
+        4,
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": 12,
+      "type": "EmptyFlux2LatentImage",
+      "pos": [
+        960,
+        810
+      ],
+      "size": [
+        300,
+        106
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 7
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyFlux2LatentImage"
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        1
+      ]
+    },
+    {
+      "id": 13,
+      "type": "SamplerCustomAdvanced",
+      "pos": [
+        1660,
+        0
+      ],
+      "size": [
+        300,
+        330
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "noise",
+          "name": "noise",
+          "type": "NOISE",
+          "link": 10
+        },
+        {
+          "localized_name": "guider",
+          "name": "guider",
+          "type": "GUIDER",
+          "link": 20
+        },
+        {
+          "localized_name": "sampler",
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 11
+        },
+        {
+          "localized_name": "sigmas",
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 12
+        },
+        {
+          "localized_name": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            14
+          ]
+        },
+        {
+          "localized_name": "denoised_output",
+          "name": "denoised_output",
+          "type": "LATENT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SamplerCustomAdvanced"
+      },
+      "widgets_values": [],
+      "title": "Sampler ib:smp"
+    },
+    {
+      "id": 14,
+      "type": "VAEDecode",
+      "pos": [
+        2010,
+        0
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 14
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            21
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 15,
+      "type": "ConditioningZeroOut",
+      "pos": [
+        1310,
+        120
+      ],
+      "size": [
+        220,
+        26
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "conditioning",
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            19
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ConditioningZeroOut"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 16,
+      "type": "CFGGuider",
+      "pos": [
+        1310,
+        220
+      ],
+      "size": [
+        300,
+        98
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 17
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 18
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 19
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "GUIDER",
+          "name": "GUIDER",
+          "type": "GUIDER",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CFGGuider"
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 17,
+      "type": "SaveImage",
+      "pos": [
+        2270,
+        0
+      ],
+      "size": [
+        520,
+        560
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 21
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "Flux2_klein_9b"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "MarkdownNote",
+      "pos": [
+        -620,
+        0
+      ],
+      "size": [
+        580,
+        940
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "## About FLUX.2 [klein] 9B\n\n[FLUX.2 [klein]](https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-fp8) (Black Forest Labs, 9B, Qwen3 8B text\nencoder): a fast step-distilled text-to-image and editing model. Write full descriptive sentences.\n\n**Settings (distilled, this workflow)**: 4 steps, CFG 1, euler, `Flux2Scheduler`, 1024×1024. The negative conditioning\nis zeroed: at CFG 1 a negative prompt has no effect, so the Generate tab shows none. Raising CFG burns the image.\n\n**Base model** (`flux-2-klein-base-9b-fp8`, undistilled, for LoRA training or true CFG): pick it in\n**Load Diffusion Model**, set steps to 20–30 (Generate tab) and CFG to about 4 (CFGGuider). For a negative prompt,\nreplace **ConditioningZeroOut** with a **CLIP Text Encode** titled `ib:np`.\n\n**Width** and **Height** feed both the latent and the scheduler, whose shift depends on the image size.\n\n## Image Bench\n\nThe node titles carry Image Bench markers:\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list |\n| `ib:pp` | Image Bench Prompt | prompt and LoRA list |\n| `ib:smp` | SamplerCustomAdvanced | seed (RandomNoise), steps (Flux2Scheduler), sampling method (KSamplerSelect), CFG scale (CFGGuider), size (Width / Height) |\n| `ib:lora` | Load LoRA (bypassed) | — (LoRA exploration only) |\n\n**LoRAs**: check them in the LoRA list of the Generate tab, or type `<lora:name:weight>` into the prompt.\nThe **Image Bench Prompt** node applies them and passes the prompt on without the tags.\n**Load LoRA** stays bypassed; LoRA exploration enables it for its runs and bypasses it again afterwards.\n\n## Model Links\n\n**diffusion_models**\n\n- [flux-2-klein-9b-fp8.safetensors](https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-fp8/resolve/main/flux-2-klein-9b-fp8.safetensors) (distilled)\n- [flux-2-klein-base-9b-fp8.safetensors](https://huggingface.co/black-forest-labs/FLUX.2-klein-base-9b-fp8/resolve/main/flux-2-klein-base-9b-fp8.safetensors) (base)\n\n**text_encoders**\n\n- [qwen_3_8b_fp8mixed.safetensors](https://huggingface.co/Comfy-Org/flux2-klein-9B/resolve/main/split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors)\n\n**vae**\n\n- [full_encoder_small_decoder.safetensors](https://huggingface.co/black-forest-labs/FLUX.2-small-decoder/resolve/main/full_encoder_small_decoder.safetensors)\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n└── 📂 models/\n    ├── 📂 diffusion_models/\n    │   ├── flux-2-klein-9b-fp8.safetensors\n    │   └── flux-2-klein-base-9b-fp8.safetensors\n    ├── 📂 text_encoders/\n    │   └── qwen_3_8b_fp8mixed.safetensors\n    └── 📂 vae/\n        └── full_encoder_small_decoder.safetensors\n```\n\nFLUX.2 [klein] 9B is released under the FLUX Non-Commercial License.\n"
+      ],
+      "title": "Note: FLUX.2 [klein] 9B",
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      4,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      4,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      3,
+      2,
+      0,
+      5,
+      1,
+      "CLIP"
+    ],
+    [
+      4,
+      5,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      5,
+      5,
+      2,
+      6,
+      1,
+      "STRING"
+    ],
+    [
+      6,
+      9,
+      0,
+      11,
+      0,
+      "INT"
+    ],
+    [
+      7,
+      9,
+      0,
+      12,
+      0,
+      "INT"
+    ],
+    [
+      8,
+      10,
+      0,
+      11,
+      1,
+      "INT"
+    ],
+    [
+      9,
+      10,
+      0,
+      12,
+      1,
+      "INT"
+    ],
+    [
+      10,
+      7,
+      0,
+      13,
+      0,
+      "NOISE"
+    ],
+    [
+      11,
+      8,
+      0,
+      13,
+      2,
+      "SAMPLER"
+    ],
+    [
+      12,
+      11,
+      0,
+      13,
+      3,
+      "SIGMAS"
+    ],
+    [
+      13,
+      12,
+      0,
+      13,
+      4,
+      "LATENT"
+    ],
+    [
+      14,
+      13,
+      0,
+      14,
+      0,
+      "LATENT"
+    ],
+    [
+      15,
+      3,
+      0,
+      14,
+      1,
+      "VAE"
+    ],
+    [
+      16,
+      6,
+      0,
+      15,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      17,
+      5,
+      0,
+      16,
+      0,
+      "MODEL"
+    ],
+    [
+      18,
+      6,
+      0,
+      16,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      19,
+      15,
+      0,
+      16,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      20,
+      16,
+      0,
+      13,
+      1,
+      "GUIDER"
+    ],
+    [
+      21,
+      14,
+      0,
+      17,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.75,
+      "offset": [
+        560,
+        120
+      ]
+    }
+  },
+  "version": 0.4
+}

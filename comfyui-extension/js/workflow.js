@@ -43,7 +43,9 @@ export const MARKER_ROLES = {
     negativePrompt: {marker: 'np', configKey: 'negative_prompt', requireWidget: true},
     lora: {marker: 'lora', configKey: 'lora', requireWidget: true},
     image: {marker: 'img', configKey: 'image', requireWidget: true},
-    mask: {marker: 'mask', configKey: 'mask', requireWidget: true}
+    mask: {marker: 'mask', configKey: 'mask', requireWidget: true},
+    controlnet: {marker: 'cn', configKey: 'controlnet', requireWidget: true},
+    reference: {marker: 'ref', configKey: 'reference', requireWidget: true}
 };
 
 /**
@@ -84,6 +86,17 @@ export function parseNodeMarker(title) {
  */
 export function hasNodeMarker(title, typeMarker) {
     return parseNodeMarkers(title).some(marker => marker.type === typeMarker);
+}
+
+/**
+ * Get the index of a node's marker of the given type ("ib:smp:1" -> 1), 0 for a marker without an index
+ * @param {Object} node
+ * @param {string} typeMarker - Marker type (e.g., "smp")
+ * @returns {number|null} null if the node has no such marker
+ */
+export function getNodeMarkerIndex(node, typeMarker) {
+    const marker = parseNodeMarkers(node?.title).find(marker => marker.type === typeMarker);
+    return marker ? marker.index ?? 0 : null;
 }
 
 /**
@@ -545,8 +558,21 @@ function extractSamplerFromHistory(historyPrompt, nodeConfig, executionIds) {
         console.warn('[Image Bench] No sampler node found in history');
     }
 
+    // Parameters located outside the sampler (e.g. the seed of RandomNoise for SamplerCustomAdvanced)
+    for (const name of HISTORY_PARAMS) {
+        const located = executionIds?.params?.[name];
+        const value = located && historyPrompt[located.executionId]?.inputs?.[located.widget];
+
+        // A linked input is [node id, slot]
+        if (value !== undefined && !Array.isArray(value))
+            params[name] = value;
+    }
+
     return params;
 }
+
+// Located generation parameters (params.js) read from /history, by their image parameter names
+const HISTORY_PARAMS = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'denoise'];
 
 /**
  * Extract checkpoint/model from history prompt

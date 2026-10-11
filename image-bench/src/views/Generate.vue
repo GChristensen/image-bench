@@ -1,10 +1,11 @@
 <script setup>
 /**
- * Generate tab (SD WebUI): the main controls of txt2img, img2img or Inpaint upload, mirrored both ways with WebUI,
+ * Generate tab: the main controls of txt2img, img2img or Inpaint upload, mirrored both ways with the host,
  * so that the whole edit-generate-review cycle can happen in the popup. The host page polls the controls of the
  * shown mode while the tab is shown (WEBUI_PARAMS) and applies the edits made here (SET_WEBUI_PARAMS).
- * Switching the mode switches the WebUI tab; the parameters of each mode are remembered here and reapplied,
- * since img2img and Inpaint share the WebUI img2img controls.
+ * In WebUI, switching the mode switches the WebUI tab; the parameters of each mode are remembered here and reapplied,
+ * since img2img and Inpaint share the WebUI img2img controls. In ComfyUI the mode follows the image markers
+ * of the workflow, and the host page reports which parameters it found (features, see src/host.js).
  * One image is generated in place with a live preview; more images are a batch shown in the Generated tab.
  */
 import {computed, onActivated, onBeforeMount, onDeactivated, reactive, ref, watch} from "vue";
@@ -17,14 +18,20 @@ import ProgressIndicator from "@/components/ProgressIndicator.vue";
 import PromptField from "@/components/PromptField.vue";
 import ReferencesPanel from "@/components/ReferencesPanel.vue";
 import ResizeToInput from "@/components/ResizeToInput.vue";
-import SeedInput from "@/components/SeedInput.vue";
 import SizeSelect from "@/components/SizeSelect.vue";
 import UiPresetSelect from "@/components/UiPresetSelect.vue";
+import SamplingGroup from "@/components/generate/SamplingGroup.vue";
+import SeedGroup from "@/components/generate/SeedGroup.vue";
+import HiresGroup from "@/components/generate/HiresGroup.vue";
+import Img2ImgGroup from "@/components/generate/Img2ImgGroup.vue";
+import {withCurrent} from "@/components/generate/choices.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
+import {useFeatures} from "@/composables/useFeatures.js";
+import {HOST_NAME} from "@/host.js";
 import {createImageLink} from "@/sdwebui.js";
 import {fetchModelInfo} from "@/civitai.js";
 import {dialog} from "@/dialogs/useDialog.js";
@@ -57,6 +64,7 @@ const generatedImagesStore = useGeneratedImagesStore();
 const config = useAppConfigStore();
 const webUI = useWebUIBridge();
 const storage = useLocalStorage();
+const has = useFeatures("generate", () => sdWebUI.features);
 
 // ---------- Mirrored parameters ----------
 
@@ -167,6 +175,11 @@ const schedulers = ref([]);
 
 const stripHash = title => title.replace(/ \[[^\]]+\]$/, "");
 
+// The host page may send the choices of the workflow widgets (ComfyUI), which replace those of the backend
+const checkpointChoices = computed(() => sdWebUI.options.checkpoints ?? checkpoints.value);
+const samplerChoices = computed(() => sdWebUI.options.samplers ?? samplers.value);
+const schedulerChoices = computed(() => sdWebUI.options.schedulers ?? schedulers.value);
+
 // WebUI may report the checkpoint with or without its hash
 const checkpointValue = computed(() => {
   const value = form.checkpoint;
@@ -174,17 +187,10 @@ const checkpointValue = computed(() => {
   if (!value)
     return "";
 
-  return checkpoints.value.find(title => title === value)
-    ?? checkpoints.value.find(title => stripHash(title) === stripHash(value))
+  return checkpointChoices.value.find(title => title === value)
+    ?? checkpointChoices.value.find(title => stripHash(title) === stripHash(value))
     ?? value;
 });
-
-// The current value is offered even if the list does not contain it
-function withCurrent(list, value) {
-  return value && !list.includes(value) ? [value, ...list] : list;
-}
-
-const shiftLabel = computed(() => sdWebUI.sliderKind === "distilledCfg" ? "Distilled CFG" : "Shift");
 
 async function loadChoices() {
   const sortByName = (list, nameOf) =>
@@ -561,7 +567,7 @@ function onGripKeydown(e) {
                 :title="generateForever ? 'Generating forever: click to restore the number of images' : 'Generate forever (until stopped)'"
                 aria-label="Generate forever" @click="toggleGenerateForever"><AppIcon name="infinity" :size="14"/></button>
       </div>
-      <button class="btn outline" :disabled="generating || !connected"
+      <button v-if="has('variations')" class="btn outline" :disabled="generating || !connected"
               title="Generate variations of the current seed in the Generated tab; the variation seed and strength are set for the batch and cleared afterwards automatically"
               @click="onGenerateVariations"><AppIcon name="shuffle" :size="14"/>Variations…</button>
 
@@ -570,14 +576,14 @@ function onGripKeydown(e) {
 
       <div class="toolbar-spacer"></div>
 
-      <span v-if="!connected" class="chip">Waiting for WebUI…</span>
-      <button class="btn outline lock-button" :class="{on: sdWebUI.promptsLocked}" :aria-pressed="sdWebUI.promptsLocked"
+      <span v-if="!connected" class="chip">Waiting for {{ HOST_NAME }}…</span>
+      <button v-if="has('promptLock')" class="btn outline lock-button" :class="{on: sdWebUI.promptsLocked}" :aria-pressed="sdWebUI.promptsLocked"
               :disabled="!connected"
               :title="sdWebUI.promptsLocked ? 'Allow editing the prompts in WebUI' : 'Cover the prompts in WebUI, so that they are edited only here'"
               @click="toggleLock"
         ><AppIcon :name="sdWebUI.promptsLocked ? 'lock' : 'unlock'" :size="14"/>{{ sdWebUI.promptsLocked ? "WebUI prompts locked" : "Lock WebUI prompts" }}</button>
-      <span class="toolbar-divider"></span>
-      <div class="seg modes" role="radiogroup" aria-label="Generation mode">
+      <span v-if="has('modeSwitch')" class="toolbar-divider"></span>
+      <div v-if="has('modeSwitch')" class="seg modes" role="radiogroup" aria-label="Generation mode">
         <button v-for="item in MODES" :key="item.value" type="button" role="radio" :class="{on: mode === item.value}"
                 :aria-checked="mode === item.value" :disabled="!connected || generating" :title="item.title"
                 @click="onModeSelect(item.value)">{{ item.label }}</button>
@@ -587,25 +593,28 @@ function onGripKeydown(e) {
     <fieldset class="generate-grid" :disabled="!connected">
       <!-- Model row -->
       <div class="model-row">
-        <UiPresetSelect v-if="form.uiPreset !== null && form.uiPreset !== undefined"
+        <UiPresetSelect v-if="has('uiPreset') && form.uiPreset !== null && form.uiPreset !== undefined"
                         :model-value="form.uiPreset" :presets="config.generateUiPresets"
                         :choices="sdWebUI.options.uiPresets"
                         @update:model-value="v => setParam('uiPreset', v)"/>
-        <div class="select-wrap checkpoint">
+        <div v-if="has('checkpoint')" class="select-wrap checkpoint">
           <select :value="checkpointValue" aria-label="Checkpoint" :title="checkpointValue"
                   @change="e => setParam('checkpoint', e.target.value)">
-            <option v-for="title in withCurrent(checkpoints, checkpointValue)" :key="title" :value="title">{{ title }}</option>
+            <option v-for="title in withCurrent(checkpointChoices, checkpointValue)" :key="title" :value="title">{{ title }}</option>
           </select>
           <AppIcon name="chevron" :size="14"/>
         </div>
-        <button class="ib" :class="{busy: modelInfoBusy}" :disabled="!form.checkpoint || modelInfoBusy"
+        <span v-else class="checkpoint"></span>
+        <button v-if="has('checkpoint')" class="ib" :class="{busy: modelInfoBusy}" :disabled="!form.checkpoint || modelInfoBusy"
                 title="Open the checkpoint page on Civitai" aria-label="Civitai model info" @click="onModelInfo"
           ><span v-if="modelInfoBusy" class="spinner"></span><AppIcon v-else name="info" :size="14"/></button>
-        <SizeSelect v-if="isTxt2Img" class="size" :width="form.width" :height="form.height"
-                    @change="(width, height) => setParams({width, height})"/>
-        <ResizeToInput v-else class="size" :width="form.width" :height="form.height"
-                       @change="(width, height) => setParams({width, height})"/>
-        <label class="inline-field">Steps
+        <template v-if="has('size')">
+          <SizeSelect v-if="isTxt2Img" class="size" :width="form.width" :height="form.height"
+                      @change="(width, height) => setParams({width, height})"/>
+          <ResizeToInput v-else class="size" :width="form.width" :height="form.height"
+                         @change="(width, height) => setParams({width, height})"/>
+        </template>
+        <label v-if="has('steps')" class="inline-field">Steps
           <NumberStepper :model-value="form.steps ?? ''" :min="1" :max="150" label="Sampling steps"
                          @update:model-value="v => setParam('steps', v)"/>
         </label>
@@ -635,11 +644,11 @@ function onGripKeydown(e) {
       </div>
 
       <!-- Prompt and LoRAs -->
-      <PromptField class="prompt" label="Prompt" :tokens="sdWebUI.tokens.prompt"
+      <PromptField class="prompt" label="Prompt" :tokens="has('tokens') ? sdWebUI.tokens?.prompt : null"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"/>
 
       <ReferencesPanel v-if="shownSideTab === 'references'" class="side-panel" :references="references"
-                       :photoshop-target="photoshopTarget"
+                       :photoshop-target="photoshopTarget" :has="has"
                        @add="files => webUI.editReferences({add: files})"
                        @remove="index => webUI.editReferences({remove: index})"
                        @clear="webUI.editReferences({clear: true})"
@@ -658,138 +667,27 @@ function onGripKeydown(e) {
 
       <!-- Negative prompt and parameters -->
       <div class="lower">
-        <div class="grip" :class="{active: resizing}" role="separator" aria-orientation="horizontal"
-             aria-label="Resize the negative prompt" :aria-valuenow="negativeHeight"
-             :aria-valuemin="NEGATIVE_HEIGHT.min" :aria-valuemax="NEGATIVE_HEIGHT.max" tabindex="0"
-             title="Drag to resize the negative prompt"
-             @pointerdown="onGripPointerDown" @keydown="onGripKeydown"><i></i></div>
+        <template v-if="has('negativePrompt')">
+          <div class="grip" :class="{active: resizing}" role="separator" aria-orientation="horizontal"
+               aria-label="Resize the negative prompt" :aria-valuenow="negativeHeight"
+               :aria-valuemin="NEGATIVE_HEIGHT.min" :aria-valuemax="NEGATIVE_HEIGHT.max" tabindex="0"
+               title="Drag to resize the negative prompt"
+               @pointerdown="onGripPointerDown" @keydown="onGripKeydown"><i></i></div>
 
-        <PromptField class="negative" label="Negative prompt" :tokens="sdWebUI.tokens.negativePrompt"
-                     :style="{height: `${negativeHeight + 20}px`}"
-                     :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"/>
+          <PromptField class="negative" label="Negative prompt" :tokens="has('tokens') ? sdWebUI.tokens?.negativePrompt : null"
+                       :style="{height: `${negativeHeight + 20}px`}"
+                       :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"/>
+        </template>
 
         <div class="groups">
-          <div class="group">
-            <div class="group-header label-small">Sampling</div>
-            <label class="field">Sampling method
-              <span class="select-wrap">
-                <select :value="form.sampler" @change="e => setParam('sampler', e.target.value)">
-                  <option v-for="name in withCurrent(samplers, form.sampler)" :key="name" :value="name">{{ name }}</option>
-                </select>
-                <AppIcon name="chevron" :size="14"/>
-              </span>
-            </label>
-            <label class="field">Schedule type
-              <span class="select-wrap">
-                <select :value="form.scheduler" @change="e => setParam('scheduler', e.target.value)">
-                  <option v-for="name in withCurrent(schedulers, form.scheduler)" :key="name" :value="name">{{ name }}</option>
-                </select>
-                <AppIcon name="chevron" :size="14"/>
-              </span>
-            </label>
-            <div class="pair">
-              <label class="field">CFG scale
-                <NumberStepper :model-value="form.cfg ?? ''" :min="1" :max="30" :step="0.5" label="CFG scale"
-                               @update:model-value="v => setParam('cfg', v)"/>
-              </label>
-              <label class="field" :class="{off: !sdWebUI.sliderKind}"
-                     :title="sdWebUI.sliderKind ? '' : 'Not used by the current UI preset'">{{ shiftLabel }}
-                <NumberStepper :model-value="form.shift ?? ''" :min="0" :max="30" :step="0.1" :label="shiftLabel"
-                               @update:model-value="v => setParam('shift', v)"/>
-              </label>
-            </div>
-          </div>
-
-          <div class="group">
-            <div class="group-header label-small">Seed</div>
-            <label class="field">Seed
-              <SeedInput :model-value="form.seed ?? -1" label="Seed"
-                         @update:model-value="v => setParam('seed', v)" @reuse="onReuseSeed('seed')"/>
-            </label>
-            <label class="field">Variation seed
-              <SeedInput :model-value="form.subseed ?? -1" label="Variation seed"
-                         @update:model-value="v => setParam('subseed', v)" @reuse="onReuseSeed('subseed')"/>
-            </label>
-            <label class="field">Variation strength
-              <NumberStepper :model-value="form.subseedStrength ?? ''" :min="0" :max="1" :step="0.01"
-                             label="Variation strength" @update:model-value="v => setParam('subseedStrength', v)"/>
-            </label>
-          </div>
-
-          <div v-if="isTxt2Img" class="group">
-            <div class="group-header label-small">Hires. fix</div>
-            <label class="field">Upscaler
-              <span class="select-wrap">
-                <select :value="form.hiresUpscaler" @change="e => setParam('hiresUpscaler', e.target.value)">
-                  <option v-for="name in withCurrent(sdWebUI.options.upscalers, form.hiresUpscaler)" :key="name"
-                          :value="name">{{ name }}</option>
-                </select>
-                <AppIcon name="chevron" :size="14"/>
-              </span>
-            </label>
-            <div class="pair">
-              <label class="field">Upscale by
-                <NumberStepper :model-value="form.hiresScale ?? ''" :min="1" :max="4" :step="0.05" label="Upscale by"
-                               @update:model-value="v => setParam('hiresScale', v)"/>
-              </label>
-              <label class="field">Steps
-                <NumberStepper :model-value="form.hiresSteps ?? ''" :min="0" :max="150" label="Hires steps"
-                               @update:model-value="v => setParam('hiresSteps', v)"/>
-              </label>
-            </div>
-            <label class="field">Denoising strength
-              <NumberStepper :model-value="form.denoising ?? ''" :min="0" :max="1" :step="0.01"
-                             label="Denoising strength" @update:model-value="v => setParam('denoising', v)"/>
-            </label>
-          </div>
-
-          <div v-else class="group">
-            <div class="group-header label-small">{{ mode === "inpaint" ? "Inpaint" : "img2img" }}</div>
-            <div class="pair">
-              <label class="field">Denoising strength
-                <NumberStepper :model-value="form.denoising ?? ''" :min="0" :max="1" :step="0.01"
-                               label="Denoising strength" @update:model-value="v => setParam('denoising', v)"/>
-              </label>
-              <label class="field">Resize mode
-                <span class="select-wrap">
-                  <select :value="form.resizeMode" @change="e => setParam('resizeMode', e.target.value)">
-                    <option v-for="name in withCurrent(sdWebUI.options.resizeMode ?? [], form.resizeMode)" :key="name"
-                            :value="name">{{ name }}</option>
-                  </select>
-                  <AppIcon name="chevron" :size="14"/>
-                </span>
-              </label>
-            </div>
-            <div class="pair" :class="{off: !hasInpaintParams}">
-              <label class="field">Mask mode
-                <span class="select-wrap">
-                  <select :value="form.maskMode" :disabled="!hasInpaintParams" @change="e => setParam('maskMode', e.target.value)">
-                    <option v-for="name in withCurrent(sdWebUI.options.maskMode ?? [], form.maskMode)" :key="name"
-                            :value="name">{{ name }}</option>
-                  </select>
-                  <AppIcon name="chevron" :size="14"/>
-                </span>
-              </label>
-              <label class="field">Inpaint area
-                <span class="select-wrap">
-                  <select :value="form.inpaintArea" :disabled="!hasInpaintParams" @change="e => setParam('inpaintArea', e.target.value)">
-                    <option v-for="name in withCurrent(sdWebUI.options.inpaintArea ?? [], form.inpaintArea)" :key="name"
-                            :value="name">{{ name }}</option>
-                  </select>
-                  <AppIcon name="chevron" :size="14"/>
-                </span>
-              </label>
-            </div>
-            <label class="field" :class="{off: !hasInpaintParams}">Masked content
-              <span class="select-wrap">
-                  <select :value="form.maskedContent" :disabled="!hasInpaintParams" @change="e => setParam('maskedContent', e.target.value)">
-                    <option v-for="name in withCurrent(sdWebUI.options.maskedContent ?? [], form.maskedContent)" :key="name"
-                            :value="name">{{ name }}</option>
-                  </select>
-                  <AppIcon name="chevron" :size="14"/>
-                </span>
-            </label>
-          </div>
+          <SamplingGroup :form="form" :samplers="samplerChoices" :schedulers="schedulerChoices"
+                         :slider-kind="sdWebUI.sliderKind" :has="has" @set="setParam"/>
+          <SeedGroup :form="form" :has="has" @set="setParam" @reuse="onReuseSeed"/>
+          <HiresGroup v-if="isTxt2Img && has('hires')" :form="form" :upscalers="sdWebUI.options.upscalers ?? []"
+                      :has="has" @set="setParam"/>
+          <Img2ImgGroup v-else-if="!isTxt2Img" :form="form" :options="sdWebUI.options" :has="has"
+                        :title="mode === 'inpaint' ? 'Inpaint' : 'img2img'" :inpaint-params="hasInpaintParams"
+                        @set="setParam"/>
         </div>
       </div>
 
@@ -1013,62 +911,12 @@ function onGripKeydown(e) {
   gap: 18px;
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.group-header {
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--ib-border);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  color: var(--ib-text-2);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.field.off,
-.pair.off {
-  opacity: 0.45;
-}
-
-.pair {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.field :deep(.stepper),
 .inline-field :deep(.stepper) {
   height: 26px;
 }
 
-.field :deep(.stepper) {
-  display: flex;
-  width: 100%;
-}
-
-.field :deep(.stepper input) {
-  flex: 1;
-  width: auto;
-  min-width: 0;
-  height: 24px;
-}
-
 .inline-field :deep(.stepper input) {
   height: 24px;
-}
-
-.field .select-wrap {
-  flex: none;
 }
 
 .preset-count {

@@ -19,8 +19,12 @@ import {
     getTargetWidget,
     setTargetWidgetValue,
     getWorkflow,
-    loadWorkflow
+    loadWorkflow,
+    getNodeMarkerIndex,
+    getRoleMarker
 } from '../workflow.js';
+import {createParamRegistry} from '../params.js';
+import {setLoadImage} from '../images.js';
 
 // Strength widgets of LoRA loaders (LoraLoaderModelOnly has only strength_model)
 const LORA_STRENGTH_WIDGETS = ['strength_model', 'strength_clip'];
@@ -41,6 +45,10 @@ export class ComfyUIOperations {
         this.app = app;
         this.api = api;
         this.nodeConfig = nodeConfig;
+        // Generation parameters located through the sampler (node_config.json generation_params)
+        this.params = createParamRegistry(this);
+        // Generation progress (progress.js), attached by core.js
+        this.progress = null;
     }
 
     // ==================== NODE DISCOVERY METHODS ====================
@@ -57,44 +65,56 @@ export class ComfyUIOperations {
         const targets = getMarkerTargets(this.app, role, this.nodeConfig);
         const precedingRole = PRECEDING_ROLES.get(role);
 
+        // A node holding both values in different widgets (TextEncodeQwenImage21: prompt, negative_prompt) is not skipped
         if (precedingRole) {
             const preceding = this.getRoleTarget(precedingRole);
-            return targets.find(target => !isSameTarget(target, preceding)) ?? null;
+            const widgetName = target => getRoleWidgetName(role, this.nodeConfig, target);
+            const precedingWidgetName = preceding && getRoleWidgetName(precedingRole, this.nodeConfig, preceding);
+
+            return targets.find(target => !isSameTarget(target, preceding) || widgetName(target) !== precedingWidgetName)
+                ?? null;
         }
 
         return targets[0] ?? null;
     }
 
     /**
-     * Get the sampler target using marker-based discovery with fallback to the first KSampler
+     * Get the target of a marker role with the given index ("ib:smp:1"); a marker without an index is index 0
+     * @param {Object} role - Entry of MARKER_ROLES
+     * @param {number} index
+     * @returns {Object|null}
+     */
+    getRoleTargetAt(role, index) {
+        const marker = getRoleMarker(role, this.nodeConfig);
+        return getMarkerTargets(this.app, role, this.nodeConfig)
+            .find(target => getNodeMarkerIndex(target.host, marker) === index) ?? null;
+    }
+
+    /**
+     * Get the sampler target (ib:smp or ib:smp:0) with fallback to the first KSampler
      * @returns {Object|null}
      */
     getSamplerTarget() {
-        return this.getRoleTarget(MARKER_ROLES.sampler)
+        return this.getRoleTargetAt(MARKER_ROLES.sampler, 0)
             ?? createNodeTarget(getNodeByType(this.app, 'KSampler'));
     }
 
     /**
-     * Set a sampler widget value
-     * @param {string} widgetName - Widget name on the sampler node
-     * @param {any} value
+     * Get the sampler of the second pass (Hires. fix), marked ib:smp:1
+     * @returns {Object|null}
      */
-    setSamplerValue(widgetName, value) {
-        const target = this.getSamplerTarget();
-        if (!target) {
-            console.warn(`[ComfyUIOperations] No sampler node found (marked with ib:smp or KSampler) to set ${widgetName}`);
-            return;
-        }
-        setTargetWidgetValue(target, widgetName, value);
+    getHiresSamplerTarget() {
+        return this.getRoleTargetAt(MARKER_ROLES.sampler, 1);
     }
 
     /**
-     * Get a sampler widget value
-     * @param {string} widgetName - Widget name on the sampler node
-     * @returns {any|null}
+     * Report a parameter that is not found in the workflow
+     * @param {string} name
+     * @param {boolean} found
      */
-    getSamplerValue(widgetName) {
-        return getTargetWidget(this.getSamplerTarget(), widgetName)?.value ?? null;
+    warnIfMissing(name, found) {
+        if (!found)
+            console.warn(`[ComfyUIOperations] No ${name} found through the sampler (marked with ib:smp or KSampler)`);
     }
 
     /**
@@ -133,20 +153,37 @@ export class ComfyUIOperations {
     }
 
     /**
-     * Set the text of a prompt role
-     * @param {Object} role - MARKER_ROLES.positivePrompt or MARKER_ROLES.negativePrompt
-     * @param {Object|null} fallbackNode - CLIPTextEncode node used when nothing is marked
+     * Get the target and widget name of a prompt: the node marked ib:pp / ib:np,
+     * else the first / second CLIPTextEncode
+     * @param {'positive'|'negative'} kind
+     * @returns {{target: Object, widgetName: string}|null}
+     */
+    getPromptTarget(kind) {
+        const role = kind === 'negative' ? MARKER_ROLES.negativePrompt : MARKER_ROLES.positivePrompt;
+        const fallbackNode = getNodesByType(this.app, 'CLIPTextEncode')[kind === 'negative' ? 1 : 0];
+        const target = this.getRoleTarget(role) ?? createNodeTarget(fallbackNode);
+
+        return target && {target, widgetName: getRoleWidgetName(role, this.nodeConfig, target) ?? 'text'};
+    }
+
+    /**
+     * @param {'positive'|'negative'} kind
+     * @returns {Object|null} The text widget of a prompt
+     */
+    getPromptWidget(kind) {
+        const prompt = this.getPromptTarget(kind);
+        return prompt && getTargetWidget(prompt.target, prompt.widgetName);
+    }
+
+    /**
+     * Set the text of a prompt
+     * @param {'positive'|'negative'} kind
      * @param {string} text
      * @returns {boolean} Whether the prompt was set
      */
-    setPromptText(role, fallbackNode, text) {
-        const target = this.getRoleTarget(role) ?? createNodeTarget(fallbackNode);
-        if (!target) {
-            return false;
-        }
-
-        const widgetName = getRoleWidgetName(role, this.nodeConfig, target) ?? 'text';
-        return setTargetWidgetValue(target, widgetName, text);
+    setPromptWidgetValue(kind, text) {
+        const prompt = this.getPromptTarget(kind);
+        return !!prompt && setTargetWidgetValue(prompt.target, prompt.widgetName, text);
     }
 
     /**
@@ -154,8 +191,13 @@ export class ComfyUIOperations {
      * @returns {Object} Execution ids keyed by MARKER_ROLES key
      */
     getMarkerExecutionIds() {
-        return Object.fromEntries(Object.entries(MARKER_ROLES)
-            .map(([key, role]) => [key, this.getRoleTarget(role)?.executionId]));
+        return {
+            ...Object.fromEntries(Object.entries(MARKER_ROLES)
+                .map(([key, role]) => [key, this.getRoleTarget(role)?.executionId])),
+            sampler: this.getSamplerTarget()?.executionId,
+            // Execution ids and widget names of the located generation parameters
+            params: this.params.getExecutionIds()
+        };
     }
 
     // ==================== LORA ====================
@@ -271,18 +313,11 @@ export class ComfyUIOperations {
         const role = kind === 'mask' ? MARKER_ROLES.mask : MARKER_ROLES.image;
         const target = this.getRoleTarget(role);
         const widgetName = target && (getRoleWidgetName(role, this.nodeConfig, target) ?? 'image');
-        const widget = widgetName && getTargetWidget(target, widgetName);
-        if (!widget) {
+
+        if (!widgetName || !setLoadImage(target, widgetName, filename)) {
             return false;
         }
 
-        // The file may be new to the combo options loaded with the node definitions
-        const values = widget.options?.values;
-        if (Array.isArray(values) && !values.includes(filename)) {
-            values.push(filename);
-        }
-
-        setTargetWidgetValue(target, widgetName, filename);
         this.app.graph.setDirtyCanvas(true, true);
         return true;
     }
@@ -393,7 +428,7 @@ export class ComfyUIOperations {
         if (seed < 0) {
             seed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         }
-        this.setSamplerValue('seed', seed);
+        this.warnIfMissing('seed', this.params.setValue('seed', seed));
     }
 
     /**
@@ -401,7 +436,7 @@ export class ComfyUIOperations {
      * @returns {number|null} The seed value or null
      */
     getSeed() {
-        return this.getSamplerValue('seed');
+        return this.params.getValue('seed');
     }
 
     /**
@@ -410,7 +445,7 @@ export class ComfyUIOperations {
      * @param {string} value - Control mode ("fixed", "increment", "decrement", "randomize")
      */
     setControlAfterGenerate(value) {
-        this.setSamplerValue('control_after_generate', value);
+        this.params.setSeedControl(value);
     }
 
     /**
@@ -418,7 +453,7 @@ export class ComfyUIOperations {
      * @returns {string|null} The control mode or null
      */
     getControlAfterGenerate() {
-        return this.getSamplerValue('control_after_generate');
+        return this.params.getSeedControl();
     }
 
     /**
@@ -427,9 +462,7 @@ export class ComfyUIOperations {
      * @param {number} steps - Number of steps
      */
     setSteps(steps) {
-        const target = this.getSamplerTarget();
-        const widgetName = (target && getRoleWidgetName(MARKER_ROLES.sampler, this.nodeConfig, target)) ?? 'steps';
-        this.setSamplerValue(widgetName, steps);
+        this.warnIfMissing('steps', this.params.setValue('steps', steps));
     }
 
     /**
@@ -437,7 +470,7 @@ export class ComfyUIOperations {
      * @returns {number|null} The steps value or null
      */
     getSteps() {
-        return this.getSamplerValue('steps');
+        return this.params.getValue('steps');
     }
 
     /**
@@ -445,7 +478,7 @@ export class ComfyUIOperations {
      * @param {number} cfg - CFG scale value
      */
     setCFG(cfg) {
-        this.setSamplerValue('cfg', cfg);
+        this.warnIfMissing('cfg', this.params.setValue('cfg', cfg));
     }
 
     /**
@@ -453,7 +486,7 @@ export class ComfyUIOperations {
      * @param {number} denoise - Denoise value (0-1)
      */
     setDenoise(denoise) {
-        this.setSamplerValue('denoise', denoise);
+        this.warnIfMissing('denoise', this.params.setValue('denoise', denoise));
     }
 
     /**
@@ -461,7 +494,7 @@ export class ComfyUIOperations {
      * @param {string} samplerName - Sampler name
      */
     setSampler(samplerName) {
-        this.setSamplerValue('sampler_name', samplerName);
+        this.warnIfMissing('sampler', this.params.setValue('sampler', samplerName));
     }
 
     /**
@@ -469,7 +502,7 @@ export class ComfyUIOperations {
      * @param {string} scheduler - Scheduler name
      */
     setScheduler(scheduler) {
-        this.setSamplerValue('scheduler', scheduler);
+        this.warnIfMissing('scheduler', this.params.setValue('scheduler', scheduler));
     }
 
     /**
@@ -478,14 +511,7 @@ export class ComfyUIOperations {
      * @returns {Promise<string|null>}
      */
     async getPrompt() {
-        const role = MARKER_ROLES.positivePrompt;
-        const target = this.getRoleTarget(role) ?? createNodeTarget(getNodesByType(this.app, 'CLIPTextEncode')[0]);
-        if (!target) {
-            return null;
-        }
-
-        const widgetName = getRoleWidgetName(role, this.nodeConfig, target) ?? 'text';
-        return getTargetWidget(target, widgetName)?.value ?? null;
+        return this.getPromptWidget('positive')?.value ?? null;
     }
 
     /**
@@ -494,8 +520,7 @@ export class ComfyUIOperations {
      * @param {string} prompt - The prompt text
      */
     setPrompt(prompt) {
-        const fallbackNode = getNodesByType(this.app, 'CLIPTextEncode')[0];
-        if (!this.setPromptText(MARKER_ROLES.positivePrompt, fallbackNode, prompt)) {
+        if (!this.setPromptWidgetValue('positive', prompt)) {
             console.warn('[ComfyUIOperations] No marked positive prompt node found (looking for "ib:pp" in node title) and no CLIPTextEncode nodes found');
         }
     }
@@ -506,8 +531,7 @@ export class ComfyUIOperations {
      * @param {string} prompt - The negative prompt text
      */
     setNegativePrompt(prompt) {
-        const fallbackNode = getNodesByType(this.app, 'CLIPTextEncode')[1];
-        if (!this.setPromptText(MARKER_ROLES.negativePrompt, fallbackNode, prompt)) {
+        if (!this.setPromptWidgetValue('negative', prompt)) {
             console.warn('[ComfyUIOperations] No marked negative prompt node found (looking for "ib:np" in node title) and no second CLIPTextEncode node found');
         }
     }
@@ -548,6 +572,12 @@ export class ComfyUIOperations {
      * @returns {Promise<void>}
      */
     async setInputValue(selectorKey, value) {
+        // The batch strategy sets the seed to -1: randomized after each queued generation, as in the Generate tab
+        if (selectorKey === 'TXT2IMG_SEED' || selectorKey === 'IMG2IMG_SEED') {
+            this.params.apply({seed: value}, 'txt2img');
+            return;
+        }
+
         const [nodeType, widgetName] = selectorKey.split(':');
         const node = getNodeByType(this.app, nodeType);
 
@@ -636,9 +666,8 @@ export class ComfyUIOperations {
      * @returns {number|null} Progress from 0-100, or null if not available
      */
     getGenerationProgress() {
-        // ComfyUI doesn't have a simple progress bar
-        // Progress is tracked via WebSocket events
-        return null;
+        // Tracked from the api progress events (progress.js)
+        return this.progress?.getProgress() ?? null;
     }
 
     /**

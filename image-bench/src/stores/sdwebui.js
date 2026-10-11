@@ -17,7 +17,11 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
     // What the Forge distilled CFG slider controls: "shift", "distilledCfg" or null if it is hidden
     const sliderKind = ref(null)
     const tokens = ref({prompt: null, negativePrompt: null})
+    // Choices of the dropdowns and radio groups; ComfyUI also sends checkpoints, samplers and schedulers
+    // (the options of the workflow widgets), which replace the lists of the backend
     const options = ref({uiPresets: [], upscalers: [], resizeMode: [], maskMode: [], inpaintArea: [], maskedContent: []})
+    // Features the host page reports as present or missing ({name: boolean}), null if it reports none (WebUI)
+    const features = ref(null)
     // Reference images of the edit models in the shown WebUI tab (Forge ImageStitch), null if absent:
     // {enabled, images: [src], maxSize, edit: true|false|null if the model has no edit switch}
     const references = ref(null)
@@ -44,6 +48,7 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
             sliderKind.value = e.sliderKind;
             tokens.value = e.tokens;
             options.value = e.options;
+            features.value = e.features ?? null;
             busy.value = e.busy;
             promptsLocked.value = e.locked;
         }
@@ -66,7 +71,7 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
         storage.setItem(PROMPTS_LOCK_KEY, String(lock));
     }
 
-    return {prompt, negativePrompt, mode, params, sliderKind, tokens, options, references, inputs, busy, promptsLocked,
+    return {prompt, negativePrompt, mode, params, sliderKind, tokens, options, features, references, inputs, busy, promptsLocked,
             live, onSDEvent,
             isPromptsLockRemembered, setPromptsLockRemembered};
 })

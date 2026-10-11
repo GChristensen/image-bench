@@ -13,6 +13,7 @@
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {useLocalStorage} from "@/composables/useLocalStorage.js";
   import {dialog} from "@/dialogs/useDialog.js";
+  import {hostHas} from "@/host.js";
   import AppIcon from "@/components/AppIcon.vue";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams', 
@@ -72,6 +73,7 @@
   const upscaledImageStore = useUpscaledImagesStore();
   // Upscaling is not implemented for ComfyUI
   const isWebUI = import.meta.env.MODE === 'webui';
+  const canSendToControlNet = hostHas("images", "sendToControlNet");
 
   // Composables
   const webUI = useWebUIBridge();
@@ -230,7 +232,7 @@
               @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
       <button v-if="isWebUI && isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
               @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
-      <button v-if="isWebUI" class="ib sm" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
+      <button v-if="canSendToControlNet" class="ib sm" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
               @mousedown.left="onSendToControlNet"><AppIcon name="controlnet" :size="13"/></button>
       <button class="ib sm" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
               @mousedown.left="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)"><AppIcon name="external" :size="13"/></button>

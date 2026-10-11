@@ -1,6 +1,7 @@
 <script setup>
 /**
- * Reference images of the edit models (Forge ImageStitch of the shown WebUI tab), named Image 1, 2, ...
+ * Reference images of the edit models (Forge ImageStitch of the shown WebUI tab, or the LoadImage nodes marked
+ * ib:ref in ComfyUI), named Image 1, 2, ...
  * as edit prompts refer to them. Images are added by browsing, dropping (also from the Generated tab
  * and the trays) or pasting, and from Photoshop if it sends here.
  */
@@ -20,6 +21,11 @@ defineProps({
     type: String,
     required: true,
     validator: value => ["input", "reference"].includes(value)
+  },
+  // Feature check (useFeatures): referencesEnabled, referenceMaxSize
+  has: {
+    type: Function,
+    default: () => true
   }
 });
 
@@ -56,11 +62,11 @@ async function onPaste(e) {
 <template>
   <div class="references" @paste="onPaste">
     <div class="row">
-      <label class="check" title="Pass the images to the model (ImageStitch Integrated)">
+      <label v-if="has('referencesEnabled')" class="check" title="Pass the images to the model (ImageStitch Integrated)">
         <input type="checkbox" :checked="references.enabled" @change="e => emit('enabled', e.target.checked)">Use
       </label>
       <span class="spacer"></span>
-      <label class="max-size" title="Maximum side length of the references, 0 for no limit">Max side
+      <label v-if="has('referenceMaxSize')" class="max-size" title="Maximum side length of the references, 0 for no limit">Max side
         <NumberStepper :model-value="references.maxSize ?? ''" :min="0" :max="2048" :step="256" label="Maximum side length"
                        @update:model-value="v => emit('max-size', v)"/>
       </label>

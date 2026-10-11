@@ -10,6 +10,11 @@ import {api} from "../../scripts/api.js";
 import {fetchSystemPaths} from "./paths.js";
 import {extractImageInfo, extractParameters, extractParametersFromHistory} from "./workflow.js";
 import {ComfyUIOperations} from "./facade/ComfyUIOperations.js";
+import {createProgress} from "./progress.js";
+import {createGeneration} from "./generation.js";
+import {createReferences} from "./references.js";
+import {createMirror} from "./mirror.js";
+import {createControlNet} from "./controlnet.js";
 import {messageBus} from "./shared/messaging/messageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager} from "./shared/popup.js";
@@ -31,6 +36,13 @@ let uiOperations = null;
 let nodeConfig = null;
 let strategies = null;
 let currentStrategy = null;
+
+// Modules of the Generate and ControlNet tabs, and the popup messages they handle
+let generation = null;
+let references = null;
+let mirror = null;
+let controlNet = null;
+let messageHandlers = {};
 
 /**
  * Register the extension with ComfyUI
@@ -112,11 +124,57 @@ async function initializeOperations() {
         window.imageBenchStrategies = strategies;
         window.getGenerationState = getGenerationState;  // Expose state function for popup
 
+        initializeTabModules();
+
         // Set up message bus handlers
         setupMessageBusHandlers();
     } catch (error) {
         console.error('[Image Bench] Failed to initialize operations:', error);
     }
+}
+
+/**
+ * Create the modules behind the Generate and ControlNet tabs; each one handles its own popup messages
+ */
+function initializeTabModules() {
+    const ctx = {
+        app,
+        api,
+        ops: uiOperations,
+        popup: {sendMessage: sendPopupMessage, isOpen: () => popupManager.isOpen()},
+        showAlert
+    };
+
+    const progress = createProgress(ctx);
+    uiOperations.progress = progress;
+
+    references = createReferences(ctx);
+    mirror = createMirror(ctx, {progress, references});
+    controlNet = createControlNet(ctx);
+    generation = createGeneration(ctx, {
+        // A strategy waits for the image of the interrupted prompt
+        onSkipped: () => currentStrategy?.isProcessing() && currentStrategy.processNext(),
+        onStop: finishStrategy
+    });
+
+    messageHandlers = {...mirror.handlers, ...controlNet.handlers, ...generation.handlers};
+}
+
+/**
+ * Show a message in the popup's dialog, or as a ComfyUI toast if the popup is closed
+ * @param {string} message
+ */
+function showAlert(message) {
+    // Without the popup, sendPopupMessage() may still queue the message for the backend WebSocket
+    if (popupManager.isOpen() && sendPopupMessage({type: "SHOW_ALERT", message}))
+        return;
+
+    const toast = app.extensionManager?.toast;
+
+    if (toast)
+        toast.add({severity: "warn", summary: "Image Bench", detail: message, life: 5000});
+    else
+        console.warn(`[Image Bench] ${message}`);
 }
 
 /**
@@ -210,6 +268,10 @@ function addToolbarButton() {
 async function handleExecuted(event) {
     const { node, output, prompt_id } = event.detail;
 
+    // A preprocessor run of the ControlNet tab
+    if (controlNet?.ownsPrompt(prompt_id))
+        return;
+
     console.log('[Image Bench] Image generated:', { node, output, prompt_id });
 
     // Extract image information
@@ -276,10 +338,15 @@ function handleExecutionStart(event) {
     const { prompt_id } = event.detail;
     console.log('[Image Bench] Execution started:', prompt_id);
 
+    if (controlNet?.ownsPrompt(prompt_id))
+        return;
+
     sendPopupMessage({
         type: "BEGIN_PROCESSING",
         prompt_id: prompt_id,
-        isBatchGeneration: currentStrategy && currentStrategy.isProcessing()
+        isBatchGeneration: currentStrategy && currentStrategy.isProcessing(),
+        // Queued from the Generate tab, where the image is shown
+        single: !!generation?.takeSingle()
     });
 }
 
@@ -288,6 +355,10 @@ function handleExecutionStart(event) {
  */
 function handleExecutionError(event) {
     const { prompt_id, exception_message } = event.detail;
+
+    if (controlNet?.ownsPrompt(prompt_id))
+        return;
+
     console.error('[Image Bench] Execution error:', exception_message);
 
     sendPopupMessage({
@@ -298,24 +369,37 @@ function handleExecutionError(event) {
 }
 
 /**
- * Load an image or a mask sent from Photoshop into the node marked with ib:img or ib:mask
- * The backend has already saved it to the input directory
+ * Load an image or a mask sent from Photoshop, which the backend has already saved to the input directory:
+ * into the node marked with ib:img or ib:mask, a new reference image if the Generate tab routes images there,
+ * or the ControlNet unit shown in the ControlNet tab (target cn_*)
  */
-function handlePhotoshopImage(event) {
-    const {kind, filename} = event.detail;
+async function handlePhotoshopImage(event) {
+    const {kind, filename, target = "input"} = event.detail;
+
+    if (target !== "input") {
+        await controlNet?.onPhotoshopImage(target, filename);
+        return;
+    }
+
+    // Without nodes marked ib:ref the image goes to the input
+    if (kind === "image" && mirror?.getPhotoshopTarget() === "reference" && popupManager.isOpen()) {
+        try {
+            if (await references.addImages([filename])) {
+                mirror.pollIfActive();
+                return;
+            }
+        } catch (error) {
+            showAlert(error.message);
+            return;
+        }
+    }
 
     if (uiOperations?.setInpaintUploadImage(kind, filename))
         return;
 
-    const message = kind === "mask"
+    showAlert(kind === "mask"
         ? 'Unable to insert the mask from Photoshop: no node is marked "ib:mask" apart from the "ib:img" node.'
-        : 'Unable to insert the image from Photoshop: no node is marked "ib:img".';
-    const toast = app.extensionManager?.toast;
-
-    if (toast)
-        toast.add({severity: "warn", summary: "Image Bench", detail: message, life: 5000});
-    else
-        console.warn(`[Image Bench] ${message}`);
+        : 'Unable to insert the image from Photoshop: no node is marked "ib:img".');
 }
 
 /**
@@ -328,12 +412,19 @@ function handlePostMessage(event) {
     const payload = event.data;
     const { type } = payload;
 
-    console.log('[Image Bench] Received message:', type);
+    // The Generate and ControlNet tabs poll several times per second
+    if (!type?.endsWith("SUBSCRIBE"))
+        console.log('[Image Bench] Received message:', type);
+
+    const handler = messageHandlers[type];
+
+    if (handler) {
+        Promise.resolve(handler(payload)).catch(error => console.error(`[Image Bench] ${type} failed:`, error));
+        return;
+    }
 
     if (type === "INITIALIZE_PROMPTS")
         initializePrompts();
-    else if (type === "STOP_GENERATION")
-        stopGeneration();
     else if (type === "EXPLORE_MODELS")
         handleExploreModels(payload);
     else if (type === "BATCH_GENERATE")
@@ -522,19 +613,10 @@ async function handleUpscaleVaryingDenoising(options) {
 }
 
 /**
- * Stop current generation
- * Interrupts ComfyUI execution and stops any active strategy
+ * Stop the active strategy (STOP_GENERATION is handled by generation.js, which also interrupts ComfyUI
+ * and clears the queue)
  */
-async function stopGeneration() {
-    console.log('[Image Bench] stopGeneration() called');
-
-    // 1. Interrupt current ComfyUI execution
-    if (uiOperations) {
-        const interrupted = uiOperations.interrupt();
-        console.log('[Image Bench] ComfyUI execution interrupted:', interrupted);
-    }
-
-    // 2. Stop active strategy
+async function finishStrategy() {
     if (currentStrategy && currentStrategy.isProcessing()) {
         console.log('[Image Bench] Stopping active strategy');
         try {
@@ -544,15 +626,8 @@ async function stopGeneration() {
         }
     }
 
-    // 3. Reset state
     setGenerationState("BATCH_GENERATION");
     currentStrategy = null;
-    console.log('[Image Bench] Generation state reset to: BATCH_GENERATION');
-
-    // 4. Notify popup
-    sendPopupMessage({
-        type: "GENERATION_STOPPED"
-    });
 }
 
 /**

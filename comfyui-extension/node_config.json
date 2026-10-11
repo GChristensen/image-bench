@@ -32,35 +32,43 @@
   "positive_prompt": {
     "marker": "pp",
     "nodeTypes": [
+      "ImageBenchPrompt",
       "String Literal",
       "CLIPTextEncode",
       "CLIPTextEncodeSDXL",
       "CLIPTextEncodeFlux",
-      "CLIPTextEncodeSD3"
+      "CLIPTextEncodeSD3",
+      "TextEncodeQwenImage21"
     ],
     "widgetNames": {
+      "ImageBenchPrompt": "text",
       "String Literal": "string",
       "CLIPTextEncode": "text",
       "CLIPTextEncodeSDXL": "text",
       "CLIPTextEncodeFlux": "text",
-      "CLIPTextEncodeSD3": "text"
+      "CLIPTextEncodeSD3": "text",
+      "TextEncodeQwenImage21": "prompt"
     }
   },
   "negative_prompt": {
     "marker": "np",
     "nodeTypes": [
+      "ImageBenchPrompt",
       "String Literal",
       "CLIPTextEncode",
       "CLIPTextEncodeSDXL",
       "CLIPTextEncodeFlux",
-      "CLIPTextEncodeSD3"
+      "CLIPTextEncodeSD3",
+      "TextEncodeQwenImage21"
     ],
     "widgetNames": {
+      "ImageBenchPrompt": "text",
       "String Literal": "string",
       "CLIPTextEncode": "text",
       "CLIPTextEncodeSDXL": "text",
       "CLIPTextEncodeFlux": "text",
-      "CLIPTextEncodeSD3": "text"
+      "CLIPTextEncodeSD3": "text",
+      "TextEncodeQwenImage21": "negative_prompt"
     }
   },
   "lora": {
@@ -93,5 +101,321 @@
       "LoadImageMask": "image",
       "LoadImage": "image"
     }
+  },
+  "controlnet": {
+    "marker": "cn",
+    "nodeTypes": [
+      "ControlNetApplyAdvanced",
+      "ControlNetApplySD3",
+      "ControlNetApply",
+      "ACN_AdvancedControlNetApply",
+      "ACN_AdvancedControlNetApply_v2"
+    ],
+    "widgetNames": {
+      "ControlNetApplyAdvanced": "strength",
+      "ControlNetApplySD3": "strength",
+      "ControlNetApply": "strength",
+      "ACN_AdvancedControlNetApply": "strength",
+      "ACN_AdvancedControlNetApply_v2": "strength"
+    },
+    "loaderTypes": {
+      "ControlNetLoader": "control_net_name",
+      "DiffControlNetLoader": "control_net_name",
+      "ACN_ControlNetLoaderAdvanced": "cnet",
+      "ControlNetLoaderAdvanced": "cnet"
+    },
+    "imageTypes": {
+      "LoadImage": "image"
+    },
+    "maskTypes": {
+      "LoadImageMask": "image",
+      "LoadImage": "image"
+    },
+    "preprocessorTypes": [
+      "AIO_Preprocessor"
+    ]
+  },
+  "reference": {
+    "marker": "ref",
+    "nodeTypes": [
+      "LoadImage"
+    ],
+    "widgetNames": {
+      "LoadImage": "image"
+    }
+  },
+  "generation_params": {
+    "_comment": "Where the Generate tab parameters live, relative to the sampler marked ib:smp (role sampler) or ib:smp:1 (role hiresSampler). The first locator that resolves wins: a widget of the sampler itself, or of a node of `types` reached through the inputs in `via`, then further upstream with `deep` (true: through any input, a name: through that input only). Deep walks do not pass the sampler node types.",
+    "seed": [
+      {
+        "widget": "seed"
+      },
+      {
+        "widget": "noise_seed"
+      },
+      {
+        "via": [
+          "noise"
+        ],
+        "types": [
+          "RandomNoise"
+        ],
+        "widget": "noise_seed"
+      }
+    ],
+    "steps": [
+      {
+        "widget": "steps"
+      },
+      {
+        "via": [
+          "sigmas"
+        ],
+        "deep": true,
+        "types": [
+          "BasicScheduler",
+          "Flux2Scheduler"
+        ],
+        "widget": "steps"
+      }
+    ],
+    "cfg": [
+      {
+        "widget": "cfg"
+      },
+      {
+        "via": [
+          "guider"
+        ],
+        "types": [
+          "CFGGuider",
+          "DualCFGGuider"
+        ],
+        "widget": "cfg"
+      }
+    ],
+    "sampler": [
+      {
+        "widget": "sampler_name"
+      },
+      {
+        "via": [
+          "sampler"
+        ],
+        "types": [
+          "KSamplerSelect"
+        ],
+        "widget": "sampler_name"
+      }
+    ],
+    "scheduler": [
+      {
+        "widget": "scheduler"
+      },
+      {
+        "via": [
+          "sigmas"
+        ],
+        "deep": true,
+        "types": [
+          "BasicScheduler"
+        ],
+        "widget": "scheduler"
+      }
+    ],
+    "denoise": [
+      {
+        "widget": "denoise"
+      },
+      {
+        "via": [
+          "sigmas"
+        ],
+        "deep": true,
+        "types": [
+          "BasicScheduler"
+        ],
+        "widget": "denoise"
+      }
+    ],
+    "guidance": [
+      {
+        "via": [
+          "positive"
+        ],
+        "deep": "conditioning",
+        "types": [
+          "FluxGuidance"
+        ],
+        "widget": "guidance"
+      },
+      {
+        "via": [
+          "guider"
+        ],
+        "deep": true,
+        "types": [
+          "FluxGuidance"
+        ],
+        "widget": "guidance"
+      }
+    ],
+    "shift": [
+      {
+        "via": [
+          "model"
+        ],
+        "deep": "model",
+        "types": [
+          "ModelSamplingSD3",
+          "ModelSamplingAuraFlow"
+        ],
+        "widget": "shift"
+      },
+      {
+        "via": [
+          "guider"
+        ],
+        "deep": true,
+        "types": [
+          "ModelSamplingSD3",
+          "ModelSamplingAuraFlow"
+        ],
+        "widget": "shift"
+      }
+    ],
+    "width": [
+      {
+        "via": [
+          "latent_image",
+          "width"
+        ],
+        "types": [
+          "PrimitiveInt",
+          "PrimitiveNode"
+        ],
+        "widget": "value"
+      },
+      {
+        "via": [
+          "latent_image"
+        ],
+        "types": [
+          "EmptyLatentImage",
+          "EmptySD3LatentImage",
+          "EmptyHunyuanLatentVideo",
+          "EmptyHunyuanImageLatent",
+          "EmptyFlux2LatentImage",
+          "EmptyQwenImageLayeredLatentImage",
+          "EmptyLTXVLatentVideo",
+          "EmptyMochiLatentVideo",
+          "EmptyCosmosLatentVideo"
+        ],
+        "widget": "width"
+      }
+    ],
+    "height": [
+      {
+        "via": [
+          "latent_image",
+          "height"
+        ],
+        "types": [
+          "PrimitiveInt",
+          "PrimitiveNode"
+        ],
+        "widget": "value"
+      },
+      {
+        "via": [
+          "latent_image"
+        ],
+        "types": [
+          "EmptyLatentImage",
+          "EmptySD3LatentImage",
+          "EmptyHunyuanLatentVideo",
+          "EmptyHunyuanImageLatent",
+          "EmptyFlux2LatentImage",
+          "EmptyQwenImageLayeredLatentImage",
+          "EmptyLTXVLatentVideo",
+          "EmptyMochiLatentVideo",
+          "EmptyCosmosLatentVideo"
+        ],
+        "widget": "height"
+      }
+    ],
+    "hiresSteps": [
+      {
+        "role": "hiresSampler",
+        "widget": "steps"
+      },
+      {
+        "role": "hiresSampler",
+        "via": [
+          "sigmas"
+        ],
+        "deep": true,
+        "types": [
+          "BasicScheduler"
+        ],
+        "widget": "steps"
+      }
+    ],
+    "hiresDenoise": [
+      {
+        "role": "hiresSampler",
+        "widget": "denoise"
+      },
+      {
+        "role": "hiresSampler",
+        "via": [
+          "sigmas"
+        ],
+        "deep": true,
+        "types": [
+          "BasicScheduler"
+        ],
+        "widget": "denoise"
+      }
+    ],
+    "hiresScale": [
+      {
+        "role": "hiresSampler",
+        "via": [
+          "latent_image"
+        ],
+        "deep": true,
+        "types": [
+          "LatentUpscaleBy",
+          "ImageScaleBy"
+        ],
+        "widget": "scale_by"
+      }
+    ],
+    "hiresUpscaler": [
+      {
+        "role": "hiresSampler",
+        "via": [
+          "latent_image"
+        ],
+        "deep": true,
+        "types": [
+          "UpscaleModelLoader"
+        ],
+        "widget": "model_name"
+      },
+      {
+        "role": "hiresSampler",
+        "via": [
+          "latent_image"
+        ],
+        "deep": true,
+        "types": [
+          "LatentUpscaleBy",
+          "ImageScaleBy"
+        ],
+        "widget": "upscale_method"
+      }
+    ]
   }
 }

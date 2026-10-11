@@ -16,6 +16,7 @@ import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
 import {dialog} from "@/dialogs/useDialog.js";
+import {hostHas} from "@/host.js";
 
 // Messages too frequent to log
 const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS", "INPUT_IMAGES", "CONTROLNET_STATE", "CONTROLNET_IMAGES"];
@@ -58,7 +59,7 @@ onBeforeMount(async () => {
   webUI.initializePrompts();
 
   // The WebUI prompts are unlocked when the popup closes; lock them again if the user left them locked
-  if (isWebUI && sdWebUIStateStore.isPromptsLockRemembered())
+  if (hostHas("generate", "promptLock") && sdWebUIStateStore.isPromptsLockRemembered())
     webUI.lockWebUIPrompts(true);
 });
 
@@ -127,8 +128,8 @@ async function switchTabAccordingToGenerationMode(e, state) {
 <template>
   <div class="tab-container">
     <nav class="tabs">
-      <RouterLink v-if="isWebUI" to="/generate" class="tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
-      <RouterLink v-if="isWebUI" to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
+      <RouterLink to="/generate" class="tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
+      <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
       <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab"><AppIcon name="concept" :size="14"/>Concept tray<span v-if="conceptTrayStore.images.length" class="count">{{ conceptTrayStore.images.length }}</span></RouterLink>

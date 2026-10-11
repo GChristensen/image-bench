@@ -6,6 +6,7 @@
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, MARKINGS} from "@/consts.js";
   import {dialog} from "@/dialogs/useDialog.js";
+  import {hostHas} from "@/host.js";
 
   const props = defineProps({
     image: {
@@ -24,8 +25,7 @@
 
   const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking', 'deleteImage']);
 
-  // ControlNet is mirrored only in WebUI
-  const isWebUI = import.meta.env.MODE === 'webui';
+  const canSendToControlNet = hostHas("images", "sendToControlNet");
   const imageTrayStore = useImageTrayStore();
   const conceptTrayStore = useConceptTrayStore();
   const imageOps = useImageOperations();
@@ -149,7 +149,7 @@
                 @click="onPlaceToConceptTray">💡</span>
           <span v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="emoji-button" title="Add to image tray"
                 @click="onPlaceToImageTray">🎨</span>
-          <span v-if="isWebUI" class="emoji-button" title="Send to the control image of the ControlNet tab"
+          <span v-if="canSendToControlNet" class="emoji-button" title="Send to the control image of the ControlNet tab"
                 @click="onSendToControlNet">🎛️</span>
           <span class="emoji-button" title="Left: send to Photoshop, Middle: send to Photoshop as a new image"
                 @click="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)">📤</span>

@@ -8,7 +8,7 @@
  */
 
 import {SELECTORS} from "./adapters/selectors.js";
-import {sendImageToPhotoshop} from "./photoshop.js";
+import {sendImageToPhotoshop} from "./shared/photoshop-send.js";
 
 const POLL_INTERVAL = 600;
 // Lets WebUI process an applied value before it is read back

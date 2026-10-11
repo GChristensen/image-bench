@@ -5,7 +5,7 @@ import {useLocalStorage} from "@/composables/useLocalStorage.js";
 const UNIT_KEY = "imageBench_controlNetUnit";
 
 /**
- * State of the ControlNet unit mirrored by the ControlNet tab (WebUI only), as the host page reports it
+ * State of the ControlNet unit mirrored by the ControlNet tab, as the host page reports it
  */
 export const useControlNetStore = defineStore('controlNet', () => {
     const storage = useLocalStorage();
@@ -25,6 +25,8 @@ export const useControlNetStore = defineStore('controlNet', () => {
     const params = ref(null)
     // Radio choices: controlType, controlMode, resizeMode
     const options = ref({controlType: [], controlMode: [], resizeMode: []})
+    // Features the host page reports as present or missing ({name: boolean}), null if it reports none (WebUI)
+    const features = ref(null)
     // The preprocessor is running
     const running = ref(false)
     // Images of the unit (CONTROLNET_IMAGES): sources, null where there is none
@@ -38,6 +40,7 @@ export const useControlNetStore = defineStore('controlNet', () => {
             available.value = e.available;
             params.value = e.available ? e.params : null;
             options.value = e.options ?? {controlType: [], controlMode: [], resizeMode: []};
+            features.value = e.features ?? null;
             running.value = e.running;
         }
         else if (e.type === "CONTROLNET_IMAGES") {
@@ -50,5 +53,5 @@ export const useControlNetStore = defineStore('controlNet', () => {
         storage.setItem(UNIT_KEY, String(index));
     }
 
-    return {selectedUnit, tab, unit, units, available, params, options, running, images, onSDEvent, selectUnit};
+    return {selectedUnit, tab, unit, units, available, params, options, features, running, images, onSDEvent, selectUnit};
 })

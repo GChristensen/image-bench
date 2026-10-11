@@ -92,7 +92,7 @@ export function useImageOperations() {
     sendUrlToPhotoshop(createImageLink(image), image.imagePath || createImageLink(image), newDocument);
 
   /**
-   * Put an image into the control image of the unit chosen in the ControlNet tab (WebUI)
+   * Put an image into the control image of the unit chosen in the ControlNet tab
    * @returns {Promise<string|null>} Error message, or null on success
    */
   const sendToControlNet = async (image) => {
