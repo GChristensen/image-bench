@@ -32,6 +32,21 @@
       "type": "command",
       "id": "sendImageAndMask",
       "label": {"default": "Send Image and Selection Mask"}
+    },
+    {
+      "type": "command",
+      "id": "sendControlNetPreprocess",
+      "label": {"default": "Send Image to ControlNet Preprocessor"}
+    },
+    {
+      "type": "command",
+      "id": "sendControlNetImage",
+      "label": {"default": "Send Image as ControlNet Control Image"}
+    },
+    {
+      "type": "command",
+      "id": "sendControlNetMask",
+      "label": {"default": "Send Selection as ControlNet Mask"}
     }
   ],
   "requiredPermissions": {

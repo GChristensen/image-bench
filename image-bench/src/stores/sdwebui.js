@@ -10,12 +10,19 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
     const prompt = ref("")
     const negativePrompt = ref("")
 
-    // txt2img parameters mirrored by the Generate tab (WEBUI_PARAMS), null until received
+    // Generation mode shown in WebUI: "txt2img", "img2img", "inpaint" (Inpaint upload) or "other" (another img2img mode)
+    const mode = ref("txt2img")
+    // Parameters of the mode mirrored by the Generate tab (WEBUI_PARAMS), null until received
     const params = ref(null)
     // What the Forge distilled CFG slider controls: "shift", "distilledCfg" or null if it is hidden
     const sliderKind = ref(null)
     const tokens = ref({prompt: null, negativePrompt: null})
-    const options = ref({uiPresets: [], upscalers: []})
+    const options = ref({uiPresets: [], upscalers: [], resizeMode: [], maskMode: [], inpaintArea: [], maskedContent: []})
+    // Reference images of the edit models in the shown WebUI tab (Forge ImageStitch), null if absent:
+    // {enabled, images: [src], maxSize, edit: true|false|null if the model has no edit switch}
+    const references = ref(null)
+    // Input images of img2img and inpaint (INPUT_IMAGES): image sources, null where there is none
+    const inputs = ref({mode: null, image: null, mask: null})
     // WebUI is generating or interrupting, whoever started it
     const busy = ref(false)
     const promptsLocked = ref(false)
@@ -31,12 +38,17 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
             negativePrompt.value = e.text;
         }
         else if (e.type === "WEBUI_PARAMS") {
+            mode.value = e.mode ?? "txt2img";
             params.value = e.params;
+            references.value = e.references ?? null;
             sliderKind.value = e.sliderKind;
             tokens.value = e.tokens;
             options.value = e.options;
             busy.value = e.busy;
             promptsLocked.value = e.locked;
+        }
+        else if (e.type === "INPUT_IMAGES") {
+            inputs.value = {mode: e.mode, image: e.image, mask: e.mask};
         }
         else if (e.type === "LIVE_PROGRESS") {
             live.value = {active: e.active, progress: e.progress, preview: e.preview};
@@ -54,6 +66,7 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
         storage.setItem(PROMPTS_LOCK_KEY, String(lock));
     }
 
-    return {prompt, negativePrompt, params, sliderKind, tokens, options, busy, promptsLocked, live, onSDEvent,
+    return {prompt, negativePrompt, mode, params, sliderKind, tokens, options, references, inputs, busy, promptsLocked,
+            live, onSDEvent,
             isPromptsLockRemembered, setPromptsLockRemembered};
 })

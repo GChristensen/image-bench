@@ -138,4 +138,24 @@ export class DOMAdapter {
     async sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+
+    /**
+     * Poll a condition
+     * @param {() => any} condition
+     * @param {number} timeout - Milliseconds
+     * @returns {Promise<any>} The value of the condition once truthy, false if it did not become truthy in time
+     */
+    async waitFor(condition, timeout) {
+        const deadline = Date.now() + timeout;
+        let value;
+
+        while (!(value = condition())) {
+            if (Date.now() >= deadline)
+                return false;
+
+            await this.sleep(100);
+        }
+
+        return value;
+    }
 }

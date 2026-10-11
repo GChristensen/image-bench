@@ -24,6 +24,8 @@
 
   const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking', 'deleteImage']);
 
+  // ControlNet is mirrored only in WebUI
+  const isWebUI = import.meta.env.MODE === 'webui';
   const imageTrayStore = useImageTrayStore();
   const conceptTrayStore = useConceptTrayStore();
   const imageOps = useImageOperations();
@@ -83,6 +85,17 @@
     flashTrayTab("concept-tray-tab");
   }
 
+  async function onSendToControlNet(e) {
+    e.preventDefault();
+
+    const error = await imageOps.sendToControlNet(props.image);
+
+    if (error)
+      await dialog.alert(error, {title: "Send to ControlNet"});
+    else
+      flashTrayTab("controlnet-tab");
+  }
+
   async function onSendToPhotoshop(e, newDocument) {
     e.preventDefault();
 
@@ -136,6 +149,8 @@
                 @click="onPlaceToConceptTray">💡</span>
           <span v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="emoji-button" title="Add to image tray"
                 @click="onPlaceToImageTray">🎨</span>
+          <span v-if="isWebUI" class="emoji-button" title="Send to the control image of the ControlNet tab"
+                @click="onSendToControlNet">🎛️</span>
           <span class="emoji-button" title="Left: send to Photoshop, Middle: send to Photoshop as a new image"
                 @click="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)">📤</span>
           <span v-if="isTray" class="emoji-button" title="Delete"

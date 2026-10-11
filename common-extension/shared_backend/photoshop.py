@@ -7,6 +7,16 @@ from PIL import Image
 # Image kinds sent by the Photoshop plugin
 PHOTOSHOP_IMAGE_KINDS = ("image", "mask")
 
+# Where an image sent by the Photoshop plugin goes, with the image kinds it accepts: the input of the generation
+# (img2img or inpaint upload in WebUI, the nodes marked ib:img and ib:mask in ComfyUI) or a ControlNet unit (WebUI):
+# its image to preprocess, its control image used without a preprocessor, or its mask
+PHOTOSHOP_TARGET_KINDS = {
+    "input": ("image", "mask"),
+    "cn_preprocess": ("image",),
+    "cn_image": ("image",),
+    "cn_mask": ("mask",)
+}
+
 # Key of the image sent from the Image Bench window to the Photoshop plugin
 OUTGOING_IMAGE_KIND = "outgoing"
 

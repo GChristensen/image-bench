@@ -616,6 +616,9 @@ async def photoshop_upload(request):
     if kind not in photoshop.PHOTOSHOP_IMAGE_KINDS:
         return web.Response(text=f"Unknown image kind: {kind}", status=400)
 
+    if request.query.get("target", "input") != "input":
+        return web.Response(text="ControlNet is supported only in SD WebUI", status=400)
+
     try:
         width, height, components = (int(request.query.get(name, "")) for name in ("width", "height", "components"))
         to_png = photoshop.raw_mask_to_png if kind == "mask" else photoshop.raw_pixels_to_png

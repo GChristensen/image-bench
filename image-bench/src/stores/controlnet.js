@@ -1,0 +1,54 @@
+import {defineStore} from "pinia";
+import {ref} from "vue";
+import {useLocalStorage} from "@/composables/useLocalStorage.js";
+
+const UNIT_KEY = "imageBench_controlNetUnit";
+
+/**
+ * State of the ControlNet unit mirrored by the ControlNet tab (WebUI only), as the host page reports it
+ */
+export const useControlNetStore = defineStore('controlNet', () => {
+    const storage = useLocalStorage();
+    // Unit chosen in the ControlNet tab (0-based, WebUI labels the units from 1), which also receives
+    // the images sent to ControlNet from the image lists and Photoshop
+    const selectedUnit = ref(Math.max(0, parseInt(storage.getItem(UNIT_KEY)) || 0))
+    // Generation tab whose ControlNet is mirrored: "txt2img" or "img2img"
+    const tab = ref("txt2img")
+    const unit = ref(0)
+    // Units of the tab: [{enabled}]
+    const units = ref([])
+    // Whether WebUI has the unit (Forge ControlNet Integrated), null until reported
+    const available = ref(null)
+    // Parameters of the unit (CONTROLNET_STATE), null until received: enabled, pixelPerfect, allowPreview, useMask,
+    // independent (img2img, else null), controlType, preprocessor, model, weight, guidanceStart, guidanceEnd,
+    // controlMode, resizeMode
+    const params = ref(null)
+    // Radio choices: controlType, controlMode, resizeMode
+    const options = ref({controlType: [], controlMode: [], resizeMode: []})
+    // The preprocessor is running
+    const running = ref(false)
+    // Images of the unit (CONTROLNET_IMAGES): sources, null where there is none
+    const images = ref({tab: null, unit: null, image: null, mask: null, preview: null})
+
+    function onSDEvent(e) {
+        if (e.type === "CONTROLNET_STATE") {
+            tab.value = e.tab;
+            unit.value = e.unit;
+            units.value = e.units;
+            available.value = e.available;
+            params.value = e.available ? e.params : null;
+            options.value = e.options ?? {controlType: [], controlMode: [], resizeMode: []};
+            running.value = e.running;
+        }
+        else if (e.type === "CONTROLNET_IMAGES") {
+            images.value = {tab: e.tab, unit: e.unit, image: e.image, mask: e.mask, preview: e.preview};
+        }
+    }
+
+    function selectUnit(index) {
+        selectedUnit.value = index;
+        storage.setItem(UNIT_KEY, String(index));
+    }
+
+    return {selectedUnit, tab, unit, units, available, params, options, running, images, onSDEvent, selectUnit};
+})

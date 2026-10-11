@@ -144,6 +144,17 @@
     }
   }
 
+  async function onSendToControlNet(e) {
+    e.preventDefault();
+
+    const error = await imageOps.sendToControlNet(props.image);
+
+    if (error)
+      await dialog.alert(error, {title: "Send to ControlNet"});
+    else
+      flashTrayTab("controlnet-tab");
+  }
+
   async function onSendToPhotoshop(e, newDocument) {
     e.preventDefault();
 
@@ -219,6 +230,8 @@
               @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
       <button v-if="isWebUI && isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
               @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
+      <button v-if="isWebUI" class="ib sm" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
+              @mousedown.left="onSendToControlNet"><AppIcon name="controlnet" :size="13"/></button>
       <button class="ib sm" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
               @mousedown.left="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)"><AppIcon name="external" :size="13"/></button>
       <button v-if="isTray" class="ib sm" title="Add comment" aria-label="Add comment"

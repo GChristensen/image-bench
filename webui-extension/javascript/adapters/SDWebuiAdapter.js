@@ -27,12 +27,22 @@ export class SDWebuiAdapter extends DOMAdapter {
     setInputValue(selectorKey, value, triggerEvents = true) {
         const selector = SELECTORS[selectorKey];
         const element = document.querySelector(selector);
-        
+
         if (!element) {
             console.log(`Input element ${selector} not found.`);
             return;
         }
 
+        this.setInputElementValue(element, value, triggerEvents);
+    }
+
+    /**
+     * Set the value of an input element given by itself
+     * @param {HTMLInputElement} element
+     * @param {string|number} value
+     * @param {boolean} triggerEvents - Whether to trigger input/blur events
+     */
+    setInputElementValue(element, value, triggerEvents = true) {
         element.value = value;
 
         if (triggerEvents) {
@@ -42,6 +52,30 @@ export class SDWebuiAdapter extends DOMAdapter {
             const blurEvent = new Event('blur', { bubbles: true, cancelable: true });
             element.dispatchEvent(blurEvent);
         }
+    }
+
+    /**
+     * Check or uncheck the checkbox of a Gradio checkbox component by clicking it, as the user does
+     * @param {HTMLElement|null} container - The checkbox component
+     * @param {boolean} checked
+     * @returns {boolean} Whether the checkbox was clicked
+     */
+    setCheckedIn(container, checked) {
+        const checkbox = container?.querySelector(SELECTORS.CHECKBOX_INPUT);
+
+        if (!checkbox || checkbox.checked === checked)
+            return false;
+
+        checkbox.click();
+        return true;
+    }
+
+    /**
+     * @param {HTMLElement|null} container - A Gradio checkbox component
+     * @returns {boolean|null} Whether it is checked, null if it is absent
+     */
+    isCheckedIn(container) {
+        return container?.querySelector(SELECTORS.CHECKBOX_INPUT)?.checked ?? null;
     }
 
     /**
@@ -86,12 +120,23 @@ export class SDWebuiAdapter extends DOMAdapter {
     async setDropdownValue(selectorKey, value, exact = false) {
         const selector = SELECTORS[selectorKey];
         const element = document.querySelector(selector);
-        
+
         if (!element) {
             console.log(`Dropdown element ${selector} not found.`);
             return;
         }
 
+        await this.setDropdownElementValue(element, value, exact);
+    }
+
+    /**
+     * Set the value of a dropdown given by its input element
+     * @param {HTMLInputElement} element
+     * @param {string} value - The value to select; options may have it with or without a model hash
+     * @param {boolean} exact - Match the current value and options exactly instead of by substring
+     * @returns {Promise<void>}
+     */
+    async setDropdownElementValue(element, value, exact = false) {
         if (exact ? element.value === value : element.value.includes(value)) {
             return;
         }
@@ -108,7 +153,7 @@ export class SDWebuiAdapter extends DOMAdapter {
 
         if (optionList) {
             // Strip hash from model names
-            value = value.replace(/ \[[^\]]+\]$/, '');
+            const name = value.replace(/ \[[^\]]+\]$/, '');
 
             const options = Array.from(optionList.querySelectorAll(SELECTORS.DROPDOWN_OPTION));
 
@@ -116,7 +161,7 @@ export class SDWebuiAdapter extends DOMAdapter {
                 const optionName = optionElement.getAttribute('data-value')
                     || optionElement.getAttribute('aria-label');
 
-                if (exact ? optionName === value : optionName?.includes(value)) {
+                if (exact ? optionName === value || optionName === name : optionName?.includes(name)) {
                     const mousedownEvent = new MouseEvent('mousedown', {
                         bubbles: true,
                         cancelable: true,
@@ -235,12 +280,160 @@ export class SDWebuiAdapter extends DOMAdapter {
      * Switch to the inpaint upload tab of img2img using the WebUI's own tab switcher
      */
     switchToInpaintUploadTab() {
-        const modeTabs = getElementById(SELECTORS.IMG2IMG_MODE_TABS);
-        const tabItems = Array.from(modeTabs?.querySelectorAll(':scope > .tabitem') ?? []);
-        const index = tabItems.findIndex(tab => tab.id === SELECTORS.IMG2IMG_INPAINT_UPLOAD_TAB);
-
         // Inpaint upload is the fifth tab: img2img, Sketch, Inpaint, Inpaint sketch, Inpaint upload
-        window.switch_to_img2img_tab?.(index >= 0 ? index : 4);
+        this.switchToImg2ImgModeTab(SELECTORS.IMG2IMG_INPAINT_UPLOAD_TAB, 4);
+    }
+
+    /**
+     * Switch to a mode tab of img2img (img2img, Sketch, Inpaint, ...) using the WebUI's own tab switcher
+     * @param {string} tabId - Element id of the tab
+     * @param {number} fallbackIndex - Index of the tab if it is not found
+     */
+    switchToImg2ImgModeTab(tabId, fallbackIndex) {
+        const index = this.getImg2ImgModeTabs().findIndex(tab => tab.id === tabId);
+        window.switch_to_img2img_tab?.(index >= 0 ? index : fallbackIndex);
+    }
+
+    /**
+     * Element id of the selected img2img mode tab, also while the img2img tab itself is hidden
+     * @returns {string|null}
+     */
+    getImg2ImgModeTab() {
+        return this.getImg2ImgModeTabs().find(tab => tab.style.display !== 'none')?.id ?? null;
+    }
+
+    getImg2ImgModeTabs() {
+        const modeTabs = getElementById(SELECTORS.IMG2IMG_MODE_TABS);
+        return Array.from(modeTabs?.querySelectorAll(':scope > .tabitem') ?? []);
+    }
+
+    /**
+     * Select the first tab of a Gradio tab set (e.g. "Resize to" of the img2img size) if it is not selected
+     * @param {string} selectorKey - Key of the tab set element id
+     */
+    selectFirstTab(selectorKey) {
+        this.selectTabIn(this.getElement(selectorKey), 0);
+    }
+
+    /**
+     * Select a tab of a Gradio tab set by its index if it is not selected
+     * @param {HTMLElement|null} tabs - The tab set element
+     * @param {number} index
+     */
+    selectTabIn(tabs, index) {
+        const button = tabs?.querySelectorAll(SELECTORS.TAB_BUTTONS)[index];
+
+        if (button && !button.classList.contains('selected'))
+            button.click();
+    }
+
+    /**
+     * @param {HTMLElement|null} tabs - A Gradio tab set element
+     * @returns {number} Number of its tabs
+     */
+    getTabCountIn(tabs) {
+        return tabs?.querySelectorAll(SELECTORS.TAB_BUTTONS).length ?? 0;
+    }
+
+    /**
+     * Label of the checked choice of a Gradio radio group
+     * @param {string} selectorKey - Key of the radio group element id
+     * @returns {string|null}
+     */
+    getRadioValue(selectorKey) {
+        return this.getRadioValueIn(this.getElement(selectorKey));
+    }
+
+    /**
+     * Choice labels of a Gradio radio group
+     * @param {string} selectorKey - Key of the radio group element id
+     * @returns {string[]}
+     */
+    getRadioChoices(selectorKey) {
+        return this.getRadioChoicesIn(this.getElement(selectorKey));
+    }
+
+    /**
+     * Check a choice of a Gradio radio group by its label
+     * @param {string} selectorKey - Key of the radio group element id
+     * @param {string} value - Choice label
+     */
+    setRadioValue(selectorKey, value) {
+        this.setRadioValueIn(this.getElement(selectorKey), value);
+    }
+
+    /**
+     * @param {HTMLElement|null} group - A Gradio radio group
+     * @returns {string|null} Label of its checked choice
+     */
+    getRadioValueIn(group) {
+        return group?.querySelector('input[type="radio"]:checked')?.value ?? null;
+    }
+
+    /**
+     * @param {HTMLElement|null} group - A Gradio radio group
+     * @returns {string[]} Its choice labels
+     */
+    getRadioChoicesIn(group) {
+        return Array.from(group?.querySelectorAll('input[type="radio"]') ?? []).map(input => input.value);
+    }
+
+    /**
+     * @param {HTMLElement|null} group - A Gradio radio group
+     * @param {string} value - Choice label to check
+     */
+    setRadioValueIn(group, value) {
+        const input = Array.from(group?.querySelectorAll('input[type="radio"]') ?? [])
+            .find(input => input.value === value);
+
+        if (input && !input.checked)
+            input.click();
+    }
+
+    /**
+     * Load a file into a Forge canvas (the img2img image) through its own file input
+     * @param {string} selectorKey - Key of the canvas file input
+     * @param {File} file - Image file
+     * @returns {boolean} Whether the canvas was found
+     */
+    setCanvasFile(selectorKey, file) {
+        return this.setCanvasFileIn(this.getElement(selectorKey), file);
+    }
+
+    /**
+     * Load a file into a Forge canvas through its file input given by itself
+     * @param {HTMLInputElement|null} fileInput
+     * @param {File} file - Image file
+     * @returns {boolean} Whether the file input was found
+     */
+    setCanvasFileIn(fileInput, file) {
+        if (!fileInput)
+            return false;
+
+        const files = new DataTransfer();
+        files.items.add(file);
+        fileInput.files = files.files;
+        fileInput.dispatchEvent(new Event('change'));
+        return true;
+    }
+
+    /**
+     * Source of a shown image, null if there is none (a hidden image keeps its last or an empty source)
+     * @param {string} selectorKey - Key of the image element
+     * @returns {string|null}
+     */
+    getImageSource(selectorKey) {
+        return this.getImageSourceOf(this.getElement(selectorKey));
+    }
+
+    /**
+     * @param {HTMLImageElement|null} image
+     * @returns {string|null} Its source if it is shown, else null
+     */
+    getImageSourceOf(image) {
+        const source = image?.getAttribute('src');
+
+        return source && image.style.display !== 'none' ? image.src : null;
     }
 
     /**
@@ -258,6 +451,16 @@ export class SDWebuiAdapter extends DOMAdapter {
             return false;
         }
 
+        return this.setImageFileIn(container, file);
+    }
+
+    /**
+     * Put a file into an image component given by its element, replacing its current image
+     * @param {HTMLElement} container - The image component or its block
+     * @param {File} file - Image file
+     * @returns {boolean} Whether the file input was found
+     */
+    setImageFileIn(container, file) {
         const files = new DataTransfer();
         files.items.add(file);
 

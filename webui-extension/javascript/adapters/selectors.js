@@ -3,6 +3,29 @@
  * Centralized constants to avoid duplication and ease maintenance
  */
 
+// Element id suffixes of a Forge "ControlNet Integrated" unit, by name
+const CONTROLNET_ELEMENT_IDS = {
+    enabled: 'controlnet_enable_checkbox',
+    pixelPerfect: 'controlnet_pixel_perfect_checkbox',
+    allowPreview: 'controlnet_preprocessor_preview_checkbox',
+    useMask: 'controlnet_mask_upload_checkbox',
+    // img2img only: the unit uses its own image instead of the img2img image
+    independent: 'controlnet_same_img2img_checkbox',
+    controlType: 'controlnet_type_filter_radio',
+    preprocessor: 'controlnet_preprocessor_dropdown',
+    model: 'controlnet_model_dropdown',
+    runPreprocessor: 'controlnet_trigger_preprocessor',
+    refreshModels: 'controlnet_refresh_models',
+    weight: 'controlnet_control_weight_slider',
+    timestepRange: 'controlnet_control_step_slider',
+    controlMode: 'controlnet_control_mode_radio',
+    resizeMode: 'controlnet_resize_mode_radio',
+    // Forge canvases: the control image, its mask and the preprocessor preview
+    image: 'input_image',
+    mask: 'mask_image',
+    preview: 'generated_image'
+};
+
 export const SELECTORS = {
     // Generation buttons
     TXT2IMG_GENERATE: 'txt2img_generate',
@@ -55,8 +78,29 @@ export const SELECTORS = {
     IMG2IMG_SAMPLING: '#img2img_sampling input',
     IMG2IMG_SCHEDULER: '#img2img_scheduler input',
 
-    // img2img mode tabs and the inpaint upload images
+    // img2img parameters mirrored in the Generate tab of the popup (radio groups, set by their choice labels)
+    IMG2IMG_RESIZE_MODE_ID: 'resize_mode',
+    IMG2IMG_MASK_MODE_ID: 'img2img_mask_mode',
+    IMG2IMG_INPAINT_AREA_ID: 'img2img_inpaint_full_res',
+    IMG2IMG_MASKED_CONTENT_ID: 'img2img_inpainting_fill',
+    // "Resize to" / "Resize by" tabs of the img2img size: the width and height apply only with "Resize to"
+    IMG2IMG_RESIZE_TABS: 'img2img_tabs_resize',
+    IMG2IMG_PROMPT_ID: 'img2img_prompt',
+    IMG2IMG_NEG_PROMPT_ID: 'img2img_neg_prompt',
+    IMG2IMG_TOKEN_COUNTER: 'img2img_token_counter',
+    IMG2IMG_NEG_TOKEN_COUNTER: 'img2img_negative_token_counter',
+    IMG2IMG_REUSE_SEED: 'img2img_reuse_seed',
+    IMG2IMG_REUSE_SUBSEED: 'img2img_reuse_subseed',
+    IMG2IMG_LIVE_PREVIEW: '#img2img_gallery .livePreview img',
+
+    // img2img mode tabs and the input images: the img2img canvas (Forge) and the inpaint upload images
     IMG2IMG_MODE_TABS: 'mode_img2img',
+    IMG2IMG_IMG2IMG_TAB: 'img2img_img2img_tab',
+    IMG2IMG_CANVAS: 'img2img_image',
+    IMG2IMG_CANVAS_IMAGE: '#img2img_image img.forge-image',
+    IMG2IMG_CANVAS_FILE_INPUT: '#img2img_image input.forge-file-upload',
+    IMG2IMG_INPAINT_UPLOAD_IMAGE_IMG: '#img_inpaint_base img',
+    IMG2IMG_INPAINT_UPLOAD_MASK_IMG: '#img_inpaint_mask img',
     IMG2IMG_INPAINT_UPLOAD_TAB: 'img2img_inpaint_upload_tab',
     IMG2IMG_INPAINT_UPLOAD_IMAGE: 'img_inpaint_base',
     IMG2IMG_INPAINT_UPLOAD_MASK: 'img_inpaint_mask',
@@ -91,6 +135,29 @@ export const SELECTORS = {
     CONFIG_PRESET_TXT2IMG_DROPDOWN: '#config_preset_txt2img_dropdown input',
     CONFIG_PRESET_WRAPPER: (kind) => `config_preset_wrapper_${kind}`,
     RESULTS_DIV: (kind) => `${kind}_results`,
+
+    // Forge "ImageStitch Integrated" (reference images of the edit models), by tab: txt2img or img2img;
+    // its upload image and buttons have no ids and are located inside the accordion
+    IMAGE_STITCH_GALLERY: (tab) => `script_${tab}_imagestitch_integrated_ref_latent`,
+    IMAGE_STITCH_THUMBNAIL: '.thumbnail-item',
+    // Settings shown in a generation tab ("Settings in UI"), which override the global settings in that tab
+    EXTRA_OPTIONS: (tab) => `extra_options_${tab}`,
+    SETTING_CHECKBOX: (name) => `#setting_${name} input[type="checkbox"]`,
+
+    // Forge "ControlNet Integrated" mirrored in the ControlNet tab of the popup, by tab (txt2img or img2img)
+    // and unit index (0-based; WebUI labels the units from 1)
+    CONTROLNET_ELEMENT: (tab, unit, name) => `${tab}_controlnet_ControlNet-${unit}_${CONTROLNET_ELEMENT_IDS[name]}`,
+    CONTROLNET_TABS: (tab) => `${tab}_controlnet_tabs`,
+    TAB_BUTTONS: ':scope > .tab-nav button, :scope > div > .tab-nav button',
+    FORGE_CANVAS_IMAGE: 'img.forge-image',
+    FORGE_CANVAS_FILE_INPUT: 'input.forge-file-upload',
+    FORGE_CANVAS_REMOVE: '[id^="removeButton_"]',
+    // gradio_rangeslider (the timestep range): number inputs of both ends
+    RANGE_SLIDER_MIN: 'input[data-testid="min-input"]',
+    RANGE_SLIDER_MAX: 'input[data-testid="max-input"]',
+    CHECKBOX_INPUT: 'input[type="checkbox"]',
+    NUMBER_INPUT: 'input[type="number"]',
+    DROPDOWN_INPUT: 'input',
 
     // Gallery & ControlNet (generated images are filtered out by the backend)
     TXT2IMG_GALLERY: '#txt2img_gallery_container .thumbnail-item img[src*="file="]',

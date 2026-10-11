@@ -4,6 +4,7 @@ import GeneratedImages from "@/views/GeneratedImages.vue";
 import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
 import Settings from "@/views/Settings.vue";
 import Generate from "@/views/Generate.vue";
+import ControlNet from "@/views/ControlNet.vue";
 
 const scrollBehavior = (to, from) => {
   if (to.name === from.name) {
@@ -37,6 +38,12 @@ const router = createRouter({
       path: '/generate',
       name: 'generate',
       component: Generate
+    },
+    {
+      // WebUI-only, like Generate
+      path: '/controlnet',
+      name: 'controlnet',
+      component: ControlNet
     },
     {
       path: '/explore',

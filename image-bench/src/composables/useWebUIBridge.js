@@ -22,17 +22,62 @@ export function useWebUIBridge() {
     sendWebUIMessage(options);
   };
 
-  // txt2img: switch WebUI to txt2img first (the Generate tab mirrors it)
-  const batchGenerate = (nImagesToGenerate = 100, { txt2img = false } = {}) => {
-    sendWebUIMessage({ type: 'BATCH_GENERATE', generateImages: nImagesToGenerate, txt2img });
+  // mode (from the Generate tab): show the WebUI tab of the mode first; null keeps the shown tab
+  const batchGenerate = (nImagesToGenerate = 100, { mode } = {}) => {
+    sendWebUIMessage({ type: 'BATCH_GENERATE', generateImages: nImagesToGenerate, mode });
   };
 
-  // A single txt2img image with the current parameters, the popup stays on the Generate tab
-  const generateImage = () => {
-    sendWebUIMessage({ type: 'GENERATE_IMAGE' });
+  // A single image with the current parameters of a mode, the popup stays on the Generate tab
+  const generateImage = (mode = null) => {
+    sendWebUIMessage({ type: 'GENERATE_IMAGE', mode });
   };
 
-  // Start or stop mirroring the txt2img parameters (WEBUI_PARAMS and LIVE_PROGRESS messages)
+  // Show the WebUI tab of a generation mode and apply the parameters remembered for it (null: none)
+  const setGenerationMode = (mode, params = null) => {
+    sendWebUIMessage({ type: 'SET_GENERATION_MODE', mode, params });
+  };
+
+  // Put an image file into the input of the shown img2img mode
+  const setInputImage = (kind, file) => {
+    sendWebUIMessage({ type: 'SET_INPUT_IMAGE', kind, file });
+  };
+
+  // Edit the reference images of the shown WebUI tab: {add: File[]} | {remove: index} | {clear: true}
+  const editReferences = (edit) => {
+    sendWebUIMessage({ type: 'EDIT_REFERENCES', edit });
+  };
+
+  // Where images sent from Photoshop go: 'input' or 'reference'
+  const setPhotoshopTarget = (target) => {
+    sendWebUIMessage({ type: 'SET_PHOTOSHOP_TARGET', target });
+  };
+
+  // Start or stop mirroring a ControlNet unit (CONTROLNET_STATE and CONTROLNET_IMAGES messages);
+  // the unit also receives the images sent to ControlNet from Photoshop
+  const subscribeControlNet = (active, unit) => {
+    sendWebUIMessage({ type: 'CONTROLNET_SUBSCRIBE', active, unit });
+  };
+
+  const setControlNetParams = (unit, params) => {
+    sendWebUIMessage({ type: 'SET_CONTROLNET_PARAMS', unit, params });
+  };
+
+  // action: 'run' (the preprocessor), 'refresh' (the models), 'clearImage', 'clearMask' or 'clearPreview'
+  const controlNetAction = (unit, action) => {
+    sendWebUIMessage({ type: 'CONTROLNET_ACTION', unit, action });
+  };
+
+  // Put an image file into a ControlNet unit: kind 'image' or 'mask'
+  const setControlNetImage = (unit, kind, file) => {
+    sendWebUIMessage({ type: 'SET_CONTROLNET_IMAGE', unit, kind, file });
+  };
+
+  // Show the WebUI generation tab whose ControlNet is mirrored: 'txt2img' or 'img2img'
+  const setControlNetTab = (tab) => {
+    sendWebUIMessage({ type: 'SET_CONTROLNET_TAB', tab });
+  };
+
+  // Start or stop mirroring the generation parameters (WEBUI_PARAMS, INPUT_IMAGES and LIVE_PROGRESS messages)
   const subscribeMirror = (active) => {
     sendWebUIMessage({ type: 'MIRROR_SUBSCRIBE', active });
   };
@@ -49,8 +94,8 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'LOCK_WEBUI_PROMPTS', locked });
   };
 
-  const generateVariations = (strength, nImagesToGenerate = 100, { txt2img = false } = {}) => {
-    sendWebUIMessage({ type: 'GENERATE_VARIATIONS', strength, generateImages: nImagesToGenerate, txt2img });
+  const generateVariations = (strength, nImagesToGenerate = 100, { mode } = {}) => {
+    sendWebUIMessage({ type: 'GENERATE_VARIATIONS', strength, generateImages: nImagesToGenerate, mode });
   };
 
   const generateVaryingSteps = (image, steps) => {
@@ -77,7 +122,16 @@ export function useWebUIBridge() {
     upscaleImages,
     batchGenerate,
     generateImage,
+    setGenerationMode,
+    setInputImage,
+    editReferences,
+    setPhotoshopTarget,
     subscribeMirror,
+    subscribeControlNet,
+    setControlNetParams,
+    controlNetAction,
+    setControlNetImage,
+    setControlNetTab,
     setWebUIParams,
     reuseSeed,
     lockWebUIPrompts,

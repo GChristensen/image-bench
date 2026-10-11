@@ -19,6 +19,11 @@
             width: 100%;
         }
 
+        .section {
+            padding-top: 8px;
+            border-top: 1px solid var(--uxp-host-border-color, #444);
+        }
+
         #status {
             min-height: 2.5em;
         }
@@ -39,9 +44,19 @@
         <sp-textfield id="webui-url" placeholder="http://127.0.0.1:7860"></sp-textfield>
     </div>
     <div class="row">
+        <sp-label>Generation</sp-label>
         <sp-button id="send-image" variant="cta">Send image</sp-button>
         <sp-button id="send-mask" variant="primary">Send selection as mask</sp-button>
         <sp-button id="send-image-and-mask" variant="secondary">Send image and mask</sp-button>
+    </div>
+    <div class="row section">
+        <sp-label>ControlNet (SD WebUI)</sp-label>
+        <sp-button id="send-cn-preprocess" variant="primary"
+                   title="Runs the preprocessor on the image and places the preview as a layer">Send to preprocess</sp-button>
+        <sp-button id="send-cn-image" variant="secondary"
+                   title="Uses the image as it is: sets the preprocessor to None and clears the preview">Use as control image</sp-button>
+        <sp-button id="send-cn-mask" variant="secondary"
+                   title="Checks Use Mask: ControlNet applies inside the selection">Send selection as mask</sp-button>
     </div>
     <sp-detail id="connection" class="error">Not connected to the server</sp-detail>
     <sp-detail id="status"></sp-detail>

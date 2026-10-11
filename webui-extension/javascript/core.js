@@ -21,6 +21,7 @@ import {restoreUiParams, saveUiParams} from "./persistence.js";
 import {initControlNetPreviewButtons, initPhotoshopBridge} from "./photoshop.js";
 import {createHeaderButton} from "./utils_html.js";
 import {createWebUIMirror} from "./mirror.js";
+import {createControlNet} from "./controlnet.js";
 
 // Create popup manager instance (no WebSocket integration for WebUI)
 const popupManager = createPopupManager({
@@ -46,9 +47,14 @@ const {exploration: explorationStrategy, batch: batchStrategy, processing: proce
 
 // txt2img parameters mirrored in the Generate tab of the popup
 const mirror = createWebUIMirror(uiOperations, adapter, {sendMessage: sendPopupMessage, isOpen: popupManager.isOpen});
+// ControlNet unit mirrored in the ControlNet tab of the popup, also the target of the Photoshop ControlNet buttons
+const controlNet = createControlNet(uiOperations, adapter, {sendMessage: sendPopupMessage, isOpen: popupManager.isOpen},
+    showAlert);
 
 let appConfig;
 let modelInfoButton;
+// Where images sent from Photoshop go, set in the Generate tab of the popup: 'input' or 'reference'
+let photoshopTarget = 'input';
 
 export async function init() {
     setGenerationState("BATCH_GENERATION");
@@ -67,7 +73,7 @@ export async function init() {
     setupMessageBusHandlers();
 
     // Receive images sent from the Photoshop plugin
-    initPhotoshopBridge(uiOperations);
+    initPhotoshopBridge(onPhotoshopImage);
     initControlNetPreviewButtons(showAlert);
 
     // Only user clicks fire mousedown, strategies click the buttons programmatically
@@ -258,7 +264,7 @@ async function onMessage(msg) {
     else if (payload.type === "UPSCALE_VARYING_DENOISING")
         await handleUpscaleVaryingDenoising(payload)
     else if (payload.type === "GENERATE_IMAGE")
-        await handleGenerateImage()
+        await handleGenerateImage(payload.mode)
     else if (payload.type === "MIRROR_SUBSCRIBE")
         mirror.subscribe(payload.active)
     else if (payload.type === "SET_WEBUI_PARAMS")
@@ -267,6 +273,48 @@ async function onMessage(msg) {
         mirror.reuseSeed(payload.which)
     else if (payload.type === "LOCK_WEBUI_PROMPTS")
         mirror.setPromptsLocked(payload.locked)
+    else if (payload.type === "SET_GENERATION_MODE")
+        await mirror.setMode(payload.mode, payload.params)
+    else if (payload.type === "SET_INPUT_IMAGE")
+        await mirror.setInputImage(payload.kind, payload.file)
+    else if (payload.type === "EDIT_REFERENCES")
+        await mirror.editReferences(payload.edit)
+    else if (payload.type === "SET_PHOTOSHOP_TARGET")
+        photoshopTarget = payload.target
+    else if (payload.type === "CONTROLNET_SUBSCRIBE")
+        controlNet.subscribe(payload.active, payload.unit)
+    else if (payload.type === "SET_CONTROLNET_PARAMS")
+        await controlNet.applyParams(payload.unit, payload.params)
+    else if (payload.type === "CONTROLNET_ACTION")
+        await controlNet.runAction(payload.unit, payload.action)
+    else if (payload.type === "SET_CONTROLNET_IMAGE")
+        await controlNet.setUnitImage(payload.unit, payload.kind, payload.file)
+    else if (payload.type === "SET_CONTROLNET_TAB")
+        await controlNet.setTab(payload.tab)
+}
+
+/**
+ * Put an image sent from Photoshop where the Generate tab of the popup routes it: a new reference image
+ * of the shown generation tab, or the input of the shown mode. Without the popup, the input of img2img
+ * if its img2img mode is shown, else the inpaint upload (the mask always goes there).
+ * The ControlNet buttons of the plugin send to the unit shown in the ControlNet tab of the popup
+ * @param {'image'|'mask'} kind
+ * @param {File} file
+ * @param {'input'|'cn_preprocess'|'cn_image'|'cn_mask'} target
+ */
+async function onPhotoshopImage(kind, file, target) {
+    if (target !== 'input') {
+        await controlNet.onPhotoshopImage(target, file);
+        return;
+    }
+
+    if (kind === 'image' && photoshopTarget === 'reference' && popupManager.isOpen()) {
+        await mirror.editReferences({add: [file]});
+        return;
+    }
+
+    const mode = uiOperations.getGenerationMode() === 'img2img' && kind === 'image' ? 'img2img' : 'inpaint';
+    await uiOperations.setInputImage(mode, kind, file);
 }
 
 /**
@@ -314,23 +362,30 @@ async function handleBatchGenerate(options, config) {
     if (!checkReadyToGenerate())
         return;
 
-    if (options.txt2img)
-        await prepareTxt2Img();
+    // Started from the Generate tab: its mode, or the shown WebUI tab if it is another one
+    if (options.mode !== undefined) {
+        await prepareMode(options.mode);
+
+        // The batch strategy randomizes the txt2img seed
+        if (uiOperations.isImg2ImgTab())
+            await uiOperations.setInputValue('IMG2IMG_SEED', -1);
+    }
 
     setGenerationState("BATCH_GENERATION");
     return await batchStrategy.process({...options, config});
 }
 
 /**
- * Generate a single txt2img image from the Generate tab with the parameters as they are (seed included).
+ * Generate a single image from the Generate tab with the parameters as they are (seed included),
+ * in its generation mode (txt2img, img2img or inpaint).
  * BEGIN_PROCESSING is marked single, so that the popup stays on the tab and shows the live preview.
+ * @param {'txt2img'|'img2img'|'inpaint'|null} mode - null: the shown WebUI tab
  */
-async function handleGenerateImage() {
+async function handleGenerateImage(mode) {
     if (!checkReadyToGenerate())
         return;
 
-    await mirror.settled();
-    await switchToTxt2Img();
+    await prepareMode(mode);
     setGenerationState("BATCH_GENERATION");
     await uiOperations.setBatchCount(1);
     await onGenerateStarted();
@@ -341,31 +396,23 @@ async function handleGenerateImage() {
 }
 
 /**
- * The Generate tab of the popup mirrors txt2img and may have just sent its parameters:
- * apply them and show txt2img for the batch strategy
+ * The Generate tab of the popup mirrors a generation mode and may have just sent its parameters:
+ * apply them and show the WebUI tab of the mode, on which the strategies then detect and use its controls
+ * @param {'txt2img'|'img2img'|'inpaint'|null} mode - null: the shown WebUI tab
  */
-async function prepareTxt2Img() {
+async function prepareMode(mode) {
     await mirror.settled();
-    await switchToTxt2Img();
-}
 
-/**
- * Show the txt2img tab, on which the strategies then detect and use the txt2img controls
- */
-async function switchToTxt2Img() {
-    if (!uiOperations.isImg2ImgTab())
-        return;
-
-    window.switch_to_txt2img?.();
-    await uiOperations.sleep(200);
+    if (mode)
+        await uiOperations.setGenerationMode(mode);
 }
 
 async function handleGenerateVariations(options, config) {
     if (!checkReadyToGenerate())
         return;
 
-    if (options.txt2img)
-        await prepareTxt2Img();
+    if (options.mode !== undefined)
+        await prepareMode(options.mode);
 
     setGenerationState("BATCH_GENERATION");
     return await batchStrategy.process({...options, config});

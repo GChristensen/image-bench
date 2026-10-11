@@ -1,6 +1,6 @@
 /**
- * Receives images sent by the Image Bench Photoshop plugin and inserts them into
- * the inpaint upload tab of img2img. The connection is kept regardless of the popup state.
+ * Receives images sent by the Image Bench Photoshop plugin and passes them to core.js, which puts them
+ * into img2img (the inpaint upload by default) or a ControlNet unit. The connection is kept regardless of the popup state.
  */
 
 import {createWebSocket} from "./shared/websocket.js";
@@ -10,13 +10,14 @@ const RECONNECT_DELAY = 5000;
 
 /**
  * Connect to the backend and keep reconnecting if the connection is lost (e.g. WebUI restarts)
- * @param {UIOperations} uiOperations - WebUI operations facade
+ * @param {(kind: 'image'|'mask', file: File, target: string) => Promise<void>} onImage - Inserts a received image;
+ *   target: 'input' (img2img) or a ControlNet target ('cn_preprocess', 'cn_image', 'cn_mask')
  */
-export function initPhotoshopBridge(uiOperations) {
+export function initPhotoshopBridge(onImage) {
     createWebSocket({
         endpoint: ENDPOINT,
-        onMessage: (e) => onPhotoshopMessage(uiOperations, e),
-        onClose: () => setTimeout(() => initPhotoshopBridge(uiOperations), RECONNECT_DELAY)
+        onMessage: (e) => onPhotoshopMessage(onImage, e),
+        onClose: () => setTimeout(() => initPhotoshopBridge(onImage), RECONNECT_DELAY)
     });
 }
 
@@ -82,26 +83,42 @@ async function sendControlNetPreview(link, showAlert) {
 
     // txt2img_controlnet_ControlNet-0_generated_image -> txt2img ControlNet-0 preview
     const unit = container.id.replace(/_generated_image$/, "").replace("_controlnet_", " ");
+    const error = await sendImageToPhotoshop(image.src, `${unit} preview`, true);
 
+    if (error)
+        showAlert(error);
+}
+
+/**
+ * Send an image to the Photoshop plugin, which places it as a layer of the active document
+ * @param {string} src - Image URL (also a data URL)
+ * @param {string} name - Name of the layer or document
+ * @param {boolean} newDocument - Open the image as a new document even if there is an active one
+ * @returns {Promise<string|null>} Error message, null on success
+ */
+export async function sendImageToPhotoshop(src, name, newDocument = false) {
     try {
-        const blob = await (await fetch(image.src)).blob();
-        const response = await fetch(`/image-bench/photoshop/send?name=${encodeURIComponent(`${unit} preview`)}`
-            + "&new_document=true", {
+        const blob = await (await fetch(src)).blob();
+        const response = await fetch(`/image-bench/photoshop/send?name=${encodeURIComponent(name)}`
+            + `&new_document=${newDocument}`, {
             method: "POST",
             headers: {"Content-Type": blob.type},
             body: blob
         });
 
         if (!response.ok)
-            showAlert(`Unable to send the image: ${await response.text()}`);
-        else if (!(await response.json()).clients)
-            showAlert("Photoshop is not connected. Please open the Image Bench panel in Photoshop.");
+            return `Unable to send the image: ${await response.text()}`;
+
+        if (!(await response.json()).clients)
+            return "Photoshop is not connected. Please open the Image Bench panel in Photoshop.";
+
+        return null;
     } catch (error) {
-        showAlert(`Unable to send the image: ${error.message}`);
+        return `Unable to send the image: ${error.message}`;
     }
 }
 
-async function onPhotoshopMessage(uiOperations, e) {
+async function onPhotoshopMessage(onImage, e) {
     const msg = JSON.parse(e.data);
 
     if (msg.type !== "PHOTOSHOP_IMAGE")
@@ -114,7 +131,7 @@ async function onPhotoshopMessage(uiOperations, e) {
             throw new Error(`HTTP ${response.status}`);
 
         const file = new File([await response.blob()], `photoshop-${msg.kind}.png`, {type: "image/png"});
-        await uiOperations.setInpaintUploadImage(msg.kind, file);
+        await onImage(msg.kind, file, msg.target ?? "input");
     } catch (error) {
         console.error(`[Image Bench] Unable to insert ${msg.kind} from Photoshop:`, error);
     }

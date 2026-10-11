@@ -38,13 +38,14 @@ function Get-PluginFiles {
 function Read-PluginsInfo {
     if (Test-Path $PluginsInfoFile) {
         $info = Get-Content $PluginsInfoFile -Raw | ConvertFrom-Json
-        return @($info.plugins | Where-Object { $_.pluginId -ne $Manifest.id })
+        return @($info.plugins | Where-Object { $_ -and $_.pluginId -ne $Manifest.id })
     }
     return @()
 }
 
 function Write-PluginsInfo($Plugins) {
-    Write-Utf8File $PluginsInfoFile (ConvertTo-Json @{ plugins = @($Plugins) } -Depth 5)
+    # An empty list passed as an argument arrives as $null, which @() would keep as an entry
+    Write-Utf8File $PluginsInfoFile (ConvertTo-Json @{ plugins = @($Plugins | Where-Object { $_ }) } -Depth 5)
 }
 
 function Remove-InstalledPlugin {

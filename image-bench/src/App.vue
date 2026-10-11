@@ -8,6 +8,7 @@ import {useExploreImagesStore} from "@/stores/explore.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {generationStateToKind} from "@/consts.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
+import {useControlNetStore} from "@/stores/controlnet.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
@@ -17,7 +18,7 @@ import DialogHost from "@/dialogs/DialogHost.vue";
 import {dialog} from "@/dialogs/useDialog.js";
 
 // Messages too frequent to log
-const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS"];
+const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS", "INPUT_IMAGES", "CONTROLNET_STATE", "CONTROLNET_IMAGES"];
 
 const route = useRoute();
 const router = useRouter();
@@ -32,6 +33,7 @@ const conceptTrayStore = useConceptTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
+const controlNetStore = useControlNetStore();
 const hasOpener = computed(() => !!window.opener);
 // Upscaling is not implemented for ComfyUI
 const isWebUI = import.meta.env.MODE === 'webui';
@@ -85,6 +87,7 @@ async function onSDEvent(e) {
   store?.onSDEvent(e);
 
   sdWebUIStateStore.onSDEvent(e);
+  controlNetStore.onSDEvent(e);
 
   try {
     routerView.value?.onAfterSDEvent?.(e);
@@ -125,6 +128,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
   <div class="tab-container">
     <nav class="tabs">
       <RouterLink v-if="isWebUI" to="/generate" class="tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
+      <RouterLink v-if="isWebUI" to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
       <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab"><AppIcon name="concept" :size="14"/>Concept tray<span v-if="conceptTrayStore.images.length" class="count">{{ conceptTrayStore.images.length }}</span></RouterLink>

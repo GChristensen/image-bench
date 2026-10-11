@@ -1,17 +1,22 @@
 <script setup>
 /**
- * Generate tab (SD WebUI): the main txt2img controls, mirrored both ways with WebUI, so that the whole
- * edit-generate-review cycle can happen in the popup. The host page polls the controls while the tab is shown
- * (WEBUI_PARAMS) and applies the edits made here (SET_WEBUI_PARAMS).
+ * Generate tab (SD WebUI): the main controls of txt2img, img2img or Inpaint upload, mirrored both ways with WebUI,
+ * so that the whole edit-generate-review cycle can happen in the popup. The host page polls the controls of the
+ * shown mode while the tab is shown (WEBUI_PARAMS) and applies the edits made here (SET_WEBUI_PARAMS).
+ * Switching the mode switches the WebUI tab; the parameters of each mode are remembered here and reapplied,
+ * since img2img and Inpaint share the WebUI img2img controls.
  * One image is generated in place with a live preview; more images are a batch shown in the Generated tab.
  */
 import {computed, onActivated, onBeforeMount, onDeactivated, reactive, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import CheckTree from "@/components/CheckTree.vue";
+import GenerateImageCell from "@/components/GenerateImageCell.vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
 import PromptField from "@/components/PromptField.vue";
+import ReferencesPanel from "@/components/ReferencesPanel.vue";
+import ResizeToInput from "@/components/ResizeToInput.vue";
 import SeedInput from "@/components/SeedInput.vue";
 import SizeSelect from "@/components/SizeSelect.vue";
 import UiPresetSelect from "@/components/UiPresetSelect.vue";
@@ -30,7 +35,21 @@ import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
 const EDIT_HOLD = 2000;
 const SEND_DELAY = 250;
 
+// A mode switch that WebUI does not report within this time is given up
+const MODE_SWITCH_TIMEOUT = 3000;
+
+const MODES = [
+  {value: "txt2img", label: "txt2img", title: "txt2img"},
+  {value: "img2img", label: "img2img", title: "img2img › img2img"},
+  {value: "inpaint", label: "Inpaint", title: "img2img › Inpaint upload"}
+];
+
+// Parameters common to all modes, not remembered per mode
+const GLOBAL_PARAMS = ["uiPreset", "checkpoint"];
+
 const NEGATIVE_HEIGHT_KEY = "imageBench_generateNegativeHeight";
+const SIDE_TAB_KEY = "imageBench_generateSideTab";
+const PHOTOSHOP_TARGET_KEY = "imageBench_generatePhotoshopTarget";
 const NEGATIVE_HEIGHT = {min: 40, max: 320, default: 62, keyStep: 20};
 
 const sdWebUI = useSDWebUIStateStore();
@@ -42,7 +61,8 @@ const storage = useLocalStorage();
 // ---------- Mirrored parameters ----------
 
 // The WebUI parameters as edited here: prompt, negativePrompt, width, height, steps, cfg, shift, seed, subseed,
-// subseedStrength, sampler, scheduler, hiresUpscaler, hiresScale, hiresSteps, denoising, uiPreset, checkpoint
+// subseedStrength, sampler, scheduler, denoising, uiPreset, checkpoint; txt2img: hiresUpscaler, hiresScale,
+// hiresSteps (denoising is that of hires. fix); img2img and inpaint: resizeMode, maskMode, inpaintArea, maskedContent
 const form = reactive({});
 const editedAt = {};
 let pending = {};
@@ -50,13 +70,61 @@ let sendTimeout = null;
 
 const connected = computed(() => !!sdWebUI.params);
 
+// ---------- Mode ----------
+
+// Mode chosen here until WebUI reports it; meanwhile the parameters of the previous mode are ignored
+const requestedMode = ref(null);
+let requestTimeout = null;
+const mode = computed(() => requestedMode.value ?? sdWebUI.mode);
+const isTxt2Img = computed(() => mode.value === "txt2img");
+// Inpaint upload, or another img2img mode tab chosen in WebUI
+const hasInpaintParams = computed(() => mode.value === "inpaint" || mode.value === "other");
+// The generation runs in the mode shown here; another img2img mode tab is kept as it is
+const generationMode = computed(() => mode.value === "other" ? null : mode.value);
+
+// Parameters of the modes left, reapplied when they are shown again
+const modeParams = {};
+
 watch(() => sdWebUI.params, params => {
+  if (requestedMode.value) {
+    if (sdWebUI.mode !== requestedMode.value)
+      return;
+
+    requestedMode.value = null;
+    clearTimeout(requestTimeout);
+  }
+
   const now = Date.now();
 
   for (const [name, value] of Object.entries(params || {}))
     if (!(name in pending) && now - (editedAt[name] || 0) > EDIT_HOLD)
       form[name] = value;
 }, {immediate: true});
+
+function onModeSelect(value) {
+  if (value === mode.value || generating.value)
+    return;
+
+  flushParams();
+
+  if (mode.value !== "other")
+    modeParams[mode.value] = Object.fromEntries(Object.entries(form).filter(([name]) => !GLOBAL_PARAMS.includes(name)));
+
+  // Shown at once and held until WebUI reports them for the new mode
+  const params = modeParams[value] ?? null;
+  const now = Date.now();
+
+  for (const [name, paramValue] of Object.entries(params || {})) {
+    form[name] = paramValue;
+    editedAt[name] = now;
+  }
+
+  requestedMode.value = value;
+  clearTimeout(requestTimeout);
+  requestTimeout = setTimeout(() => requestedMode.value = null, MODE_SWITCH_TIMEOUT);
+
+  webUI.setGenerationMode(value, params);
+}
 
 function setParams(values) {
   const now = Date.now();
@@ -234,11 +302,11 @@ function onGenerate() {
 
     batchForever = nImages === -1;
     generatedImagesStore.startingGeneration();
-    webUI.batchGenerate(nImages, {txt2img: true});
+    webUI.batchGenerate(nImages, {mode: generationMode.value});
   }
   else {
     singleInProgress.value = true;
-    webUI.generateImage();
+    webUI.generateImage(generationMode.value);
   }
 }
 
@@ -263,7 +331,7 @@ async function onGenerateVariations() {
   batchForever = nImages === -1;
   generatedImagesStore.startingGeneration();
   storage.setVariationStrength(strength);
-  webUI.generateVariations(strength, nImages, {txt2img: true});
+  webUI.generateVariations(strength, nImages, {mode: generationMode.value});
 }
 
 function onInterrupt() {
@@ -304,6 +372,13 @@ const latestImage = computed(() => {
 const livePreview = computed(() => sdWebUI.live.active ? sdWebUI.live.preview : null);
 const shownImageUrl = computed(() => livePreview.value || createImageLink(latestImage.value));
 
+// Input images of the shown mode, as WebUI reports them
+const inputs = computed(() => sdWebUI.inputs.mode === mode.value ? sdWebUI.inputs : {image: null, mask: null});
+
+function onInputUpload(kind, file) {
+  webUI.setInputImage(kind, file);
+}
+
 /**
  * Reuse the (variation) seed of the latest image: set here and mirrored to WebUI like an edit,
  * so that the value is shown at once. As in WebUI, the variation seed of an image without variations is -1.
@@ -325,7 +400,7 @@ function onReuseSeed(which) {
 const showImageOverlay = ref(false);
 const overlayImage = ref(null);
 
-function onImageClick() {
+function onResultClick() {
   if (!latestImage.value || livePreview.value)
     return;
 
@@ -340,6 +415,54 @@ function onKeydown(e) {
 
 onActivated(() => document.addEventListener("keydown", onKeydown));
 onDeactivated(() => document.removeEventListener("keydown", onKeydown));
+
+// ---------- References ----------
+
+const referenceEdits = reactive({});
+
+// Reference images of the edit models in the shown WebUI tab, null if WebUI has none (no Forge ImageStitch)
+const references = computed(() => {
+  const state = sdWebUI.references;
+
+  if (!state)
+    return null;
+
+  // Values changed here are shown until WebUI reports them
+  const now = Date.now();
+  const held = Object.fromEntries(Object.entries(referenceEdits)
+    .filter(([, edit]) => now - edit.at < EDIT_HOLD)
+    .map(([name, edit]) => [name, edit.value]));
+
+  return {...state, ...held};
+});
+
+// LoRA or references
+const sideTab = ref(storage.getItem(SIDE_TAB_KEY) === "references" ? "references" : "lora");
+const shownSideTab = computed(() => references.value ? sideTab.value : "lora");
+
+watch(sideTab, tab => storage.setItem(SIDE_TAB_KEY, tab));
+
+function setReferenceParam(name, param, value) {
+  referenceEdits[name] = {value, at: Date.now()};
+  webUI.setWebUIParams({[param]: value});
+}
+
+watch(() => sdWebUI.references, state => {
+  for (const name of Object.keys(referenceEdits))
+    if (state?.[name] === referenceEdits[name].value)
+      delete referenceEdits[name];
+});
+
+const photoshopTarget = ref(storage.getItem(PHOTOSHOP_TARGET_KEY) === "reference" ? "reference" : "input");
+
+function setPhotoshopTarget(target) {
+  photoshopTarget.value = target;
+  storage.setItem(PHOTOSHOP_TARGET_KEY, target);
+  webUI.setPhotoshopTarget(target);
+}
+
+// The host page forgets the target when WebUI is reloaded
+onActivated(() => webUI.setPhotoshopTarget(photoshopTarget.value));
 
 // ---------- Model info ----------
 
@@ -453,6 +576,12 @@ function onGripKeydown(e) {
               :title="sdWebUI.promptsLocked ? 'Allow editing the prompts in WebUI' : 'Cover the prompts in WebUI, so that they are edited only here'"
               @click="toggleLock"
         ><AppIcon :name="sdWebUI.promptsLocked ? 'lock' : 'unlock'" :size="14"/>{{ sdWebUI.promptsLocked ? "WebUI prompts locked" : "Lock WebUI prompts" }}</button>
+      <span class="toolbar-divider"></span>
+      <div class="seg modes" role="radiogroup" aria-label="Generation mode">
+        <button v-for="item in MODES" :key="item.value" type="button" role="radio" :class="{on: mode === item.value}"
+                :aria-checked="mode === item.value" :disabled="!connected || generating" :title="item.title"
+                @click="onModeSelect(item.value)">{{ item.label }}</button>
+      </div>
     </div>
 
     <fieldset class="generate-grid" :disabled="!connected">
@@ -472,8 +601,10 @@ function onGripKeydown(e) {
         <button class="ib" :class="{busy: modelInfoBusy}" :disabled="!form.checkpoint || modelInfoBusy"
                 title="Open the checkpoint page on Civitai" aria-label="Civitai model info" @click="onModelInfo"
           ><span v-if="modelInfoBusy" class="spinner"></span><AppIcon v-else name="info" :size="14"/></button>
-        <SizeSelect class="size" :width="form.width" :height="form.height"
+        <SizeSelect v-if="isTxt2Img" class="size" :width="form.width" :height="form.height"
                     @change="(width, height) => setParams({width, height})"/>
+        <ResizeToInput v-else class="size" :width="form.width" :height="form.height"
+                       @change="(width, height) => setParams({width, height})"/>
         <label class="inline-field">Steps
           <NumberStepper :model-value="form.steps ?? ''" :min="1" :max="150" label="Sampling steps"
                          @update:model-value="v => setParam('steps', v)"/>
@@ -481,16 +612,42 @@ function onGripKeydown(e) {
       </div>
 
       <div class="lora-header">
-        <span class="label-small">LoRA</span>
-        <span v-if="selectedLoras.size" class="count" title="LoRAs in the prompt">{{ selectedLoras.size }}</span>
-        <input v-model="loraFilter" class="filter" type="search" placeholder="Filter…" aria-label="Filter LoRAs">
+        <div v-if="references" class="side-tabs" role="tablist">
+          <button type="button" role="tab" class="side-tab label-small" :class="{on: shownSideTab === 'lora'}"
+                  :aria-selected="shownSideTab === 'lora'" @click="sideTab = 'lora'">LoRA
+            <span v-if="selectedLoras.size" class="count" title="LoRAs in the prompt">{{ selectedLoras.size }}</span></button>
+          <button type="button" role="tab" class="side-tab label-small" :class="{on: shownSideTab === 'references'}"
+                  :aria-selected="shownSideTab === 'references'" @click="sideTab = 'references'">References
+            <span v-if="references.images.length" class="count" title="Reference images">{{ references.images.length }}</span></button>
+        </div>
+        <template v-else>
+          <span class="label-small">LoRA</span>
+          <span v-if="selectedLoras.size" class="count" title="LoRAs in the prompt">{{ selectedLoras.size }}</span>
+        </template>
+        <input v-if="shownSideTab === 'lora'" v-model="loraFilter" class="filter" type="search" placeholder="Filter…"
+               aria-label="Filter LoRAs">
+        <template v-else>
+          <span class="spacer"></span>
+          <button v-if="references.edit !== null" type="button" class="edit-switch" role="switch"
+                  :aria-checked="references.edit" title="Edit with the references (the WebUI setting of the current model)"
+                  @click="setReferenceParam('edit', 'edit', !references.edit)"><i></i>Edit</button>
+        </template>
       </div>
 
       <!-- Prompt and LoRAs -->
       <PromptField class="prompt" label="Prompt" :tokens="sdWebUI.tokens.prompt"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"/>
 
-      <div class="lora-tree">
+      <ReferencesPanel v-if="shownSideTab === 'references'" class="side-panel" :references="references"
+                       :photoshop-target="photoshopTarget"
+                       @add="files => webUI.editReferences({add: files})"
+                       @remove="index => webUI.editReferences({remove: index})"
+                       @clear="webUI.editReferences({clear: true})"
+                       @enabled="value => setReferenceParam('enabled', 'referencesEnabled', value)"
+                       @max-size="value => setReferenceParam('maxSize', 'referenceMaxSize', value)"
+                       @photoshop-target="setPhotoshopTarget"/>
+
+      <div v-else class="lora-tree side-panel">
         <CheckTree v-if="loraItems.length" :items="loraItems" :selected="selectedLoras"
                    storage-key="imageBench_generateLoraCollapsed"
                    @toggle="(name, checked) => onLoraToggle([name], checked)"
@@ -559,7 +716,7 @@ function onGripKeydown(e) {
             </label>
           </div>
 
-          <div class="group">
+          <div v-if="isTxt2Img" class="group">
             <div class="group-header label-small">Hires. fix</div>
             <label class="field">Upscaler
               <span class="select-wrap">
@@ -585,16 +742,64 @@ function onGripKeydown(e) {
                              label="Denoising strength" @update:model-value="v => setParam('denoising', v)"/>
             </label>
           </div>
+
+          <div v-else class="group">
+            <div class="group-header label-small">{{ mode === "inpaint" ? "Inpaint" : "img2img" }}</div>
+            <div class="pair">
+              <label class="field">Denoising strength
+                <NumberStepper :model-value="form.denoising ?? ''" :min="0" :max="1" :step="0.01"
+                               label="Denoising strength" @update:model-value="v => setParam('denoising', v)"/>
+              </label>
+              <label class="field">Resize mode
+                <span class="select-wrap">
+                  <select :value="form.resizeMode" @change="e => setParam('resizeMode', e.target.value)">
+                    <option v-for="name in withCurrent(sdWebUI.options.resizeMode ?? [], form.resizeMode)" :key="name"
+                            :value="name">{{ name }}</option>
+                  </select>
+                  <AppIcon name="chevron" :size="14"/>
+                </span>
+              </label>
+            </div>
+            <div class="pair" :class="{off: !hasInpaintParams}">
+              <label class="field">Mask mode
+                <span class="select-wrap">
+                  <select :value="form.maskMode" :disabled="!hasInpaintParams" @change="e => setParam('maskMode', e.target.value)">
+                    <option v-for="name in withCurrent(sdWebUI.options.maskMode ?? [], form.maskMode)" :key="name"
+                            :value="name">{{ name }}</option>
+                  </select>
+                  <AppIcon name="chevron" :size="14"/>
+                </span>
+              </label>
+              <label class="field">Inpaint area
+                <span class="select-wrap">
+                  <select :value="form.inpaintArea" :disabled="!hasInpaintParams" @change="e => setParam('inpaintArea', e.target.value)">
+                    <option v-for="name in withCurrent(sdWebUI.options.inpaintArea ?? [], form.inpaintArea)" :key="name"
+                            :value="name">{{ name }}</option>
+                  </select>
+                  <AppIcon name="chevron" :size="14"/>
+                </span>
+              </label>
+            </div>
+            <label class="field" :class="{off: !hasInpaintParams}">Masked content
+              <span class="select-wrap">
+                  <select :value="form.maskedContent" :disabled="!hasInpaintParams" @change="e => setParam('maskedContent', e.target.value)">
+                    <option v-for="name in withCurrent(sdWebUI.options.maskedContent ?? [], form.maskedContent)" :key="name"
+                            :value="name">{{ name }}</option>
+                  </select>
+                  <AppIcon name="chevron" :size="14"/>
+                </span>
+            </label>
+          </div>
         </div>
       </div>
 
-      <!-- Latest image or live preview -->
-      <button type="button" class="image" :class="{clickable: latestImage && !livePreview}"
-              :title="livePreview ? 'Live preview' : latestImage ? 'Click to view' : ''" @click="onImageClick">
-        <img v-if="shownImageUrl" :src="shownImageUrl" alt="">
-        <span v-else class="empty">The generated image appears here</span>
-        <span v-if="livePreview" class="live-progress"><i :style="{width: `${sdWebUI.live.progress}%`}"></i></span>
-      </button>
+      <!-- Latest image or live preview; the input images in img2img and inpaint -->
+      <GenerateImageCell :mode="mode" :result-url="shownImageUrl"
+                         :live-progress="livePreview ? sdWebUI.live.progress : null"
+                         :result-clickable="!!latestImage && !livePreview"
+                         :input-image="inputs.image" :input-mask="inputs.mask"
+                         @result-click="onResultClick" @upload="onInputUpload"
+                         @use-size="(width, height) => setParams({width, height})"/>
     </fieldset>
   </div>
 </template>
@@ -652,6 +857,80 @@ function onGripKeydown(e) {
   min-width: 0;
 }
 
+.side-tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.side-tab {
+  height: 26px;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+}
+
+.side-tab:hover {
+  color: var(--ib-text-2);
+}
+
+.side-tab.on {
+  border-bottom-color: var(--ib-accent);
+  color: var(--ib-text);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.edit-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--ib-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.edit-switch i {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--ib-elev-2);
+  transition: background 0.15s;
+}
+
+.edit-switch i::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--ib-text-2);
+  transition: left 0.15s;
+}
+
+.edit-switch[aria-checked="true"] i {
+  background: var(--ib-accent);
+}
+
+.edit-switch[aria-checked="true"] i::after {
+  left: 14px;
+  background: var(--ib-accent-ink);
+}
+
 .filter {
   flex: 1;
   min-width: 0;
@@ -670,11 +949,14 @@ function onGripKeydown(e) {
 }
 
 /* Aligned with the prompt textarea, below its label */
+.side-panel {
+  margin-top: 20px;
+}
+
 .lora-tree {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  margin-top: 20px;
   padding: 4px;
   border: 1px solid var(--ib-border);
   border-radius: 6px;
@@ -753,7 +1035,8 @@ function onGripKeydown(e) {
   white-space: nowrap;
 }
 
-.field.off {
+.field.off,
+.pair.off {
   opacity: 0.45;
 }
 
@@ -788,53 +1071,6 @@ function onGripKeydown(e) {
   flex: none;
 }
 
-/* ---------- Image ---------- */
-
-.image {
-  position: relative;
-  min-height: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border: 1px solid var(--ib-border);
-  border-radius: 8px;
-  background: var(--ib-surface);
-  color: inherit;
-  font: inherit;
-  cursor: default;
-}
-
-.image.clickable {
-  cursor: zoom-in;
-}
-
-/* Out of the flow, so that the image does not size the grid row */
-.image img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.live-progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: var(--ib-elev-2);
-}
-
-.live-progress i {
-  display: block;
-  height: 100%;
-  background: var(--ib-accent);
-  transition: width 0.3s;
-}
-
 .preset-count {
   min-width: 26px;
   padding: 0 6px;
@@ -845,6 +1081,20 @@ function onGripKeydown(e) {
 .preset-count.on {
   background: var(--ib-accent-soft);
   color: var(--ib-accent);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--ib-border);
+}
+
+.modes {
+  flex: none;
+}
+
+.modes button {
+  padding: 0 10px;
 }
 
 .lock-button.on {

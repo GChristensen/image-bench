@@ -1,4 +1,7 @@
 import { createImageLink, createImageGenerationParams } from '@/sdwebui.js';
+import { sendUrlToPhotoshop } from '@/photoshop.js';
+import { sendWebUIMessage } from '@/sdwebui.js';
+import { useControlNetStore } from '@/stores/controlnet.js';
 
 /**
  * Composable for common image operations
@@ -85,28 +88,28 @@ export function useImageOperations() {
    * @param {boolean} newDocument - Open the image as a new document even if there is an active one
    * @returns {Promise<string|null>} Error message, or null on success
    */
-  const sendToPhotoshop = async (image, newDocument = false) => {
+  const sendToPhotoshop = (image, newDocument = false) =>
+    sendUrlToPhotoshop(createImageLink(image), image.imagePath || createImageLink(image), newDocument);
+
+  /**
+   * Put an image into the control image of the unit chosen in the ControlNet tab (WebUI)
+   * @returns {Promise<string|null>} Error message, or null on success
+   */
+  const sendToControlNet = async (image) => {
     try {
-      const imageResponse = await fetch(createImageLink(image));
-
-      if (!imageResponse.ok)
-        return `Unable to read the image: ${imageResponse.status}`;
-
-      const blob = await imageResponse.blob();
-      const name = encodeURIComponent(image.imagePath || createImageLink(image));
-      const response = await fetch(`/image-bench/photoshop/send?name=${name}&new_document=${newDocument}`, {
-        method: 'POST',
-        headers: {'Content-Type': blob.type},
-        body: blob
-      });
+      const response = await fetch(createImageLink(image));
 
       if (!response.ok)
-        return `Unable to send the image: ${await response.text()}`;
+        return `Unable to read the image: ${response.status}`;
 
-      const {clients} = await response.json();
-      return clients ? null : 'Photoshop is not connected. Please open the Image Bench panel in Photoshop.';
+      const blob = await response.blob();
+      const name = (image.imagePath || 'image.png').split(/[\\/]/).pop();
+      const file = new File([blob], name, {type: blob.type});
+
+      sendWebUIMessage({type: 'SET_CONTROLNET_IMAGE', unit: useControlNetStore().selectedUnit, kind: 'image', file});
+      return null;
     } catch (error) {
-      return `Unable to send the image: ${error.message}`;
+      return `Unable to read the image: ${error.message}`;
     }
   };
 
@@ -119,6 +122,7 @@ export function useImageOperations() {
     isUpscaledImage,
     hasCustomSteps,
     openImageInNewWindow,
-    sendToPhotoshop
+    sendToPhotoshop,
+    sendToControlNet
   };
 }

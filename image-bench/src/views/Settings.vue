@@ -55,6 +55,12 @@ function setGenerateUiPreset(index, value) {
         <span>Images set by the count button</span>
         <input type="number" min="2" :value="appConfigStore.generatePresetImages"
                @change="e => appConfigStore.generatePresetImages = e.target.value">
+        <span class="help" tabindex="0" role="note"
+              aria-label="WebUI allows at most 100 images per batch. To generate more, raise the maximum of Batch count in ui-config.json in the WebUI folder and restart WebUI."
+          >?<span class="help-text" aria-hidden="true">WebUI allows at most 100 images per batch.
+            To generate more, raise <code>"txt2img/Batch count/maximum"</code> and
+            <code>"img2img/Batch count/maximum"</code> in <code>ui-config.json</code> in the WebUI folder,
+            then restart WebUI.</span></span>
       </label>
     </template>
     <h3>Model Exploration</h3>
@@ -123,6 +129,61 @@ a:hover {
 
 .generate-setting span {
   min-width: 200px;
+}
+
+.generate-setting .help {
+  position: relative;
+  min-width: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--ib-border-2);
+  border-radius: 50%;
+  color: var(--ib-text-2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: help;
+}
+
+.generate-setting .help:hover,
+.generate-setting .help:focus-visible {
+  outline: none;
+  border-color: var(--ib-accent-border);
+  color: var(--ib-accent);
+}
+
+.generate-setting .help-text {
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  z-index: 10;
+  width: 320px;
+  min-width: 0;
+  padding: 8px 10px;
+  transform: translateY(-50%);
+  border: 1px solid var(--ib-border-2);
+  border-radius: 6px;
+  background: var(--ib-elev);
+  color: var(--ib-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.generate-setting .help:hover .help-text,
+.generate-setting .help:focus .help-text {
+  visibility: visible;
+}
+
+.help-text code {
+  font-family: var(--ib-mono);
+  font-size: 11.5px;
+  color: var(--ib-accent);
 }
 
 .generate-setting input {

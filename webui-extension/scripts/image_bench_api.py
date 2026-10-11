@@ -92,6 +92,9 @@ class ImageBenchApi():
         self.add_api_route("/models", self.get_models, methods=["GET"])
         self.add_api_route("/samplers", self.get_samplers, methods=["GET"])
         self.add_api_route("/loras", self.get_loras, methods=["GET"])
+        self.add_api_route("/webui_options", self.get_webui_options, methods=["GET"])
+        self.add_api_route("/webui_options", self.write_webui_options, methods=["POST"])
+        self.add_api_route("/controlnet/choices", self.get_controlnet_choices, methods=["GET"])
         self.add_api_route("/civitai/model_info", self.get_civitai_model_info, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
@@ -244,13 +247,17 @@ class ImageBenchApi():
     def get_photoshop_image_url(self, kind):
         return f"{self.BASE_PATH}/photoshop/image?kind={kind}&t={time.time_ns()}"
 
-    async def photoshop_upload(self, request: Request, kind: str, width: int, height: int, components: int):
+    async def photoshop_upload(self, request: Request, kind: str, width: int, height: int, components: int,
+                               target: str = "input"):
         """
         Receive raw pixels of the document (kind=image) or its selection (kind=mask) from the Photoshop plugin
-        and notify the connected WebUI pages to insert it into the inpaint upload tab
+        and notify the connected WebUI pages to insert it into the target (see photoshop.PHOTOSHOP_TARGET_KINDS)
         """
         if kind not in photoshop.PHOTOSHOP_IMAGE_KINDS:
             raise HTTPException(status_code=400, detail=f"Unknown image kind: {kind}")
+
+        if kind not in photoshop.PHOTOSHOP_TARGET_KINDS.get(target, ()):
+            raise HTTPException(status_code=400, detail=f"Unknown target of the {kind}: {target}")
 
         try:
             png = photoshop.raw_pixels_to_png(await request.body(), width, height, components)
@@ -262,6 +269,7 @@ class ImageBenchApi():
         clients = await self.broadcast(self.photoshop_websockets, {
             "type": "PHOTOSHOP_IMAGE",
             "kind": kind,
+            "target": target,
             "imageUrl": self.get_photoshop_image_url(kind)
         })
 
@@ -294,6 +302,24 @@ class ImageBenchApi():
 
         content, media_type = image
         return Response(content, media_type=media_type, headers={"Cache-Control": "no-store"})
+
+    @staticmethod
+    def get_controlnet_choices(type: str = "All", all_models: bool = False):
+        """
+        Preprocessors and models of a control type, as Forge ControlNet Integrated offers them after choosing the type
+        (models whose file names match it), or all models, as it offers them after refreshing them until the type
+        is changed; empty lists without it. Its module is already loaded by its script
+        """
+        global_state = sys.modules.get("lib_controlnet.global_state")
+
+        if global_state is None:
+            return JSONResponse({"preprocessors": [], "models": []})
+
+        return JSONResponse({
+            "preprocessors": global_state.get_filtered_preprocessor_names(type),
+            "models": global_state.get_all_controlnet_names() if all_models
+                      else global_state.get_filtered_controlnet_names(type)
+        })
 
     def get_explore_presets(self):
         return self.serve_store_file("explore_presets.json")
@@ -407,6 +433,29 @@ class ImageBenchApi():
             "samplers": sd_samplers.visible_sampler_names(),
             "schedulers": [s.label for s in sd_schedulers.schedulers]
         })
+
+    @staticmethod
+    def is_reference_option(name):
+        """Only the boolean settings that switch the references of the edit models may be read and changed"""
+        return name.endswith("_reference") and isinstance(shared.opts.data.get(name), bool)
+
+    def get_webui_options(self, names: str):
+        """Values of the edit reference settings (e.g. klein_no_reference), by comma-separated names"""
+        return JSONResponse({name: shared.opts.data[name] for name in names.split(",") if self.is_reference_option(name)})
+
+    async def write_webui_options(self, request: Request):
+        """Change edit reference settings given as a JSON object and save the WebUI settings"""
+        values = json.loads(await persist.read_request_body(request))
+
+        if not isinstance(values, dict) or not all(self.is_reference_option(name) and isinstance(value, bool)
+                                                   for name, value in values.items()):
+            raise HTTPException(status_code=400, detail="Only edit reference settings may be changed")
+
+        for name, value in values.items():
+            shared.opts.set(name, value)
+
+        shared.opts.save(shared.config_filename)
+        return JSONResponse(values)
 
     def get_loras(self):
         """Get list of available LoRAs with their Forge user metadata (sidecar .json)"""

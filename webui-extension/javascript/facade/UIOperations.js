@@ -72,9 +72,11 @@ export class UIOperations {
      * @returns {Promise<void>}
      */
     async enableVariations(strength) {
-        await this.adapter.setCheckboxValue('TXT2IMG_SUBSEED_SHOW', true);
-        await this.adapter.setInputValue('TXT2IMG_SUBSEED', -1);
-        await this.adapter.setInputValue('TXT2IMG_SUBSEED_STRENGTH', strength);
+        const tab = this.getTabPrefix();
+
+        await this.adapter.setCheckboxValue(`${tab}_SUBSEED_SHOW`, true);
+        await this.adapter.setInputValue(`${tab}_SUBSEED`, -1);
+        await this.adapter.setInputValue(`${tab}_SUBSEED_STRENGTH`, strength);
     }
 
     /**
@@ -82,8 +84,111 @@ export class UIOperations {
      * @returns {Promise<void>}
      */
     async disableVariations() {
-        await this.adapter.setInputValue('TXT2IMG_SUBSEED_STRENGTH', 0);
-        await this.adapter.setCheckboxValue('TXT2IMG_SUBSEED_SHOW', false);
+        const tab = this.getTabPrefix();
+
+        await this.adapter.setInputValue(`${tab}_SUBSEED_STRENGTH`, 0);
+        await this.adapter.setCheckboxValue(`${tab}_SUBSEED_SHOW`, false);
+    }
+
+    /**
+     * Selector key prefix of the shown generation tab
+     * @returns {'TXT2IMG'|'IMG2IMG'}
+     */
+    getTabPrefix() {
+        return this.adapter.isImg2ImgTab() ? 'IMG2IMG' : 'TXT2IMG';
+    }
+
+    // ==================== GENERATION MODES (Generate tab of the popup) ====================
+
+    /**
+     * Generation mode shown in WebUI: txt2img, img2img (its img2img mode tab), inpaint (Inpaint upload)
+     * or other (another img2img mode tab, e.g. Sketch)
+     * @returns {'txt2img'|'img2img'|'inpaint'|'other'}
+     */
+    getGenerationMode() {
+        if (!this.adapter.isImg2ImgTab())
+            return 'txt2img';
+
+        const modeTab = this.adapter.getImg2ImgModeTab();
+
+        return modeTab === SELECTORS.IMG2IMG_IMG2IMG_TAB ? 'img2img'
+            : modeTab === SELECTORS.IMG2IMG_INPAINT_UPLOAD_TAB ? 'inpaint'
+            : 'other';
+    }
+
+    /**
+     * Show the WebUI tab of a generation mode
+     * @param {'txt2img'|'img2img'|'inpaint'} mode
+     * @returns {Promise<void>}
+     */
+    async setGenerationMode(mode) {
+        if (mode === this.getGenerationMode())
+            return;
+
+        if (mode === 'txt2img')
+            window.switch_to_txt2img?.();
+        else if (mode === 'img2img')
+            this.adapter.switchToImg2ImgModeTab(SELECTORS.IMG2IMG_IMG2IMG_TAB, 0);
+        else if (mode === 'inpaint')
+            this.adapter.switchToInpaintUploadTab();
+
+        // Let Gradio render the tab
+        await this.sleep(200);
+    }
+
+    /**
+     * Show a generation tab; img2img keeps its shown mode tab (img2img, Inpaint upload, ...)
+     * @param {'txt2img'|'img2img'} tab
+     * @returns {Promise<void>}
+     */
+    async showGenerationTab(tab) {
+        if ((tab === 'img2img') === this.adapter.isImg2ImgTab())
+            return;
+
+        if (tab === 'txt2img')
+            window.switch_to_txt2img?.();
+        else {
+            const modeTab = this.adapter.getImg2ImgModeTab();
+            this.adapter.switchToImg2ImgModeTab(modeTab, 0);
+        }
+
+        // Let Gradio render the tab
+        await this.sleep(200);
+    }
+
+    /**
+     * Put an image into the input of a generation mode: the img2img canvas or the inpaint upload image or mask.
+     * The mode tab is shown first
+     * @param {'img2img'|'inpaint'} mode
+     * @param {'image'|'mask'} kind - The mask is used only by inpaint
+     * @param {File} file
+     * @returns {Promise<boolean>} Whether the image component was found
+     */
+    async setInputImage(mode, kind, file) {
+        if (mode === 'inpaint')
+            return this.setInpaintUploadImage(kind, file);
+
+        if (kind === 'mask')
+            return false;
+
+        await this.setGenerationMode('img2img');
+        return this.adapter.setCanvasFile('IMG2IMG_CANVAS_FILE_INPUT', file);
+    }
+
+    /**
+     * Sources of the input images of a generation mode, null where there is none
+     * @param {'txt2img'|'img2img'|'inpaint'|'other'} mode
+     * @returns {{image: string|null, mask: string|null}}
+     */
+    getInputImages(mode) {
+        if (mode === 'img2img')
+            return {image: this.adapter.getImageSource('IMG2IMG_CANVAS_IMAGE'), mask: null};
+
+        if (mode === 'inpaint')
+            return {image: this.adapter.getImageSource('IMG2IMG_INPAINT_UPLOAD_IMAGE_IMG'),
+                    mask: this.adapter.getImageSource('IMG2IMG_INPAINT_UPLOAD_MASK_IMG')};
+
+        return {image: null, mask: null};
     }
 
     /**

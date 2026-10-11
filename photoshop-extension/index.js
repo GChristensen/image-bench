@@ -2,7 +2,7 @@
  * Image Bench Photoshop plugin
  * Sends the active document and its selection (as a black and white mask)
  * to SD WebUI (the inpaint upload tab of img2img) or ComfyUI (the nodes marked ib:img and ib:mask)
- * with the Image Bench extension,
+ * with the Image Bench extension, or to a ControlNet unit of SD WebUI (the one shown in the Image Bench window),
  * and places images sent from the Image Bench window into Photoshop
  */
 
@@ -94,10 +94,12 @@ async function readSelectionMask(doc) {
  * Send pixels to the Image Bench backend, which forwards them to the connected WebUI or ComfyUI pages
  * @param {'image'|'mask'} kind - Image kind
  * @param {{data: Uint8Array, width: number, height: number, components: number}} pixels
+ * @param {'input'|'cn_preprocess'|'cn_image'|'cn_mask'} target - The generation input, or a ControlNet unit (WebUI):
+ *   its image to preprocess, its control image used without a preprocessor, or its mask
  */
-async function upload(kind, pixels) {
+async function upload(kind, pixels, target = "input") {
     const {data, width, height, components} = pixels;
-    const query = Object.entries({kind, width, height, components})
+    const query = Object.entries({kind, width, height, components, target})
         .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
         .join("&");
     const body = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
@@ -141,6 +143,21 @@ async function sendImageAndMask() {
     await upload("image", await readDocumentImage(doc));
     await upload("mask", mask);
     return "Image and mask sent";
+}
+
+async function sendControlNetPreprocess() {
+    await upload("image", await readDocumentImage(getActiveDocument()), "cn_preprocess");
+    return "Image sent to the ControlNet preprocessor";
+}
+
+async function sendControlNetImage() {
+    await upload("image", await readDocumentImage(getActiveDocument()), "cn_image");
+    return "Image sent as the ControlNet control image";
+}
+
+async function sendControlNetMask() {
+    await upload("mask", await readSelectionMask(getActiveDocument()), "cn_mask");
+    return "Mask sent to ControlNet";
 }
 
 // ==================== RECEIVING ====================
@@ -302,6 +319,9 @@ function initPanel() {
     document.getElementById("send-image").addEventListener("click", () => run(sendImage, true));
     document.getElementById("send-mask").addEventListener("click", () => run(sendMask, true));
     document.getElementById("send-image-and-mask").addEventListener("click", () => run(sendImageAndMask, true));
+    document.getElementById("send-cn-preprocess").addEventListener("click", () => run(sendControlNetPreprocess, true));
+    document.getElementById("send-cn-image").addEventListener("click", () => run(sendControlNetImage, true));
+    document.getElementById("send-cn-mask").addEventListener("click", () => run(sendControlNetMask, true));
 
     panelReady = true;
 }
@@ -310,7 +330,10 @@ entrypoints.setup({
     commands: {
         sendImage: () => run(sendImage),
         sendMask: () => run(sendMask),
-        sendImageAndMask: () => run(sendImageAndMask)
+        sendImageAndMask: () => run(sendImageAndMask),
+        sendControlNetPreprocess: () => run(sendControlNetPreprocess),
+        sendControlNetImage: () => run(sendControlNetImage),
+        sendControlNetMask: () => run(sendControlNetMask)
     },
     panels: {
         imageBenchPanel: {
