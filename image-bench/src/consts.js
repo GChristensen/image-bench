@@ -4,6 +4,8 @@ export const KIND_UPSCALED = "upscaled";
 export const KIND_IMAGE_TRAY = "image_tray";
 export const KIND_CONCEPT_TRAY = "concept_tray";
 export const KIND_COMPARE = "compare";
+// The session filmstrip of the Generate tab
+export const KIND_SESSION = "session";
 
 export const MARKINGS = ["👍", "👎", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "🏁"];
 
@@ -45,6 +47,7 @@ export const DEFAULT_GENERATE_PRESET_IMAGES = 128;
 // note: the aspect ratio and/or a remark, ratios are flipped with the size in the portrait orientation
 export const SIZE_PRESET_GROUPS = [
     {name: "General", sizes: [
+        {width: 512, height: 512, note: ""},
         {width: 864, height: 616, note: "A4"},
         {width: 960, height: 544, note: "16:9"},
         {width: 1536, height: 640, note: "12:5"},

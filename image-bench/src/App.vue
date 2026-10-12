@@ -14,6 +14,7 @@ import {useControlNetStore} from "@/stores/controlnet.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useCompareStore} from "@/stores/compare.js";
+import {useSessionImagesStore} from "@/stores/session.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
@@ -38,6 +39,7 @@ const generatedImagesStore = useGeneratedImagesStore();
 const imageTrayStore = useImageTrayStore();
 const conceptTrayStore = useConceptTrayStore();
 const compareStore = useCompareStore();
+const sessionImagesStore = useSessionImagesStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
@@ -123,8 +125,12 @@ async function onSDEvent(e) {
     console.error('Error in onBeforeSDEvent:', error);
   }
 
-  const store = viewStores[generationStateToKind(state)];
+  const kind = generationStateToKind(state);
+  const store = viewStores[kind];
   store?.onSDEvent(e);
+
+  if (kind === KIND_GENERATED)
+    sessionImagesStore.onSDEvent(e);
 
   sdWebUIStateStore.onSDEvent(e);
   controlNetStore.onSDEvent(e);

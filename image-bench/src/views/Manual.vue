@@ -241,7 +241,13 @@ onMounted(loadPluginStatus);
           <span class="kbd">Ps</span> <b>sends to</b> option decides whether an image arriving from Photoshop
           becomes the input image or a new reference.</li>
         <li><b>Sampling, Seed and Hires. fix</b> groups. A seed of −1 means a random seed; the reuse button takes
-          the seed of the latest image.</li>
+          the seed of the image shown in the Result pane.</li>
+        <li><b>Session filmstrip</b> — the tabs at the right edge of the parameter groups switch between the
+          <b>Parameters</b> and the <b>Session</b> filmstrip: the last 265 images generated while the popup is open,
+          each batch set apart. It appears by itself while a batch of more than one image runs, and hides when the
+          batch ends, unless you have scrolled or clicked it meanwhile (or the pointer is over it). Click an image to
+          open it (<span class="kbd">←</span> / <span class="kbd">→</span> move the open image through the session); middle-click it to show it in the Result pane (middle-click it again to return to the latest image);
+          right-click, the action keys and dragging to the trays work as on the image cards.</li>
         <li v-if="isWebUI"><b>Mode switch</b> (at the right of the toolbar) — txt2img, img2img or Inpaint. It
           switches the WebUI tab and remembers the parameters of each mode separately. In img2img and Inpaint, the
           size becomes "Resize to" (click its <b>×</b> to reset it to 1024×1024), and the Hires. fix column holds the denoising strength and the resize and mask
@@ -251,7 +257,7 @@ onMounted(loadPluginStatus);
           as well.</li>
         <li><b>Result, Input and Mask</b> panes. Upload, drop or paste an input image or an img2img mask onto its pane.
           In a wide window the image has a column of its own that fits the image size; otherwise it is below the
-          LoRA list and fits the column width. Drag the grips to resize the negative prompt, the LoRA column, the
+          LoRA list and fits the column width. Drag the grips to resize the negative prompt, the parameters and the filmstrip, the LoRA column, the
           image column or the image; double-click a grip to restore the automatic size.</li>
         <li><b>Generate</b> — makes one image and shows it with a live preview. Ask for more than one image (or
           for <AppIcon name="infinity" :size="13" class="inline-icon"/>), and the batch runs in the Generated tab

@@ -6,13 +6,15 @@
  * In WebUI, switching the mode switches the WebUI tab; the parameters of each mode are remembered here and reapplied,
  * since img2img and Inpaint share the WebUI img2img controls. In ComfyUI the mode follows the image markers
  * of the workflow, and the host page reports which parameters it found (features, see src/host.js).
- * One image is generated in place with a live preview; more images are a batch shown in the Generated tab.
+ * One image is generated in place with a live preview; more images are a batch shown in the Generated tab
+ * and, while it runs, in the session filmstrip, which takes the place of the parameter groups.
  */
 import {computed, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import CheckTree from "@/components/CheckTree.vue";
 import GenerateImageCell from "@/components/GenerateImageCell.vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
+import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
 import PromptField from "@/components/PromptField.vue";
@@ -24,14 +26,17 @@ import SamplingGroup from "@/components/generate/SamplingGroup.vue";
 import SeedGroup from "@/components/generate/SeedGroup.vue";
 import HiresGroup from "@/components/generate/HiresGroup.vue";
 import Img2ImgGroup from "@/components/generate/Img2ImgGroup.vue";
+import SessionStrip from "@/components/generate/SessionStrip.vue";
 import {withCurrent} from "@/components/generate/choices.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
+import {useSessionImagesStore} from "@/stores/session.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {useFeatures} from "@/composables/useFeatures.js";
+import {useImageOperations} from "@/composables/useImageOperations.js";
 import {HOST_NAME} from "@/host.js";
 import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModelInfo} from "@/civitai.js";
@@ -62,7 +67,10 @@ const PARAMS_COLLAPSED_KEY = "imageBench_generateParamsCollapsed";
 const SIDE_WIDTH_KEY = "imageBench_generateSideWidth";
 const IMAGE_WIDTH_KEY = "imageBench_generateImageWidth";
 const IMAGE_HEIGHT_KEY = "imageBench_generateImageHeight";
+const LOWER_HEIGHT_KEY = "imageBench_generateLowerHeight";
 const NEGATIVE_HEIGHT = {min: 40, max: 320, default: 62};
+// Parameters or filmstrip: the parameter groups at their own height unless resized; the prompts keep the reserve
+const LOWER_HEIGHT = {min: 80, default: 150, promptReserve: 260};
 
 // From this grid width on, the image has a column of its own beside the LoRA column
 const WIDE_LAYOUT_WIDTH = 1500;
@@ -78,6 +86,8 @@ const IMAGE_HEIGHT = {min: 120, sideReserve: 200};
 
 const sdWebUI = useSDWebUIStateStore();
 const generatedImagesStore = useGeneratedImagesStore();
+const sessionImagesStore = useSessionImagesStore();
+const imageOps = useImageOperations();
 const config = useAppConfigStore();
 const webUI = useWebUIBridge();
 const storage = useLocalStorage();
@@ -328,9 +338,12 @@ async function onGenerate() {
 
     batchForever = nImages === -1;
     generatedImagesStore.startingGeneration();
+    selectedImage.value = null;
+    autoShowStrip();
     webUI.batchGenerate(nImages, {mode: generationMode.value});
   }
   else {
+    selectedImage.value = null;
     singleInProgress.value = true;
     webUI.generateImage(generationMode.value);
   }
@@ -359,6 +372,8 @@ async function onGenerateVariations() {
 
   batchForever = nImages === -1;
   generatedImagesStore.startingGeneration();
+  selectedImage.value = null;
+  autoShowStrip();
   storage.setVariationStrength(strength);
   webUI.generateVariations(strength, nImages, {mode: generationMode.value});
 }
@@ -370,6 +385,11 @@ function onInterrupt() {
 watch(() => sdWebUI.busy, (busy, wasBusy) => {
   if (wasBusy && !busy)
     singleInProgress.value = false;
+});
+
+watch(batchInProgress, (inProgress, wasInProgress) => {
+  if (wasInProgress && !inProgress)
+    autoHideStrip();
 });
 
 function onAfterSDEvent(e) {
@@ -398,8 +418,18 @@ const latestImage = computed(() => {
   return null;
 });
 
-const livePreview = computed(() => sdWebUI.live.active ? sdWebUI.live.preview : null);
-const shownImageUrl = computed(() => livePreview.value || createImageLink(latestImage.value));
+// An image chosen in the filmstrip is shown instead of the latest image and the live preview
+const selectedImage = ref(null);
+const resultImage = computed(() => selectedImage.value ?? latestImage.value);
+
+const livePreview = computed(() => !selectedImage.value && sdWebUI.live.active ? sdWebUI.live.preview : null);
+const shownImageUrl = computed(() => livePreview.value || createImageLink(resultImage.value));
+
+// Dropped from the session by its image limit
+watch(() => sessionImagesStore.images, images => {
+  if (selectedImage.value && !images.includes(selectedImage.value))
+    selectedImage.value = null;
+});
 
 // Input images of the shown mode, as WebUI reports them
 const inputs = computed(() => sdWebUI.inputs.mode === mode.value ? sdWebUI.inputs : {image: null, mask: null});
@@ -409,13 +439,13 @@ function onInputUpload(kind, file) {
 }
 
 /**
- * Reuse the (variation) seed of the latest image: set here and mirrored to WebUI like an edit,
+ * Reuse the (variation) seed of the shown image: set here and mirrored to WebUI like an edit,
  * so that the value is shown at once. As in WebUI, the variation seed of an image without variations is -1.
  * Without an image, the WebUI reuse button is clicked (it uses the last generation of the WebUI session)
  * @param {'seed'|'subseed'} which
  */
 function onReuseSeed(which) {
-  const parameters = latestImage.value?.parameters;
+  const parameters = resultImage.value?.parameters;
 
   if (!parameters) {
     webUI.reuseSeed(which);
@@ -430,15 +460,52 @@ const showImageOverlay = ref(false);
 const overlayImage = ref(null);
 
 function onResultClick() {
-  if (!latestImage.value || livePreview.value)
+  if (!resultImage.value || livePreview.value)
     return;
 
-  overlayImage.value = latestImage.value;
+  openImageOverlay(resultImage.value);
+}
+
+function openImageOverlay(image) {
+  overlayImage.value = image;
   showImageOverlay.value = true;
 }
 
+const showParamsOverlay = ref(false);
+const paramsOverlayImage = ref(null);
+const paramsOverlayText = ref("");
+
+function onShowParams(image) {
+  paramsOverlayText.value = imageOps.getImageParams(image);
+  paramsOverlayImage.value = image;
+  showParamsOverlay.value = true;
+}
+
+// The arrow keys move the overlay through the session images; the latest image is found there by its URL
+function showSessionNeighbour(step) {
+  const images = sessionImagesStore.images;
+  const url = createImageLink(overlayImage.value);
+  const index = images.findIndex(image => image === overlayImage.value || createImageLink(image) === url);
+  const neighbour = index >= 0 ? images[index + step] : null;
+
+  if (neighbour)
+    overlayImage.value = neighbour;
+}
+
 function onKeydown(e) {
-  if ((e.key === "Escape" || e.key === "Esc") && showImageOverlay.value)
+  if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && showImageOverlay.value && !showParamsOverlay.value
+      && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    showSessionNeighbour(e.key === "ArrowLeft" ? -1 : 1);
+    return;
+  }
+
+  if (e.key !== "Escape" && e.key !== "Esc")
+    return;
+
+  if (showParamsOverlay.value)
+    showParamsOverlay.value = false;
+  else if (showImageOverlay.value)
     showImageOverlay.value = false;
 }
 
@@ -535,6 +602,65 @@ const paramsCollapsed = ref(storage.getItem(PARAMS_COLLAPSED_KEY) === "true");
 
 watch(paramsCollapsed, collapsed => storage.setItem(PARAMS_COLLAPSED_KEY, String(collapsed)));
 
+// ---------- Parameters or session filmstrip ----------
+
+// Tabs at the right edge of the parameter groups; the filmstrip is hidden by default
+const lowerTab = ref("params");
+
+// Shown for a batch, also over collapsed parameters, the filmstrip is hidden when the batch ends unless
+// it has been used meanwhile; under the pointer it is hidden when the pointer leaves it
+const stripAutoShown = ref(false);
+const stripHovered = ref(false);
+let stripHidePending = false;
+
+const lowerCollapsed = computed(() => paramsCollapsed.value && !stripAutoShown.value);
+
+function showLowerTab(tab) {
+  lowerTab.value = tab;
+  paramsCollapsed.value = false;
+  stripAutoShown.value = false;
+  stripHidePending = false;
+}
+
+function autoShowStrip() {
+  if (lowerTab.value === "session" && !lowerCollapsed.value)
+    return;
+
+  lowerTab.value = "session";
+  stripAutoShown.value = true;
+  // A hidden strip receives no mouseleave
+  stripHovered.value = false;
+  stripHidePending = false;
+}
+
+function autoHideStrip() {
+  if (!stripAutoShown.value)
+    return;
+
+  if (stripHovered.value) {
+    stripHidePending = true;
+    return;
+  }
+
+  stripAutoShown.value = false;
+  lowerTab.value = "params";
+}
+
+// Used while it is shown automatically, the filmstrip stays
+function keepStrip() {
+  if (stripAutoShown.value)
+    showLowerTab("session");
+}
+
+function onStripLeave() {
+  stripHovered.value = false;
+
+  if (stripHidePending) {
+    stripHidePending = false;
+    autoHideStrip();
+  }
+}
+
 // ---------- Layout ----------
 
 // Content size of the grid; an estimate until it is measured
@@ -583,6 +709,30 @@ const imageWidth = reactive(useDragSize(IMAGE_WIDTH_KEY, {
   fallback: () => Math.min(gridSize.height * aspect.value, gridSize.width * IMAGE_WIDTH.autoShare)
 }));
 
+// Natural height of the parameter groups, which the filmstrip takes too unless the area is resized
+const groupsElement = ref(null);
+const groupsHeight = ref(LOWER_HEIGHT.default);
+const groupsObserver = new ResizeObserver(([entry]) => {
+  // Hidden behind the filmstrip or in a deactivated tab
+  if (entry.target.offsetHeight)
+    groupsHeight.value = entry.target.offsetHeight;
+});
+
+watch(groupsElement, (element, previous) => {
+  if (previous)
+    groupsObserver.unobserve(previous);
+  if (element)
+    groupsObserver.observe(element);
+});
+
+onBeforeUnmount(() => groupsObserver.disconnect());
+
+const lowerHeight = reactive(useDragSize(LOWER_HEIGHT_KEY, {
+  min: LOWER_HEIGHT.min,
+  max: () => Math.max(LOWER_HEIGHT.min, gridSize.height - LOWER_HEIGHT.promptReserve),
+  fallback: () => groupsHeight.value
+}));
+
 const imageHeight = reactive(useDragSize(IMAGE_HEIGHT_KEY, {
   min: IMAGE_HEIGHT.min,
   max: () => gridSize.height - IMAGE_HEIGHT.sideReserve,
@@ -597,7 +747,10 @@ const gridStyle = computed(() => ({
 </script>
 
 <template>
-  <ImageOverlay v-if="showImageOverlay" :image="overlayImage" @hide-overlay="showImageOverlay = false"/>
+  <ImageOverlay v-if="showImageOverlay" :image="overlayImage" @show-params="onShowParams"
+                @hide-overlay="showImageOverlay = false"/>
+  <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage" :text="paramsOverlayText"
+                     @hide-overlay="showParamsOverlay = false"/>
 
   <div class="view-container generate">
     <div class="toolbar">
@@ -728,7 +881,7 @@ const gridStyle = computed(() => ({
         <GenerateImageCell class="image-cell" :style="wide ? null : {height: `${imageHeight.size}px`}"
                            :mode="mode" :result-url="shownImageUrl"
                            :live-progress="livePreview ? sdWebUI.live.progress : null"
-                           :result-clickable="!!latestImage && !livePreview"
+                           :result-clickable="!!resultImage && !livePreview"
                            :input-image="inputs.image" :input-mask="inputs.mask"
                            @result-click="onResultClick" @upload="onInputUpload"
                            @use-size="(width, height) => setParams({width, height})"/>
@@ -758,26 +911,58 @@ const gridStyle = computed(() => ({
                        :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"/>
         </template>
 
-        <div v-if="paramsCollapsed" class="groups-collapsed">
-          <span class="label-small">Parameters</span>
+        <div v-if="lowerCollapsed" class="groups-collapsed">
+          <button type="button" class="collapsed-tab label-small" title="Show the generation parameters"
+                  @click="showLowerTab('params')">Parameters</button>
+          <button type="button" class="collapsed-tab label-small" title="Show the images generated in this session"
+                  @click="showLowerTab('session')">Session
+            <span v-if="sessionImagesStore.images.length" class="count">{{ sessionImagesStore.images.length }}</span></button>
+          <span class="spacer"></span>
           <button type="button" class="params-toggle restore" title="Show the generation parameters"
                   aria-label="Show the generation parameters" :aria-expanded="false"
-                  @click="paramsCollapsed = false"><AppIcon name="chevron" :size="14"/></button>
+                  @click="showLowerTab(lowerTab)"><AppIcon name="chevron" :size="14"/></button>
         </div>
 
-        <div v-else class="groups">
-          <button type="button" class="params-toggle" title="Hide the generation parameters"
-                  aria-label="Hide the generation parameters" :aria-expanded="true"
-                  @click="paramsCollapsed = true"><AppIcon name="chevron" :size="14"/></button>
-          <SamplingGroup :form="form" :samplers="samplerChoices" :schedulers="schedulerChoices"
-                         :slider-kind="sdWebUI.sliderKind" :has="has" @set="setParam"/>
-          <SeedGroup :form="form" :has="has" @set="setParam" @reuse="onReuseSeed"/>
-          <HiresGroup v-if="isTxt2Img && has('hires')" :form="form" :upscalers="sdWebUI.options.upscalers ?? []"
-                      :has="has" @set="setParam"/>
-          <Img2ImgGroup v-else-if="!isTxt2Img" :form="form" :options="sdWebUI.options" :has="has"
-                        :title="mode === 'inpaint' ? 'Inpaint' : 'img2img'" :inpaint-params="hasInpaintParams"
-                        @set="setParam"/>
-        </div>
+        <template v-else>
+          <div class="grip" :class="{active: lowerHeight.resizing}" role="separator" aria-orientation="horizontal"
+               aria-label="Resize the parameters" :aria-valuenow="lowerHeight.size" tabindex="0"
+               title="Drag to resize the parameters and the filmstrip; double-click to fit the parameters"
+               @pointerdown="lowerHeight.onPointerDown" @keydown="lowerHeight.onKeydown"
+               @dblclick="lowerHeight.reset"><i></i></div>
+
+          <div class="lower-area" :style="{height: `${lowerHeight.size}px`}">
+            <div v-show="lowerTab === 'params'" class="lower-pane params-pane">
+              <div ref="groupsElement" class="groups">
+                <SamplingGroup :form="form" :samplers="samplerChoices" :schedulers="schedulerChoices"
+                               :slider-kind="sdWebUI.sliderKind" :has="has" @set="setParam"/>
+                <SeedGroup :form="form" :has="has" @set="setParam" @reuse="onReuseSeed"/>
+                <HiresGroup v-if="isTxt2Img && has('hires')" :form="form" :upscalers="sdWebUI.options.upscalers ?? []"
+                            :has="has" @set="setParam"/>
+                <Img2ImgGroup v-else-if="!isTxt2Img" :form="form" :options="sdWebUI.options" :has="has"
+                              :title="mode === 'inpaint' ? 'Inpaint' : 'img2img'" :inpaint-params="hasInpaintParams"
+                              @set="setParam"/>
+              </div>
+            </div>
+
+            <SessionStrip v-show="lowerTab === 'session'" class="lower-pane" :images="sessionImagesStore.images"
+                          :selected="selectedImage" :active="lowerTab === 'session'"
+                          @select="image => selectedImage = image" @open="openImageOverlay"
+                          @show-params="onShowParams" @interact="keepStrip"
+                          @mouseenter="stripHovered = true" @mouseleave="onStripLeave"/>
+
+            <div class="lower-tabs" role="tablist" aria-orientation="vertical">
+              <button type="button" class="params-toggle" title="Hide the generation parameters"
+                      aria-label="Hide the generation parameters" :aria-expanded="true"
+                      @click="paramsCollapsed = true; stripAutoShown = false"><AppIcon name="chevron" :size="14"/></button>
+              <button type="button" role="tab" class="lower-tab label-small" :class="{on: lowerTab === 'params'}"
+                      :aria-selected="lowerTab === 'params'" @click="showLowerTab('params')">Parameters</button>
+              <button type="button" role="tab" class="lower-tab label-small" :class="{on: lowerTab === 'session'}"
+                      :aria-selected="lowerTab === 'session'" title="Images generated in this session"
+                      @click="showLowerTab('session')">Session<span v-if="sessionImagesStore.images.length"
+                      class="count">{{ sessionImagesStore.images.length }}</span></button>
+            </div>
+          </div>
+        </template>
       </div>
     </fieldset>
   </div>
@@ -1084,19 +1269,77 @@ const gridStyle = computed(() => ({
   gap: 18px;
 }
 
-/* At the right end of the group headers; the collapsed groups leave a header line with it */
-.groups > .params-toggle {
-  position: absolute;
-  top: -3px;
-  right: 0;
+/* Parameters or filmstrip, with their tabs at the right edge */
+.lower-area {
+  display: flex;
+  gap: 8px;
+  min-height: 0;
 }
 
+.lower-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Scrolled when the area is resized below the height of the groups */
+.params-pane {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.lower-tabs {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: -3px;
+  border-left: 1px solid var(--ib-border);
+}
+
+/* Rotated, read from the bottom up */
+.lower-tab {
+  padding: 6px 2px 6px 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  border: 0;
+  border-right: 2px solid transparent;
+  margin-left: -1px;
+  background: none;
+  cursor: pointer;
+}
+
+.lower-tab:hover,
+.collapsed-tab:hover {
+  color: var(--ib-text-2);
+}
+
+.lower-tab.on {
+  border-right-color: var(--ib-accent);
+  color: var(--ib-text);
+}
+
+/* The collapsed area leaves a header line with its tabs */
 .groups-collapsed {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   padding-bottom: 2px;
   border-bottom: 1px solid var(--ib-border);
+}
+
+.collapsed-tab {
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
 
 .params-toggle {
