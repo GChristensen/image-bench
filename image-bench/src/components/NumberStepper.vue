@@ -24,6 +24,10 @@ const props = defineProps({
   label: {
     type: String,
     default: ""
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -36,11 +40,11 @@ function increment(direction) {
 </script>
 
 <template>
-  <span class="stepper">
-    <button type="button" :aria-label="`Decrease ${label}`" @click="increment(-1)"><AppIcon name="minus" :size="12"/></button>
+  <span class="stepper" :class="{disabled}">
+    <button type="button" :aria-label="`Decrease ${label}`" @click="increment(-1)" :disabled="disabled"><AppIcon name="minus" :size="12"/></button>
     <input type="number" :min="min" :max="max === Infinity ? undefined : max" :step="step" :aria-label="label"
-           v-model="model">
-    <button type="button" :aria-label="`Increase ${label}`" @click="increment(1)"><AppIcon name="plus" :size="12"/></button>
+           :disabled="disabled" v-model="model">
+    <button type="button" :aria-label="`Increase ${label}`" @click="increment(1)" :disabled="disabled"><AppIcon name="plus" :size="12"/></button>
   </span>
 </template>
 
@@ -52,6 +56,10 @@ function increment(direction) {
   border: 1px solid var(--ib-border);
   border-radius: 5px;
   background: var(--ib-bg);
+}
+
+.stepper.disabled {
+  opacity: 0.5;
 }
 
 .stepper button {
@@ -67,7 +75,11 @@ function increment(direction) {
   padding: 0;
 }
 
-.stepper button:hover {
+.stepper button:disabled {
+  cursor: default;
+}
+
+.stepper button:not(:disabled):hover {
   color: var(--ib-text);
   background: var(--ib-hover);
 }

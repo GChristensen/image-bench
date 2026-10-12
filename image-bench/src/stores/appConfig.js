@@ -25,6 +25,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Open Image Bench in a browser tab instead of a popup window (disabled unless set to true)
+    const openInTab = computed({
+        get() {
+            return _config.openInTab ?? false;
+        },
+        set(v) {
+            _config.openInTab = v;
+            return persist();
+        }
+    });
+
     // Civitai domain of the model pages: "com" or "red"
     const civitaiDomain = computed({
         get() {
@@ -147,6 +158,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         init, persist,
         repositionConfigPresetsDropdown,
         addModelInfoButton,
+        openInTab,
         civitaiDomain,
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,

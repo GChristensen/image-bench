@@ -28,10 +28,6 @@ export function useImageOperations() {
   const createImageTooltip = (image) => {
     let result = '';
 
-    if (image.comment) {
-      result += '💬 ' + image.comment + '\u000d\u000d';
-    }
-
     for (const key in image.parameters) {
       if (key !== 'prompt' && key !== 'negative prompt' && key !== 'version') {
         let value = image.parameters[key];
@@ -113,6 +109,40 @@ export function useImageOperations() {
     }
   };
 
+  /**
+   * Whether images can be put on the clipboard (needs a secure context, e.g. localhost)
+   */
+  const canCopyImage = () => !!(window.ClipboardItem && navigator.clipboard?.write);
+
+  /**
+   * Put an image on the clipboard as PNG, the only image type browsers accept there
+   * @returns {Promise<string|null>} Error message, or null on success
+   */
+  const copyImage = async (image) => {
+    try {
+      const response = await fetch(createImageLink(image));
+
+      if (!response.ok)
+        return `Unable to read the image: ${response.status}`;
+
+      let blob = await response.blob();
+
+      if (blob.type !== 'image/png') {
+        const bitmap = await createImageBitmap(blob);
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        canvas.getContext('2d').drawImage(bitmap, 0, 0);
+        blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      }
+
+      await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+      return null;
+    } catch (error) {
+      return `Unable to copy the image: ${error.message}`;
+    }
+  };
+
   return {
     getImageLink,
     getImageParams,
@@ -123,6 +153,8 @@ export function useImageOperations() {
     hasCustomSteps,
     openImageInNewWindow,
     sendToPhotoshop,
-    sendToControlNet
+    sendToControlNet,
+    canCopyImage,
+    copyImage
   };
 }

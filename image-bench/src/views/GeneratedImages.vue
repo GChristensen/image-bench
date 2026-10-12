@@ -44,12 +44,14 @@ const showImageOverlay = ref(false);
 // const overlayImageIndex = ref(null);
 const overlayImage = ref(null);
 const isAllSelected = computed(() => imageStream.value?.isAllSelected);
-const isSomeSelected = computed(() => imageStream.value?.isSomeSelected);
+const selectedCount = computed(() => imageStream.value?.selectedCount || 0);
 const showParamsOverlay = ref(false);
 const paramsOverlayText = ref("");
 const paramsOverlayImage = ref(null);
 const lastConfigPreset = ref("");
 const isShowingMarked = ref(false);
+// Marking the shown images are filtered by (with isShowingMarked), set by clicking the marking of an image
+const markingFilter = ref(null);
 const openFileInput = ref()
 
 // Composables
@@ -78,6 +80,10 @@ function onClearClick() {
   imageStream.value.clear();
 }
 
+function onRemoveSelectedClick() {
+  imageStream.value.removeSelected();
+}
+
 async function onUpscaleSelectedClick() {
   const selectedImages = imageStream.value.getSelectedImages();
 
@@ -93,7 +99,7 @@ async function onUpscaleSelectedClick() {
   }
 }
 
-async function onUpscaleImage(imageProxy, usePreset) {
+async function onUpscaleImage(imageProxy) {
   const image = imageOps.cloneImage(imageProxy);
 
   if (!await ensureGenerationIdle())
@@ -232,8 +238,21 @@ function hideOverlay() {
   showParamsOverlay.value = false;
 }
 
-function onMarkingFilter() {
-  isShowingMarked.value = true;
+// Clicking the marking the images are filtered by shows all images again
+function onMarkingFilter(marking) {
+  if (markingFilter.value === marking) {
+    markingFilter.value = null;
+    isShowingMarked.value = false;
+  }
+  else {
+    markingFilter.value = marking;
+    isShowingMarked.value = true;
+  }
+}
+
+function onMarkingFilterOverlay(marking) {
+  closeImageOverlay();
+  onMarkingFilter(marking);
 }
 
 function displayPrevImage() {
@@ -259,6 +278,7 @@ function displayNextImage() {
 function onShowMarkedClick() {
   if (isShowingMarked.value) {
     isShowingMarked.value = false;
+    markingFilter.value = null;
   }
   else {
     isShowingMarked.value = true;
@@ -324,6 +344,12 @@ function isComponentTray(kind) {
                 :image="overlayImage"
                 :is-tray="isComponentTray(kind)"
                 :kind="kind"
+                :upscalable="isComponentTray(kind) || kind === KIND_GENERATED"
+                :marking-filter="markingFilter"
+                @show-params="onShowParams"
+                @upscale-image="onUpscaleImage"
+                @add-comment="image => imageStream.addComment(image)"
+                @filter-marking="onMarkingFilterOverlay"
                 @hide-overlay="closeImageOverlay"
                 @image-select="onImageSelectOverlay"
                 @set-marking="imageStore.persist()"
@@ -343,8 +369,10 @@ function isComponentTray(kind) {
       :kind="kind"
       :is-tray="isComponentTray(kind)"
       :is-all-selected="isAllSelected"
-      :is-some-selected="isSomeSelected"
+      :selected-count="selectedCount"
+      :auto-clear="config.automaticallyClearGeneratedImages"
       :is-showing-marked="isShowingMarked"
+      :marking-filter="markingFilter"
       :generation-in-progress="imageStore.generationInProgress"
       :generation-progress="imageStore.generationProgress"
       :generation-completed="imageStore.generationCompleted"
@@ -362,12 +390,16 @@ function isComponentTray(kind) {
       @stop-generation="onStopGenerationClick"
       @upscale-selected="onUpscaleSelectedClick"
       @clear="onClearClick"
+      @remove-selected="onRemoveSelectedClick"
+      @unselect-all="imageStream.unselectAll()"
+      @update:autoClear="value => config.automaticallyClearGeneratedImages = value"
       @preset-change="onConfigPresetChange"
     />
     <ImageStream ref="imageStream"
                  :kind="kind"
                  :image-store="imageStore"
                  :show-marked="isShowingMarked"
+                 :marking-filter="markingFilter"
                  @marking-filter="onMarkingFilter"
                  @image-click="onImageClick"
                  @image-open="onImageOpen"

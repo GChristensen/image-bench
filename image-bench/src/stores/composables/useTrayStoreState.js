@@ -26,9 +26,9 @@ export function useTrayStoreState(kind) {
   async function _persistToServer() {
     const trayContent = { version: 1, images: [] };
     trayContent.images = [...baseStore.images.value];
-    trayContent.images.forEach(i => delete i.selected);
 
-    const payload = JSON.stringify(trayContent);
+    // The selection is not saved, but kept in the view (images arrive while upscaled ones are selected)
+    const payload = JSON.stringify(trayContent, (key, value) => key === "selected" ? undefined : value);
     const response = await fetch(`/image-bench/${kind}`, { method: 'post', body: payload });
 
     // Update the sent images with backend's modified data (contains updated paths after file copying);
@@ -58,6 +58,8 @@ export function useTrayStoreState(kind) {
 
   async function addImage(imageData) {
     imageData = { ...imageData };
+    // A selected image (e.g. dragged with others) does not arrive selected
+    delete imageData.selected;
 
     if (!isInTray(imageData)) {
       imageData.tagColor = pickTagColor(baseStore.images.value, imageData);

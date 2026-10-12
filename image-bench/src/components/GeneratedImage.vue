@@ -1,24 +1,18 @@
 <script setup>
-  import {nextTick, ref, watch} from "vue";
-  import {useImageTrayStore} from "@/stores/imageTray.js";
-  import {animateColors} from "@/utils_html.js";
+  import {computed, nextTick, ref, watch} from "vue";
   import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
-  import {useAppConfigStore} from "@/stores/appConfig.js";
-  import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
-  import {useUpscaledImagesStore} from "@/stores/upscaled.js";
-  import {flashTrayTab} from "@/components/utils.js";
-  import {useConceptTrayStore} from "@/stores/conceptTray.js";
-  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, MARKINGS} from "@/consts.js";
-  import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
-  import {useLocalStorage} from "@/composables/useLocalStorage.js";
-  import {dialog} from "@/dialogs/useDialog.js";
-  import {hostHas} from "@/host.js";
-  import {ensureGenerationIdle} from "@/sdwebui.js";
+  import {useShiftKey} from "@/composables/useShiftKey.js";
+  import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
+  import {visibleActionGroups, runImageAction, imageActionHint} from "@/imageActions.js";
+  import {openImageMenu} from "@/contextMenu.js";
+  import {startImageDrag, endImageDrag} from "@/imageDrag.js";
+  import {isWebUI} from "@/host.js";
+  import {MARKINGS} from "@/consts.js";
   import AppIcon from "@/components/AppIcon.vue";
 
-  const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams', 
-    'select', 'upscaleImage', 'addComment', 'deleteImage']);
+  const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams',
+    'select', 'upscaleImage', 'addComment']);
 
   const props = defineProps({
     isTray: {
@@ -53,6 +47,11 @@
     highlighted: {
       type: Boolean,
       default: false
+    },
+    // Marking the view is filtered by, if any
+    markingFilter: {
+      type: String,
+      default: null
     }
   });
 
@@ -66,114 +65,99 @@
     }
   });
 
-  const config = useAppConfigStore();
-  const imageTrayStore = useImageTrayStore();
-  const conceptTrayStore = useConceptTrayStore();
   const sdWebUIStore = useSDWebUIStateStore();
-  const generatedImagesStore = useGeneratedImagesStore();
-  const upscaledImageStore = useUpscaledImagesStore();
-  // Upscaling is not implemented for ComfyUI
-  const isWebUI = import.meta.env.MODE === 'webui';
-  const canSendToControlNet = hostHas("images", "sendToControlNet");
-
-  // Composables
-  const webUI = useWebUIBridge();
   const imageOps = useImageOperations();
-  const storage = useLocalStorage();
+  const shiftDown = useShiftKey();
 
-  async function onReuseSeedClick(e) {
-    e.preventDefault();
-
-    if (!await ensureGenerationIdle())
-      return;
-
-    const parameters = imageOps.cloneImage(props.image).parameters;
-    webUI.setImageSeed(parameters);
-  }
-
-  // currently undocumented
-  async function onReuseParamsClick(e) {
-    e.preventDefault();
-
-    if (!await ensureGenerationIdle())
-      return;
-
-    const parameters = imageOps.cloneImage(props.image).parameters;
-    webUI.setImageParams(parameters);
-  }
-
-  function onPlaceToTray(e) {
-    e.preventDefault();
-
-    imageTrayStore.addImage(props.image);
-
-    flashTrayTab("image-tray-tab");
-  }
-
-  function onPlaceToConceptTray(e) {
-    e.preventDefault();
-
-    conceptTrayStore.addImage(props.image);
-
-    flashTrayTab("concept-tray-tab");
-  }
-
-
-  async function onGenerateVaryingSteps(e) {
-    if (!await ensureGenerationIdle())
-      return;
-
-    const storedSteps = storage.getVaryingSteps();
-    const steps = await dialog.prompt("Apply step values:",
-      {defaultValue: storedSteps, storageKey: "varyingSteps", dropdown: true, historySize: 5});
-
-    if (steps) {
-      if (config.automaticallyClearGeneratedImages)
-        generatedImagesStore.clear();
-
-      generatedImagesStore.startingGeneration();
-
-      storage.setVaryingSteps(steps);
-      const image = imageOps.cloneImage(props.image);
-      webUI.generateVaryingSteps(image, steps);
+  // Context of the image actions (imageActions.js)
+  const actionContext = {
+    get kind() { return props.kind; },
+    get isTray() { return props.isTray; },
+    get upscalable() { return props.upscalable; },
+    handlers: {
+      showParams: () => emit("showParams"),
+      upscale: image => emit("upscaleImage", image),
+      addComment: image => emit("addComment", image),
+      openImage: () => emit("imageOpen"),
+      filterMarking: marking => emit("filterMarking", marking),
+      removeMarking: () => removeMarking(),
+      activeMarkingFilter: () => props.markingFilter
     }
+  };
+
+  const leftGroups = computed(() => visibleActionGroups(props.image, actionContext, "left"));
+  const rightGroups = computed(() => visibleActionGroups(props.image, actionContext, "right"));
+
+  // Shift over the card shows the alternative actions of the buttons that have one
+  const hovered = ref(false);
+  const hoveredAction = ref(null);
+  const showAlt = computed(() => hovered.value && shiftDown.value);
+  // Badges and markings show their description in the same place instead of a tooltip;
+  // a function keeps it current while the pointer stays (e.g. after toggling the marking filter)
+  const hoveredText = ref(null);
+  const hint = computed(() => hoveredAction.value
+    ? imageActionHint(hoveredAction.value, showAlt.value)
+    : typeof hoveredText.value === "function" ? hoveredText.value() : hoveredText.value);
+
+  const markingHint = () => props.markingFilter === props.image.marking
+    ? "Click: show all images · Middle: remove marking"
+    : "Click: show only this marking · Middle: remove marking";
+
+  function onFrameEnter() {
+    hovered.value = true;
+    setHoveredImageTarget({getImage: () => props.image, ctx: actionContext, element: rootElement.value});
   }
 
-  async function onUpscaleVaryingDenoising(e) {
-    if (!await ensureGenerationIdle())
-      return;
-
-    const storedSteps = storage.getVaryingDenoising();
-    const denoising = await dialog.prompt("Apply denoising values:",
-      {defaultValue: storedSteps, storageKey: "varyingDenoising", dropdown: true, historySize: 5});
-
-    if (denoising) {
-      upscaledImageStore.startingGeneration();
-
-      storage.setVaryingDenoising(denoising);
-      const image = imageOps.cloneImage(props.image);
-      webUI.upscaleVaryingDenoising(image, denoising);
-    }
+  function onFrameLeave() {
+    hovered.value = false;
+    hoveredAction.value = null;
+    hoveredText.value = null;
+    clearHoveredImageTarget(rootElement.value);
   }
 
-  async function onSendToControlNet(e) {
-    e.preventDefault();
-
-    const error = await imageOps.sendToControlNet(props.image);
-
-    if (error)
-      await dialog.alert(error, {title: "Send to ControlNet"});
-    else
-      flashTrayTab("controlnet-tab");
+  function onActionClick(action, e) {
+    runImageAction(action, props.image, actionContext, e.shiftKey);
   }
 
-  async function onSendToPhotoshop(e, newDocument) {
-    e.preventDefault();
+  function onActionAuxClick(action, e) {
+    if (e.button === 1 && action.alt)
+      runImageAction(action, props.image, actionContext, true);
+  }
 
-    const error = await imageOps.sendToPhotoshop(props.image, newDocument);
+  // The card is dragged by its image, so that the buttons and markings do not start drags
+  const dragging = ref(false);
 
-    if (error)
-      await dialog.alert(error, {title: "Send to Photoshop"});
+  function onDragStart(e) {
+    startImageDrag(e, props.image, props.kind);
+    dragging.value = true;
+  }
+
+  function onDragEnd() {
+    endImageDrag();
+    dragging.value = false;
+  }
+
+  function onImageAuxClick(e) {
+    if (e.button === 1)
+      emit("imageOpen");
+  }
+
+  function onMarkingAuxClick(e) {
+    if (e.button === 1)
+      removeMarking();
+  }
+
+  // The marking and the picker replace each other under the pointer without a mouseleave
+  function setMarking(marking) {
+    hoveredText.value = null;
+    props.image.marking = marking;
+    emit("setMarking");
+  }
+
+  function removeMarking() {
+    hoveredText.value = null;
+    delete props.image.marking;
+    emit("setMarking");
   }
 
   // An image without a negative prompt has no "negative prompt" parameter, as WebUI omits it from the infotext
@@ -188,102 +172,88 @@
         || !samePrompt(image.parameters["negative prompt"], sdWebUIStore.negativePrompt));
   }
 
-  function getUpscaleButtonTitle(image) {
-    // let result = "Left: " + "upscale";
-    //
-    // if (image.setSteps)
-    //   result += ` using ${image.parameters['steps']} sampling steps`;
-    // else
-    //   result += ' using WebUI settings';
-    //
-    // if (!image.setSteps)
-    //   result += ", Middle: upscale using image tray preset";
-
-    let result = "Upscale using the current WebUI settings";
-
-    return result;
-  }
-
-  function onSelectMarkingClick(e) {
-    props.image.marking = e.target.textContent;
-    emit("setMarking");
-  }
-
-  function onRemoveMarking(e) {
-    delete props.image.marking;
-    emit("setMarking");
-  }
-
 </script>
 
 <template>
-<div v-if="displayed" ref="rootElement" class="selectable-image" :class="{selected, highlighted}">
+<div v-if="displayed" ref="rootElement" class="selectable-image" :class="{selected, highlighted, dragging}">
   <div class="image-separator" v-if="image.separator">◇</div>
-  <div v-else class="image-frame">
+  <div v-else class="image-frame" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
+       @contextmenu="openImageMenu($event, image, actionContext)">
     <img class="selectable-image-preview"
          :src="imageOps.getImageLink(image)"
          :title="imageOps.createImageTooltip(image)"
-         @mousedown.left="$emit('imageClick')"
-         @mousedown.middle="$emit('imageOpen')">
+         @click="$emit('imageClick')"
+         @mousedown.middle.prevent
+         @auxclick="onImageAuxClick"
+         @dragstart="onDragStart"
+         @dragend="onDragEnd">
 
     <span v-if="image.tagColor" class="tag-bar" :style="{background: image.tagColor}"></span>
 
-    <label v-if="selectable" class="select-box" title="Select">
+    <label v-if="selectable" class="select-box"
+           @mouseenter="hoveredText = () => selected ? 'Unselect' : 'Select'" @mouseleave="hoveredText = null">
       <input type="checkbox" aria-label="Select image" :checked="selected"
              @change="$emit('select', $event.target.checked)">
       <span class="select-circle"><AppIcon name="check" :size="12"/></span>
     </label>
 
+    <div v-if="image.comment" class="image-comment" :class="{selectable}" :title="image.comment"
+         @click="$emit('imageClick')">{{ image.comment }}</div>
+
     <!-- One shared row, so the left group wraps only when the whole width runs out -->
     <div class="image-actions-bar" :class="{selectable}">
-    <div class="image-actions left">
-      <button v-if="!image.img2img" class="ib sm" title="Left: reuse seed, Middle: reuse all parameters" aria-label="Reuse seed"
-              @mousedown.left="onReuseSeedClick" @mousedown.middle="onReuseParamsClick"><AppIcon name="seed" :size="13"/></button>
-      <button class="ib sm" title="Generation parameters" aria-label="Generation parameters"
-              @mousedown.left="$emit('showParams')"><AppIcon name="params" :size="13"/></button>
-      <button v-if="isTray && !image.img2img" class="ib sm" title="Generate with steps" aria-label="Generate with steps"
-              @mousedown.left="onGenerateVaryingSteps"><AppIcon name="steps" :size="13"/></button>
-      <button v-if="isWebUI && upscalable && !image.img2img" class="ib sm" :title="getUpscaleButtonTitle(image)" aria-label="Upscale"
-              @mousedown.left="$emit('upscaleImage', image, false)"
-              @mousedown.middle="$emit('upscaleImage', image, true)"><AppIcon name="upscale" :size="13"/></button>
-      <button v-if="isWebUI && isTray && !image.img2img" class="ib sm" title="Upscale with denoising" aria-label="Upscale with denoising"
-              @mousedown.left="onUpscaleVaryingDenoising"><AppIcon name="denoise" :size="13"/></button>
-      <button v-if="canSendToControlNet" class="ib sm" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
-              @mousedown.left="onSendToControlNet"><AppIcon name="controlnet" :size="13"/></button>
-      <button class="ib sm" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
-              @mousedown.left="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)"><AppIcon name="external" :size="13"/></button>
-      <button v-if="isTray" class="ib sm" title="Add comment" aria-label="Add comment"
-              @click="$emit('addComment', image)"><AppIcon name="comment" :size="13"/></button>
-      <button v-if="isTray" class="ib sm danger" title="Delete" aria-label="Delete"
-              @mousedown.left="$emit('deleteImage', image)"><AppIcon name="trash" :size="13"/></button>
+      <div v-for="(side, sideIndex) in [leftGroups, rightGroups]" :key="sideIndex"
+           class="image-actions" :class="sideIndex ? 'right' : 'left'">
+        <template v-for="(group, groupIndex) in side" :key="groupIndex">
+          <span v-if="groupIndex" class="action-sep"></span>
+          <button v-for="action in group" :key="action.id" class="ib sm"
+                  :class="{on: showAlt && action.alt}"
+                  :aria-label="showAlt && action.alt ? action.alt.label : action.label"
+                  @click="onActionClick(action, $event)"
+                  @mousedown.middle.prevent
+                  @auxclick="onActionAuxClick(action, $event)"
+                  @mouseenter="hoveredAction = action"
+                  @mouseleave="hoveredAction = null"
+          ><AppIcon :name="showAlt && action.alt ? action.alt.icon : action.icon" :size="13"/></button>
+        </template>
+      </div>
     </div>
 
-    <!-- Tray buttons stay top-right, the rest go top-left -->
-    <div class="image-actions right">
-      <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib sm" title="Place to concept tray" aria-label="Place to concept tray"
-              @click="onPlaceToConceptTray"><AppIcon name="concept" :size="13"/></button>
-      <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib sm" title="Place to image tray" aria-label="Place to image tray"
-              @click="onPlaceToTray"><AppIcon name="palette" :size="13"/></button>
-    </div>
-    </div>
-
-    <!-- One row, so that the markings shown on hover never cover the badges; it wraps upwards if narrow -->
+    <!-- One row, so that the hint never covers the badges; it wraps upwards if narrow -->
     <div class="image-bottom-bar">
-      <div class="image-badges">
-        <span v-if="image.parameters['hires upscale']" class="badge hr" title="Upscaled">HR</span>
-        <span v-if="image.img2img" class="badge i2i" title="Img2Img image">I2I</span>
-        <span v-if="image.setSteps" class="badge steps" :title="`Upscaled with ${image.parameters['steps']} sampling steps`">{{ image.parameters['steps'] }} st</span>
-        <span v-if="needShowPromptWarning(image)" class="badge warn" title="Image prompt and Txt2Img prompt do not match"
+      <!-- Explore images compare models, so they show no badges or markings -->
+      <div v-if="kind !== 'explore'" class="image-badges">
+        <span v-if="image.parameters['hires upscale']" class="badge hr"
+              @mouseenter="hoveredText = 'Upscaled'" @mouseleave="hoveredText = null">HR</span>
+        <span v-if="image.img2img" class="badge i2i"
+              @mouseenter="hoveredText = 'Img2Img image'" @mouseleave="hoveredText = null">I2I</span>
+        <span v-if="image.setSteps" class="badge steps"
+              @mouseenter="hoveredText = `Upscaled with ${image.parameters['steps']} sampling steps`"
+              @mouseleave="hoveredText = null">{{ image.parameters['steps'] }} st</span>
+        <span v-if="needShowPromptWarning(image)" class="badge warn"
+              @mouseenter="hoveredText = 'Image prompt and Txt2Img prompt do not match'"
+              @mouseleave="hoveredText = null"
           ><AppIcon name="alert" :size="11"/></span>
       </div>
 
-      <div v-if="isTray" class="markings">
-        <span v-for="marking in MARKINGS" :key="marking" class="marking" @click="onSelectMarkingClick">{{ marking }}</span>
-      </div>
+      <span v-if="hint" class="action-hint">{{ hint }}</span>
 
-      <span v-if="image.marking" class="image-marking" title="Left: remove marking, Middle: filter by"
-            @mousedown.left="onRemoveMarking"
-            @mousedown.middle="$emit('filterMarking', image.marking)">{{ image.marking }}</span>
+      <span v-if="image.marking && kind !== 'explore'" class="image-marking" :class="{active: markingFilter === image.marking}"
+            @mouseenter="hoveredText = markingHint"
+            @mouseleave="hoveredText = null"
+            @click="$emit('filterMarking', image.marking)"
+            @mousedown.middle.prevent
+            @auxclick="onMarkingAuxClick">{{ image.marking }}</span>
+
+      <!-- Without a marking, the badge opens the markings upwards on hover -->
+      <span v-else-if="isTray" class="marking-picker"
+            @mouseenter="hoveredText = 'Set a marking'" @mouseleave="hoveredText = null">
+        <span class="marking-badge"><AppIcon name="tag" :size="13"/></span>
+        <span class="marking-strip">
+          <span v-for="marking in MARKINGS" :key="marking" class="marking-option"
+                @click="setMarking(marking)">{{ marking }}</span>
+        </span>
+      </span>
     </div>
   </div>
 </div>
@@ -308,6 +278,10 @@
 
 .selectable-image.selected .image-frame {
   box-shadow: 0 0 0 2px var(--ib-accent);
+}
+
+.selectable-image.dragging .image-frame {
+  opacity: 0.5;
 }
 
 .selectable-image.highlighted .image-frame {
@@ -453,12 +427,51 @@
   color: #fff;
 }
 
+/* Shift shows the alternative action */
+.image-actions .ib.on {
+  background: rgba(17, 19, 23, 0.85);
+  border-color: var(--ib-accent-border);
+  color: var(--ib-accent);
+}
+
+.action-sep {
+  width: 1px;
+  margin: 3px 1px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Below the button row, always shown */
+.image-comment {
+  position: absolute;
+  top: 31px;
+  left: 6px;
+  right: 6px;
+  width: fit-content;
+  max-width: calc(100% - 12px);
+  box-sizing: border-box;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(17, 19, 23, 0.6);
+  color: var(--ib-text);
+  font-size: 11px;
+  line-height: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.image-comment.selectable {
+  left: 40px;
+  max-width: calc(100% - 46px);
+}
+
 /* The bar itself never takes clicks, so the gaps between its items fall through to the image */
 .image-bottom-bar {
   position: absolute;
   left: 6px;
   right: 6px;
-  bottom: 7px;
+  bottom: 6px;
   display: flex;
   flex-wrap: wrap-reverse;
   align-items: flex-end;
@@ -480,6 +493,21 @@
   cursor: default;
 }
 
+.action-hint {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(17, 19, 23, 0.8);
+  color: var(--ib-text);
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 .image-marking {
   margin-left: auto;
   padding: 1px 4px;
@@ -490,29 +518,68 @@
   cursor: pointer;
 }
 
-.markings {
-  margin: 0 auto;
-  display: none;
-  padding: 1px 4px;
+.image-marking.active {
+  box-shadow: inset 0 0 0 1px var(--ib-accent);
+}
+
+.marking-picker {
+  position: relative;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.image-frame:hover .marking-picker {
+  opacity: 1;
+}
+
+.marking-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
-  background: rgba(17, 19, 23, 0.8);
-  line-height: normal;
-  white-space: nowrap;
-}
-
-.image-frame:hover .markings {
-  display: block;
-  animation: fadeIn 0.2s both ease-in;
-}
-
-.marking {
+  background: rgba(17, 19, 23, 0.85);
+  color: var(--ib-text);
   cursor: pointer;
-  padding: 0 1px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+/* Opens upwards; it starts right at the badge, so the pointer can move onto it without leaving the picker */
+.marking-strip {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  display: none;
+  flex-direction: column;
+  padding-bottom: 3px;
+}
+
+.marking-picker:hover .marking-strip {
+  display: flex;
+}
+
+.marking-option {
+  padding: 1px 3px;
+  background: rgba(17, 19, 23, 0.85);
+  font-size: 14px;
+  line-height: normal;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.marking-option:first-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.marking-option:last-child {
+  border-radius: 0 0 4px 4px;
+}
+
+.marking-option:hover {
+  transform: scale(1.2);
 }
 
 .image-separator {

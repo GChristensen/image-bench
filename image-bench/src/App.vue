@@ -6,7 +6,8 @@ import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
-import {generationStateToKind, KIND_GENERATED, KIND_UPSCALED} from "@/consts.js";
+import {generationStateToKind, KIND_GENERATED, KIND_UPSCALED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+import {canDropOn, isMoveTo, dropImages} from "@/imageDrag.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useControlNetStore} from "@/stores/controlnet.js";
@@ -16,6 +17,8 @@ import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
+import ImageContextMenu from "@/components/ImageContextMenu.vue";
+import {installImageActionKeys} from "@/composables/useImageActionKeys.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas} from "@/host.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
@@ -133,6 +136,7 @@ async function onSDEvent(e) {
 onMounted(() => {
   window.onSDEvent = onSDEvent;
   initManualHint();
+  installImageActionKeys();
 });
 
 onUnmounted(() => {
@@ -142,6 +146,29 @@ onUnmounted(() => {
     window.onSDEvent = null;
   }
 });
+
+// The tray tabs receive image cards dragged from any view
+const dropTargetKind = ref(null);
+
+function onTrayDragOver(e, kind) {
+  if (!canDropOn(e, kind))
+    return;
+
+  e.preventDefault();
+  e.dataTransfer.dropEffect = isMoveTo(kind) ? "move" : "copy";
+  dropTargetKind.value = kind;
+}
+
+// Moving between the children of the tab also leaves the tab
+function onTrayDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget))
+    dropTargetKind.value = null;
+}
+
+function onTrayDrop(kind) {
+  dropTargetKind.value = null;
+  dropImages(kind);
+}
 
 // Tabs that receive the images of a generation state
 const RESULT_TAB_IDS = {
@@ -183,8 +210,14 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
-      <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab"><AppIcon name="concept" :size="14"/>Concept tray<span v-if="conceptTrayStore.images.length" class="count">{{ conceptTrayStore.images.length }}</span></RouterLink>
-      <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
+      <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab"
+                  :class="{'drop-target': dropTargetKind === KIND_CONCEPT_TRAY}"
+                  @dragover="onTrayDragOver($event, KIND_CONCEPT_TRAY)" @dragleave="onTrayDragLeave"
+                  @drop.prevent="onTrayDrop(KIND_CONCEPT_TRAY)" ref="conceptTrayTab"><AppIcon name="concept" :size="14"/>Concept tray<span v-if="conceptTrayStore.images.length" class="count">{{ conceptTrayStore.images.length }}</span></RouterLink>
+      <RouterLink to="/image-tray" class="tab" id="image-tray-tab"
+                  :class="{'drop-target': dropTargetKind === KIND_IMAGE_TRAY}"
+                  @dragover="onTrayDragOver($event, KIND_IMAGE_TRAY)" @dragleave="onTrayDragLeave"
+                  @drop.prevent="onTrayDrop(KIND_IMAGE_TRAY)" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
       <RouterLink v-if="isWebUI" to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <div class="tab-spacer"></div>
       <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
@@ -194,8 +227,8 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <RouterLink to="/settings" class="tab" ref="settingsTab"><AppIcon name="settings" :size="14"/>Settings</RouterLink>
       <RouterLink to="/manual" class="tab"><AppIcon name="book" :size="14"/>Manual</RouterLink>
       <button class="ib flat actions-button" @click="showActionsModal = true"
-              title="Maintenance actions (clear outputs, images)" aria-label="Maintenance actions"
-        ><AppIcon name="more" :size="16"/></button>
+              title="Clean up (clear images, delete outputs, reset parameters)" aria-label="Clean up"
+        ><AppIcon name="broom" :size="16"/></button>
     </nav>
     <div id="tab-content">
       <RouterView v-slot="{ Component }">
@@ -205,6 +238,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       </RouterView>
     </div>
   <ActionsModal :show="showActionsModal" @close="showActionsModal = false" />
+  <ImageContextMenu />
   <DialogHost />
   </div>
 </template>
@@ -251,6 +285,12 @@ async function switchTabAccordingToGenerationMode(e, state) {
   .tab.router-link-exact-active {
     color: #fff;
     border-bottom-color: var(--ib-accent);
+  }
+
+  .tab.drop-target {
+    color: var(--ib-text);
+    background: var(--ib-accent-soft);
+    box-shadow: inset 0 0 0 1px var(--ib-accent-border);
   }
 
   .tab-spacer {

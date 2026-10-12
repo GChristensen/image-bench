@@ -71,7 +71,8 @@ def _encode_file(path: str) -> Iterator[bytes]:
 def generate_explore_html(
     groups: List[Dict[str, Any]],
     resolve_path: Callable[[Dict[str, Any]], Optional[str]],
-    title: str = "Image Bench exploration"
+    title: str = "Image Bench exploration",
+    matrix: Optional[Dict[str, Any]] = None
 ) -> Iterator[bytes]:
     """
     Generate the exploration page chunk by chunk.
@@ -80,9 +81,21 @@ def generate_explore_html(
         groups: List of {name, images: [{parameters, ...}]} in display order
         resolve_path: Returns the validated file path of an image, or None if it can not be embedded
         title: Page title
+        matrix: {columns: [label], rows: [{name, images: [image | None]}]} of a matrix exploration,
+                laid out as a grid instead of the groups
     """
     yield _page_head(title).encode("utf-8")
 
+    if matrix:
+        yield from _matrix_html(matrix, resolve_path)
+    else:
+        yield from _groups_html(groups, resolve_path)
+
+    yield _PAGE_TAIL.encode("utf-8")
+
+
+def _groups_html(groups: List[Dict[str, Any]],
+                 resolve_path: Callable[[Dict[str, Any]], Optional[str]]) -> Iterator[bytes]:
     for group in groups:
         images = group.get("images") or []
         count = len(images)
@@ -94,33 +107,68 @@ def generate_explore_html(
                f'<div class="model-images">').encode("utf-8")
 
         for image in images:
-            params = _escape(json.dumps(image.get("parameters") or {}, ensure_ascii=False))
-
-            try:
-                path = resolve_path(image)
-            except Exception:
-                path = None
-
-            if not path:
-                yield f'<figure class="image-frame missing" data-params="{params}"><span>Image not found</span></figure>'.encode("utf-8")
-                continue
-
-            media_type = IMAGE_MEDIA_TYPES[os.path.splitext(path)[1].lower()]
-            yield (f'<figure class="image-frame" data-params="{params}">'
-                   f'<button class="params-btn" title="Generation parameters">i</button>'
-                   f'<img src="data:{media_type};base64,').encode("utf-8")
-
-            try:
-                yield from _encode_file(path)
-            except OSError:
-                # The data URI is already open: leave it broken rather than the markup
-                pass
-
-            yield b'"></figure>'
+            yield from _image_html(image, resolve_path)
 
         yield b"</div></section>\n"
 
-    yield _PAGE_TAIL.encode("utf-8")
+
+def _matrix_html(matrix: Dict[str, Any],
+                 resolve_path: Callable[[Dict[str, Any]], Optional[str]]) -> Iterator[bytes]:
+    """A grid with a row per model and a column per LoRA"""
+    columns = matrix.get("columns") or []
+
+    yield f'<div class="matrix" style="--columns: {len(columns)}"><div class="matrix-corner"></div>'.encode("utf-8")
+
+    for label in columns:
+        yield f'<div class="matrix-column-header" title="{_escape(label)}">{_escape(label)}</div>'.encode("utf-8")
+
+    for row in matrix.get("rows") or []:
+        name = _escape(row.get("name", ""))
+        yield f'<div class="matrix-row-header" title="{name}">{name}</div>'.encode("utf-8")
+
+        images = row.get("images") or []
+
+        for i in range(len(columns)):
+            image = images[i] if i < len(images) else None
+            yield b'<div class="matrix-cell">'
+
+            if image:
+                yield from _image_html(image, resolve_path)
+            else:
+                yield b'<div class="matrix-empty"></div>'
+
+            yield b'</div>'
+
+        yield b"\n"
+
+    yield b"</div>\n"
+
+
+def _image_html(image: Dict[str, Any],
+                resolve_path: Callable[[Dict[str, Any]], Optional[str]]) -> Iterator[bytes]:
+    params = _escape(json.dumps(image.get("parameters") or {}, ensure_ascii=False))
+
+    try:
+        path = resolve_path(image)
+    except Exception:
+        path = None
+
+    if not path:
+        yield f'<figure class="image-frame missing" data-params="{params}"><span>Image not found</span></figure>'.encode("utf-8")
+        return
+
+    media_type = IMAGE_MEDIA_TYPES[os.path.splitext(path)[1].lower()]
+    yield (f'<figure class="image-frame" data-params="{params}">'
+           f'<button class="params-btn" title="Generation parameters">i</button>'
+           f'<img src="data:{media_type};base64,').encode("utf-8")
+
+    try:
+        yield from _encode_file(path)
+    except OSError:
+        # The data URI is already open: leave it broken rather than the markup
+        pass
+
+    yield b'"></figure>'
 
 
 def _page_head(title: str) -> str:
@@ -188,6 +236,19 @@ body {
   width: 160px; height: 160px; line-height: normal;
   border: 1px dashed var(--ib-border-2); color: var(--ib-muted); font-size: 12px;
 }
+.matrix {
+  display: grid; gap: 10px; align-items: start;
+  grid-template-columns: minmax(120px, 200px) repeat(var(--columns), minmax(200px, 1fr));
+}
+.matrix-corner, .matrix-column-header, .matrix-row-header {
+  min-width: 0; font-size: 13px; font-weight: 600; color: var(--ib-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--ib-bg);
+}
+.matrix-corner, .matrix-column-header { position: sticky; top: 0; z-index: 2; padding: 4px 2px; }
+.matrix-row-header { padding: 8px 8px 0 2px; }
+.matrix-cell { min-width: 0; }
+.matrix-cell .image-frame { max-width: 100%; }
+.matrix-empty { aspect-ratio: 1; border: 1px dashed var(--ib-border); border-radius: 6px; }
 .params-btn, .lightbox button {
   font: 600 13px/1 Georgia, serif; color: var(--ib-text); cursor: pointer;
   background: rgba(17, 19, 23, 0.85); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 4px;

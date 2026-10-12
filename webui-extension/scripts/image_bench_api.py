@@ -86,7 +86,6 @@ class ImageBenchApi():
         self.add_api_route("/upscaled", self.write_upscaled, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
-        self.add_api_route("/clear_generated_images", self.clear_generated_images, methods=["GET"])
         self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
         self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
         self.add_api_route("/download_image_tray", self.download_image_tray, methods=["GET"])
@@ -524,9 +523,6 @@ class ImageBenchApi():
     def clear_outputs_dir(self):
         persist.clear_directory(self.outputs_dir)
 
-    def clear_generated_images(self):
-        persist.clear_directory_except(self.outputs_dir, ["image-bench"])
-
     async def save_controlnet_images(self, request: Request):
         content = await request.body()
         options = json.loads(content)
@@ -614,7 +610,8 @@ class ImageBenchApi():
             return path if explore_export.is_allowed_image(path, roots) else None
 
         content = explore_export.generate_explore_html(data.get("groups") or [], resolve_path,
-                                                       data.get("title") or "Image Bench exploration")
+                                                       data.get("title") or "Image Bench exploration",
+                                                       data.get("matrix"))
         return StreamingResponse(content, media_type="text/html; charset=utf-8",
                                  headers={"Content-Disposition": explore_export.content_disposition()})
 

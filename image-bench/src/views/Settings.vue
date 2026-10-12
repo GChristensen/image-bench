@@ -39,9 +39,9 @@ function setGenerateUiPreset(index, value) {
       </div>
       <span class="accent-name">{{ ACCENT_COLORS[appConfigStore.accentColor].name }}</span>
     </div>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.openInTab"
+    >Open Image Bench in a browser tab instead of a popup window</label>
     <h3>Generation</h3>
-    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.automaticallyClearGeneratedImages"
-    >Automatically clear generated images</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.flashGeneratedTab"
     >Flash the Generated tab when an image generated from the Generate tab arrives</label>
     <template v-if="isWebUI">

@@ -67,6 +67,15 @@ watch(activeTab, tab => storage.setItem(ACTIVE_TAB_STORAGE_KEY, tab));
 const modelImages = computed(() => exploreImagesStore.images);
 const generateImagesNumber = ref(3);
 
+// Matrix mode: one image per model x LoRA, rows are models, columns are LoRAs
+const matrixMode = ref(false);
+
+watch(matrixMode, on => generateImagesNumber.value = on ? 1 : 3);
+watch(() => loras.selected.value.size, n => {
+  if (!n)
+    matrixMode.value = false;
+});
+
 const samplers = ref([]);
 const schedulers = ref([]);
 const showParamsModal = ref(false);
@@ -99,14 +108,18 @@ const settingsSummary = computed(() => {
 const exploreSummary = computed(() => {
   const models = checkpoints.selected.value.size;
   const nLoras = loras.selected.value.size;
-  const parts = [`${models} model${models === 1 ? "" : "s"}`];
-
-  if (nLoras)
-    parts.push(`${nLoras} LoRA${nLoras === 1 ? "" : "s"}`);
 
   // The same variants as in ModelExplorationStrategy: each LoRA, plus a LoRA-free run unless disabled
   const variants = nLoras + (nLoras && appConfigStore.exploreLoraFreeImages === false ? 0 : 1);
   const total = models * variants * generateImagesNumber.value;
+
+  if (matrixMode.value)
+    return `${models} model${models === 1 ? "" : "s"} × ${variants} column${variants === 1 ? "" : "s"} · matrix (${total})`;
+
+  const parts = [`${models} model${models === 1 ? "" : "s"}`];
+
+  if (nLoras)
+    parts.push(`${nLoras} LoRA${nLoras === 1 ? "" : "s"}`);
 
   parts.push(`${generateImagesNumber.value} image${generateImagesNumber.value == 1 ? "" : "s"} each (${total})`);
   return parts.join(" · ");
@@ -120,6 +133,32 @@ const progressLabel = computed(() => {
 
   const images = modelImages.value.reduce((n, model) => n + model.images.length, 0);
   return `${percent} · ${images} image${images === 1 ? "" : "s"}`;
+});
+
+// Rows of a matrix run: models in the order of arrival, a cell per LoRA column (null while pending)
+const matrixRows = computed(() => {
+  const columns = exploreImagesStore.matrixColumns;
+
+  if (!columns)
+    return null;
+
+  const rows = [];
+
+  for (const group of modelImages.value) {
+    let row = rows.find(r => r.model === group.model);
+
+    if (!row) {
+      row = {model: group.model, cells: columns.map(() => null)};
+      rows.push(row);
+    }
+
+    const column = columns.indexOf(group.lora);
+
+    if (column >= 0)
+      row.cells[column] = group.images[0] ?? null;
+  }
+
+  return rows;
 });
 
 const generatedImagesElement = ref();
@@ -193,12 +232,16 @@ async function onExploreClick() {
     exploreImagesStore.generationTotal = 0;
     exploreImagesStore.generationInProgress = true;
     exploreImagesStore.clear();
+    exploreImagesStore.matrixColumns = matrixMode.value
+      ? [...(appConfigStore.exploreLoraFreeImages === false ? [] : [null]), ...selectedLoras.map(lora => lora.name)]
+      : null;
     sendWebUIMessage({
       type: "EXPLORE_MODELS",
       models: selectedModels,
       loras: selectedLoras,
       loraFreeImages: appConfigStore.exploreLoraFreeImages,
-      generateImages: generateImagesNumber.value
+      generateImages: generateImagesNumber.value,
+      matrix: matrixMode.value
     });
   }
 }
@@ -305,10 +348,17 @@ function onImageOpen(image) {
  * and the form posts into a hidden frame, so the download goes to disk without buffering here
  */
 function onSaveResults() {
+  const exportImage = ({imagePath, imageUrl, parameters}) => ({imagePath, imageUrl, parameters});
   const groups = modelImages.value.map(model => ({
     name: model.name,
-    images: model.images.map(({imagePath, imageUrl, parameters}) => ({imagePath, imageUrl, parameters}))
+    images: model.images.map(exportImage)
   }));
+
+  // A matrix run is saved as the same grid
+  const matrix = matrixRows.value && {
+    columns: exploreImagesStore.matrixColumns.map(lora => lora ?? "No LoRA"),
+    rows: matrixRows.value.map(row => ({name: row.model, images: row.cells.map(image => image && exportImage(image))}))
+  };
   const title = `Exploration · ${exploreSummary.value} · ${new Date().toLocaleString()}`;
 
   let frame = document.querySelector("iframe[name='ib-export-frame']");
@@ -329,7 +379,7 @@ function onSaveResults() {
   const input = document.createElement("input");
   input.type = "hidden";
   input.name = "data";
-  input.value = JSON.stringify({title, groups});
+  input.value = JSON.stringify({title, groups, matrix});
   form.appendChild(input);
 
   document.body.appendChild(form);
@@ -389,7 +439,7 @@ function onKeydown(e) {
     @confirm="onLoraParamsConfirm"
     @cancel="showLoraParamsModal = false"
   />
-  <ImageOverlay v-if="showImageOverlay" :image="overlayImage"
+  <ImageOverlay v-if="showImageOverlay" :image="overlayImage" kind="explore" @show-params="onShowParams"
                 @hide-overlay="closeImageOverlay"/>
   <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage" :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
@@ -401,7 +451,16 @@ function onKeydown(e) {
           <span :class="{off: exploreImagesStore.generationInProgress}"><AppIcon name="play" :size="13"/>Explore</span>
           <span :class="{off: !exploreImagesStore.generationInProgress}"><AppIcon name="stop" :size="13"/>Stop</span>
         </button>
-        <label class="toolbar-group-label" title="Images per model">×<NumberStepper v-model="generateImagesNumber" label="Images per model"/></label>
+        <label class="toolbar-group-label" title="Images per model">×<NumberStepper v-model="generateImagesNumber"
+          label="Images per model" :disabled="matrixMode"/></label>
+        <div class="seg layout-switch" role="radiogroup" aria-label="Exploration layout"
+             :title="loras.selected.value.size ? '' : 'Select LoRAs to explore a model × LoRA matrix'">
+          <button :class="{on: !matrixMode}" :disabled="!loras.selected.value.size" role="radio"
+                  :aria-checked="!matrixMode" @click="matrixMode = false">By model</button>
+          <button :class="{on: matrixMode}" :disabled="!loras.selected.value.size" role="radio"
+                  :aria-checked="matrixMode" title="One image per model and LoRA, with the same seed"
+                  @click="matrixMode = true">Matrix</button>
+        </div>
       </div>
       <ProgressIndicator v-if="exploreImagesStore.generationInProgress"
                          :value="exploreImagesStore.generationProgress" :label="progressLabel"/>
@@ -445,7 +504,27 @@ function onKeydown(e) {
       </div>
       <div class="generated-images-wrapper">
         <div class="generated-images scrollable" ref="generatedImagesElement">
-          <section class="model-group" v-for="model in modelImages" :key="model.name">
+          <div v-if="matrixRows" class="matrix" :style="{'--columns': exploreImagesStore.matrixColumns.length}">
+            <div class="matrix-corner"></div>
+            <div class="matrix-column-header" v-for="lora in exploreImagesStore.matrixColumns" :key="lora ?? ''"
+                 :title="lora ?? 'No LoRA'">{{ lora ?? "No LoRA" }}</div>
+            <template v-for="row in matrixRows" :key="row.model">
+              <div class="matrix-row-header" :title="row.model">{{ row.model }}</div>
+              <div class="matrix-cell" v-for="(image, i) in row.cells" :key="i">
+                <GeneratedImage v-if="image"
+                                kind="explore"
+                                :is-tray="false"
+                                :image="image"
+                                :displayed="true"
+                                :highlighted="isHighlighted(image)"
+                                @show-params="() => onShowParams(image)"
+                                @image-click="() => onImageClick(image)"
+                                @image-open="() => onImageOpen(image)"></GeneratedImage>
+                <div v-else class="matrix-pending"></div>
+              </div>
+            </template>
+          </div>
+          <section v-else class="model-group" v-for="model in modelImages" :key="model.name">
             <div class="model-group-header">
               <h3 class="model-name" :title="model.name">{{ model.name }}</h3>
               <span class="model-group-count">{{ model.images.length }} image{{ model.images.length === 1 ? "" : "s" }}</span>
@@ -556,6 +635,77 @@ function onKeydown(e) {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.layout-switch {
+  margin-left: 6px;
+}
+
+.layout-switch button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.layout-switch button:disabled:hover {
+  color: var(--ib-text-2);
+}
+
+.matrix {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) repeat(var(--columns), minmax(200px, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+.matrix-corner,
+.matrix-column-header,
+.matrix-row-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ib-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--ib-bg);
+}
+
+.matrix-corner,
+.matrix-column-header {
+  position: sticky;
+  top: -12px;
+  z-index: 2;
+  padding: 4px 2px;
+}
+
+.matrix-corner {
+  left: -16px;
+  z-index: 3;
+}
+
+.matrix-column-header,
+.matrix-row-header,
+.matrix-cell {
+  min-width: 0;
+}
+
+/* A cell holds a single card: it takes the cell width instead of the card's share of a row */
+.matrix-cell :deep(.selectable-image) {
+  max-width: 100%;
+}
+
+.matrix-row-header {
+  position: sticky;
+  left: -16px;
+  z-index: 1;
+  align-self: stretch;
+  padding: 8px 8px 0 2px;
+}
+
+.matrix-pending {
+  aspect-ratio: 1;
+  border: 1px dashed var(--ib-border);
+  border-radius: 6px;
 }
 
 .empty-state {

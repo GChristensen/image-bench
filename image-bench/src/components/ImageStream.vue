@@ -1,7 +1,7 @@
 <script setup>
   import GeneratedImage from "@/components/GeneratedImage.vue";
-  import {computed, nextTick, ref, shallowRef, toRaw, watch} from "vue";
-  import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+  import {computed, nextTick, ref, shallowRef, toRaw} from "vue";
+  import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
   import {useImageSelection} from "@/composables/useImageSelection.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {dialog} from "@/dialogs/useDialog.js";
@@ -19,14 +19,18 @@
     showMarked: {
       type: Boolean,
       default: false
+    },
+    // Marking the images are filtered by, if any (with showMarked)
+    markingFilter: {
+      type: String,
+      default: null
     }
   });
 
   const emit = defineEmits(['imageClick', 'imageOpen', 'showParams', 'upscaleImage', 'markingFilter']);
 
-  const isTray = ref(props.kind === KIND_IMAGE_TRAY || props.kind === KIND_CONCEPT_TRAY);
+  const isTray = props.kind === KIND_IMAGE_TRAY || props.kind === KIND_CONCEPT_TRAY;
   const images = computed(() => props.imageStore.images);
-  const markingFilter = ref();
 
   const imageStreamElement = ref();
 
@@ -34,8 +38,8 @@
   function shouldShowImage(image) {
     let result = true;
 
-    if (props.showMarked && !image.marking || markingFilter.value
-          && markingFilter.value !== image.marking)
+    if (props.showMarked && !image.marking || props.markingFilter
+          && props.markingFilter !== image.marking)
       result = false;
 
     return result;
@@ -51,11 +55,15 @@
   const {
     isAllSelected,
     isSomeSelected,
-    isNoneSelected,
     selectImage,
     selectAll,
     getSelectedImages
   } = useImageSelection(filteredImages);
+
+  function unselectAll() {
+    for (const image of images.value)
+      image.selected = false;
+  }
 
   let scrolledToBottom = true;
 
@@ -75,22 +83,30 @@
     return imageOps.getImageLink(images.value[index]);
   }
 
-  async function clear(e) {
-    const message = isNoneSelected.value
-      ? "Remove all images from this view?"
-      : `Remove ${props.imageStore.images.filter(i => i.selected).length} selected image(s) from this view?`;
+  // The checked images of the whole view, including those hidden by the marking filter
+  const selectedCount = computed(() => images.value.filter(i => i.selected).length);
 
-    if (!await dialog.confirm(message, {okText: "Remove", danger: true}))
+  async function clear() {
+    const count = images.value.filter(i => !i.separator).length;
+
+    if (!images.value.length || !await dialog.confirm(`Remove all ${count} images from this view? The files stay on disk.`,
+        {title: "Clear", okText: "Remove", danger: true}))
       return;
 
-    if (isNoneSelected.value) {
-      props.imageStore.images.length = 0;
-    }
-    else {
-      props.imageStore.images = props.imageStore.images.filter(i => !i.selected);
-    }
+    props.imageStore.images.length = 0;
 
     // Trays and the upscaled images are saved on the server
+    props.imageStore.persist?.();
+  }
+
+  async function removeSelected() {
+    const count = selectedCount.value;
+
+    if (!count || !await dialog.confirm(`Remove ${count} selected image${count === 1 ? "" : "s"} from this view? `
+        + "The files stay on disk.", {title: "Remove selected", okText: "Remove", danger: true}))
+      return;
+
+    props.imageStore.images = props.imageStore.images.filter(i => !i.selected);
     props.imageStore.persist?.();
   }
 
@@ -121,8 +137,9 @@
     return imageView.findIndex(i => isSameImage(i, image));
   }
 
+  // The overlay navigates through the shown images only
   function getNextImage(image) {
-    const imageView = props.showMarked? images.value.filter(i => i.marking): images.value;
+    const imageView = filteredImages.value;
 
     let index = findImageIndex(imageView, image);
 
@@ -138,7 +155,7 @@
   }
 
   function getPrevImage(image) {
-    const imageView = props.showMarked? images.value.filter(i => i.marking): images.value;
+    const imageView = filteredImages.value;
 
     let index = findImageIndex(imageView, image);
 
@@ -179,22 +196,16 @@
     return isSameImage(toRaw(image), highlightedImage.value);
   }
 
+  // The view toggles the filter: the active marking clears it
   function onFilterMarking(marking) {
-    props.showMarked = true;
-    markingFilter.value = marking;
-    emit("markingFilter");
+    emit("markingFilter", marking);
   }
-
-  watch(() => props.showMarked, async (newVal, oldVal) => {
-    if (!newVal)
-      markingFilter.value = null;
-  })
 
   // onBeforeMount(() => {
   // })
 
-  defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, clear, isAllSelected,
-    isSomeSelected, getSelectedImages, getNextImage, getPrevImage, revealImage, deleteImage: onDeleteImage});
+  defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, unselectAll, clear, removeSelected,
+    isAllSelected, isSomeSelected, selectedCount, getSelectedImages, getNextImage, getPrevImage, revealImage, deleteImage: onDeleteImage, addComment: onAddComment});
 </script>
 
 <template>
@@ -205,11 +216,12 @@
                        :kind="kind"
                        :displayed="shouldShowImage(image)"
                        :image="image"
-                       :selectable="isTray"
+                       :selectable="isTray || kind === KIND_UPSCALED"
                        :upscalable="isTray || kind === KIND_GENERATED"
                        :selected="image.selected"
                        :highlighted="isHighlighted(image)"
                        :is-tray="isTray"
+                       :marking-filter="markingFilter"
                        @image-click="$emit('imageClick', image)"
                        @image-open="$emit('imageOpen', image)"
                        @show-params="$emit('showParams', image)"
@@ -218,7 +230,6 @@
                        @add-comment="onAddComment(image)"
                        @set-marking="onSetMarking(image)"
                        @filter-marking="onFilterMarking"
-                       @delete-image="onDeleteImage"
       ></GeneratedImage>
     </div>
   </div>

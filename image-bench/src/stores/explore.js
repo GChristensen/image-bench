@@ -1,4 +1,4 @@
-import {reactive, computed} from 'vue'
+import {reactive, computed, ref} from 'vue'
 import {defineStore} from 'pinia'
 import {KIND_EXPLORE} from "@/consts.js";
 import {createImageData} from "@/sdwebui.js";
@@ -11,6 +11,9 @@ import {useImageStoreState} from "@/stores/composables/useImageStoreState.js";
  */
 export const useExploreImagesStore = defineStore('exploreImages', () => {
     const state = useImageStoreState(KIND_EXPLORE);
+
+    // LoRA columns of a matrix run (null is the LoRA-free column), null for a run by model
+    const matrixColumns = ref(null);
 
     // Custom onSDEvent that groups images by model
     function onSDEvent(e) {
@@ -26,6 +29,8 @@ export const useExploreImagesStore = defineStore('exploreImages', () => {
                 model = reactive({
                     name: groupName,
                     hash: imageData.parameters["model hash"],
+                    model: imageData.parameters["model"],
+                    lora: e.exploreLora ?? null,
                     images: []
                 });
                 state.images.value.push(model);
@@ -49,6 +54,7 @@ export const useExploreImagesStore = defineStore('exploreImages', () => {
     return {
         // Expose state
         ...state,
+        matrixColumns,
 
         // Override onSDEvent with custom model-grouping logic
         onSDEvent,

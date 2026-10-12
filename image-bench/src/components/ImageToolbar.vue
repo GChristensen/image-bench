@@ -28,13 +28,19 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  isSomeSelected: {
-    type: Boolean,
-    default: false
+  // Number of checked images; the selection bar is shown while it is nonzero
+  selectedCount: {
+    type: Number,
+    default: 0
   },
   isShowingMarked: {
     type: Boolean,
     default: false
+  },
+  // Marking the shown images are filtered by, if any
+  markingFilter: {
+    type: String,
+    default: null
   },
   generationInProgress: {
     type: Boolean,
@@ -72,6 +78,11 @@ const props = defineProps({
   presetImages: {
     type: Number,
     default: 128
+  },
+  // Clear the Generated tab when a new batch starts
+  autoClear: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -85,11 +96,14 @@ const emit = defineEmits([
   'stop-generation',
   'upscale-selected',
   'clear',
-  'preset-change'
+  'remove-selected',
+  'unselect-all',
+  'preset-change',
+  'update:autoClear'
 ]);
 
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
-const clearText = computed(() => props.isSomeSelected ? 'Clear selected' : 'Clear');
+const selectable = computed(() => props.isTray || props.kind === KIND_UPSCALED);
 const generateImagesNumber = ref(props.presetImages);
 const isWebUI = import.meta.env.MODE === 'webui';
 const generateForever = computed(() => generateImagesNumber.value === -1);
@@ -129,12 +143,24 @@ defineExpose({generateImagesNumber});
       <div class="vsep"></div>
       <button class="btn outline select-all" @click="$emit('select-all')"><AppIcon name="checks" :size="14"/>{{ selectAllText }}</button>
       <button class="ib" :class="{on: isShowingMarked}" :aria-pressed="isShowingMarked"
-              :title="isShowingMarked ? 'Showing marked images: click to show all' : 'Show marked images only'"
-              aria-label="Show marked images only" @click="$emit('show-marked')"><AppIcon name="filter" :size="14"/></button>
-      <div v-if="isWebUI" class="vsep"></div>
-      <button v-if="isWebUI && !upscaleInProgress" class="btn primary" :disabled="!isSomeSelected"
-              :title="isSomeSelected ? 'Upscale selected images' : 'Select images to upscale'"
+              :title="markingFilter ? `Showing ${markingFilter} only: click to show all`
+                : isShowingMarked ? 'Showing marked images: click to show all' : 'Show marked images only'"
+              aria-label="Show marked images only" @click="$emit('show-marked')"
+        ><span v-if="markingFilter" class="marking-filter">{{ markingFilter }}</span
+        ><AppIcon v-else name="filter" :size="14"/></button>
+    </template>
+
+    <!-- Actions on the checked images -->
+    <template v-if="selectable && selectedCount">
+      <div class="vsep"></div>
+      <span class="selection-count">{{ selectedCount }} selected</span>
+      <button v-if="isTray && isWebUI" class="btn primary" :disabled="upscaleInProgress"
+              :title="upscaleInProgress ? 'An upscale is in progress' : 'Upscale the selected images'"
               @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
+      <button class="btn outline remove-selected" title="Remove the selected images from this view (the files stay on disk)"
+              @click="$emit('remove-selected')"><AppIcon name="trash" :size="14"/>Remove selected</button>
+      <button class="ib" title="Unselect all (Ctrl+U)" aria-label="Unselect all" @click="$emit('unselect-all')"
+        ><AppIcon name="close" :size="14"/></button>
     </template>
 
     <!-- Generated images actions -->
@@ -184,11 +210,22 @@ defineExpose({generateImagesNumber});
     </div>
 
     <!-- Clear action -->
-    <button class="btn" @click="$emit('clear')"><AppIcon name="eraser" :size="14"/>{{ clearText }}</button>
+    <button class="btn" title="Remove all images from this view (the files stay on disk)"
+            @click="$emit('clear')"><AppIcon name="eraser" :size="14"/>Clear</button>
+    <button v-if="kind === KIND_GENERATED" class="ib" :class="{on: autoClear}" :aria-pressed="autoClear"
+            :title="`Clear automatically when a new batch starts: ${autoClear ? 'on' : 'off'}`"
+            aria-label="Clear automatically when a new batch starts"
+            @click="$emit('update:autoClear', !autoClear)"><AppIcon name="recycle" :size="14"/></button>
   </div>
+
 </template>
 
 <style scoped>
+.marking-filter {
+  font-size: 13px;
+  line-height: 1;
+}
+
 .select-all {
   min-width: 112px;
 }
@@ -203,6 +240,19 @@ defineExpose({generateImagesNumber});
 .preset-count.on {
   background: var(--ib-accent-soft);
   color: var(--ib-accent);
+}
+
+.selection-count {
+  padding: 0 4px;
+  color: var(--ib-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.remove-selected:hover {
+  color: var(--ib-danger-text);
+  border-color: #5b2d30;
+  background: #2a1a1c;
 }
 
 .preset-selector {

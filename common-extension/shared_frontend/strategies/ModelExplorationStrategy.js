@@ -18,11 +18,14 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.exploringLoras = false;
         this.loraBeforeExplore = null;
         this.invalidated = false;
+        this.seed = null;
+        this.seedControlBeforeExplore = null;
     }
 
     /**
      * Initialize the exploration queue
-     * @param {Object} options - { models: [], loras: [{name, prompt, weight}], loraFreeImages: boolean, generateImages: number }
+     * @param {Object} options - { models: [], loras: [{name, prompt, weight}], loraFreeImages: boolean, generateImages: number,
+     *                             matrix: boolean }; a matrix generates every image with the same random seed
      *                           SD WebUI applies a LoRA through its prompt, ComfyUI through the node marked ib:lora
      */
     initialize(options) {
@@ -50,6 +53,7 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.totalItems = this.queue.length;
         this.generationId = this.createGenerationId();
         this.currentModel = options.models[0];
+        this.seed = options.matrix ? Math.floor(Math.random() * 2 ** 32) : null;
 
         console.log('[ModelExploration] Queue built with', this.totalItems, 'items');
         console.log('[ModelExploration] Models to explore:', options.models.map(m => m.title).join(', '));
@@ -88,8 +92,14 @@ export class ModelExplorationStrategy extends QueueProcessor {
         await this.uiOperations.restoreModel(this.currentModel.title);
 
         // Configure generation parameters
-        console.log('[ModelExploration] Configuring generation parameters (seed=-1, batch=1)');
-        await this.uiOperations.setupBasicGeneration(-1, 1);
+        console.log('[ModelExploration] Configuring generation parameters (seed=' + (this.seed ?? -1) + ', batch=1)');
+        await this.uiOperations.setupBasicGeneration(this.seed ?? -1, 1);
+
+        // Keep ComfyUI from changing the shared seed of a matrix after each queued prompt
+        if (this.seed !== null && this.uiOperations.setControlAfterGenerate) {
+            this.seedControlBeforeExplore = this.uiOperations.getControlAfterGenerate();
+            this.uiOperations.setControlAfterGenerate('fixed');
+        }
 
         // Notify that processing started
         console.log('[ModelExploration] Publishing BEGIN_PROCESSING event');
@@ -149,6 +159,11 @@ export class ModelExplorationStrategy extends QueueProcessor {
             await this.uiOperations.sleep(333);
         }
 
+        // Set the shared seed of a matrix again, in case a UI preset or model switch has reset it
+        if (this.seed !== null) {
+            await this.uiOperations.setupBasicGeneration(this.seed, 1);
+        }
+
         // Click generate button
         console.log('[ModelExploration] Clicking generate button');
         if (await this.clickGenerate())
@@ -190,6 +205,18 @@ export class ModelExplorationStrategy extends QueueProcessor {
         }
 
         this.currentLora = null;
+
+        if (this.seed !== null) {
+            console.log('[ModelExploration] Resetting the shared matrix seed');
+            await this.uiOperations.setupBasicGeneration(-1, 1);
+
+            if (this.seedControlBeforeExplore !== null && this.uiOperations.setControlAfterGenerate) {
+                this.uiOperations.setControlAfterGenerate(this.seedControlBeforeExplore);
+            }
+
+            this.seed = null;
+            this.seedControlBeforeExplore = null;
+        }
 
         // Restore original model if saved
         if (this.modelBeforeExplore) {

@@ -1,5 +1,5 @@
 <script setup>
-  import {computed, nextTick, onBeforeUnmount, ref, watch} from "vue";
+  import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
   import {flashTrayTab} from "@/components/utils.js";
@@ -7,6 +7,8 @@
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, MARKINGS} from "@/consts.js";
   import {dialog} from "@/dialogs/useDialog.js";
   import {hostHas} from "@/host.js";
+  import {openImageMenu} from "@/contextMenu.js";
+  import {setOverlayImageTarget, clearOverlayImageTarget} from "@/composables/useImageActionKeys.js";
   import AppIcon from "@/components/AppIcon.vue";
 
   const props = defineProps({
@@ -21,10 +23,20 @@
     kind: {
       type: String,
       default: 'generated'
+    },
+    upscalable: {
+      type: Boolean,
+      default: false
+    },
+    // Marking the view is filtered by, if any
+    markingFilter: {
+      type: String,
+      default: null
     }
   });
 
-  const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking', 'deleteImage']);
+  const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking', 'deleteImage',
+    'showParams', 'upscaleImage', 'addComment', 'filterMarking']);
 
   const canSendToControlNet = hostHas("images", "sendToControlNet");
   const imageTrayStore = useImageTrayStore();
@@ -79,8 +91,9 @@
   let dragged = false;
 
   function onImageMouseDown(e) {
+    // Middle click opens the image on auxclick; no autoscroll
     if (e.button === 1) {
-      window.open(e.target.src, "_blank");
+      e.preventDefault();
       return;
     }
 
@@ -175,6 +188,16 @@
       await dialog.alert(error, {title: "Send to Photoshop"});
   }
 
+  function onImageAuxClick(e) {
+    if (e.button === 1)
+      window.open(e.target.src, "_blank");
+  }
+
+  function onPhotoshopAuxClick(e) {
+    if (e.button === 1)
+      onSendToPhotoshop(e, true);
+  }
+
   // Clicking the current marking removes it
   function onMarkingClick(marking) {
     if (props.image.marking === marking)
@@ -184,6 +207,52 @@
 
     emit("setMarking", props.image);
   }
+
+  // The marking bar opens on hover, or on a click on the current marking
+  const markingBarOpen = ref(false);
+
+  // Context of the image actions (imageActions.js) for the context menu and the keys
+  const actionContext = {
+    get kind() { return props.kind; },
+    get isTray() { return props.isTray; },
+    get upscalable() { return props.upscalable; },
+    handlers: {
+      showParams: image => emit("showParams", image),
+      upscale: image => emit("upscaleImage", image),
+      addComment: image => emit("addComment", image),
+      openImage: image => imageOps.openImageInNewWindow(image),
+      filterMarking: marking => emit("filterMarking", marking),
+      removeMarking: image => {
+        delete image.marking;
+        emit("setMarking", image);
+      },
+      activeMarkingFilter: () => props.markingFilter
+    }
+  };
+
+  // Digits set the markings of tray images: 1-8 as in MARKINGS, 0 removes the marking
+  const keyTarget = {
+    getImage: () => props.image,
+    ctx: actionContext,
+    get element() {
+      return containerElement.value;
+    },
+    get setMarking() {
+      return props.isTray ? setMarkingByKey : null;
+    }
+  };
+
+  function setMarkingByKey(marking) {
+    if (marking)
+      onMarkingClick(marking);
+    else if (props.image.marking) {
+      delete props.image.marking;
+      emit("setMarking", props.image);
+    }
+  }
+
+  onMounted(() => setOverlayImageTarget(keyTarget));
+  onBeforeUnmount(() => clearOverlayImageTarget(keyTarget));
 
 </script>
 
@@ -202,14 +271,23 @@
                @click="onContainerClick">
             <img class="overlay-image" :src="imageLink" draggable="false"
                  :title="isFullSize ? 'Click to fit to screen, drag to pan' : 'Click to view in full size'"
-                 @mousedown="onImageMouseDown" @load="onImageLoad">
+                 @mousedown="onImageMouseDown" @auxclick="onImageAuxClick" @load="onImageLoad"
+                 @contextmenu="openImageMenu($event, image, actionContext)">
           </div>
         </Transition>
-        <div v-if="isTray" class="overlay-markings">
-          <span v-for="marking in MARKINGS" :key="marking" class="emoji-button"
-                :class="{active: image.marking === marking}"
-                :title="image.marking === marking ? 'Remove marking' : 'Set marking'"
-                @click="onMarkingClick(marking)">{{ marking }}</span>
+        <div v-if="isTray" class="overlay-markings" :class="{open: markingBarOpen}"
+             @mouseleave="markingBarOpen = false">
+          <span class="marking-current" :title="image.marking ? 'Marking (keys 1-8, 0 removes)' : 'Set a marking (keys 1-8)'"
+                @click="markingBarOpen = !markingBarOpen">
+            <template v-if="image.marking">{{ image.marking }}</template>
+            <AppIcon v-else name="tag" :size="20"/>
+          </span>
+          <div class="marking-bar">
+            <span v-for="(marking, index) in MARKINGS" :key="marking" class="emoji-button"
+                  :class="{active: image.marking === marking}"
+                  :title="(image.marking === marking ? 'Remove marking' : 'Set marking') + ` (${index + 1})`"
+                  @click="onMarkingClick(marking)">{{ marking }}</span>
+          </div>
         </div>
         <div class="overlay-actions">
           <template v-if="isTray">
@@ -220,7 +298,7 @@
           <button v-if="canSendToControlNet" class="ib" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
                   @click="onSendToControlNet"><AppIcon name="controlnet" :size="20"/></button>
           <button class="ib" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
-                  @click="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)"><AppIcon name="external" :size="20"/></button>
+                  @click="onSendToPhotoshop($event, false)" @mousedown.middle.prevent @auxclick="onPhotoshopAuxClick"><AppIcon name="external" :size="20"/></button>
           <span class="actions-separator"></span>
           <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib" title="Add to concept tray" aria-label="Add to concept tray"
                   @click="onPlaceToConceptTray"><AppIcon name="concept" :size="20"/></button>
@@ -344,10 +422,34 @@
   left: 20px;
   z-index: 1003;
   display: flex;
+  align-items: center;
   gap: 6px;
+  min-height: 36px;
+  box-sizing: border-box;
   padding: 4px 8px;
   border-radius: 6px;
   background: rgba(17, 19, 23, 0.6);
+}
+
+.marking-current {
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ib-text);
+  cursor: pointer;
+}
+
+.marking-bar {
+  display: none;
+  gap: 6px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.overlay-markings:hover .marking-bar,
+.overlay-markings.open .marking-bar {
+  display: flex;
 }
 
 .overlay-markings .emoji-button {

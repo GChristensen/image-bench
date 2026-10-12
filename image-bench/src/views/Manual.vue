@@ -189,7 +189,9 @@ onMounted(loadPluginStatus);
       <p>
         To open Image Bench, click the <b>🔬 Image Bench</b> button
         {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}. It opens in a window of its
-        own, which stays connected to the {{ HOST_NAME }} page it was opened from.
+        own, which stays connected to the {{ HOST_NAME }} page it was opened from. With the setting <b>Open Image
+        Bench in a browser tab instead of a popup window</b> it opens in a tab instead; drag that tab into a window
+        of its own, so that the {{ HOST_NAME }} page stays the active tab of its window (see below).
       </p>
       <p>
         Keep that page open, and keep it as the active tab of its browser window. The browser window may be
@@ -324,6 +326,9 @@ onMounted(loadPluginStatus);
         <li><b>LoRA-free images</b> — when LoRAs are checked, each model also gets an image without them for
           comparison. The corresponding setting on the Settings tab can turn this off.<span v-if="isComfy"> In ComfyUI, exploring LoRAs requires a
             LoRA loader titled <code>ib:lora</code>.</span></li>
+        <li><b>By model / Matrix</b> — the switch next to <b>×</b>, available when LoRAs are checked. Matrix
+          generates one image per model and LoRA, all with the same seed, and lays them out as a grid: a row per
+          model, a column per LoRA (plus the LoRA-free column). Back in By model, the number of images is 3 again.</li>
         <li><b>Save results</b> stores the whole comparison as a single HTML page; <b>Clear results</b> empties
           the tab.</li>
         <li>The <AppIcon name="info" :size="13" class="inline-icon"/> button opens the Civitai page of the focused
@@ -349,7 +354,9 @@ onMounted(loadPluginStatus);
         <li>Move the images worth keeping to a tray with
           <AppIcon name="concept" :size="13" class="inline-icon"/> or
           <AppIcon name="palette" :size="13" class="inline-icon"/>. The tab is emptied whenever a new batch
-          starts, unless "Automatically clear generated images" is turned off in Settings.</li>
+          starts while the <AppIcon name="recycle" :size="13" class="inline-icon"/> toggle next to <b>Clear</b>
+          is on; turn it off to let the images of successive runs accumulate. <b>Clear</b> removes all images
+          from the tab (the files stay on disk).</li>
       </ul>
     </section>
 
@@ -361,17 +368,31 @@ onMounted(loadPluginStatus);
         to return to — and the <b>image tray</b> the images you mean to finish by upscaling, refining or editing
         them in Photoshop. The same buttons copy images from one tray to the other.
       </p>
+      <p>
+        You can also drag a thumbnail by its image onto the <b>Concept tray</b> or <b>Image tray</b> tab. Images
+        dragged from any other view are copied there, while images dragged from one tray to the other are moved.
+        Dragging a selected thumbnail takes all selected images along.
+      </p>
       <p>Both trays offer:</p>
       <ul>
-        <li><b>Markings</b> (👍 👎 🔴 🟠 🟡 🟢 🔵 🟣) — hover over an image and click one. Middle-click a marking
-          to show only the images that carry it; the <AppIcon name="filter" :size="13" class="inline-icon"/>
-          button shows only marked images.</li>
-        <li><b>Comments</b> <AppIcon name="comment" :size="13" class="inline-icon"/> on images.</li>
+        <li><b>Markings</b> (👍 👎 🔴 🟠 🟡 🟢 🔵 🟣) — on an unmarked thumbnail, hover over the
+          <AppIcon name="tag" :size="13" class="inline-icon"/> badge at the bottom right and click one. In the
+          large image view, hover over the badge at the bottom left (or the current marking) and click one, or
+          press <span class="kbd">1</span>–<span class="kbd">8</span>; clicking the current marking or
+          <span class="kbd">0</span> removes it. On a thumbnail, click the marking to show only the
+          images that carry it, and click it again to show all; middle-click it to remove it. The
+          <AppIcon name="filter" :size="13" class="inline-icon"/> button shows only marked images, or the marking
+          being shown.</li>
+        <li><b>Comments</b> <AppIcon name="comment" :size="13" class="inline-icon"/> on images, shown below the
+          buttons of the image.</li>
+        <li><b>Removing images</b> — check them and use <b>Remove selected</b>, which appears in the toolbar
+          while images are checked, or the <AppIcon name="trash" :size="13" class="inline-icon"/> button of the large image
+          view. <b>Clear</b> removes all images of the tray. The files stay on disk either way.</li>
         <li><b>Generate with steps</b> <AppIcon name="steps" :size="13" class="inline-icon"/> — asks for a list of
           step counts and generates the image again with each of them, in the Generated tab.</li>
         <li v-if="isWebUI"><b>Upscale with denoising</b> <AppIcon name="denoise" :size="13" class="inline-icon"/>
           — asks for a list of denoising strengths and upscales the image with each of them. <b>Upscale
-          selected</b> upscales every checked image.</li>
+          selected</b>, shown in the toolbar next to it, upscales each of them.</li>
         <li><b>Download</b> <AppIcon name="download" :size="13" class="inline-icon"/> saves the tray as a .zip
           file; <b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (parameters
           included) or a saved tray.</li>
@@ -384,8 +405,8 @@ onMounted(loadPluginStatus);
           the seed from the image (along with its variation seed, and the steps or denoising strength being
           varied). The prompt, checkpoint, LoRAs, sampler, size and everything else come from what is currently
           set in {{ HOST_NAME }}. Before using these buttons, bring {{ HOST_NAME }} in line with the image:
-          middle-click its <AppIcon name="seed" :size="13" class="inline-icon"/> button to reuse all of its
-          parameters.<template v-if="isWebUI"> An image whose prompt differs from the current txt2img prompt
+          middle-click (or Shift+click) its <AppIcon name="seed" :size="13" class="inline-icon"/> button to reuse
+          all of its parameters.<template v-if="isWebUI"> An image whose prompt differs from the current txt2img prompt
           carries the <AppIcon name="alert" :size="13" class="inline-icon"/> badge as a reminder.</template>
         </div>
       </div>
@@ -400,26 +421,47 @@ onMounted(loadPluginStatus);
       </p>
       <p>
         Like the trays, the tab keeps its images until you remove them: they are copied to the
-        <code>image-bench/upscaled</code> folder of the outputs directory and survive restarts and clearing the
-        generated images. A colored bar marks the images of one upscale run. <AppIcon name="download" :size="13" class="inline-icon"/> downloads
+        <code>image-bench/upscaled</code> folder of the outputs directory and survive restarts. A colored bar marks the images of one upscale run. <AppIcon name="download" :size="13" class="inline-icon"/> downloads
         them as a .zip, which can be imported into a tray.
       </p>
     </section>
 
     <section id="manual-images">
       <h2>Working with images</h2>
-      <p>Hovering over an image reveals its buttons:</p>
+      <p>
+        Hovering over an image reveals its buttons; the bottom of the image names the button under the pointer
+        and its key. While the pointer is over an image, the keys in the table act on it. Buttons with an
+        alternative action perform it on a middle click or Shift+click; holding Shift shows their alternative
+        icons.
+      </p>
       <table>
-        <tr><td><AppIcon name="seed" :size="14"/></td><td>Left click reuses the seed; middle click reuses all the
-          parameters (prompt, sampler, size, ...) in {{ HOST_NAME }}.</td></tr>
-        <tr><td><AppIcon name="params" :size="14"/></td><td>Shows the generation parameters.</td></tr>
-        <tr><td><AppIcon name="controlnet" :size="14"/></td><td>Sends the image to the control image of the
-          ControlNet tab.</td></tr>
-        <tr><td><AppIcon name="external" :size="14"/></td><td>Sends the image to Photoshop as a layer of the active
-          document; middle click opens it as a new document.</td></tr>
-        <tr><td><AppIcon name="concept" :size="14"/> <AppIcon name="palette" :size="14"/></td><td>Places the image
-          in the concept tray or the image tray.</td></tr>
+        <tr><td><AppIcon name="seed" :size="14"/></td><td><span class="kbd">S</span> Reuses the seed; middle click
+          or <span class="kbd">Shift</span>+<span class="kbd">S</span> reuses all the parameters (prompt, sampler,
+          size, ...) in {{ HOST_NAME }}.</td></tr>
+        <tr><td><AppIcon name="params" :size="14"/></td><td><span class="kbd">I</span> Shows the generation
+          parameters.</td></tr>
+        <tr><td><AppIcon name="comment" :size="14"/></td><td><span class="kbd">C</span> Comments the image
+          (trays).</td></tr>
+        <tr><td><AppIcon name="steps" :size="14"/></td><td><span class="kbd">G</span> Generates the image with a
+          list of step counts (trays).</td></tr>
+        <tr v-if="isWebUI"><td><AppIcon name="upscale" :size="14"/></td><td><span class="kbd">U</span> Upscales the
+          image.</td></tr>
+        <tr v-if="isWebUI"><td><AppIcon name="denoise" :size="14"/></td><td><span class="kbd">D</span> Upscales the
+          image with a list of denoising strengths (trays).</td></tr>
+        <tr><td><AppIcon name="controlnet" :size="14"/></td><td><span class="kbd">N</span> Sends the image to the
+          control image of the ControlNet tab.</td></tr>
+        <tr><td><AppIcon name="external" :size="14"/></td><td><span class="kbd">P</span> Sends the image to
+          Photoshop as a layer of the active document; middle click or
+          <span class="kbd">Shift</span>+<span class="kbd">P</span> opens it as a new document.</td></tr>
+        <tr><td><AppIcon name="concept" :size="14"/> <AppIcon name="palette" :size="14"/></td><td>
+          <span class="kbd">Y</span> / <span class="kbd">T</span> Places the image in the concept tray or the
+          image tray.</td></tr>
       </table>
+      <p>
+        Right-click an image (or the large image) for a menu with all of its actions, as well as opening it in a
+        new window, copying it to the clipboard and, for a marked image, showing only its marking or removing
+        it. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
+      </p>
       <p>
         Click an image to view it large. In that view, <span class="kbd">←</span> and
         <span class="kbd">→</span> page through the images, <span class="kbd">Ctrl</span>+click switches between
@@ -438,8 +480,9 @@ onMounted(loadPluginStatus);
       <p>The <b>Settings</b> tab holds the following options, which are saved on the {{ HOST_NAME }} server:</p>
       <ul>
         <li><b>Accent color</b> — the highlight color of the window: buttons, active tabs, selections.</li>
-        <li><b>Automatically clear generated images</b> — empties the Generated tab whenever a new batch starts, so that it shows only the latest run. Turn it off
-          to let the images of successive runs accumulate.</li>
+        <li><b>Open Image Bench in a browser tab instead of a popup window</b> — the 🔬 button opens a regular
+          browser tab (with an address bar, bookmarks and extensions) instead of a popup window. Takes effect the
+          next time Image Bench is opened.</li>
         <li><b>Flash the Generated tab when an image generated from the Generate tab arrives</b> — generations
           started from the Generate tab stay on it, and the tab that receives each image flashes. Turn it off to
           stop the Generated tab from flashing; the Upscaled tab still flashes.</li>
@@ -467,21 +510,24 @@ onMounted(loadPluginStatus);
         </template>
       </ul>
       <p>
-        The <AppIcon name="more" :size="13" class="inline-icon"/> button at the right end of the tab bar opens the
-        maintenance actions. Each one asks for confirmation first; the ☢️ signs show how much it destroys:
+        The <AppIcon name="broom" :size="13" class="inline-icon"/> button at the right end of the tab bar opens the
+        clean-up actions. Each one asks for confirmation first; the
+        <AppIcon name="nuke" :size="13" class="inline-icon"/> signs show how much it destroys:
       </p>
       <ul>
-        <li><b>Delete generated images (keep tray images)</b> — permanently deletes every file and folder in the
-          {{ HOST_NAME }} output folder except the <code>image-bench</code> folder, which holds the tray images.
-          Use it to reclaim disk space while keeping the trays intact.</li>
-        <li><b>Clear all images and trays (UI only)</b> — removes all images from the window and empties both
-          trays. The image files themselves stay on disk.</li>
-        <li><b>Clear outputs (delete all files)</b> — does both of the above and deletes the
-          <code>image-bench</code> folder too: the whole output folder is emptied, tray images included. This
-          cannot be undone.</li>
-        <li v-if="isWebUI"><b>Clear saved generation parameters</b> — forgets the prompts and parameters saved by
-          "Remember prompts and generation parameters across WebUI reloads", so that nothing is restored at the
-          next reload.</li>
+        <li><b>Clear generated images</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> — removes all
+          images from the Generated<template v-if="isWebUI">, Upscaled</template> and Explore tabs. The trays are
+          kept, and no files are deleted.</li>
+        <li><b>Clear all images and trays</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
+          name="nuke" :size="13" class="inline-icon"/> — also empties both trays. The image files stay on disk.</li>
+        <li><b>Delete all output files</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
+          name="nuke" :size="13" class="inline-icon"/><AppIcon name="nuke" :size="13" class="inline-icon"/> —
+          clears all tabs and trays and permanently deletes every file and folder in the {{ HOST_NAME }} output
+          folder, tray<template v-if="isWebUI"> and upscaled</template> images included. This cannot be
+          undone.</li>
+        <li v-if="isWebUI"><b>Reset saved generation parameters</b> <AppIcon name="reset" :size="13"
+          class="inline-icon"/> — forgets the prompts and parameters saved by "Remember prompts and generation
+          parameters across WebUI reloads", so that nothing is restored at the next reload.</li>
       </ul>
     </section>
 
@@ -610,8 +656,15 @@ onMounted(loadPluginStatus);
         <tr><td><span class="kbd">Esc</span></td><td>Close the image view, or the topmost dialog</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">U</span></td><td>Unselect all images</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+click</td><td>Switch between full size and fit to screen in the image view</td></tr>
-        <tr><td>Middle click</td><td>On an image, open it in a new tab. On a button, perform the alternative action
-          named in its tooltip (reuse all parameters, open as a new Photoshop document, filter by marking, ...)</td></tr>
+        <tr><td>Middle click</td><td>On an image, open it in a new tab. On a button, perform its alternative action
+          (reuse all parameters, open as a new Photoshop document); on a marking, remove it</td></tr>
+        <tr><td><span class="kbd">Shift</span>+click</td><td>On a button of an image, perform its alternative
+          action</td></tr>
+        <tr><td>Right click</td><td>The menu of an image</td></tr>
+        <tr><td>Letter keys</td><td>Actions of the image under the pointer or in the image view (see Working with
+          images)</td></tr>
+        <tr><td><span class="kbd">1</span>–<span class="kbd">8</span>, <span class="kbd">0</span></td><td>Set or
+          remove the marking in the image view of a tray</td></tr>
       </table>
     </section>
 

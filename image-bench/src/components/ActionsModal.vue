@@ -7,6 +7,8 @@ import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
+import {HOST_NAME, isWebUI} from "@/host.js";
+import AppIcon from "@/components/AppIcon.vue";
 
 const props = defineProps({
   show: {
@@ -16,8 +18,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
-
-const isWebui = import.meta.env.MODE === 'webui';
 
 // Key used by webui-extension/javascript/persistence.js; the popup shares the WebUI origin
 const GENERATION_PARAMS_KEY = "image-bench-generation-params";
@@ -29,42 +29,51 @@ const conceptTrayStore = useConceptTrayStore();
 const imageTrayStore = useImageTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
 
-function clearImageStores() {
+// The views that are not trays, as named in the confirmations
+const VIEWS = isWebUI ? "Generated, Explore and Upscaled tabs" : "Generated and Explore tabs";
+
+function clearViews() {
   exploreImagesStore.clear();
   generatedImagesStore.clear();
-  imageTrayStore.clear();
-  conceptTrayStore.clear();
   upscaledImageStore.clear();
 }
 
-async function onClearImagesClick() {
-  if (await dialog.confirm("This will remove all images from the UI and empty the image and concept trays and the upscaled images. The image files will remain on disk. Do you want to continue?",
-      {title: "Clear all images", okText: "Clear", danger: true})) {
-    clearImageStores();
+function clearViewsAndTrays() {
+  clearViews();
+  imageTrayStore.clear();
+  conceptTrayStore.clear();
+}
+
+async function onClearViewsClick() {
+  if (await dialog.confirm(`Removes all images from the ${VIEWS}. The image and concept trays are kept, `
+      + "and no files are deleted from disk.", {title: "Clear generated images", okText: "Clear"})) {
+    clearViews();
     emit('close');
   }
 }
 
-async function onClearOutputsClick() {
-  if (await dialog.confirm("This will remove all images from the UI, empty the trays and permanently delete all files and folders in the outputs directory, including tray images. Do you want to continue?",
-      {title: "Clear outputs", okText: "Delete files", danger: true})) {
-    clearImageStores();
+async function onClearAllClick() {
+  if (await dialog.confirm(`Removes all images from the ${VIEWS} and empties the image and concept trays. `
+      + "No files are deleted from disk.", {title: "Clear all images", okText: "Clear", danger: true})) {
+    clearViewsAndTrays();
+    emit('close');
+  }
+}
+
+async function onDeleteOutputsClick() {
+  if (await dialog.confirm(`Permanently deletes every file and folder in the ${HOST_NAME} outputs directory, `
+      + `including the images of the trays${isWebUI ? " and the Upscaled tab" : ""}, and empties all tabs and trays. `
+      + "This cannot be undone.", {title: "Delete all output files", okText: "Delete files", danger: true})) {
+    clearViewsAndTrays();
     setTimeout(() => fetch("/image-bench/clear_outputs_dir"), 500);
     emit('close');
   }
 }
 
-async function onClearGeneratedImagesClick() {
-  if (await dialog.confirm("This will permanently delete all files and folders in the outputs directory except the Image Bench folder, which holds tray images. Do you want to continue?",
-      {title: "Clear generated images", okText: "Delete", danger: true})) {
-    setTimeout(() => fetch("/image-bench/clear_generated_images"), 500);
-    emit('close');
-  }
-}
-
-async function onClearSavedParamsClick() {
-  if (await dialog.confirm("This will remove the prompts and parameters saved on each generation, so nothing will be restored on the next reload. Do you want to continue?",
-      {title: "Clear saved parameters", okText: "Clear", danger: true})) {
+async function onResetParamsClick() {
+  if (await dialog.confirm("Forgets the prompts and parameters Image Bench saved after each generation, so they are "
+      + "not restored when the WebUI page is reloaded. Images and settings are not affected.",
+      {title: "Reset saved parameters", okText: "Reset"})) {
     storage.removeItem(GENERATION_PARAMS_KEY);
     emit('close');
   }
@@ -101,21 +110,25 @@ onUnmounted(() => {
         <Transition name="zoom">
           <div v-if="show" class="actions-modal-content">
             <div class="actions-modal-header">
-              <h3>Actions</h3>
+              <h3>Clean up</h3>
               <button class="close-button" @click="onClose" title="Close (Esc)">✖</button>
             </div>
             <div class="actions-modal-body">
-              <button class="action-button" @click="onClearGeneratedImagesClick">
-                Delete generated images (keep tray images) ☢️
+              <button class="action-button" @click="onClearViewsClick">
+                <span class="action-icons"><AppIcon name="nuke" :size="16"/></span>
+                <span class="action-text">Clear generated images<small>Trays are kept, files stay on disk</small></span>
               </button>
-              <button class="action-button" @click="onClearImagesClick">
-                Clear all images and trays (UI only) ☢️☢️
+              <button class="action-button" @click="onClearAllClick">
+                <span class="action-icons"><AppIcon v-for="n in 2" :key="n" name="nuke" :size="16"/></span>
+                <span class="action-text">Clear all images and trays<small>Files stay on disk</small></span>
               </button>
-              <button class="action-button" @click="onClearOutputsClick">
-                Clear outputs (delete all files) ☢️☢️☢️
+              <button class="action-button danger" @click="onDeleteOutputsClick">
+                <span class="action-icons"><AppIcon v-for="n in 3" :key="n" name="nuke" :size="16"/></span>
+                <span class="action-text">Delete all output files<small>Deletes the outputs directory, cannot be undone</small></span>
               </button>
-              <button v-if="isWebui" class="action-button" @click="onClearSavedParamsClick">
-                Clear saved generation parameters 🧹
+              <button v-if="isWebUI" class="action-button" @click="onResetParamsClick">
+                <span class="action-icons"><AppIcon name="reset" :size="16"/></span>
+                <span class="action-text">Reset saved generation parameters<small>Prompts and parameters restored on page reload</small></span>
               </button>
             </div>
           </div>
@@ -202,7 +215,11 @@ onUnmounted(() => {
 }
 
 .action-button {
-  padding: 12px 20px;
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
   font-size: 14px;
   background: var(--ib-elev-2);
   color: var(--ib-text);
@@ -216,8 +233,30 @@ onUnmounted(() => {
 
 .action-button:hover {
   background: var(--ib-hover);
+}
+
+.action-button.danger:hover {
   border-color: var(--ib-danger);
   color: var(--ib-danger-text);
+}
+
+/* Right-aligned, so that the labels of all rows start in one column */
+.action-icons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.action-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.action-text small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ib-muted);
 }
 
 /* Transitions */
