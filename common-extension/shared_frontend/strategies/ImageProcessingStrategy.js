@@ -11,6 +11,8 @@ export class ImageProcessingStrategy extends QueueProcessor {
         this.setSteps = false;
         this.setDenoising = false;
         this.paramsBackup = null;
+        // Parameters of the current image being set
+        this.applying = null;
         this.progressMonitoring = false;
     }
 
@@ -37,22 +39,14 @@ export class ImageProcessingStrategy extends QueueProcessor {
         // Notify that processing started
         this.messageBus.publish('BEGIN_PROCESSING', {});
 
-        // Backup current parameters
-        this.paramsBackup = await this.uiOperations.backupGenerationParams();
+        // Backup all parameters that the images set, restored in finish()
+        this.paramsBackup = await this.uiOperations.backupImageParams();
 
         // Apply preset if specified
         if (options.preset) {
             await this.uiOperations.applyPreset(options.preset);
             await this.uiOperations.sleep(500);
         }
-
-        // Enable hires fix for sequential generation, disable for hires fix mode
-        if (!this.setSteps) {
-            this.uiOperations.toggleHiresFix(true);
-        }
-
-        // Set batch count to 1 for sequential processing
-        await this.uiOperations.setBatchCount(1);
 
         // Start progress monitoring
         this.startProgressMonitoring();
@@ -69,13 +63,29 @@ export class ImageProcessingStrategy extends QueueProcessor {
 
         const parameters = imageData.parameters;
 
-        // Apply image parameters
-        await this.uiOperations.applyImageParameters(parameters, {
-            setSteps: this.setSteps || imageData.setSteps,
-            setDenoising: this.setDenoising
-        });
+        // Set all generation parameters of the image; generating with other steps reproduces
+        // the image's own Hires. fix, otherwise the image is upscaled with Hires. fix.
+        // finish() waits for this, so that it restores the parameters after they are set
+        this.applying = (async () => {
+            await this.uiOperations.applyImageParameters(parameters, {
+                upscale: !this.setSteps,
+                setDenoising: this.setDenoising
+            });
 
-        await this.uiOperations.sleep(500);
+            // The tab may have been switched to txt2img
+            await this.uiOperations.setBatchCount(1);
+            await this.uiOperations.sleep(500);
+        })();
+
+        try {
+            await this.applying;
+        } finally {
+            this.applying = null;
+        }
+
+        // Stopped while the parameters were being set
+        if (!this.isActive)
+            return;
 
         // Click generate button
         await this.clickGenerate();
@@ -125,21 +135,17 @@ export class ImageProcessingStrategy extends QueueProcessor {
         this.progressMonitoring = false;
         this.queue = [];
 
-        // Restore parameters
-        if (this.paramsBackup) {
-            this.uiOperations.restoreGenerationParams(this.paramsBackup);
-        }
-
-        // Toggle hires fix back if needed
-        if (!this.setSteps) {
-            this.uiOperations.toggleHiresFix();
-        }
-
+        // Taken before awaiting, so that a finish request arriving meanwhile does not restore twice
+        const paramsBackup = this.paramsBackup;
         const tempGenId = this.generationId;
         this.generationId = null;
         this.paramsBackup = null;
         this.setDenoising = false;
         this.setSteps = false;
+
+        // Restore the parameters set before processing (also when interrupted)
+        await this.applying?.catch(() => {});
+        await this.uiOperations.restoreImageParams(paramsBackup);
 
         this.messageBus.publish('GENERATION_FINISHED', {});
 

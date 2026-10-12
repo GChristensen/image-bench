@@ -35,6 +35,8 @@ const PRECEDING_ROLES = new Map([
     [MARKER_ROLES.mask, MARKER_ROLES.image]
 ]);
 
+const isSet = value => value !== undefined && value !== null;
+
 export class ComfyUIOperations {
     /**
      * @param {Object} app - ComfyUI app instance
@@ -367,15 +369,9 @@ export class ComfyUIOperations {
     async applyUiPresetForModel(modelName) {}
 
     /**
-     * Per-model generation parameters are applied in SD WebUI only; no-ops in ComfyUI
+     * Per-model generation parameters are applied in SD WebUI only; no-op in ComfyUI
      */
     async applyGenerationParams(params) {}
-
-    async backupGenerationParams() {
-        return null;
-    }
-
-    async restoreGenerationParams(backup) {}
 
     /**
      * Click the generate button (queue the workflow)
@@ -753,26 +749,76 @@ export class ComfyUIOperations {
     }
 
     /**
-     * Apply parameters from an image to current generation settings
-     * @param {Object} parameters - Image parameters object
-     * @param {Object} options - { setSteps: boolean, setDenoising: boolean }
+     * Backup everything applyImageParameters() may change: prompts, checkpoint and the located parameters
+     * @returns {Promise<Object>}
+     */
+    async backupImageParams() {
+        // read() reports a randomized seed as -1, the seed value and its control are kept apart
+        const params = {...this.params.read('txt2img').params, seed: this.getSeed()};
+
+        return {
+            params,
+            denoise: this.params.getValue('denoise'),
+            seedControl: this.getControlAfterGenerate()
+        };
+    }
+
+    /**
+     * Restore the parameters saved by backupImageParams()
+     * @param {Object} backup
+     * @returns {Promise<void>}
+     */
+    async restoreImageParams(backup) {
+        if (!backup) {
+            return;
+        }
+
+        this.params.apply(backup.params, 'txt2img');
+
+        if (backup.denoise !== null) {
+            this.params.setValue('denoise', backup.denoise);
+        }
+
+        if (backup.seedControl !== null) {
+            this.setControlAfterGenerate(backup.seedControl);
+        }
+
+        this.app.graph.setDirtyCanvas(true, true);
+    }
+
+    /**
+     * Set all generation parameters of an image found in the workflow.
+     * Choices unknown to the workflow (e.g. WebUI sampler names of a WebUI image) are skipped
+     * @param {Object} parameters - Image parameters object (from /history or a WebUI infotext)
+     * @param {Object} options - { setDenoising: boolean (denoising strength of the parameters) }
      * @returns {Promise<void>}
      */
     async applyImageParameters(parameters, options = {}) {
-        // Set seed if present
-        if ('seed' in parameters) {
-            this.setSeed(parameters['seed']);
+        const accepts = (widget, value) => {
+            const choices = widget?.options?.values;
+            const list = typeof choices === 'function' ? choices() : choices;
+            return !Array.isArray(list) || list.includes(value);
+        };
+        const choice = (widget, value) => isSet(value) && accepts(widget, value) ? value : undefined;
+
+        this.params.apply({
+            prompt: parameters['prompt'],
+            negativePrompt: parameters['negative prompt'],
+            checkpoint: choice(this.getCheckpointWidget(), parameters['model']),
+            seed: parameters['seed'],
+            steps: parameters['steps'],
+            cfg: parameters['cfg'] ?? parameters['cfg scale'],
+            sampler: choice(this.params.locate('sampler')?.widget, parameters['sampler']),
+            scheduler: choice(this.params.locate('scheduler')?.widget,
+                parameters['scheduler'] ?? parameters['schedule type'])
+        }, 'txt2img');
+
+        const denoise = options.setDenoising ? parameters['denoising strength'] : parameters['denoise'];
+        if (isSet(denoise)) {
+            this.setDenoise(denoise);
         }
 
-        // Set steps if needed
-        if (options.setSteps && 'steps' in parameters) {
-            this.setSteps(parameters['steps']);
-        }
-
-        // Set denoising if needed
-        if (options.setDenoising && 'denoising strength' in parameters) {
-            this.setDenoise(parameters['denoising strength']);
-        }
+        this.app.graph.setDirtyCanvas(true, true);
     }
 
     /**

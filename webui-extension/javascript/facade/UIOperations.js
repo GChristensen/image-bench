@@ -207,63 +207,149 @@ export class UIOperations {
         }
     }
 
+    // ==================== IMAGE PARAMETERS (upscaling, varying steps / denoising) ====================
+
     /**
-     * Backup current generation parameters
-     * @returns {Promise<Object>} Backup object with seeds, steps, and denoising values
+     * Backup everything applyImageParameters() may change: the shown tab, UI preset, checkpoint, clip skip,
+     * txt2img prompts and parameters and its Hires. fix
+     * @returns {Promise<Object>}
      */
-    async backupGenerationParams() {
+    async backupImageParams() {
         return {
-            seeds: [
-                await this.adapter.getInputValue('TXT2IMG_SEED'),
-                await this.adapter.getInputValue('TXT2IMG_SUBSEED')
-            ],
-            steps: await this.adapter.getInputValue('TXT2IMG_STEPS'),
-            denoising: await this.adapter.getInputValue('TXT2IMG_DENOISING')
+            tab: this.adapter.isImg2ImgTab() ? 'img2img' : 'txt2img',
+            uiPreset: this.adapter.getInputValue('FORGE_UI_PRESET'),
+            model: this.adapter.getInputValue('MODEL_CHECKPOINT'),
+            clipSkip: this.adapter.getInputValue('CLIP_SKIP'),
+            txt2img: this.captureTabParams('TXT2IMG'),
+            hires: this.captureHiresParams()
         };
     }
 
     /**
-     * Restore generation parameters from backup
-     * @param {Object} backup - Backup object from backupGenerationParams()
+     * Restore the parameters saved by backupImageParams()
+     * @param {Object} backup
+     * @returns {Promise<void>}
      */
-    restoreGenerationParams(backup) {
-        if (backup.seeds) {
-            this.adapter.setInputValue('TXT2IMG_SEED', backup.seeds[0]);
-            this.adapter.setInputValue('TXT2IMG_SUBSEED', backup.seeds[1]);
+    async restoreImageParams(backup) {
+        if (!backup) {
+            return;
         }
 
-        if (backup.steps) {
-            this.adapter.setInputValue('TXT2IMG_STEPS', backup.steps);
+        // The preset resets the sampling parameters, so it goes first
+        if (isSet(backup.uiPreset)) {
+            await this.setUiPreset(backup.uiPreset);
         }
 
-        if (backup.denoising) {
-            this.adapter.setInputValue('TXT2IMG_DENOISING', backup.denoising);
+        if (backup.model) {
+            await this.restoreModel(backup.model);
+        }
+
+        this.setClipSkip(backup.clipSkip);
+        await this.applyTabParams('TXT2IMG', backup.txt2img);
+        await this.applyHiresParams(backup.hires);
+        await this.showGenerationTab(backup.tab);
+    }
+
+    /**
+     * Set all generation parameters of an image (its infotext parameters) in txt2img, which is shown.
+     * Upscaling uses the Hires. fix settings of WebUI, otherwise the image's Hires. fix is reproduced
+     * @param {Object} parameters - Image parameters object
+     * @param {Object} options - { upscale: boolean, setDenoising: boolean (denoising of the parameters) }
+     * @returns {Promise<void>}
+     */
+    async applyImageParameters(parameters, options = {}) {
+        await this.showGenerationTab('txt2img');
+
+        const model = parameters['model'];
+        if (model && !String(this.adapter.getInputValue('MODEL_CHECKPOINT') ?? '').includes(model)) {
+            // The preset resets the sampling parameters, which are set below
+            await this.applyUiPresetForModel(model);
+            await this.restoreModel(model);
+        }
+
+        // WebUI omits the default clip skip from the infotext
+        this.setClipSkip(parameters['clip skip'] ?? 1);
+
+        const size = String(parameters['size'] ?? '').match(/^(\d+)x(\d+)$/);
+        const subseedStrength = Number(parameters['variation seed strength'] ?? 0);
+        const sliderKind = this.getDistilledCfgSliderKind();
+        const hiresFix = options.upscale || 'hires upscale' in parameters;
+        const setDenoising = options.setDenoising || (!options.upscale && hiresFix);
+
+        await this.applyTabParams('TXT2IMG', {
+            prompt: parameters['prompt'] ?? '',
+            negativePrompt: parameters['negative prompt'] ?? '',
+            sampler: parameters['sampler'],
+            scheduler: parameters['schedule type'],
+            steps: parameters['steps'],
+            cfg: parameters['cfg scale'],
+            distilledCfg: sliderKind === 'shift' ? parameters['shift']
+                : sliderKind === 'distilledCfg' ? parameters['distilled cfg scale']
+                : undefined,
+            width: size?.[1],
+            height: size?.[2],
+            seed: parameters['seed'],
+            subseed: parameters['variation seed'],
+            subseedStrength,
+            subseedShow: subseedStrength > 0 ? true : undefined,
+            denoising: setDenoising ? parameters['denoising strength'] : undefined
+        });
+
+        await this.applyHiresParams(options.upscale ? {hiresFix} : {
+            hiresFix,
+            scale: parameters['hires upscale'],
+            steps: hiresFix ? parameters['hires steps'] ?? 0 : undefined,
+            upscaler: parameters['hires upscaler']
+        });
+    }
+
+    /**
+     * @returns {Object} Hires. fix of txt2img: { hiresFix, scale, steps, upscaler }
+     */
+    captureHiresParams() {
+        return {
+            hiresFix: this.adapter.getElement('HIRES_CHECKBOX')?.checked ?? null,
+            scale: this.adapter.getInputValue('HIRES_SCALE'),
+            steps: this.adapter.getInputValue('HIRES_STEPS'),
+            upscaler: this.adapter.getInputValue('HIRES_UPSCALER')
+        };
+    }
+
+    /**
+     * Apply Hires. fix parameters captured by captureHiresParams(); unset ones are left untouched
+     * @param {Object} params
+     * @returns {Promise<void>}
+     */
+    async applyHiresParams(params) {
+        const differs = (key, value) => isSet(value)
+            && String(this.adapter.getInputValue(key)) !== String(value);
+
+        if (differs('HIRES_SCALE', params.scale)) {
+            this.adapter.setInputValue('HIRES_SCALE', params.scale);
+        }
+
+        if (differs('HIRES_STEPS', params.steps)) {
+            this.adapter.setInputValue('HIRES_STEPS', params.steps);
+        }
+
+        if (differs('HIRES_UPSCALER', params.upscaler)) {
+            await this.adapter.setDropdownValue('HIRES_UPSCALER', params.upscaler, true);
+        }
+
+        if (isSet(params.hiresFix)) {
+            this.adapter.toggleHiresFix(params.hiresFix, !params.hiresFix);
         }
     }
 
     /**
-     * Apply parameters from an image to current generation settings
-     * @param {Object} parameters - Image parameters object
-     * @param {Object} options - { setSteps: boolean, setDenoising: boolean }
-     * @returns {Promise<void>}
+     * Set the clip skip setting if it is shown in the quick settings and differs
+     * @param {number|string|null} value
      */
-    async applyImageParameters(parameters, options = {}) {
-        // Always set seed
-        await this.adapter.setInputValue('TXT2IMG_SEED', parameters['seed']);
+    setClipSkip(value) {
+        const current = this.adapter.getInputValue('CLIP_SKIP');
 
-        // Set variation seed if present
-        if ('variation seed' in parameters) {
-            await this.adapter.setInputValue('TXT2IMG_SUBSEED', parameters['variation seed']);
-        }
-
-        // Set denoising strength if needed
-        if (options.setDenoising && 'denoising strength' in parameters) {
-            await this.adapter.setInputValue('TXT2IMG_DENOISING', parameters['denoising strength']);
-        }
-
-        // Set steps if needed
-        if (options.setSteps && 'steps' in parameters) {
-            await this.adapter.setInputValue('TXT2IMG_STEPS', parameters['steps']);
+        if (isSet(value) && current !== null && String(current) !== String(value)) {
+            this.adapter.setInputValue('CLIP_SKIP', value);
         }
     }
 
