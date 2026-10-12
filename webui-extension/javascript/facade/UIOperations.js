@@ -550,12 +550,16 @@ export class UIOperations {
      * @returns {Object} { uiPreset, txt2img, img2img }
      */
     captureUiParams() {
+        const hires = this.captureHiresParams();
+
         return {
             uiPreset: this.adapter.getInputValue('FORGE_UI_PRESET'),
             txt2img: {
                 ...this.captureTabParams('TXT2IMG'),
-                hiresFix: this.adapter.getElement('HIRES_CHECKBOX')?.checked ?? null,
-                hiresScale: this.adapter.getInputValue('HIRES_SCALE')
+                hiresFix: hires.hiresFix,
+                hiresScale: hires.scale,
+                hiresSteps: hires.steps,
+                hiresUpscaler: hires.upscaler
             },
             img2img: this.captureTabParams('IMG2IMG')
         };
@@ -600,15 +604,12 @@ export class UIOperations {
         await this.applyTabParams('TXT2IMG', params.txt2img);
         await this.applyTabParams('IMG2IMG', params.img2img);
 
-        const hiresScale = params.txt2img?.hiresScale;
-        if (isSet(hiresScale) && String(this.adapter.getInputValue('HIRES_SCALE')) !== String(hiresScale)) {
-            this.adapter.setInputValue('HIRES_SCALE', hiresScale);
-        }
-
-        const hiresFix = params.txt2img?.hiresFix;
-        if (isSet(hiresFix)) {
-            this.adapter.toggleHiresFix(hiresFix, !hiresFix);
-        }
+        await this.applyHiresParams({
+            hiresFix: params.txt2img?.hiresFix,
+            scale: params.txt2img?.hiresScale,
+            steps: params.txt2img?.hiresSteps,
+            upscaler: params.txt2img?.hiresUpscaler
+        });
     }
 
     /**
