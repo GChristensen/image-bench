@@ -603,7 +603,8 @@ const gridStyle = computed(() => ({
         </button>
         <button class="btn outline" :disabled="!generating" title="Skip the image being generated"
                 @click="webUI.skipGeneration()"><AppIcon name="skip" :size="13"/>Skip</button>
-        <label class="toolbar-group-label">×<NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
+        <label class="toolbar-group-label"><span class="reset-count" title="Reset to 1 image"
+              @click.prevent="generateImagesNumber = 1">×</span><NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
         <button class="btn preset-count" :class="{on: generateImagesNumber === config.generatePresetImages}"
                 :disabled="generating" :title="`Generate ${config.generatePresetImages} images (set in the settings)`"
                 @click="generateImagesNumber = config.generatePresetImages">{{ config.generatePresetImages }}</button>

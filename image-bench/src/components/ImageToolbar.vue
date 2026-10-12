@@ -143,7 +143,8 @@ defineExpose({generateImagesNumber});
           <span :class="{off: generationInProgress}"><AppIcon name="play" :size="13"/>Generate</span>
           <span :class="{off: !generationInProgress}"><AppIcon name="stop" :size="13"/>Stop</span>
         </button>
-        <label class="toolbar-group-label">×<NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
+        <label class="toolbar-group-label"><span class="reset-count" title="Reset to 1 image"
+              @click.prevent="generateImagesNumber = 1">×</span><NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
         <button class="btn preset-count" :class="{on: generateImagesNumber === presetImages}"
                 :disabled="generationInProgress" :title="`Generate ${presetImages} images (set in the settings)`"
                 @click="setPresetImages">{{ presetImages }}</button>

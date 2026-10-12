@@ -1,8 +1,21 @@
+<script>
+import {reactive, watchEffect} from "vue";
+
+// Labels of the mounted indicators (kept-alive tabs included), the latest one is shown in the window title
+const activeLabels = reactive(new Map());
+const baseTitle = document.title;
+
+watchEffect(() => {
+  const labels = [...activeLabels.values()];
+  document.title = labels.length ? `[${labels[labels.length - 1]}] ${baseTitle}` : baseTitle;
+});
+</script>
+
 <script setup>
 /**
  * Compact inline progress bar with a monospace label
  */
-import {computed} from "vue";
+import {computed, onUnmounted, watch} from "vue";
 
 const props = defineProps({
   value: {
@@ -28,6 +41,10 @@ const defaultLabel = computed(() => {
   const percent = `${Math.round(props.value)}%`;
   return props.total > 0 ? `${props.completed}/${props.total} · ${percent}` : percent;
 });
+
+const titleKey = Symbol();
+watch(() => props.label || defaultLabel.value, label => activeLabels.set(titleKey, label), {immediate: true});
+onUnmounted(() => activeLabels.delete(titleKey));
 </script>
 
 <template>

@@ -6,6 +6,7 @@
 import {computed} from "vue";
 
 const MULTIPLE = 16;
+const DEFAULT_SIZE = 1024;  // set by clicking the ×
 
 const props = defineProps({
   width: {
@@ -46,7 +47,8 @@ function onInput(which, e) {
   <div class="resize-to" title="Resize to">
     <input type="number" min="1" :class="{unaligned: !aligned}" :value="width" :disabled="disabled"
            aria-label="Resize to width" @change="e => onInput('width', e)">
-    <span class="times" aria-hidden="true">×</span>
+    <span class="times" :class="{disabled}" :title="`Reset to ${DEFAULT_SIZE}×${DEFAULT_SIZE}`" aria-hidden="true"
+          @click="!disabled && emit('change', DEFAULT_SIZE, DEFAULT_SIZE)">×</span>
     <input type="number" min="1" :class="{unaligned: !aligned}" :value="height" :disabled="disabled"
            aria-label="Resize to height" @change="e => onInput('height', e)">
     <button class="ib round" :class="{on: !aligned}" :disabled="disabled || aligned"
@@ -100,6 +102,16 @@ function onInput(which, e) {
 .times {
   color: var(--ib-muted);
   font-size: 12px;
+  cursor: pointer;
+}
+
+.times:hover {
+  color: var(--ib-text);
+}
+
+.times.disabled {
+  cursor: default;
+  pointer-events: none;
 }
 
 .round {

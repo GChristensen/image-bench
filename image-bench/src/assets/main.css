@@ -56,6 +56,15 @@ body {
   color: var(--ib-text-2);
 }
 
+/* The × before an image count stepper resets it */
+.reset-count {
+  cursor: pointer;
+}
+
+.reset-count:hover {
+  color: var(--ib-text);
+}
+
 .vsep {
   width: 1px;
   align-self: stretch;

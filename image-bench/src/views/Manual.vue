@@ -239,7 +239,7 @@ onMounted(loadPluginStatus);
           the seed of the latest image.</li>
         <li v-if="isWebUI"><b>Mode switch</b> (at the right of the toolbar) — txt2img, img2img or Inpaint. It
           switches the WebUI tab and remembers the parameters of each mode separately. In img2img and Inpaint, the
-          size becomes "Resize to", and the Hires. fix column holds the denoising strength and the resize and mask
+          size becomes "Resize to" (click its <b>×</b> to reset it to 1024×1024), and the Hires. fix column holds the denoising strength and the resize and mask
           options instead.</li>
         <li v-else><b>Mode</b> — set by the workflow rather than by a switch: txt2img by default, img2img when a
           load node is marked <code>ib:img</code>, and inpaint when a mask loader is marked <code>ib:mask</code>
@@ -250,7 +250,7 @@ onMounted(loadPluginStatus);
           image column or the image; double-click a grip to restore the automatic size.</li>
         <li><b>Generate</b> — makes one image and shows it with a live preview. Ask for more than one image (or
           for <AppIcon name="infinity" :size="13" class="inline-icon"/>), and the batch runs in the Generated tab
-          instead. <b>Skip</b> abandons the current image; <b>Stop</b> ends the batch.</li>
+          instead; clicking the <b>×</b> before the count resets it to 1. <b>Skip</b> abandons the current image; <b>Stop</b> ends the batch.</li>
         <li v-if="isWebUI"><b>UI preset buttons</b> — switch the Forge UI preset (sd, xl, flux, ...); Settings
           decides which presets they offer. <b><AppIcon name="lock" :size="13" class="inline-icon"/> Prompt
           lock</b> covers the prompts in WebUI, so that they can only be edited here.</li>
@@ -340,7 +340,7 @@ onMounted(loadPluginStatus);
       <p>Its toolbar, and what to do with the results:</p>
       <ul>
         <li><b>Generate × N</b> — runs a batch with the current parameters and a random seed for each image. The
-          count button beside it sets the number chosen in Settings, and
+          count button beside it sets the number chosen in Settings, clicking <b>×</b> resets it to 1, and
           <AppIcon name="infinity" :size="13" class="inline-icon"/> keeps generating until you stop it.</li>
         <li v-if="isWebUI"><b>Variations…</b> — generates variations of the current seed. The variation seed and
           strength are set for the batch and cleared once it is done.</li>
