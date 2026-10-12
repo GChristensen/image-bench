@@ -90,9 +90,8 @@
       props.imageStore.images = props.imageStore.images.filter(i => !i.selected);
     }
 
-    if (isTray.value) {
-      props.imageStore.persist();
-    }
+    // Trays and the upscaled images are saved on the server
+    props.imageStore.persist?.();
   }
 
   // Resolves to true if the image was deleted
@@ -106,17 +105,14 @@
       const removedImageIndex = images.value.indexOf(removedImage);
       images.value.splice(removedImageIndex, 1);
 
-      if (isTray.value) {
-        props.imageStore.persist();
-      }
+      props.imageStore.persist?.();
     }
 
     return !!removedImage;
   }
 
 
-  // Tray persist replaces all image objects with the ones returned by the server,
-  // so images held elsewhere (e.g. by the overlay) are located by path, not by identity
+  // Images held elsewhere (e.g. by the overlay) may be copies, so they are located by path, not by identity
   function isSameImage(a, b) {
     return a === b || !!a && !!b && !a.separator && a.imagePath === b.imagePath;
   }
@@ -161,14 +157,12 @@
     if (comment) {
       image.comment = comment;
 
-      if (isTray)
-        props.imageStore.persist();
+      props.imageStore.persist?.();
     }
   }
 
   function onSetMarking(image) {
-    if (isTray)
-      props.imageStore.persist();
+    props.imageStore.persist?.();
   }
 
   // Highlights the image thumbnail and scrolls it into view

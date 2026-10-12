@@ -398,6 +398,12 @@ onMounted(loadPluginStatus);
         the image is generated again from its parameters, this time with Hires. fix, using the Hires. fix
         settings currently set in WebUI.
       </p>
+      <p>
+        Like the trays, the tab keeps its images until you remove them: they are copied to the
+        <code>image-bench/upscaled</code> folder of the outputs directory and survive restarts and clearing the
+        generated images. A colored bar marks the images of one upscale run. <AppIcon name="download" :size="13" class="inline-icon"/> downloads
+        them as a .zip, which can be imported into a tray.
+      </p>
     </section>
 
     <section id="manual-images">
@@ -432,8 +438,7 @@ onMounted(loadPluginStatus);
       <p>The <b>Settings</b> tab holds the following options, which are saved on the {{ HOST_NAME }} server:</p>
       <ul>
         <li><b>Accent color</b> — the highlight color of the window: buttons, active tabs, selections.</li>
-        <li><b>Automatically clear generated images</b> — empties the Generated tab whenever a new batch starts
-          (and the Upscaled tab whenever a new upscale starts), so that it shows only the latest run. Turn it off
+        <li><b>Automatically clear generated images</b> — empties the Generated tab whenever a new batch starts, so that it shows only the latest run. Turn it off
           to let the images of successive runs accumulate.</li>
         <li><b>Flash the Generated tab when an image generated from the Generate tab arrives</b> — generations
           started from the Generate tab stay on it, and the tab that receives each image flashes. Turn it off to

@@ -86,6 +86,7 @@ onBeforeMount(async () => {
   await appConfigStore.init();
   await imageTrayStore.init();
   await conceptTrayStore.init();
+  await upscaledImageStore.init();
   await configPresetsStore.init();
 
   webUI.initializePrompts();

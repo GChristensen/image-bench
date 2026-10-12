@@ -1,3 +1,5 @@
+import {dialog} from "@/dialogs/useDialog.js";
+
 export function createImageData(data) {
     return {...data};
 }
@@ -53,6 +55,31 @@ export function isImg2Img(imageData) {
 
 export function getGenerationState() {
     return window.getGenerationState()
+}
+
+/**
+ * Whether the host is generating or an Image Bench operation (batch, upscaling, exploration, ...) is running.
+ * Asked from the host page itself, so that it also works after the popup is reloaded
+ * @returns {boolean}
+ */
+export function isGenerationActive() {
+    try {
+        return !!window.opener?.imageBenchIsGenerationActive?.();
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Tell the user that an operation is refused while a generation is active
+ * @returns {Promise<boolean>} Whether an operation may start
+ */
+export async function ensureGenerationIdle() {
+    if (!isGenerationActive())
+        return true;
+
+    await dialog.alert("A generation is in progress. Please wait until it finishes or stop it.");
+    return false;
 }
 
 export function sendWebUIMessage(msg) {

@@ -10,7 +10,7 @@ import {useImageTrayStore} from "@/stores/imageTray.js";
 import {generationStateToKind, KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
-import {createImageLink} from "@/sdwebui.js";
+import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
@@ -78,14 +78,14 @@ function onClearClick() {
   imageStream.value.clear();
 }
 
-function onUpscaleSelectedClick() {
+async function onUpscaleSelectedClick() {
   const selectedImages = imageStream.value.getSelectedImages();
 
   if (upscaledImageStore.generationInProgress) {
     webUI.stopGeneration();
   }
   else {
-    if (selectedImages.length) {
+    if (selectedImages.length && await ensureGenerationIdle()) {
       upscaledImageStore.startingGeneration();
 
       webUI.upscaleImages(selectedImages);
@@ -93,19 +93,22 @@ function onUpscaleSelectedClick() {
   }
 }
 
-function onUpscaleImage(imageProxy, usePreset) {
+async function onUpscaleImage(imageProxy, usePreset) {
   const image = imageOps.cloneImage(imageProxy);
+
+  if (!await ensureGenerationIdle())
+    return;
 
   upscaledImageStore.startingGeneration();
 
   webUI.upscaleImages([image]);
 }
 
-function onBatchGenerateClick() {
+async function onBatchGenerateClick() {
   if (imageStore.generationInProgress) {
     webUI.stopGeneration();
   }
-  else {
+  else if (await ensureGenerationIdle()) {
     if (config.automaticallyClearGeneratedImages)
       generatedImagesStore.clear();
 
@@ -117,6 +120,9 @@ function onBatchGenerateClick() {
 }
 
 async function onGenerateVariationsClick() {
+  if (!await ensureGenerationIdle())
+    return;
+
   const variationStrength = storage.getVariationStrength();
   const strength = await dialog.prompt("Variation strength:",
     {defaultValue: variationStrength, storageKey: "variationStrength"});

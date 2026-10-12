@@ -33,7 +33,7 @@ import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {useFeatures} from "@/composables/useFeatures.js";
 import {HOST_NAME} from "@/host.js";
-import {createImageLink} from "@/sdwebui.js";
+import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModelInfo} from "@/civitai.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
@@ -313,7 +313,10 @@ function toggleGenerateForever() {
   }
 }
 
-function onGenerate() {
+async function onGenerate() {
+  if (!await ensureGenerationIdle())
+    return;
+
   flushParams();
 
   const nImages = Number(generateImagesNumber.value);
@@ -338,6 +341,9 @@ function onGenerate() {
  * and restores them afterwards (the batch strategy does it)
  */
 async function onGenerateVariations() {
+  if (!await ensureGenerationIdle())
+    return;
+
   const strength = await dialog.prompt("Variation strength:",
     {defaultValue: storage.getVariationStrength(), storageKey: "variationStrength"});
 

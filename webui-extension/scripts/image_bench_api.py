@@ -40,8 +40,9 @@ DEFAULT_CONFIG = """{
 """
 
 EXTENSION_CONFIG_FILE = "config.json"
-IMAGE_TRAY_FILE = "image_tray.json"
-CONCEPT_TRAY_FILE = "concept_tray.json"
+IMAGE_TRAY_FILE = tray.TRAY_FILES["image_tray"]
+CONCEPT_TRAY_FILE = tray.TRAY_FILES["concept_tray"]
+UPSCALED_FILE = tray.TRAY_FILES["upscaled"]
 
 TERMINATE_WEBSOCKET = object()
 
@@ -81,6 +82,8 @@ class ImageBenchApi():
         self.add_api_route("/image_tray", self.write_image_tray, methods=["POST"])
         self.add_api_route("/concept_tray", self.get_concept_tray, methods=["GET"])
         self.add_api_route("/concept_tray", self.write_concept_tray, methods=["POST"])
+        self.add_api_route("/upscaled", self.get_upscaled, methods=["GET"])
+        self.add_api_route("/upscaled", self.write_upscaled, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
         self.add_api_route("/clear_generated_images", self.clear_generated_images, methods=["GET"])
@@ -360,62 +363,28 @@ class ImageBenchApi():
         return self.serve_store_file(IMAGE_TRAY_FILE)
 
     async def write_image_tray(self, request: Request):
-        # Read and parse tray data
-        content = await request.body()
-        tray_data = json.loads(content)
-
-        # Process each image: copy to tray directory if not already processed
-        for image in tray_data.get("images", []):
-            if not image.get("_tray_processed"):
-                try:
-                    # Copy image to dedicated tray directory and update paths
-                    await tray.save_image_to_tray(
-                        image,
-                        "image_tray",
-                        self.image_bench_dir,
-                        "webui"
-                    )
-                    # Mark as processed to avoid re-copying on subsequent saves
-                    image["_tray_processed"] = True
-                except Exception as e:
-                    print(f"[Image Bench] Error copying image to tray: {e}")
-                    # Continue with other images even if one fails
-
-        # Save updated tray data with new paths
-        base_dir = self.get_file_path("", upper=True)
-        await persist.write_store_file_content(base_dir, IMAGE_TRAY_FILE, json.dumps(tray_data))
-
-        # Return updated tray data so frontend can update its store with new paths
-        return Response(json.dumps(tray_data), media_type="application/json")
+        return await self.write_tray(request, "image_tray")
 
     def get_concept_tray(self):
         return self.serve_store_file(CONCEPT_TRAY_FILE)
 
     async def write_concept_tray(self, request: Request):
-        # Read and parse tray data
-        content = await request.body()
-        tray_data = json.loads(content)
+        return await self.write_tray(request, "concept_tray")
 
-        # Process each image: copy to tray directory if not already processed
-        for image in tray_data.get("images", []):
-            if not image.get("_tray_processed"):
-                try:
-                    # Copy image to dedicated tray directory and update paths
-                    await tray.save_image_to_tray(
-                        image,
-                        "concept_tray",
-                        self.image_bench_dir,
-                        "webui"
-                    )
-                    # Mark as processed to avoid re-copying on subsequent saves
-                    image["_tray_processed"] = True
-                except Exception as e:
-                    print(f"[Image Bench] Error copying image to tray: {e}")
-                    # Continue with other images even if one fails
+    def get_upscaled(self):
+        return self.serve_store_file(UPSCALED_FILE)
 
-        # Save updated tray data with new paths
+    async def write_upscaled(self, request: Request):
+        return await self.write_tray(request, "upscaled")
+
+    async def write_tray(self, request: Request, kind):
+        tray_data = json.loads(await request.body())
+
+        # Copy the new images to the tray directory and update their paths
+        await tray.save_tray_images(tray_data, kind, self.image_bench_dir, "webui")
+
         base_dir = self.get_file_path("", upper=True)
-        await persist.write_store_file_content(base_dir, CONCEPT_TRAY_FILE, json.dumps(tray_data))
+        await persist.write_store_file_content(base_dir, tray.TRAY_FILES[kind], json.dumps(tray_data))
 
         # Return updated tray data so frontend can update its store with new paths
         return Response(json.dumps(tray_data), media_type="application/json")
@@ -625,8 +594,7 @@ class ImageBenchApi():
             kind,
             self.image_bench_dir,
             store_dir,
-            IMAGE_TRAY_FILE,
-            CONCEPT_TRAY_FILE
+            IMAGE_TRAY_FILE
         )
 
         if status_code == 200 and file_path:

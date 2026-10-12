@@ -1,25 +1,24 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { KIND_UPSCALED } from "@/consts.js";
-import { useImageStoreState } from "@/stores/composables/useImageStoreState.js";
-import { pickTagColor } from "@/stores/composables/tagColors.js";
+import { useTrayStoreState } from "@/stores/composables/useTrayStoreState.js";
 
 /**
  * Store for upscaled images
- * Uses proper Pinia store pattern with composable for shared logic
+ * Persisted like the trays: the images are copied to image-bench/upscaled/ and kept across sessions
  */
 export const useUpscaledImagesStore = defineStore('upscaledImages', () => {
-  const state = useImageStoreState(KIND_UPSCALED);
+  const state = useTrayStoreState(KIND_UPSCALED);
 
-  // Images are color-tagged by generation like in the trays
+  // Images are color-tagged by generation like in the trays, so batches need no separators
   function onSDEvent(e) {
+    if (e.type === "BEGIN_PROCESSING")
+      return;
+
     state.onSDEvent(e);
 
-    if (e.type === "SAVED_IMAGE") {
-      const images = state.images.value;
-      const image = images.at(-1);
-      image.tagColor = pickTagColor(images.slice(0, -1), image);
-    }
+    if (e.type === "SAVED_IMAGE")
+      state.colorAndPersist(state.images.value.at(-1));
   }
 
   // Getters

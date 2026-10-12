@@ -14,6 +14,7 @@
   import {useLocalStorage} from "@/composables/useLocalStorage.js";
   import {dialog} from "@/dialogs/useDialog.js";
   import {hostHas} from "@/host.js";
+  import {ensureGenerationIdle} from "@/sdwebui.js";
   import AppIcon from "@/components/AppIcon.vue";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams', 
@@ -80,16 +81,22 @@
   const imageOps = useImageOperations();
   const storage = useLocalStorage();
 
-  function onReuseSeedClick(e) {
+  async function onReuseSeedClick(e) {
     e.preventDefault();
+
+    if (!await ensureGenerationIdle())
+      return;
 
     const parameters = imageOps.cloneImage(props.image).parameters;
     webUI.setImageSeed(parameters);
   }
 
   // currently undocumented
-  function onReuseParamsClick(e) {
+  async function onReuseParamsClick(e) {
     e.preventDefault();
+
+    if (!await ensureGenerationIdle())
+      return;
 
     const parameters = imageOps.cloneImage(props.image).parameters;
     webUI.setImageParams(parameters);
@@ -113,6 +120,9 @@
 
 
   async function onGenerateVaryingSteps(e) {
+    if (!await ensureGenerationIdle())
+      return;
+
     const storedSteps = storage.getVaryingSteps();
     const steps = await dialog.prompt("Apply step values:",
       {defaultValue: storedSteps, storageKey: "varyingSteps", dropdown: true, historySize: 5});
@@ -130,6 +140,9 @@
   }
 
   async function onUpscaleVaryingDenoising(e) {
+    if (!await ensureGenerationIdle())
+      return;
+
     const storedSteps = storage.getVaryingDenoising();
     const denoising = await dialog.prompt("Apply denoising values:",
       {defaultValue: storedSteps, storageKey: "varyingDenoising", dropdown: true, historySize: 5});

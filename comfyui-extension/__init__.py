@@ -17,7 +17,7 @@ import folder_paths
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from shared import civitai, explore_export, loras, persist, photoshop, photoshop_plugin
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
-from shared.tray import download_image_tray, image_tray_upload as tray_upload_handler, save_image_to_tray
+from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
 
 # Tell ComfyUI to serve files from the js/ directory
 WEB_DIRECTORY = "./js"
@@ -34,8 +34,8 @@ photoshop_images = {}
 BASE_PATH = "/image-bench"
 
 # Store file names
-IMAGE_TRAY_FILE = "image_tray.json"
-CONCEPT_TRAY_FILE = "concept_tray.json"
+IMAGE_TRAY_FILE = TRAY_FILES["image_tray"]
+CONCEPT_TRAY_FILE = TRAY_FILES["concept_tray"]
 EXPLORE_PRESETS_FILE = "explore_presets.json"
 
 
@@ -288,46 +288,24 @@ async def get_civitai_model_info(request):
     return web.json_response(result)
 
 
-# Image tray endpoints
-@PromptServer.instance.routes.get(BASE_PATH + "/image_tray")
-async def get_image_tray(request):
-    """Get image tray from store"""
+# Persistent image collections: image tray, concept tray and upscaled images
+async def get_tray(request, kind):
+    """Get tray from store"""
     base_dir = get_extension_root()
-    content = persist.serve_store_file_content(base_dir, IMAGE_TRAY_FILE)
+    content = persist.serve_store_file_content(base_dir, TRAY_FILES[kind])
     return web.Response(text=content, content_type="application/json")
 
 
-@PromptServer.instance.routes.post(BASE_PATH + "/image_tray")
-async def update_image_tray(request):
-    """Update image tray in store"""
+async def update_tray(request, kind):
+    """Update tray in store"""
     try:
-        # Read and parse tray data
-        content = await request.text()
-        tray_data = json.loads(content)
+        tray_data = json.loads(await request.text())
 
-        # Get image-bench directory
-        image_bench_dir = get_image_bench_dir()
+        # Copy the new images to the tray directory and update their paths
+        await save_tray_images(tray_data, kind, get_image_bench_dir(), "comfyui")
 
-        # Process each image: copy to tray directory if not already processed
-        for image in tray_data.get("images", []):
-            if not image.get("_tray_processed"):
-                try:
-                    # Copy image to dedicated tray directory and update paths
-                    await save_image_to_tray(
-                        image,
-                        "image_tray",
-                        image_bench_dir,
-                        "comfyui"
-                    )
-                    # Mark as processed to avoid re-copying on subsequent saves
-                    image["_tray_processed"] = True
-                except Exception as e:
-                    print(f"[Image Bench] Error copying image to tray: {e}")
-                    # Continue with other images even if one fails
-
-        # Save updated tray data with new paths
         base_dir = get_extension_root()
-        await persist.write_store_file_content(base_dir, IMAGE_TRAY_FILE, json.dumps(tray_data))
+        await persist.write_store_file_content(base_dir, TRAY_FILES[kind], json.dumps(tray_data))
 
         # Return updated tray data so frontend can update its store with new paths
         return web.Response(text=json.dumps(tray_data), content_type="application/json")
@@ -335,51 +313,18 @@ async def update_image_tray(request):
         return web.Response(text=str(e), status=500)
 
 
-# Concept tray endpoints
-@PromptServer.instance.routes.get(BASE_PATH + "/concept_tray")
-async def get_concept_tray(request):
-    """Get concept tray from store"""
-    base_dir = get_extension_root()
-    content = persist.serve_store_file_content(base_dir, CONCEPT_TRAY_FILE)
-    return web.Response(text=content, content_type="application/json")
+def add_tray_routes(kind):
+    @PromptServer.instance.routes.get(BASE_PATH + "/" + kind)
+    async def get(request):
+        return await get_tray(request, kind)
+
+    @PromptServer.instance.routes.post(BASE_PATH + "/" + kind)
+    async def update(request):
+        return await update_tray(request, kind)
 
 
-@PromptServer.instance.routes.post(BASE_PATH + "/concept_tray")
-async def update_concept_tray(request):
-    """Update concept tray in store"""
-    try:
-        # Read and parse tray data
-        content = await request.text()
-        tray_data = json.loads(content)
-
-        # Get image-bench directory
-        image_bench_dir = get_image_bench_dir()
-
-        # Process each image: copy to tray directory if not already processed
-        for image in tray_data.get("images", []):
-            if not image.get("_tray_processed"):
-                try:
-                    # Copy image to dedicated tray directory and update paths
-                    await save_image_to_tray(
-                        image,
-                        "concept_tray",
-                        image_bench_dir,
-                        "comfyui"
-                    )
-                    # Mark as processed to avoid re-copying on subsequent saves
-                    image["_tray_processed"] = True
-                except Exception as e:
-                    print(f"[Image Bench] Error copying image to tray: {e}")
-                    # Continue with other images even if one fails
-
-        # Save updated tray data with new paths
-        base_dir = get_extension_root()
-        await persist.write_store_file_content(base_dir, CONCEPT_TRAY_FILE, json.dumps(tray_data))
-
-        # Return updated tray data so frontend can update its store with new paths
-        return web.Response(text=json.dumps(tray_data), content_type="application/json")
-    except Exception as e:
-        return web.Response(text=str(e), status=500)
+for tray_kind in TRAY_FILES:
+    add_tray_routes(tray_kind)
 
 
 # Tray upload/download endpoints
@@ -395,8 +340,7 @@ async def download_tray(request):
             kind,
             image_bench_dir,
             store_dir,
-            IMAGE_TRAY_FILE,
-            CONCEPT_TRAY_FILE
+            IMAGE_TRAY_FILE
         )
 
         if status_code == 200 and file_path:

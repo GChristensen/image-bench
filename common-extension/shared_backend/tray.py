@@ -16,6 +16,13 @@ from PIL import Image
 
 from .persist import read_json_file
 
+# Store files of the persistent image collections by kind; the images are copied to image-bench/<kind>/
+TRAY_FILES = {
+    "image_tray": "image_tray.json",
+    "concept_tray": "concept_tray.json",
+    "upscaled": "upscaled.json"
+}
+
 
 def parse_pnginfo(input_string: str) -> Dict[str, Any]:
     """
@@ -181,6 +188,27 @@ async def save_image_to_tray(
     return image_data
 
 
+async def save_tray_images(tray_data: Dict[str, Any], kind: str, image_bench_dir: str, platform: str) -> None:
+    """
+    Copy the images not copied yet to the directory of the tray (see save_image_to_tray())
+
+    Args:
+        tray_data: Tray content posted by the popup ({version, images})
+        kind: Key of TRAY_FILES
+        image_bench_dir: Base directory for image bench files
+        platform: Platform identifier - "webui" or "comfyui"
+    """
+    for image in tray_data.get("images", []):
+        if not image.get("_tray_processed"):
+            try:
+                await save_image_to_tray(image, kind, image_bench_dir, platform)
+                # Mark as processed to avoid re-copying on subsequent saves
+                image["_tray_processed"] = True
+            except Exception as e:
+                # Continue with other images even if one fails
+                print(f"[Image Bench] Error copying image to tray: {e}")
+
+
 async def image_tray_upload(
     filename: str,
     file_data: bytes,
@@ -229,18 +257,17 @@ def download_image_tray(
     kind: str,
     image_bench_dir: str,
     store_dir: str,
-    image_tray_file: str,
-    concept_tray_file: str
+    image_tray_file: str
 ) -> Tuple[Optional[str], int]:
     """
-    Download image or concept tray as a zip archive.
+    Download a tray or the upscaled images as a zip archive.
 
     Args:
-        kind: Type of tray ("image_tray" or "concept_tray")
+        kind: Key of TRAY_FILES
         image_bench_dir: Base directory for image bench files
         store_dir: Directory containing tray JSON files
-        image_tray_file: Name of the image tray JSON file
-        concept_tray_file: Name of the concept tray JSON file
+        image_tray_file: Name of the image tray JSON file, under which the archive holds the tray
+                         content, so that any archive can be imported into a tray
 
     Returns:
         Tuple of (zip_file_path, status_code) where:
@@ -251,10 +278,10 @@ def download_image_tray(
     export_file = os.path.join(export_dir, str(round(time.time() * 1000)) + ".zip")
     os.makedirs(export_dir, exist_ok=True)
 
-    tray_filename = image_tray_file if kind == "image_tray" else concept_tray_file
-    tray_file_path = os.path.join(store_dir, tray_filename)
+    tray_filename = TRAY_FILES.get(kind)
+    tray_file_path = tray_filename and os.path.join(store_dir, tray_filename)
 
-    if os.path.exists(tray_file_path):
+    if tray_file_path and os.path.exists(tray_file_path):
         image_tray = read_json_file(tray_file_path)
         images = image_tray["images"]
         controlnet_artifacts = {}

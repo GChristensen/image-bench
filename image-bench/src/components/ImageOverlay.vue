@@ -35,10 +35,33 @@
   const isFullSize = ref(false);
   const containerElement = ref(null);
 
-  // Each newly displayed image (e.g. navigated with arrow keys) starts scaled
+  // A newly displayed image (e.g. navigated with arrow keys) keeps the full size and shows the same detail:
+  // the relative scroll position is taken before the update and restored when the new image has loaded
+  let pendingScroll = null;
+
   watch(imageLink, () => {
-    isFullSize.value = false;
+    const container = containerElement.value;
+
+    if (!isFullSize.value || !container)
+      return;
+
+    const fraction = (scroll, client, total) => total > client ? scroll / (total - client) : 0.5;
+    pendingScroll = {
+      x: fraction(container.scrollLeft, container.clientWidth, container.scrollWidth),
+      y: fraction(container.scrollTop, container.clientHeight, container.scrollHeight)
+    };
   });
+
+  function onImageLoad() {
+    const container = containerElement.value;
+
+    if (!pendingScroll || !container)
+      return;
+
+    container.scrollLeft = pendingScroll.x * (container.scrollWidth - container.clientWidth);
+    container.scrollTop = pendingScroll.y * (container.scrollHeight - container.clientHeight);
+    pendingScroll = null;
+  }
 
   // A click on the image toggles full size, a click on the dimmed background around it closes the overlay
   function onContainerClick(e) {
@@ -179,7 +202,7 @@
                @click="onContainerClick">
             <img class="overlay-image" :src="imageLink" draggable="false"
                  :title="isFullSize ? 'Click to fit to screen, drag to pan' : 'Click to view in full size'"
-                 @mousedown="onImageMouseDown">
+                 @mousedown="onImageMouseDown" @load="onImageLoad">
           </div>
         </Transition>
         <div v-if="isTray" class="overlay-markings">

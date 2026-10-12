@@ -2,7 +2,7 @@
 
 import {computed, nextTick, onBeforeMount, ref, shallowRef, toRaw, watch} from "vue";
 import GeneratedImage from "@/components/GeneratedImage.vue";
-import {createImageGenerationParams, createImageLink, sendWebUIMessage} from "@/sdwebui.js";
+import {createImageGenerationParams, createImageLink, ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {fetchModelInfo, showModelInfo} from "@/civitai.js";
@@ -179,11 +179,11 @@ onBeforeMount(async () => {
   await loadSamplers();
 });
 
-function onExploreClick() {
+async function onExploreClick() {
   if (exploreImagesStore.generationInProgress) {
     sendWebUIMessage({type: "STOP_GENERATION"});
   }
-  else {
+  else if (await ensureGenerationIdle()) {
     const selectedModels = checkpoints.getSelectedItems();
     const selectedLoras = loras.getSelectedItems()
       .map(lora => ({name: lora.name, prompt: createLoraPrompt(lora), weight: getLoraWeight(lora)}));

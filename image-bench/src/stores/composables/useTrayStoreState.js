@@ -31,12 +31,13 @@ export function useTrayStoreState(kind) {
     const payload = JSON.stringify(trayContent);
     const response = await fetch(`/image-bench/${kind}`, { method: 'post', body: payload });
 
-    // Update store with backend's modified data (contains updated paths after file copying)
+    // Update the sent images with backend's modified data (contains updated paths after file copying);
+    // they are updated in place, so images added or removed while saving are kept as they are
     if (response.ok) {
       try {
         const updatedTray = await response.json();
-        if (updatedTray && updatedTray.images) {
-          baseStore.images.value = updatedTray.images;
+        if (updatedTray?.images?.length === trayContent.images.length) {
+          trayContent.images.forEach((image, index) => Object.assign(image, updatedTray.images[index]));
           triggerRef(baseStore.images);
         }
       } catch (error) {
@@ -65,6 +66,13 @@ export function useTrayStoreState(kind) {
     }
   }
 
+  // Color-tag and save an image already added to the images (e.g. by onSDEvent)
+  async function colorAndPersist(image) {
+    const images = baseStore.images.value;
+    image.tagColor = pickTagColor(images.slice(0, images.indexOf(image)), image);
+    await persist();
+  }
+
   async function clear() {
     baseStore.images.value = [];
     await persist();
@@ -76,6 +84,7 @@ export function useTrayStoreState(kind) {
     // Tray-specific actions
     init,
     addImage,
+    colorAndPersist,
     persist,
     clear
   };

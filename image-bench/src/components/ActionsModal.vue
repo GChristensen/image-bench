@@ -38,7 +38,7 @@ function clearImageStores() {
 }
 
 async function onClearImagesClick() {
-  if (await dialog.confirm("This will remove all images from the UI and empty the image and concept trays. The image files will remain on disk. Do you want to continue?",
+  if (await dialog.confirm("This will remove all images from the UI and empty the image and concept trays and the upscaled images. The image files will remain on disk. Do you want to continue?",
       {title: "Clear all images", okText: "Clear", danger: true})) {
     clearImageStores();
     emit('close');

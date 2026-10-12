@@ -63,6 +63,9 @@ export async function init() {
 
     window.addEventListener("message", onMessage);
 
+    // Asked by the popup before it starts an operation
+    window.imageBenchIsGenerationActive = isGenerationActive;
+
     // Close popup on page unload
     window.addEventListener("pagehide", () => {
         popupManager.close();
@@ -327,16 +330,25 @@ function showAlert(message) {
 }
 
 /**
- * Refuse to start a strategy while WebUI is generating or interrupting,
- * before the strategy changes any UI parameters
+ * Whether WebUI is generating or interrupting, or a strategy is running (also between its images,
+ * while WebUI is momentarily idle)
+ * @returns {boolean}
+ */
+function isGenerationActive() {
+    return !uiOperations.isReadyToGenerate()
+        || Object.values(strategies).some(strategy => strategy.isProcessing());
+}
+
+/**
+ * Refuse to start a strategy while a generation is active, before the strategy changes any UI parameters
  * @returns {boolean} Whether the strategy may start
  */
 function checkReadyToGenerate() {
-    if (uiOperations.isReadyToGenerate())
+    if (!isGenerationActive())
         return true;
 
     sendPopupMessage({type: "GENERATION_FINISHED"});
-    showAlert("Generation is in progress or being interrupted. Please wait until it finishes.");
+    showAlert("A generation is in progress. Please wait until it finishes or stop it.");
     return false;
 }
 

@@ -123,6 +123,8 @@ async function initializeOperations() {
         window.imageBenchMessageBus = messageBus;
         window.imageBenchStrategies = strategies;
         window.getGenerationState = getGenerationState;  // Expose state function for popup
+        // Asked by the popup before it starts an operation
+        window.imageBenchIsGenerationActive = isGenerationActive;
 
         initializeTabModules();
 
@@ -402,6 +404,18 @@ async function handlePhotoshopImage(event) {
         : 'Unable to insert the image from Photoshop: no node is marked "ib:img".');
 }
 
+// Popup messages that start a generation, refused while one is active
+const GENERATION_MESSAGES = new Set(["GENERATE_IMAGE", "EXPLORE_MODELS", "BATCH_GENERATE", "GENERATE_VARIATIONS",
+    "UPSCALE_IMAGES", "GENERATE_VARYING_STEPS", "UPSCALE_VARYING_DENOISING"]);
+
+/**
+ * Whether ComfyUI is running or has queued prompts, or a strategy is running (also between its prompts)
+ * @returns {boolean}
+ */
+function isGenerationActive() {
+    return !!(uiOperations?.progress?.isBusy() || currentStrategy?.isProcessing());
+}
+
 /**
  * Handle postMessage from popup window (analogous to WebUI's onMessage)
  */
@@ -415,6 +429,12 @@ function handlePostMessage(event) {
     // The Generate and ControlNet tabs poll several times per second
     if (!type?.endsWith("SUBSCRIBE"))
         console.log('[Image Bench] Received message:', type);
+
+    if (GENERATION_MESSAGES.has(type) && isGenerationActive()) {
+        sendPopupMessage({type: "GENERATION_FINISHED"});
+        showAlert("A generation is in progress. Please wait until it finishes or stop it.");
+        return;
+    }
 
     const handler = messageHandlers[type];
 
