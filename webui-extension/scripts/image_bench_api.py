@@ -84,6 +84,9 @@ class ImageBenchApi():
         self.add_api_route("/concept_tray", self.write_concept_tray, methods=["POST"])
         self.add_api_route("/upscaled", self.get_upscaled, methods=["GET"])
         self.add_api_route("/upscaled", self.write_upscaled, methods=["POST"])
+        self.add_api_route("/compare", self.get_compare, methods=["GET"])
+        self.add_api_route("/compare", self.write_compare, methods=["POST"])
+        self.add_api_route("/compare_upload", self.compare_upload, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
         self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
@@ -270,6 +273,19 @@ class ImageBenchApi():
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
+        # Saved and added to the Compare tab here, so that it arrives even if the popup is closed
+        if target == photoshop.COMPARE_TARGET:
+            image = tray.save_compare_file(f"photoshop_{time.strftime('%Y%m%d-%H%M%S')}.png", png,
+                                           self.image_bench_dir, "webui")
+            tray.append_tray_image(self.get_file_path("store", upper=True), tray.COMPARE_KIND, image)
+            clients = await self.broadcast(self.photoshop_websockets, {
+                "type": "PHOTOSHOP_IMAGE",
+                "kind": kind,
+                "target": target,
+                "image": image
+            })
+            return JSONResponse({"clients": clients, "saved": True})
+
         self.photoshop_images[kind] = (png, "image/png")
 
         clients = await self.broadcast(self.photoshop_websockets, {
@@ -375,6 +391,20 @@ class ImageBenchApi():
 
     async def write_upscaled(self, request: Request):
         return await self.write_tray(request, "upscaled")
+
+    def get_compare(self):
+        return self.serve_store_file(tray.TRAY_FILES["compare"])
+
+    async def write_compare(self, request: Request):
+        return await self.write_tray(request, "compare")
+
+    async def compare_upload(self, file: UploadFile):
+        try:
+            image = tray.save_compare_file(file.filename, await file.read(), self.image_bench_dir, "webui")
+        except ValueError as e:
+            return JSONResponse(content={"error": str(e)})
+
+        return JSONResponse(content=image)
 
     async def write_tray(self, request: Request, kind):
         tray_data = json.loads(await request.body())

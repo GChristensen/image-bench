@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from shared import civitai, explore_export, loras, persist, photoshop, photoshop_plugin
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
+from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
 
 # Tell ComfyUI to serve files from the js/ directory
 WEB_DIRECTORY = "./js"
@@ -431,6 +432,23 @@ async def upload_concept_tray(request):
         return web.Response(text=str(e), status=500)
 
 
+@PromptServer.instance.routes.post(BASE_PATH + "/compare_upload")
+async def upload_compare(request):
+    """Upload an image to the Compare tab (any image, also without PNG info)"""
+    reader = await request.multipart()
+    field = await reader.next()
+
+    if field is None:
+        return web.Response(text="No file provided", status=400)
+
+    try:
+        image = save_compare_file(field.filename, await field.read(), get_image_bench_dir(), "comfyui")
+    except ValueError as e:
+        return web.json_response({"error": str(e)})
+
+    return web.json_response(image)
+
+
 # WebSocket endpoint for real-time communication
 @PromptServer.instance.routes.get(BASE_PATH + "/websocket")
 async def websocket_handler(request):
@@ -533,12 +551,21 @@ async def photoshop_upload(request):
     except ValueError as e:
         return web.Response(text=str(e), status=400)
 
+    server = PromptServer.instance
+
+    # Saved and added to the Compare tab here, so that it arrives even if the popup is closed
+    if target == photoshop.COMPARE_TARGET:
+        image = save_compare_file(f"photoshop_{time.strftime('%Y%m%d-%H%M%S')}.png", png,
+                                  get_image_bench_dir(), "comfyui")
+        append_tray_image(os.path.join(get_extension_root(), "store"), COMPARE_KIND, image)
+        await server.send("image-bench.photoshop", {"kind": kind, "target": target, "image": image})
+        return web.json_response({"clients": len(server.sockets), "saved": True})
+
     filename = photoshop.COMFYUI_INPUT_FILES[target][kind]
 
     with open(os.path.join(folder_paths.get_input_directory(), filename), "wb") as file:
         file.write(png)
 
-    server = PromptServer.instance
     await server.send("image-bench.photoshop", {"kind": kind, "filename": filename, "target": target})
 
     return web.json_response({"clients": len(server.sockets)})

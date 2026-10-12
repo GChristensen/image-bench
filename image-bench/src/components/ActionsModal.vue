@@ -5,6 +5,7 @@ import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useImageTrayStore} from "@/stores/imageTray.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
+import {useCompareStore} from "@/stores/compare.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {HOST_NAME, isWebUI} from "@/host.js";
@@ -28,6 +29,7 @@ const generatedImagesStore = useGeneratedImagesStore();
 const conceptTrayStore = useConceptTrayStore();
 const imageTrayStore = useImageTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
+const compareStore = useCompareStore();
 
 // The views that are not trays, as named in the confirmations
 const VIEWS = isWebUI ? "Generated, Explore and Upscaled tabs" : "Generated and Explore tabs";
@@ -42,10 +44,11 @@ function clearViewsAndTrays() {
   clearViews();
   imageTrayStore.clear();
   conceptTrayStore.clear();
+  compareStore.clear();
 }
 
 async function onClearViewsClick() {
-  if (await dialog.confirm(`Removes all images from the ${VIEWS}. The image and concept trays are kept, `
+  if (await dialog.confirm(`Removes all images from the ${VIEWS}. The image and concept trays and the Compare tab are kept, `
       + "and no files are deleted from disk.", {title: "Clear generated images", okText: "Clear"})) {
     clearViews();
     emit('close');
@@ -53,7 +56,7 @@ async function onClearViewsClick() {
 }
 
 async function onClearAllClick() {
-  if (await dialog.confirm(`Removes all images from the ${VIEWS} and empties the image and concept trays. `
+  if (await dialog.confirm(`Removes all images from the ${VIEWS} and empties the image and concept trays and the Compare tab. `
       + "No files are deleted from disk.", {title: "Clear all images", okText: "Clear", danger: true})) {
     clearViewsAndTrays();
     emit('close');
@@ -62,7 +65,7 @@ async function onClearAllClick() {
 
 async function onDeleteOutputsClick() {
   if (await dialog.confirm(`Permanently deletes every file and folder in the ${HOST_NAME} outputs directory, `
-      + `including the images of the trays${isWebUI ? " and the Upscaled tab" : ""}, and empties all tabs and trays. `
+      + `including the images of the trays, the Compare tab${isWebUI ? " and the Upscaled tab" : ""}, and empties all tabs and trays. `
       + "This cannot be undone.", {title: "Delete all output files", okText: "Delete files", danger: true})) {
     clearViewsAndTrays();
     setTimeout(() => fetch("/image-bench/clear_outputs_dir"), 500);

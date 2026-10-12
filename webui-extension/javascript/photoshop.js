@@ -13,12 +13,14 @@ const RECONNECT_DELAY = 5000;
  * Connect to the backend and keep reconnecting if the connection is lost (e.g. WebUI restarts)
  * @param {(kind: 'image'|'mask', file: File, target: string) => Promise<void>} onImage - Inserts a received image;
  *   target: 'input' (img2img) or a ControlNet target ('cn_preprocess', 'cn_image', 'cn_mask')
+ * @param {(image: Object) => void} onCompareImage - Receives the image data of an image the backend has added
+ *   to the Compare tab (target 'compare')
  */
-export function initPhotoshopBridge(onImage) {
+export function initPhotoshopBridge(onImage, onCompareImage) {
     createWebSocket({
         endpoint: ENDPOINT,
-        onMessage: (e) => onPhotoshopMessage(onImage, e),
-        onClose: () => setTimeout(() => initPhotoshopBridge(onImage), RECONNECT_DELAY)
+        onMessage: (e) => onPhotoshopMessage(onImage, onCompareImage, e),
+        onClose: () => setTimeout(() => initPhotoshopBridge(onImage, onCompareImage), RECONNECT_DELAY)
     });
 }
 
@@ -90,11 +92,16 @@ async function sendControlNetPreview(link, showAlert) {
         showAlert(error);
 }
 
-async function onPhotoshopMessage(onImage, e) {
+async function onPhotoshopMessage(onImage, onCompareImage, e) {
     const msg = JSON.parse(e.data);
 
     if (msg.type !== "PHOTOSHOP_IMAGE")
         return;
+
+    if (msg.target === "compare") {
+        onCompareImage(msg.image);
+        return;
+    }
 
     try {
         const response = await fetch(msg.imageUrl);

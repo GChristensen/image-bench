@@ -12,6 +12,7 @@ import zipfile
 import re
 import shutil
 from typing import Dict, Any, Optional, Tuple, Union
+from urllib.parse import quote
 from PIL import Image
 
 from .persist import read_json_file
@@ -20,8 +21,12 @@ from .persist import read_json_file
 TRAY_FILES = {
     "image_tray": "image_tray.json",
     "concept_tray": "concept_tray.json",
-    "upscaled": "upscaled.json"
+    "upscaled": "upscaled.json",
+    "compare": "compare.json"
 }
+
+# Kind of the images of the Compare tab, which are saved to image-bench/compare/ when uploaded or sent from Photoshop
+COMPARE_KIND = "compare"
 
 
 def parse_pnginfo(input_string: str) -> Dict[str, Any]:
@@ -146,20 +151,20 @@ async def save_image_to_tray(
     if not os.path.exists(source_path):
         raise FileNotFoundError(f"Source image not found: {source_path}")
 
-    # Determine destination filename based on platform
-    if platform == "comfyui":
-        # ComfyUI: Use prompt_id for unique naming
-        prompt_id = image_data.get("parameters", {}).get("prompt_id", "unknown")
+    # Determine destination filename based on platform; ComfyUI images are named by their unique prompt_id,
+    # images without one (e.g. uploaded) keep their file name like in WebUI
+    prompt_id = (image_data.get("parameters") or {}).get("prompt_id") if platform == "comfyui" else None
+
+    if prompt_id:
         # Extract file extension from source (usually .png)
         _, ext = os.path.splitext(source_path)
         new_filename = f"{prompt_id}{ext}"
     else:
-        # WebUI: Keep original filename
         new_filename = os.path.basename(source_path)
 
-    # Handle filename conflicts (WebUI only, ComfyUI prompt_id is unique)
+    # Handle filename conflicts (the prompt_id is unique)
     dest_path = os.path.join(tray_dir, new_filename)
-    if os.path.exists(dest_path) and platform == "webui":
+    if os.path.exists(dest_path) and not prompt_id:
         # Append counter if file exists
         base_name, ext = os.path.splitext(new_filename)
         counter = 1
@@ -186,6 +191,86 @@ async def save_image_to_tray(
         image_data["imageUrl"] = f"/file={dest_path}"
 
     return image_data
+
+
+def unique_file_path(directory: str, filename: str) -> str:
+    """Path of a file in the directory that does not exist yet: the file name with a counter if it is taken"""
+    path = os.path.join(directory, filename)
+    base_name, ext = os.path.splitext(filename)
+    counter = 1
+
+    while os.path.exists(path):
+        path = os.path.join(directory, f"{base_name}_{counter:03d}{ext}")
+        counter += 1
+
+    return path
+
+
+def save_compare_file(filename: str, file_data: bytes, image_bench_dir: str, platform: str) -> Dict[str, Any]:
+    """
+    Save an image uploaded to the Compare tab or sent there from Photoshop to image-bench/compare/.
+    Images without PNG info are accepted (their parameters are empty).
+
+    Args:
+        filename: Name of the image file
+        file_data: File content
+        image_bench_dir: Base directory for image bench files
+        platform: Platform identifier - "webui" or "comfyui"
+
+    Returns:
+        Image data of the Compare tab, marked as already copied to its directory (see save_tray_images())
+
+    Raises:
+        ValueError: If the file is not an image
+    """
+    compare_dir = os.path.join(image_bench_dir, COMPARE_KIND)
+    os.makedirs(compare_dir, exist_ok=True)
+
+    name = re.sub(r'[<>:"/\|?*&#%\x00-\x1f]', "_", os.path.basename(filename.replace("\\", "/"))).strip(" .")
+    path = unique_file_path(compare_dir, name or "image.png")
+
+    with open(path, "wb") as f:
+        f.write(file_data)
+
+    parameters = {}
+
+    try:
+        with Image.open(path) as image:
+            text = getattr(image, "text", None) or {}
+
+            if text.get("parameters"):
+                p, n = prompts_from_pnginfo(text["parameters"])
+                parameters = pnginfo_to_dict(p, n, text)
+    except Exception as e:
+        os.unlink(path)
+        raise ValueError(f"Not an image: {filename}") from e
+
+    new_filename = os.path.basename(path)
+
+    if platform == "comfyui":
+        image_url = f"/view?filename={quote(new_filename)}&type=output&subfolder=image-bench/{COMPARE_KIND}"
+    else:
+        image_url = f"/file={path.replace(os.sep, '/')}"
+
+    return {
+        "imagePath": path,
+        "imageUrl": image_url,
+        "fileName": new_filename,
+        "parameters": parameters,
+        "_tray_processed": True
+    }
+
+
+def append_tray_image(store_dir: str, kind: str, image: Dict[str, Any]) -> None:
+    """Add an image to the store file of a tray, so that it is there even if the popup is closed"""
+    path = os.path.join(store_dir, TRAY_FILES[kind])
+    content = read_json_file(path) if os.path.exists(path) else None
+    content = content or {"version": 1, "images": []}
+    content.setdefault("images", []).append(image)
+
+    os.makedirs(store_dir, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(content, f)
 
 
 async def save_tray_images(tray_data: Dict[str, Any], kind: str, image_bench_dir: str, platform: str) -> None:

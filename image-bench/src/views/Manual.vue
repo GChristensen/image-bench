@@ -11,6 +11,7 @@ const SECTIONS = [
   {id: "controlnet", title: "ControlNet"},
   {id: "explore", title: "Explore"},
   {id: "generated", title: "Generated"},
+  {id: "compare", title: "Compare"},
   {id: "trays", title: "Concept & image trays"},
   ...(isWebUI ? [{id: "upscaled", title: "Upscaled"}] : []),
   {id: "images", title: "Working with images"},
@@ -173,6 +174,8 @@ onMounted(loadPluginStatus);
         <li><b>Explore</b> — runs one prompt on many checkpoints and LoRAs and shows the results side by side.</li>
         <li><b>Generated</b> — batches, variations and endless generation, with images streaming in as they
           finish.</li>
+        <li><b>Compare</b> — chosen images side by side, and the same region of each of them, for picking the
+          best of several variants.</li>
         <li><b>Concept tray</b> and <b>Image tray</b> — permanent collections of the images worth keeping.</li>
         <li v-if="isWebUI"><b>Upscaled</b> — upscaled (Hires. fix) versions of the images you choose.</li>
         <li><b>Settings</b> and <b>Manual</b> — the options of the window, and this manual.</li>
@@ -360,6 +363,44 @@ onMounted(loadPluginStatus);
       </ul>
     </section>
 
+    <section id="manual-compare">
+      <h2><AppIcon name="compare" :size="17"/>Compare</h2>
+      <p>
+        The Compare tab shows images next to each other, for example inpainted variants of a face or the same
+        prompt with different seeds or LoRAs. Add an image with its <AppIcon name="compare" :size="13"
+        class="inline-icon"/> button (key <span class="kbd">A</span>) in any view or the large image view, by
+        dragging it onto the <b>Compare</b> tab, from files with <AppIcon name="upload" :size="13"
+        class="inline-icon"/>, or from Photoshop with the plugin's <b>Compare</b> button. Like the trays, the tab
+        keeps its images across restarts (in the <code>image-bench/compare</code> folder of the outputs directory),
+        and <AppIcon name="download" :size="13" class="inline-icon"/> downloads them as a .zip.
+      </p>
+      <ul>
+        <li><b>Layout</b> — the images follow each other, separated by a thin line whose color the swatch button
+          changes. Images of one landscape aspect ratio are stacked and scroll vertically; portrait, square and
+          mixed images stand in a row that the mouse wheel scrolls horizontally. Drag an image to scroll.</li>
+        <li><b>Numbers and order</b> — each image shows its number. Drag the
+          <AppIcon name="grip" :size="13" class="inline-icon"/> grip next to it onto another image, or press
+          <span class="kbd">←</span> / <span class="kbd">→</span> over an image, to move it.</li>
+        <li><b>Zoom</b> — <b>100%</b> and <b>200%</b> show the actual pixels of the first image (twice as large),
+          <span class="kbd">Ctrl</span>+wheel zooms around the pointer, and <AppIcon name="fit" :size="13"
+          class="inline-icon"/> fits the images again. All images zoom and pan together: drag any of them to look
+          at the same spot in each.</li>
+        <li><b>Region</b> — turn on <AppIcon name="region" :size="13" class="inline-icon"/> (key
+          <span class="kbd">R</span>) and drag on any image to select a rectangle, which then appears on every
+          image at the same relative position. Drag inside it to move it and its handles to resize it. The menu next
+          to the button fixes its aspect ratio; <span class="kbd">Shift</span> while dragging keeps the current
+          one.</li>
+        <li><b>Crops</b> (key <span class="kbd">X</span>) — shows only the region of every image, packed as large
+          as the window allows. <AppIcon name="save" :size="13" class="inline-icon"/> saves the crops as one PNG at
+          their native resolution, and <AppIcon name="external" :size="13" class="inline-icon"/> sends that image to
+          Photoshop.</li>
+        <li><b>Image actions</b> — hovering over an image shows its buttons (reuse seed, parameters, ControlNet,
+          Photoshop, the trays, a comment shown below the buttons), a marking badge and <AppIcon name="close" :size="13" class="inline-icon"/>, which
+          removes it from the tab (the file stays on disk). Middle-click or Shift+click an image to view it large;
+          <span class="kbd">←</span> / <span class="kbd">→</span> page through the images there.</li>
+      </ul>
+    </section>
+
     <section id="manual-trays">
       <h2><AppIcon name="palette" :size="17"/>Concept tray and image tray</h2>
       <p>
@@ -375,10 +416,10 @@ onMounted(loadPluginStatus);
       </p>
       <p>Both trays offer:</p>
       <ul>
-        <li><b>Markings</b> (👍 👎 🔴 🟠 🟡 🟢 🔵 🟣) — on an unmarked thumbnail, hover over the
+        <li><b>Markings</b> (👍 👎 🔴 🟠 🟡 🟢 🔵 🟣, and 🏁 for the final choice) — on an unmarked thumbnail, hover over the
           <AppIcon name="tag" :size="13" class="inline-icon"/> badge at the bottom right and click one. In the
           large image view, hover over the badge at the bottom left (or the current marking) and click one, or
-          press <span class="kbd">1</span>–<span class="kbd">8</span>; clicking the current marking or
+          press <span class="kbd">1</span>–<span class="kbd">9</span>; clicking the current marking or
           <span class="kbd">0</span> removes it. On a thumbnail, click the marking to show only the
           images that carry it, and click it again to show all; middle-click it to remove it. The
           <AppIcon name="filter" :size="13" class="inline-icon"/> button shows only marked images, or the marking
@@ -441,7 +482,7 @@ onMounted(loadPluginStatus);
         <tr><td><AppIcon name="params" :size="14"/></td><td><span class="kbd">I</span> Shows the generation
           parameters.</td></tr>
         <tr><td><AppIcon name="comment" :size="14"/></td><td><span class="kbd">C</span> Comments the image
-          (trays).</td></tr>
+          (trays, Compare).</td></tr>
         <tr><td><AppIcon name="steps" :size="14"/></td><td><span class="kbd">G</span> Generates the image with a
           list of step counts (trays).</td></tr>
         <tr v-if="isWebUI"><td><AppIcon name="upscale" :size="14"/></td><td><span class="kbd">U</span> Upscales the
@@ -453,6 +494,8 @@ onMounted(loadPluginStatus);
         <tr><td><AppIcon name="external" :size="14"/></td><td><span class="kbd">P</span> Sends the image to
           Photoshop as a layer of the active document; middle click or
           <span class="kbd">Shift</span>+<span class="kbd">P</span> opens it as a new document.</td></tr>
+        <tr><td><AppIcon name="compare" :size="14"/></td><td><span class="kbd">A</span> Adds the image to the
+          Compare tab.</td></tr>
         <tr><td><AppIcon name="concept" :size="14"/> <AppIcon name="palette" :size="14"/></td><td>
           <span class="kbd">Y</span> / <span class="kbd">T</span> Places the image in the concept tray or the
           image tray.</td></tr>
@@ -594,6 +637,8 @@ onMounted(loadPluginStatus);
           preprocessor, and places the result back in Photoshop as a layer. <b>ControlNet: image</b> uses the image
           as the control image as it is, without a preprocessor, and <b>ControlNet: mask</b> sends the selection as
           the unit's mask.</li>
+        <li><b>Compare: image</b> — adds the composite image of the document to the Compare tab, also while the
+          Image Bench window is closed (it appears when the window opens).</li>
       </ul>
       <p class="muted">
         The same commands appear in the <b>Plugins › Image Bench</b> menu, so you can assign keyboard shortcuts to
@@ -663,8 +708,10 @@ onMounted(loadPluginStatus);
         <tr><td>Right click</td><td>The menu of an image</td></tr>
         <tr><td>Letter keys</td><td>Actions of the image under the pointer or in the image view (see Working with
           images)</td></tr>
-        <tr><td><span class="kbd">1</span>–<span class="kbd">8</span>, <span class="kbd">0</span></td><td>Set or
-          remove the marking in the image view of a tray</td></tr>
+        <tr><td><span class="kbd">1</span>–<span class="kbd">9</span>, <span class="kbd">0</span></td><td>Set or
+          remove the marking in the image view of a tray, or of the Compare image under the pointer</td></tr>
+        <tr><td><span class="kbd">R</span>, <span class="kbd">X</span></td><td>Compare tab: select a region, show
+          the crops</td></tr>
       </table>
     </section>
 

@@ -76,7 +76,7 @@ export async function init() {
     setupMessageBusHandlers();
 
     // Receive images sent from the Photoshop plugin
-    initPhotoshopBridge(onPhotoshopImage);
+    initPhotoshopBridge(onPhotoshopImage, image => sendPopupMessage({type: "COMPARE_IMAGE", image}));
     initControlNetPreviewButtons(showAlert);
 
     // Only user clicks fire mousedown, strategies click the buttons programmatically

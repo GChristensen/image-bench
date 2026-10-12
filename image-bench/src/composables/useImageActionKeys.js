@@ -6,7 +6,7 @@ import {MARKINGS} from "@/consts.js";
 /**
  * Keys of the image actions (imageActions.js), acting on the shown overlay image or else on the hovered card.
  * Targets are {getImage(), ctx, element, setMarking?(marking|null)}; setMarking enables the digit keys
- * (1-8 set a marking, 0 removes it).
+ * (1-9 set a marking, 0 removes it).
  */
 let hoveredTarget = null;
 let overlayTarget = null;

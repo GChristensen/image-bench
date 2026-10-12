@@ -3,11 +3,13 @@ import {useImageTrayStore} from "@/stores/imageTray.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
+import {useCompareStore} from "@/stores/compare.js";
 import {flashTrayTab} from "@/components/utils.js";
-import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED, KIND_GENERATED} from "@/consts.js";
+import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED, KIND_GENERATED, KIND_COMPARE} from "@/consts.js";
 
 /**
- * Dragging image cards onto the tray tabs: images dragged from the other tray are moved, from other views copied.
+ * Dragging image cards onto the tray tabs and the Compare tab: images dragged from the other tray are moved,
+ * from other views (and to the Compare tab) copied.
  * The card keeps the native URL of its image, so it can also be dropped into the image inputs of the Generate
  * and ControlNet tabs.
  */
@@ -17,6 +19,12 @@ const IMAGE_DRAG_TYPE = "application/x-image-bench";
 const TRAY_TAB_IDS = {
   [KIND_IMAGE_TRAY]: "image-tray-tab",
   [KIND_CONCEPT_TRAY]: "concept-tray-tab"
+};
+
+// Tabs that receive dropped images
+const DROP_TAB_IDS = {
+  ...TRAY_TAB_IDS,
+  [KIND_COMPARE]: "compare-tab"
 };
 
 // {images, sourceKind} while a card is dragged
@@ -32,6 +40,8 @@ function storeOfKind(kind) {
       return useUpscaledImagesStore();
     case KIND_GENERATED:
       return useGeneratedImagesStore();
+    case KIND_COMPARE:
+      return useCompareStore();
   }
 }
 
@@ -59,7 +69,8 @@ export function canDropOn(e, trayKind) {
 }
 
 export function isMoveTo(trayKind) {
-  return !!dragged && dragged.sourceKind in TRAY_TAB_IDS && dragged.sourceKind !== trayKind;
+  return !!dragged && dragged.sourceKind in TRAY_TAB_IDS && trayKind in TRAY_TAB_IDS
+    && dragged.sourceKind !== trayKind;
 }
 
 export async function dropImages(trayKind) {
@@ -83,5 +94,5 @@ export async function dropImages(trayKind) {
     sourceStore.persist();
   }
 
-  flashTrayTab(TRAY_TAB_IDS[trayKind]);
+  flashTrayTab(DROP_TAB_IDS[trayKind]);
 }

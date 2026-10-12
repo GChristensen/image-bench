@@ -3,11 +3,12 @@ import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
+import {useCompareStore} from "@/stores/compare.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {flashTrayTab} from "@/components/utils.js";
-import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas, isWebUI} from "@/host.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
@@ -91,6 +92,11 @@ async function reuseParameters(image, all) {
     useWebUIBridge().setImageSeed(parameters);
 }
 
+// Images uploaded to the Compare tab or sent there from Photoshop may have no generation parameters
+function hasParameters(image) {
+  return !!image.parameters && Object.keys(image.parameters).length > 0;
+}
+
 /**
  * The card shows the groups of a side separated by a separator, in this order
  */
@@ -98,17 +104,17 @@ export const IMAGE_ACTIONS = [
   {
     id: "seed", side: "left", group: 0, icon: "seed", label: "Reuse seed", key: "S",
     alt: {icon: "sliders", label: "Reuse all parameters"},
-    visible: image => !image.img2img,
+    visible: image => !image.img2img && hasParameters(image),
     run: (image, ctx, alt) => reuseParameters(image, alt)
   },
   {
     id: "params", side: "left", group: 0, icon: "params", label: "Generation parameters", key: "I",
-    visible: () => true,
+    visible: image => hasParameters(image),
     run: (image, ctx) => ctx.handlers.showParams?.(image)
   },
   {
     id: "comment", side: "left", group: 0, icon: "comment", label: "Comment", key: "C",
-    visible: (image, ctx) => ctx.isTray,
+    visible: (image, ctx) => ctx.isTray || ctx.kind === KIND_COMPARE,
     run: (image, ctx) => ctx.handlers.addComment?.(image)
   },
   {
@@ -136,6 +142,14 @@ export const IMAGE_ACTIONS = [
     alt: {icon: "filePlus", label: "Send to Photoshop as a new document"},
     visible: () => true,
     run: (image, ctx, alt) => sendToPhotoshop(image, alt)
+  },
+  {
+    id: "compare", side: "right", group: 3, icon: "compare", label: "Add to compare", key: "A",
+    visible: (image, ctx) => ctx.kind !== KIND_COMPARE,
+    run: image => {
+      useCompareStore().addImage(image);
+      flashTrayTab("compare-tab");
+    }
   },
   {
     id: "conceptTray", side: "right", group: 3, icon: "concept", label: "Add to concept tray", key: "Y",

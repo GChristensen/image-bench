@@ -8,8 +8,9 @@
   import {openImageMenu} from "@/contextMenu.js";
   import {startImageDrag, endImageDrag} from "@/imageDrag.js";
   import {isWebUI} from "@/host.js";
-  import {MARKINGS} from "@/consts.js";
   import AppIcon from "@/components/AppIcon.vue";
+  import ImageActionButtons from "@/components/ImageActionButtons.vue";
+  import MarkingPicker from "@/components/MarkingPicker.vue";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams',
     'select', 'upscaleImage', 'addComment']);
@@ -115,13 +116,8 @@
     clearHoveredImageTarget(rootElement.value);
   }
 
-  function onActionClick(action, e) {
-    runImageAction(action, props.image, actionContext, e.shiftKey);
-  }
-
-  function onActionAuxClick(action, e) {
-    if (e.button === 1 && action.alt)
-      runImageAction(action, props.image, actionContext, true);
+  function onAction(action, alt) {
+    runImageAction(action, props.image, actionContext, alt);
   }
 
   // The card is dragged by its image, so that the buttons and markings do not start drags
@@ -202,21 +198,9 @@
 
     <!-- One shared row, so the left group wraps only when the whole width runs out -->
     <div class="image-actions-bar" :class="{selectable}">
-      <div v-for="(side, sideIndex) in [leftGroups, rightGroups]" :key="sideIndex"
-           class="image-actions" :class="sideIndex ? 'right' : 'left'">
-        <template v-for="(group, groupIndex) in side" :key="groupIndex">
-          <span v-if="groupIndex" class="action-sep"></span>
-          <button v-for="action in group" :key="action.id" class="ib sm"
-                  :class="{on: showAlt && action.alt}"
-                  :aria-label="showAlt && action.alt ? action.alt.label : action.label"
-                  @click="onActionClick(action, $event)"
-                  @mousedown.middle.prevent
-                  @auxclick="onActionAuxClick(action, $event)"
-                  @mouseenter="hoveredAction = action"
-                  @mouseleave="hoveredAction = null"
-          ><AppIcon :name="showAlt && action.alt ? action.alt.icon : action.icon" :size="13"/></button>
-        </template>
-      </div>
+      <ImageActionButtons v-for="(side, sideIndex) in [leftGroups, rightGroups]" :key="sideIndex"
+                          :class="sideIndex ? 'right' : 'left'" :groups="side" :show-alt="showAlt"
+                          @run="onAction" @hover="action => hoveredAction = action"/>
     </div>
 
     <!-- One row, so that the hint never covers the badges; it wraps upwards if narrow -->
@@ -246,14 +230,8 @@
             @auxclick="onMarkingAuxClick">{{ image.marking }}</span>
 
       <!-- Without a marking, the badge opens the markings upwards on hover -->
-      <span v-else-if="isTray" class="marking-picker"
-            @mouseenter="hoveredText = 'Set a marking'" @mouseleave="hoveredText = null">
-        <span class="marking-badge"><AppIcon name="tag" :size="13"/></span>
-        <span class="marking-strip">
-          <span v-for="marking in MARKINGS" :key="marking" class="marking-option"
-                @click="setMarking(marking)">{{ marking }}</span>
-        </span>
-      </span>
+      <MarkingPicker v-else-if="isTray" class="card-marking-picker" @set="setMarking"
+                     @mouseenter="hoveredText = 'Set a marking'" @mouseleave="hoveredText = null"/>
     </div>
   </div>
 </div>
@@ -391,11 +369,6 @@
   left: 40px;
 }
 
-.image-actions {
-  display: flex;
-  gap: 3px;
-}
-
 .image-actions.left {
   flex: 0 1 auto;
   min-width: 0;
@@ -413,31 +386,6 @@
 
 .image-frame:hover .image-actions {
   pointer-events: auto;
-}
-
-.image-actions .ib {
-  background: rgba(17, 19, 23, 0.85);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: var(--ib-text);
-}
-
-.image-actions .ib:hover {
-  background: var(--ib-elev-2);
-  border-color: var(--ib-border-2);
-  color: #fff;
-}
-
-/* Shift shows the alternative action */
-.image-actions .ib.on {
-  background: rgba(17, 19, 23, 0.85);
-  border-color: var(--ib-accent-border);
-  color: var(--ib-accent);
-}
-
-.action-sep {
-  width: 1px;
-  margin: 3px 1px;
-  background: rgba(255, 255, 255, 0.25);
 }
 
 /* Below the button row, always shown */
@@ -522,64 +470,14 @@
   box-shadow: inset 0 0 0 1px var(--ib-accent);
 }
 
-.marking-picker {
-  position: relative;
+.card-marking-picker {
   margin-left: auto;
   opacity: 0;
   transition: opacity 0.15s;
 }
 
-.image-frame:hover .marking-picker {
+.image-frame:hover .card-marking-picker {
   opacity: 1;
-}
-
-.marking-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-  background: rgba(17, 19, 23, 0.85);
-  color: var(--ib-text);
-  cursor: pointer;
-}
-
-/* Opens upwards; it starts right at the badge, so the pointer can move onto it without leaving the picker */
-.marking-strip {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  display: none;
-  flex-direction: column;
-  padding-bottom: 3px;
-}
-
-.marking-picker:hover .marking-strip {
-  display: flex;
-}
-
-.marking-option {
-  padding: 1px 3px;
-  background: rgba(17, 19, 23, 0.85);
-  font-size: 14px;
-  line-height: normal;
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-
-.marking-option:first-child {
-  border-radius: 4px 4px 0 0;
-}
-
-.marking-option:last-child {
-  border-radius: 0 0 4px 4px;
-}
-
-.marking-option:hover {
-  transform: scale(1.2);
 }
 
 .image-separator {

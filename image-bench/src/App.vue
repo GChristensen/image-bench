@@ -6,13 +6,14 @@ import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
-import {generationStateToKind, KIND_GENERATED, KIND_UPSCALED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+import {generationStateToKind, KIND_GENERATED, KIND_UPSCALED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {canDropOn, isMoveTo, dropImages} from "@/imageDrag.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useControlNetStore} from "@/stores/controlnet.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
+import {useCompareStore} from "@/stores/compare.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
@@ -36,6 +37,7 @@ const exploreImagesStore = useExploreImagesStore();
 const generatedImagesStore = useGeneratedImagesStore();
 const imageTrayStore = useImageTrayStore();
 const conceptTrayStore = useConceptTrayStore();
+const compareStore = useCompareStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
@@ -89,6 +91,7 @@ onBeforeMount(async () => {
   await appConfigStore.init();
   await imageTrayStore.init();
   await conceptTrayStore.init();
+  await compareStore.init();
   await upscaledImageStore.init();
   await configPresetsStore.init();
 
@@ -125,6 +128,7 @@ async function onSDEvent(e) {
 
   sdWebUIStateStore.onSDEvent(e);
   controlNetStore.onSDEvent(e);
+  compareStore.onSDEvent(e);
 
   try {
     routerView.value?.onAfterSDEvent?.(e);
@@ -210,6 +214,10 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
+      <RouterLink to="/compare" class="tab" id="compare-tab"
+                  :class="{'drop-target': dropTargetKind === KIND_COMPARE}"
+                  @dragover="onTrayDragOver($event, KIND_COMPARE)" @dragleave="onTrayDragLeave"
+                  @drop.prevent="onTrayDrop(KIND_COMPARE)"><AppIcon name="compare" :size="14"/>Compare<span v-if="compareStore.images.length" class="count">{{ compareStore.images.length }}</span></RouterLink>
       <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab"
                   :class="{'drop-target': dropTargetKind === KIND_CONCEPT_TRAY}"
                   @dragover="onTrayDragOver($event, KIND_CONCEPT_TRAY)" @dragleave="onTrayDragLeave"

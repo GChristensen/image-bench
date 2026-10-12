@@ -10,13 +10,17 @@ PHOTOSHOP_IMAGE_KINDS = ("image", "mask")
 # Where an image sent by the Photoshop plugin goes, with the image kinds it accepts: the input of the generation
 # (img2img or inpaint upload in WebUI, the nodes marked ib:img and ib:mask in ComfyUI) or a ControlNet unit
 # (the unit shown in the ControlNet tab; ComfyUI: the node marked ib:cn:<unit>): its image to preprocess,
-# its control image used without a preprocessor, or its mask
+# its control image used without a preprocessor, or its mask; or the Compare tab, where the backend saves the image
 PHOTOSHOP_TARGET_KINDS = {
     "input": ("image", "mask"),
     "cn_preprocess": ("image",),
     "cn_image": ("image",),
-    "cn_mask": ("mask",)
+    "cn_mask": ("mask",),
+    "compare": ("image",)
 }
+
+# Target of the images added to the Compare tab
+COMPARE_TARGET = "compare"
 
 # Key of the image sent from the Image Bench window to the Photoshop plugin
 OUTGOING_IMAGE_KIND = "outgoing"

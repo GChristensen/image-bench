@@ -378,6 +378,12 @@ function handleExecutionError(event) {
 async function handlePhotoshopImage(event) {
     const {kind, filename, target = "input"} = event.detail;
 
+    // Already added to the Compare tab by the backend
+    if (target === "compare") {
+        sendPopupMessage({type: "COMPARE_IMAGE", image: event.detail.image});
+        return;
+    }
+
     if (target !== "input") {
         await controlNet?.onPhotoshopImage(target, filename);
         return;

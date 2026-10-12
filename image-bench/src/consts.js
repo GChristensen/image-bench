@@ -3,8 +3,9 @@ export const KIND_GENERATED = "generated";
 export const KIND_UPSCALED = "upscaled";
 export const KIND_IMAGE_TRAY = "image_tray";
 export const KIND_CONCEPT_TRAY = "concept_tray";
+export const KIND_COMPARE = "compare";
 
-export const MARKINGS = ["👍", "👎", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣"];
+export const MARKINGS = ["👍", "👎", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "🏁"];
 
 export function generationStateToKind(generationState) {
     switch (generationState) {

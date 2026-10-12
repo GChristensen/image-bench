@@ -2,7 +2,7 @@
   "manifestVersion": 5,
   "id": "image-bench.photoshop",
   "name": "Image Bench",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.html",
   "host": {
     "app": "PS",
@@ -47,6 +47,11 @@
       "type": "command",
       "id": "sendControlNetMask",
       "label": {"default": "Send Selection as ControlNet Mask"}
+    },
+    {
+      "type": "command",
+      "id": "sendCompare",
+      "label": {"default": "Add Image to Compare Tab"}
     }
   ],
   "requiredPermissions": {

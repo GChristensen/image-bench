@@ -2,9 +2,10 @@
   import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
+  import {useCompareStore} from "@/stores/compare.js";
   import {flashTrayTab} from "@/components/utils.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
-  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, MARKINGS} from "@/consts.js";
+  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE, MARKINGS} from "@/consts.js";
   import {dialog} from "@/dialogs/useDialog.js";
   import {hostHas} from "@/host.js";
   import {openImageMenu} from "@/contextMenu.js";
@@ -25,6 +26,11 @@
       default: 'generated'
     },
     upscalable: {
+      type: Boolean,
+      default: false
+    },
+    // Markings can be set outside the trays too (the Compare tab)
+    markable: {
       type: Boolean,
       default: false
     },
@@ -152,6 +158,14 @@
     container.scrollTop += fullRect.top + fy * fullRect.height - e.clientY;
   }
 
+  function onAddToCompare(e) {
+    e.preventDefault();
+
+    useCompareStore().addImage(props.image);
+
+    flashTrayTab("compare-tab");
+  }
+
   function onPlaceToImageTray(e) {
     e.preventDefault();
 
@@ -230,7 +244,7 @@
     }
   };
 
-  // Digits set the markings of tray images: 1-8 as in MARKINGS, 0 removes the marking
+  // Digits set the markings of tray images: 1-9 as in MARKINGS, 0 removes the marking
   const keyTarget = {
     getImage: () => props.image,
     ctx: actionContext,
@@ -238,7 +252,7 @@
       return containerElement.value;
     },
     get setMarking() {
-      return props.isTray ? setMarkingByKey : null;
+      return props.isTray || props.markable ? setMarkingByKey : null;
     }
   };
 
@@ -275,9 +289,9 @@
                  @contextmenu="openImageMenu($event, image, actionContext)">
           </div>
         </Transition>
-        <div v-if="isTray" class="overlay-markings" :class="{open: markingBarOpen}"
+        <div v-if="isTray || markable" class="overlay-markings" :class="{open: markingBarOpen}"
              @mouseleave="markingBarOpen = false">
-          <span class="marking-current" :title="image.marking ? 'Marking (keys 1-8, 0 removes)' : 'Set a marking (keys 1-8)'"
+          <span class="marking-current" :title="image.marking ? 'Marking (keys 1-9, 0 removes)' : 'Set a marking (keys 1-9)'"
                 @click="markingBarOpen = !markingBarOpen">
             <template v-if="image.marking">{{ image.marking }}</template>
             <AppIcon v-else name="tag" :size="20"/>
@@ -300,6 +314,8 @@
           <button class="ib" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
                   @click="onSendToPhotoshop($event, false)" @mousedown.middle.prevent @auxclick="onPhotoshopAuxClick"><AppIcon name="external" :size="20"/></button>
           <span class="actions-separator"></span>
+          <button v-if="kind !== KIND_COMPARE" class="ib" title="Add to compare" aria-label="Add to compare"
+                  @click="onAddToCompare"><AppIcon name="compare" :size="20"/></button>
           <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib" title="Add to concept tray" aria-label="Add to concept tray"
                   @click="onPlaceToConceptTray"><AppIcon name="concept" :size="20"/></button>
           <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib" title="Add to image tray" aria-label="Add to image tray"

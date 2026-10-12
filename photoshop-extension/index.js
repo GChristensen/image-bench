@@ -95,8 +95,8 @@ async function readSelectionMask(doc) {
  * Send pixels to the Image Bench backend, which forwards them to the connected WebUI or ComfyUI pages
  * @param {'image'|'mask'} kind - Image kind
  * @param {{data: Uint8Array, width: number, height: number, components: number}} pixels
- * @param {'input'|'cn_preprocess'|'cn_image'|'cn_mask'} target - The generation input, or a ControlNet unit (WebUI):
- *   its image to preprocess, its control image used without a preprocessor, or its mask
+ * @param {'input'|'cn_preprocess'|'cn_image'|'cn_mask'|'compare'} target - The generation input, a ControlNet unit (WebUI):
+ *   its image to preprocess, its control image used without a preprocessor, or its mask; or the Compare tab
  */
 async function upload(kind, pixels, target = "input") {
     const {data, width, height, components} = pixels;
@@ -119,9 +119,10 @@ async function upload(kind, pixels, target = "input") {
     if (!response.ok)
         throw new Error(`The server responded with ${response.status}: ${await response.text()}`);
 
-    const {clients} = await response.json();
+    const {clients, saved} = await response.json();
 
-    if (!clients)
+    // Images of the Compare tab are saved by the server and shown when the Image Bench window opens
+    if (!clients && !saved)
         throw new Error("No WebUI or ComfyUI page is open");
 }
 
@@ -159,6 +160,11 @@ async function sendControlNetImage() {
 async function sendControlNetMask() {
     await upload("mask", await readSelectionMask(getActiveDocument()), "cn_mask");
     return "Mask sent to ControlNet";
+}
+
+async function sendCompare() {
+    await upload("image", await readDocumentImage(getActiveDocument()), "compare");
+    return "Image added to the Compare tab";
 }
 
 // ==================== RECEIVING ====================
@@ -372,6 +378,7 @@ function initPanel() {
     document.getElementById("send-cn-preprocess").addEventListener("click", () => run(sendControlNetPreprocess, true));
     document.getElementById("send-cn-image").addEventListener("click", () => run(sendControlNetImage, true));
     document.getElementById("send-cn-mask").addEventListener("click", () => run(sendControlNetMask, true));
+    document.getElementById("send-compare").addEventListener("click", () => run(sendCompare, true));
 
     panelReady = true;
 }
@@ -383,7 +390,8 @@ entrypoints.setup({
         sendImageAndMask: () => run(sendImageAndMask),
         sendControlNetPreprocess: () => run(sendControlNetPreprocess),
         sendControlNetImage: () => run(sendControlNetImage),
-        sendControlNetMask: () => run(sendControlNetMask)
+        sendControlNetMask: () => run(sendControlNetMask),
+        sendCompare: () => run(sendCompare)
     },
     panels: {
         imageBenchPanel: {
