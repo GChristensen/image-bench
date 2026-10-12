@@ -42,6 +42,8 @@ function setGenerateUiPreset(index, value) {
     <h3>Generation</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.automaticallyClearGeneratedImages"
     >Automatically clear generated images</label>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.flashGeneratedTab"
+    >Flash the Generated tab when an image generated from the Generate tab arrives</label>
     <template v-if="isWebUI">
       <h3>Generate Tab</h3>
       <div class="setting-label generate-setting">

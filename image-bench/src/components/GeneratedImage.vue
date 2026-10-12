@@ -257,20 +257,23 @@
     </div>
     </div>
 
-    <div class="image-badges">
-      <span v-if="image.parameters['hires upscale']" class="badge hr" title="Upscaled">HR</span>
-      <span v-if="image.img2img" class="badge i2i" title="Img2Img image">I2I</span>
-      <span v-if="image.setSteps" class="badge steps" :title="`Upscaled with ${image.parameters['steps']} sampling steps`">{{ image.parameters['steps'] }} st</span>
-      <span v-if="needShowPromptWarning(image)" class="badge warn" title="Image prompt and Txt2Img prompt do not match"
-        ><AppIcon name="alert" :size="11"/></span>
-    </div>
+    <!-- One row, so that the markings shown on hover never cover the badges; it wraps upwards if narrow -->
+    <div class="image-bottom-bar">
+      <div class="image-badges">
+        <span v-if="image.parameters['hires upscale']" class="badge hr" title="Upscaled">HR</span>
+        <span v-if="image.img2img" class="badge i2i" title="Img2Img image">I2I</span>
+        <span v-if="image.setSteps" class="badge steps" :title="`Upscaled with ${image.parameters['steps']} sampling steps`">{{ image.parameters['steps'] }} st</span>
+        <span v-if="needShowPromptWarning(image)" class="badge warn" title="Image prompt and Txt2Img prompt do not match"
+          ><AppIcon name="alert" :size="11"/></span>
+      </div>
 
-    <span v-if="image.marking" class="image-marking" title="Left: remove marking, Middle: filter by"
-          @mousedown.left="onRemoveMarking"
-          @mousedown.middle="$emit('filterMarking', image.marking)">{{ image.marking }}</span>
+      <div v-if="isTray" class="markings">
+        <span v-for="marking in MARKINGS" :key="marking" class="marking" @click="onSelectMarkingClick">{{ marking }}</span>
+      </div>
 
-    <div v-if="isTray" class="markings">
-      <span v-for="marking in MARKINGS" :key="marking" class="marking" @click="onSelectMarkingClick">{{ marking }}</span>
+      <span v-if="image.marking" class="image-marking" title="Left: remove marking, Middle: filter by"
+            @mousedown.left="onRemoveMarking"
+            @mousedown.middle="$emit('filterMarking', image.marking)">{{ image.marking }}</span>
     </div>
   </div>
 </div>
@@ -440,29 +443,35 @@
   color: #fff;
 }
 
-.image-badges {
+/* The bar itself never takes clicks, so the gaps between its items fall through to the image */
+.image-bottom-bar {
   position: absolute;
   left: 6px;
+  right: 6px;
   bottom: 7px;
   display: flex;
+  flex-wrap: wrap-reverse;
+  align-items: flex-end;
   gap: 3px;
   line-height: normal;
-  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.image-bottom-bar > * {
+  pointer-events: auto;
+}
+
+.image-badges {
+  display: flex;
+  gap: 3px;
 }
 
 .image-badges .badge {
   cursor: default;
 }
 
-/* Make room for the hover buttons, except for the prompt warning, which matters most while they are used */
-.image-frame:hover .image-badges .badge:not(.warn) {
-  display: none;
-}
-
 .image-marking {
-  position: absolute;
-  right: 6px;
-  bottom: 7px;
+  margin-left: auto;
   padding: 1px 4px;
   border-radius: 4px;
   background: rgba(17, 19, 23, 0.8);
@@ -472,10 +481,7 @@
 }
 
 .markings {
-  position: absolute;
-  bottom: 7px;
-  left: 50%;
-  transform: translate(-50%, 0);
+  margin: 0 auto;
   display: none;
   padding: 1px 4px;
   border-radius: 4px;

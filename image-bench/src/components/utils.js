@@ -2,5 +2,6 @@ import {animateColors} from "@/utils_html.js";
 
 export function flashTrayTab(tabId) {
     const trayTabElement = document.getElementById(tabId);
-    animateColors(trayTabElement, 0.7);
+    if (trayTabElement)
+        animateColors(trayTabElement, 0.7);
 }

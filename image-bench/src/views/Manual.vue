@@ -435,6 +435,9 @@ onMounted(loadPluginStatus);
         <li><b>Automatically clear generated images</b> — empties the Generated tab whenever a new batch starts
           (and the Upscaled tab whenever a new upscale starts), so that it shows only the latest run. Turn it off
           to let the images of successive runs accumulate.</li>
+        <li><b>Flash the Generated tab when an image generated from the Generate tab arrives</b> — generations
+          started from the Generate tab stay on it, and the tab that receives each image flashes. Turn it off to
+          stop the Generated tab from flashing; the Upscaled tab still flashes.</li>
         <template v-if="isWebUI">
           <li><b>UI preset buttons</b> — which Forge UI presets the buttons of the Generate tab switch to. The
             other presets remain available in the menu next to them.</li>

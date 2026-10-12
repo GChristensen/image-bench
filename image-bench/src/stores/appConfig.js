@@ -57,6 +57,18 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Flash the Generated tab when an image of a generation started from the Generate tab arrives
+    // (enabled unless set to false)
+    const flashGeneratedTab = computed({
+        get() {
+            return _config.flashGeneratedTab ?? true;
+        },
+        set(v) {
+            _config.flashGeneratedTab = v;
+            return persist();
+        }
+    });
+
     // Remember txt2img prompts and parameters across WebUI reloads (disabled unless set to true)
     const persistGenerationParams = computed({
         get() {
@@ -138,6 +150,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         civitaiDomain,
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,
+        flashGeneratedTab,
         persistGenerationParams,
         generateUiPresets,
         generatePresetImages,

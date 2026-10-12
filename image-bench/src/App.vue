@@ -6,7 +6,8 @@ import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
-import {generationStateToKind} from "@/consts.js";
+import {generationStateToKind, KIND_GENERATED, KIND_UPSCALED} from "@/consts.js";
+import {flashTrayTab} from "@/components/utils.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useControlNetStore} from "@/stores/controlnet.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
@@ -141,8 +142,24 @@ onUnmounted(() => {
   }
 });
 
+// Tabs that receive the images of a generation state
+const RESULT_TAB_IDS = {
+  [KIND_GENERATED]: "generated-images-tab",
+  [KIND_UPSCALED]: "upscaled-images-tab"
+};
+
 async function switchTabAccordingToGenerationMode(e, state) {
-  // A single image generated from the Generate tab is shown there
+  // Generations started from the Generate tab stay there, the tab receiving their images flashes
+  if (route.path === "/generate") {
+    const tabId = RESULT_TAB_IDS[generationStateToKind(state)];
+
+    const disabled = tabId === RESULT_TAB_IDS[KIND_GENERATED] && !appConfigStore.flashGeneratedTab;
+
+    if (e.type === "SAVED_IMAGE" && tabId && !disabled)
+      flashTrayTab(tabId);
+    return;
+  }
+
   if (e.type === "BEGIN_PROCESSING" && !e.single) {
     if (state === "BATCH_GENERATION" || state === "SEQUENTIAL_GENERATION") {
       if (route.fullPath !== "/generated-images") {
@@ -164,10 +181,10 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <RouterLink to="/generate" class="tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
       <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
-      <RouterLink to="/generated-images" class="tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
+      <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
       <RouterLink to="/concept-tray" class="tab" id="concept-tray-tab" ref="conceptTrayTab"><AppIcon name="concept" :size="14"/>Concept tray<span v-if="conceptTrayStore.images.length" class="count">{{ conceptTrayStore.images.length }}</span></RouterLink>
       <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
-      <RouterLink v-if="isWebUI" to="/upscaled-images" class="tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
+      <RouterLink v-if="isWebUI" to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <div class="tab-spacer"></div>
       <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
         ><AppIcon name="book" :size="13"/>New to Image Bench? Read the manual</a>
