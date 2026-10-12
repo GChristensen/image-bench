@@ -135,9 +135,6 @@
       {defaultValue: storedSteps, storageKey: "varyingDenoising", dropdown: true, historySize: 5});
 
     if (denoising) {
-      if (config.automaticallyClearGeneratedImages)
-        upscaledImageStore.clear();
-
       upscaledImageStore.startingGeneration();
 
       storage.setVaryingDenoising(denoising);

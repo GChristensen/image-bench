@@ -86,9 +86,6 @@ function onUpscaleSelectedClick() {
   }
   else {
     if (selectedImages.length) {
-      if (config.automaticallyClearGeneratedImages)
-        upscaledImageStore.clear();
-
       upscaledImageStore.startingGeneration();
 
       webUI.upscaleImages(selectedImages);
@@ -98,9 +95,6 @@ function onUpscaleSelectedClick() {
 
 function onUpscaleImage(imageProxy, usePreset) {
   const image = imageOps.cloneImage(imageProxy);
-
-  if (config.automaticallyClearGeneratedImages)
-    upscaledImageStore.clear();
 
   upscaledImageStore.startingGeneration();
 
