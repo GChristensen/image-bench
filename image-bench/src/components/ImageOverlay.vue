@@ -7,6 +7,7 @@
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, MARKINGS} from "@/consts.js";
   import {dialog} from "@/dialogs/useDialog.js";
   import {hostHas} from "@/host.js";
+  import AppIcon from "@/components/AppIcon.vue";
 
   const props = defineProps({
     image: {
@@ -170,7 +171,8 @@
       <div class="image-overlay-container" >
         <div class="image-overlay" @click="$emit('hideOverlay')">
         </div>
-        <div class="close-button" @click="$emit('hideOverlay')">✖</div>
+        <button class="ib close-button" title="Close" aria-label="Close"
+                @click="$emit('hideOverlay')"><AppIcon name="close" :size="22"/></button>
         <Transition name="zoom">
           <div class="overlay-image-container" ref="containerElement"
                :class="{ 'full-size': isFullSize }"
@@ -186,17 +188,21 @@
                 :title="image.marking === marking ? 'Remove marking' : 'Set marking'"
                 @click="onMarkingClick(marking)">{{ marking }}</span>
         </div>
-        <div class="overlay-emoji-buttons">
-          <span v-if="!isTray || kind === KIND_IMAGE_TRAY" class="emoji-button" title="Add to concept tray"
-                @click="onPlaceToConceptTray">💡</span>
-          <span v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="emoji-button" title="Add to image tray"
-                @click="onPlaceToImageTray">🎨</span>
-          <span v-if="canSendToControlNet" class="emoji-button" title="Send to the control image of the ControlNet tab"
-                @click="onSendToControlNet">🎛️</span>
-          <span class="emoji-button" title="Left: send to Photoshop, Middle: send to Photoshop as a new image"
-                @click="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)">📤</span>
-          <span v-if="isTray" class="emoji-button" title="Delete"
-                @click="$emit('deleteImage', image)">🗑️</span>
+        <div class="overlay-actions">
+          <template v-if="isTray">
+            <button class="ib danger" title="Delete" aria-label="Delete"
+                    @click="$emit('deleteImage', image)"><AppIcon name="trash" :size="20"/></button>
+            <span class="actions-separator"></span>
+          </template>
+          <button v-if="canSendToControlNet" class="ib" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
+                  @click="onSendToControlNet"><AppIcon name="controlnet" :size="20"/></button>
+          <button class="ib" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
+                  @click="onSendToPhotoshop($event, false)" @mousedown.middle="onSendToPhotoshop($event, true)"><AppIcon name="external" :size="20"/></button>
+          <span class="actions-separator"></span>
+          <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib" title="Add to concept tray" aria-label="Add to concept tray"
+                  @click="onPlaceToConceptTray"><AppIcon name="concept" :size="20"/></button>
+          <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib" title="Add to image tray" aria-label="Add to image tray"
+                  @click="onPlaceToImageTray"><AppIcon name="palette" :size="20"/></button>
         </div>
       </div>
     </Transition>
@@ -218,8 +224,28 @@
   top: 20px;
   right: 20px;
   z-index: 1003;
-  cursor: pointer;
-  font-size: 24px;
+}
+
+/* Larger variant of the thumbnail action buttons (GeneratedImage.vue) */
+.image-overlay-container .ib {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: rgba(17, 19, 23, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--ib-text);
+}
+
+.image-overlay-container .ib:hover {
+  background: var(--ib-elev-2);
+  border-color: var(--ib-border-2);
+  color: #fff;
+}
+
+.image-overlay-container .ib.danger:hover {
+  color: var(--ib-danger-text);
+  border-color: #5b2d30;
+  background: #2a1a1c;
 }
 
 .image-overlay {
@@ -273,16 +299,20 @@
   cursor: grabbing;
 }
 
-.overlay-emoji-buttons {
+.overlay-actions {
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 1003;
   display: flex;
-  gap: 10px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(17, 19, 23, 0.6);
+  align-items: center;
+  gap: 6px;
+}
+
+.actions-separator {
+  align-self: stretch;
+  margin: 4px 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .overlay-markings {
