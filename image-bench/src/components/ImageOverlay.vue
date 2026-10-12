@@ -1,5 +1,5 @@
 <script setup>
-  import {computed, nextTick, ref, watch} from "vue";
+  import {computed, nextTick, onBeforeUnmount, ref, watch} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
   import {flashTrayTab} from "@/components/utils.js";
@@ -39,13 +39,59 @@
     isFullSize.value = false;
   });
 
-  // Plain click anywhere closes the overlay, Ctrl+click on the image toggles full size
+  // A click on the image toggles full size, a click on the dimmed background around it closes the overlay
   function onContainerClick(e) {
-    if ((e.ctrlKey || e.metaKey) && e.target.classList.contains("overlay-image"))
-      toggleFullSize(e);
+    if (e.target.classList.contains("overlay-image")) {
+      if (!dragged)
+        toggleFullSize(e);
+    }
     else
       emit("hideOverlay");
   }
+
+  // In full size the image is panned by dragging; a drag does not count as a click
+  const DRAG_THRESHOLD = 4;
+  let dragStart = null;
+  let dragged = false;
+
+  function onImageMouseDown(e) {
+    if (e.button === 1) {
+      window.open(e.target.src, "_blank");
+      return;
+    }
+
+    dragged = false;
+
+    if (e.button !== 0 || !isFullSize.value)
+      return;
+
+    e.preventDefault();
+    const container = containerElement.value;
+    dragStart = {x: e.clientX, y: e.clientY, left: container.scrollLeft, top: container.scrollTop};
+    window.addEventListener("mousemove", onDragMove);
+    window.addEventListener("mouseup", onDragEnd);
+  }
+
+  function onDragMove(e) {
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+
+    if (!dragged && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD)
+      return;
+
+    dragged = true;
+    const container = containerElement.value;
+    container.scrollLeft = dragStart.left - dx;
+    container.scrollTop = dragStart.top - dy;
+  }
+
+  function onDragEnd() {
+    dragStart = null;
+    window.removeEventListener("mousemove", onDragMove);
+    window.removeEventListener("mouseup", onDragEnd);
+  }
+
+  onBeforeUnmount(onDragEnd);
 
   async function toggleFullSize(e) {
     const container = containerElement.value;
@@ -115,10 +161,6 @@
     emit("setMarking", props.image);
   }
 
-  function onImageMouseDown(e) {
-    if (e.button === 1)
-      window.open(e.target.src, "_blank");
-  }
 </script>
 
 <template>
@@ -133,8 +175,8 @@
           <div class="overlay-image-container" ref="containerElement"
                :class="{ 'full-size': isFullSize }"
                @click="onContainerClick">
-            <img class="overlay-image" :src="imageLink"
-                 :title="isFullSize ? 'Click to close, Ctrl+click to fit to screen' : 'Click to close, Ctrl+click to view in full size'"
+            <img class="overlay-image" :src="imageLink" draggable="false"
+                 :title="isFullSize ? 'Click to fit to screen, drag to pan' : 'Click to view in full size'"
                  @mousedown="onImageMouseDown">
           </div>
         </Transition>
@@ -212,6 +254,8 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  cursor: zoom-in;
+  user-select: none;
 }
 
 .overlay-image-container.full-size {
@@ -222,6 +266,11 @@
   max-width: none;
   max-height: none;
   flex-shrink: 0;
+  cursor: grab;
+}
+
+.full-size .overlay-image:active {
+  cursor: grabbing;
 }
 
 .overlay-emoji-buttons {
