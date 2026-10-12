@@ -166,10 +166,16 @@
       await dialog.alert(error, {title: "Send to Photoshop"});
   }
 
+  // An image without a negative prompt has no "negative prompt" parameter, as WebUI omits it from the infotext
+  function samePrompt(imagePrompt, prompt) {
+    return (imagePrompt ?? "").trim() === (prompt ?? "").trim();
+  }
+
+  // The txt2img prompts are reported by WebUI only
   function needShowPromptWarning(image) {
-    return import.meta.env.webui
-        && (image.parameters["prompt"] != sdWebUIStore.prompt
-        || image.parameters["negative prompt"] != sdWebUIStore.negativePrompt);
+    return isWebUI && !image.img2img
+        && (!samePrompt(image.parameters["prompt"], sdWebUIStore.prompt)
+        || !samePrompt(image.parameters["negative prompt"], sdWebUIStore.negativePrompt));
   }
 
   function getUpscaleButtonTitle(image) {
@@ -448,8 +454,9 @@
   cursor: default;
 }
 
-.image-frame:hover .image-badges {
-  opacity: 0;
+/* Make room for the hover buttons, except for the prompt warning, which matters most while they are used */
+.image-frame:hover .image-badges .badge:not(.warn) {
+  display: none;
 }
 
 .image-marking {

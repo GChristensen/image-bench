@@ -1,6 +1,6 @@
 <script setup>
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
-import {onBeforeMount, ref, computed, onMounted, onUnmounted} from "vue";
+import {onBeforeMount, ref, computed, onMounted, onUnmounted, watch} from "vue";
 import {useImageTrayStore} from "@/stores/imageTray.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
@@ -17,6 +17,7 @@ import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
 import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas} from "@/host.js";
+import {useLocalStorage} from "@/composables/useLocalStorage.js";
 
 // Messages too frequent to log
 const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS", "INPUT_IMAGES", "CONTROLNET_STATE", "CONTROLNET_IMAGES"];
@@ -42,6 +43,36 @@ const isWebUI = import.meta.env.MODE === 'webui';
 // Composables
 const webUI = useWebUIBridge();
 const showActionsModal = ref(false);
+
+// A link to the manual is shown for a minute on the first opening after installation
+const MANUAL_HINT_KEY = "imageBench_manualHintShown";
+const MANUAL_HINT_DURATION = 60_000;
+const storage = useLocalStorage();
+const showManualHint = ref(false);
+let manualHintTimer = null;
+
+function initManualHint() {
+  if (storage.getItem(MANUAL_HINT_KEY))
+    return;
+  storage.setItem(MANUAL_HINT_KEY, "true");
+  showManualHint.value = true;
+  manualHintTimer = setTimeout(hideManualHint, MANUAL_HINT_DURATION);
+}
+
+function hideManualHint() {
+  clearTimeout(manualHintTimer);
+  showManualHint.value = false;
+}
+
+watch(() => route.path, path => {
+  if (path === "/manual")
+    hideManualHint();
+});
+
+function openManual() {
+  hideManualHint();
+  router.push("/manual");
+}
 
 const viewStores = {
   [exploreImagesStore.kind]: exploreImagesStore,
@@ -99,9 +130,11 @@ async function onSDEvent(e) {
 
 onMounted(() => {
   window.onSDEvent = onSDEvent;
+  initManualHint();
 });
 
 onUnmounted(() => {
+  clearTimeout(manualHintTimer);
   // Clean up window event handler
   if (window.onSDEvent === onSDEvent) {
     window.onSDEvent = null;
@@ -136,6 +169,8 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <RouterLink to="/image-tray" class="tab" id="image-tray-tab" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
       <RouterLink v-if="isWebUI" to="/upscaled-images" class="tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <div class="tab-spacer"></div>
+      <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
+        ><AppIcon name="book" :size="13"/>New to Image Bench? Read the manual</a>
       <span v-if="!hasOpener" class="chip window-warning" title="The opener SD WebUI window is closed or was reloaded"
         ><AppIcon name="alert" :size="13"/>Disconnected from WebUI</span>
       <RouterLink to="/settings" class="tab" ref="settingsTab"><AppIcon name="settings" :size="14"/>Settings</RouterLink>
@@ -211,6 +246,20 @@ async function switchTabAccordingToGenerationMode(e, state) {
 
   .actions-button {
     margin-left: 2px;
+  }
+
+  .manual-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 8px;
+    color: var(--ib-accent);
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .manual-hint:hover {
+    text-decoration: underline;
   }
 
   .window-warning {

@@ -1,3 +1,6 @@
+# Machine-specific settings (deploy destinations) are read from .env
+set dotenv-load
+
 webui:
     cd image-bench; npm run build:webui
     cp -f image-bench/dist/index.html webui-extension/scripts
@@ -7,18 +10,21 @@ comfy:
     cp -f image-bench/dist/index.html comfyui-extension/js
     cp -rf common-extension/shared_frontend/* comfyui-extension/js/shared/
 
-# Forward slashes, converted by PowerShell: the shell passes \\ of a UNC path to it as \
-webui_dest := '//RTX/A/software/ai/sd/webui-neo/extensions/image-bench'
-comfy_dest := '//RTX/A/software/ai/sd/comfyui/ComfyUI/custom_nodes/image-bench'
+# Extension directories of the remote installs, set in .env (see .env.example)
+webui_dest := env("WEBUI_DEST", "")
+comfy_dest := env("COMFY_DEST", "")
 
 # Build and copy the code files of the extension to the remote WebUI install (symlinked shared code included)
-deploy-webui: webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html") (_deploy_ps webui_dest)
+deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html") (_deploy_ps webui_dest)
 
 # Build and copy the code files of the extension to the remote ComfyUI install (symlinked shared code included)
-deploy-comfy: comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json") (_deploy_ps comfy_dest)
+deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json") (_deploy_ps comfy_dest)
 
 # The Photoshop plugin, supplied with the extension for installing it from the Manual tab
 _deploy_ps dest: (_deploy "photoshop-extension" (dest + "/shared/photoshop-plugin") "index.js index.html manifest.json uxp.ps1")
+
+_require name value:
+    @{{ if value == "" { error(name + " is not set: copy .env.example to .env and set it") } else { "echo " + name + "=" + value } }}
 
 # robocopy follows the directory symlinks and fails only with exit codes >= 8
 _deploy src dest files:

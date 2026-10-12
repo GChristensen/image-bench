@@ -13,6 +13,7 @@ const fs = storage.localFileSystem;
 
 const DEFAULT_WEBUI_URL = "http://127.0.0.1:7860";
 const WEBUI_URL_KEY = "webuiUrl";
+const SMART_OBJECTS_KEY = "placeSmartObjects";
 const PLUGIN_WEBSOCKET_PATH = "/image-bench/photoshop/plugin-websocket";
 const RECONNECT_DELAY = 5000;
 
@@ -178,18 +179,23 @@ function connect() {
         websocket = new WebSocket(getWebuiUrl().replace(/^http/i, "ws") + PLUGIN_WEBSOCKET_PATH);
     } catch (error) {
         console.error(error);
+        setConnectionState("disconnected");
         setStatus(`Invalid server URL: ${getWebuiUrl()}`, true);
         return;
     }
 
     socket = websocket;
+    setConnectionState("connecting");
 
-    websocket.onopen = () => setConnected(true);
+    websocket.onopen = () => {
+        if (socket === websocket)
+            setConnectionState("connected");
+    };
     websocket.onmessage = onWebuiMessage;
     websocket.onclose = () => {
         // A replaced connection is closed deliberately
         if (socket === websocket) {
-            setConnected(false);
+            setConnectionState("disconnected");
             reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
         }
     };
@@ -199,7 +205,6 @@ function reconnect() {
     const websocket = socket;
     socket = null;
     websocket?.close();
-    setConnected(false);
     connect();
 }
 
@@ -246,10 +251,12 @@ async function openImage({name, imageUrl, newDocument}) {
 }
 
 /**
- * Place a file as a smart object layer centered in the active document, named after the file
+ * Place a file as a layer centered in the active document, named after the file. Placing makes a smart object,
+ * which is rasterized unless the panel keeps smart objects, so that its pixels can be edited directly
+ * (a selection deleted, painted on, ...)
  */
 async function placeAsLayer(file) {
-    const [result] = await action.batchPlay([{
+    const commands = [{
         _obj: "placeEvent",
         null: {_path: fs.createSessionToken(file), _kind: "local"},
         freeTransformCenterState: {_enum: "quadCenterState", _value: "QCSAverage"},
@@ -258,10 +265,19 @@ async function placeAsLayer(file) {
             horizontal: {_unit: "pixelsUnit", _value: 0},
             vertical: {_unit: "pixelsUnit", _value: 0}
         }
-    }], {});
+    }];
 
-    if (result?._obj === "error")
-        throw new Error(`Unable to place ${file.name}: ${result.message}`);
+    if (localStorage.getItem(SMART_OBJECTS_KEY) !== "true")
+        commands.push({
+            _obj: "rasterizeLayer",
+            _target: [{_ref: "layer", _enum: "ordinal", _value: "targetEnum"}]
+        });
+
+    const results = await action.batchPlay(commands, {});
+    const error = results.find(result => result?._obj === "error");
+
+    if (error)
+        throw new Error(`Unable to place ${file.name}: ${error.message}`);
 }
 
 // ==================== UI ====================
@@ -275,10 +291,37 @@ function setStatus(text, isError = false) {
     status.classList.toggle("error", isError);
 }
 
-function setConnected(connected) {
-    const connection = document.getElementById("connection");
-    connection.textContent = connected ? "Connected to the server" : "Not connected to the server";
-    connection.classList.toggle("error", !connected);
+const CONNECTION_STATES = {
+    connected: {label: "Connected", title: "Connected to the server: click to reconnect"},
+    connecting: {label: "Connecting...", title: "Connecting to the server: click to retry"},
+    disconnected: {label: "Reconnect", title: "Not connected to the server: click to reconnect"}
+};
+
+/**
+ * Show the connection state in the reconnect button and the indicator next to it
+ * @param {'connected'|'connecting'|'disconnected'} state
+ */
+function setConnectionState(state) {
+    const {label, title} = CONNECTION_STATES[state];
+    const button = document.getElementById("connection");
+    button.textContent = label;
+    button.title = title;
+    document.getElementById("connection-dot").className = state;
+}
+
+/**
+ * Save the URL of the field and reconnect, if it has changed or if forced (Enter, the reconnect button)
+ */
+function applyUrl(force) {
+    const urlField = document.getElementById("webui-url");
+    const url = urlField.value.trim();
+    const changed = url !== (localStorage.getItem(WEBUI_URL_KEY) ?? "");
+
+    if (changed)
+        localStorage.setItem(WEBUI_URL_KEY, url);
+
+    if (changed || force)
+        reconnect();
 }
 
 /**
@@ -311,10 +354,17 @@ function initPanel() {
 
     const urlField = document.getElementById("webui-url");
     urlField.value = getWebuiUrl();
-    urlField.addEventListener("change", () => {
-        localStorage.setItem(WEBUI_URL_KEY, urlField.value.trim());
-        reconnect();
+    // Enter also fires "change", which then finds the URL already saved
+    urlField.addEventListener("keydown", e => {
+        if (e.key === "Enter")
+            applyUrl(true);
     });
+    urlField.addEventListener("change", () => applyUrl(false));
+    document.getElementById("connection").addEventListener("click", () => applyUrl(true));
+
+    const smartObjects = document.getElementById("smart-objects");
+    smartObjects.checked = localStorage.getItem(SMART_OBJECTS_KEY) === "true";
+    smartObjects.addEventListener("change", () => localStorage.setItem(SMART_OBJECTS_KEY, String(smartObjects.checked)));
 
     document.getElementById("send-image").addEventListener("click", () => run(sendImage, true));
     document.getElementById("send-mask").addEventListener("click", () => run(sendMask, true));

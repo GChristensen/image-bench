@@ -339,7 +339,7 @@ input[type=checkbox] {
 .badge.hr { background: #1f3a56; color: #9ccaff; }
 .badge.i2i { background: #3b2c4e; color: #d2b6ff; }
 .badge.steps { background: #1f3a2a; color: #8ee0a8; }
-.badge.warn { background: #3a2a12; color: var(--ib-warn); }
+.badge.warn { background: #6b4a16; color: #ffd08a; box-shadow: inset 0 0 0 1px rgba(255, 196, 107, 0.75); }
 
 /* ---------- Segmented control ---------- */
 

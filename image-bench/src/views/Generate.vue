@@ -8,7 +8,7 @@
  * of the workflow, and the host page reports which parameters it found (features, see src/host.js).
  * One image is generated in place with a live preview; more images are a batch shown in the Generated tab.
  */
-import {computed, onActivated, onBeforeMount, onDeactivated, reactive, ref, watch} from "vue";
+import {computed, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import CheckTree from "@/components/CheckTree.vue";
 import GenerateImageCell from "@/components/GenerateImageCell.vue";
@@ -30,6 +30,7 @@ import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
+import {useDragSize} from "@/composables/useDragSize.js";
 import {useFeatures} from "@/composables/useFeatures.js";
 import {HOST_NAME} from "@/host.js";
 import {createImageLink} from "@/sdwebui.js";
@@ -58,7 +59,22 @@ const NEGATIVE_HEIGHT_KEY = "imageBench_generateNegativeHeight";
 const SIDE_TAB_KEY = "imageBench_generateSideTab";
 const PHOTOSHOP_TARGET_KEY = "imageBench_generatePhotoshopTarget";
 const PARAMS_COLLAPSED_KEY = "imageBench_generateParamsCollapsed";
-const NEGATIVE_HEIGHT = {min: 40, max: 320, default: 62, keyStep: 20};
+const SIDE_WIDTH_KEY = "imageBench_generateSideWidth";
+const IMAGE_WIDTH_KEY = "imageBench_generateImageWidth";
+const IMAGE_HEIGHT_KEY = "imageBench_generateImageHeight";
+const NEGATIVE_HEIGHT = {min: 40, max: 320, default: 62};
+
+// From this grid width on, the image has a column of its own beside the LoRA column
+const WIDE_LAYOUT_WIDTH = 1500;
+// Left to the prompts and the model row when the side columns are enlarged
+const MAIN_MIN_WIDTH = 560;
+const GRID_GAP = 14;
+// Default: 30% of the grid width up to the maximum; wide: the width of the LoRA column
+const SIDE_WIDTH = {min: 220, default: 360, defaultShare: 0.3, wide: 300};
+// Wide: the image column fits the image at full height, up to a share of the grid width unless resized
+const IMAGE_WIDTH = {min: 240, autoShare: 0.4};
+// Below the LoRA list: the image fits the column width; the list keeps the rest
+const IMAGE_HEIGHT = {min: 120, sideReserve: 200};
 
 const sdWebUI = useSDWebUIStateStore();
 const generatedImagesStore = useGeneratedImagesStore();
@@ -513,45 +529,65 @@ const paramsCollapsed = ref(storage.getItem(PARAMS_COLLAPSED_KEY) === "true");
 
 watch(paramsCollapsed, collapsed => storage.setItem(PARAMS_COLLAPSED_KEY, String(collapsed)));
 
-// ---------- Negative prompt height ----------
+// ---------- Layout ----------
 
-const clampHeight = height => Math.round(Math.min(NEGATIVE_HEIGHT.max, Math.max(NEGATIVE_HEIGHT.min, height)));
+// Content size of the grid; an estimate until it is measured
+const gridElement = ref(null);
+const gridSize = reactive({width: window.innerWidth - 24, height: window.innerHeight - 120});
+let gridObserver = null;
 
-const negativeHeight = ref(clampHeight(parseInt(storage.getItem(NEGATIVE_HEIGHT_KEY)) || NEGATIVE_HEIGHT.default));
-const resizing = ref(false);
+onMounted(() => {
+  gridObserver = new ResizeObserver(([entry]) => {
+    // A deactivated (kept alive) tab is detached and measures 0
+    if (!entry.contentRect.width)
+      return;
 
-watch(resizing, active => {
-  if (!active)
-    storage.setItem(NEGATIVE_HEIGHT_KEY, String(negativeHeight.value));
+    gridSize.width = entry.contentRect.width;
+    gridSize.height = entry.contentRect.height;
+  });
+
+  gridObserver.observe(gridElement.value);
 });
 
-// Dragging the grip up enlarges the negative prompt at the expense of the prompt
-function onGripPointerDown(e) {
-  e.preventDefault();
+onBeforeUnmount(() => gridObserver?.disconnect());
 
-  const startY = e.clientY;
-  const startHeight = negativeHeight.value;
+// Wide: prompts | LoRAs | image; else the image is below the LoRAs
+const wide = computed(() => gridSize.width >= WIDE_LAYOUT_WIDTH);
 
-  const onMove = moveEvent => negativeHeight.value = clampHeight(startHeight + startY - moveEvent.clientY);
-  const onUp = () => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
-    resizing.value = false;
-  };
+// Aspect ratio of the image to generate
+const aspect = computed(() => form.width > 0 && form.height > 0 ? form.width / form.height : 1);
 
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
-  resizing.value = true;
-}
+// The grips enlarge the negative prompt, the side column, the image column (wide) and the image below
+// the LoRAs (default) at the expense of their neighbours; double-clicking one restores the automatic size
+const negative = reactive(useDragSize(NEGATIVE_HEIGHT_KEY, {
+  min: NEGATIVE_HEIGHT.min, max: NEGATIVE_HEIGHT.max, fallback: NEGATIVE_HEIGHT.default
+}));
 
-function onGripKeydown(e) {
-  if (e.key !== "ArrowUp" && e.key !== "ArrowDown")
-    return;
+const sideWidth = reactive(useDragSize(SIDE_WIDTH_KEY, {
+  axis: "x",
+  min: SIDE_WIDTH.min,
+  max: () => gridSize.width - MAIN_MIN_WIDTH - GRID_GAP - (wide.value ? IMAGE_WIDTH.min + GRID_GAP : 0),
+  fallback: () => wide.value ? SIDE_WIDTH.wide : Math.min(SIDE_WIDTH.default, gridSize.width * SIDE_WIDTH.defaultShare)
+}));
 
-  e.preventDefault();
-  negativeHeight.value = clampHeight(negativeHeight.value + (e.key === "ArrowUp" ? 1 : -1) * NEGATIVE_HEIGHT.keyStep);
-  storage.setItem(NEGATIVE_HEIGHT_KEY, String(negativeHeight.value));
-}
+const imageWidth = reactive(useDragSize(IMAGE_WIDTH_KEY, {
+  axis: "x",
+  min: IMAGE_WIDTH.min,
+  max: () => gridSize.width - MAIN_MIN_WIDTH - sideWidth.size - 2 * GRID_GAP,
+  fallback: () => Math.min(gridSize.height * aspect.value, gridSize.width * IMAGE_WIDTH.autoShare)
+}));
+
+const imageHeight = reactive(useDragSize(IMAGE_HEIGHT_KEY, {
+  min: IMAGE_HEIGHT.min,
+  max: () => gridSize.height - IMAGE_HEIGHT.sideReserve,
+  fallback: () => sideWidth.size / aspect.value
+}));
+
+const gridStyle = computed(() => ({
+  gridTemplateColumns: wide.value
+    ? `minmax(0, 1fr) ${sideWidth.size}px ${imageWidth.size}px`
+    : `minmax(0, 1fr) ${sideWidth.size}px`
+}));
 </script>
 
 <template>
@@ -598,7 +634,7 @@ function onGripKeydown(e) {
       </div>
     </div>
 
-    <fieldset class="generate-grid" :disabled="!connected">
+    <fieldset ref="gridElement" class="generate-grid" :class="{wide}" :style="gridStyle" :disabled="!connected">
       <!-- Model row -->
       <div class="model-row">
         <UiPresetSelect v-if="has('uiPreset') && form.uiPreset !== null && form.uiPreset !== undefined"
@@ -655,35 +691,63 @@ function onGripKeydown(e) {
       <PromptField class="prompt" label="Prompt" :tokens="has('tokens') ? sdWebUI.tokens?.prompt : null"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"/>
 
-      <ReferencesPanel v-if="shownSideTab === 'references'" class="side-panel" :references="references"
-                       :photoshop-target="photoshopTarget" :has="has"
-                       @add="files => webUI.editReferences({add: files})"
-                       @remove="index => webUI.editReferences({remove: index})"
-                       @clear="webUI.editReferences({clear: true})"
-                       @enabled="value => setReferenceParam('enabled', 'referencesEnabled', value)"
-                       @max-size="value => setReferenceParam('maxSize', 'referenceMaxSize', value)"
-                       @photoshop-target="setPhotoshopTarget"/>
+      <!-- LoRAs or references with the image below them; wide, the image is in a column of its own -->
+      <div class="side">
+        <ReferencesPanel v-if="shownSideTab === 'references'" class="side-panel" :references="references"
+                         :photoshop-target="photoshopTarget" :has="has"
+                         @add="files => webUI.editReferences({add: files})"
+                         @remove="index => webUI.editReferences({remove: index})"
+                         @clear="webUI.editReferences({clear: true})"
+                         @enabled="value => setReferenceParam('enabled', 'referencesEnabled', value)"
+                         @max-size="value => setReferenceParam('maxSize', 'referenceMaxSize', value)"
+                         @photoshop-target="setPhotoshopTarget"/>
 
-      <div v-else class="lora-tree side-panel">
-        <CheckTree v-if="loraItems.length" :items="loraItems" :selected="selectedLoras"
-                   storage-key="imageBench_generateLoraCollapsed"
-                   @toggle="(name, checked) => onLoraToggle([name], checked)"
-                   @toggle-many="onLoraToggle"
-                   @focus="name => onLoraToggle([name], !selectedLoras.has(name))"/>
-        <div v-else class="empty">{{ loras.length ? "No matching LoRAs" : "No LoRAs" }}</div>
+        <div v-else class="lora-tree side-panel">
+          <CheckTree v-if="loraItems.length" :items="loraItems" :selected="selectedLoras"
+                     storage-key="imageBench_generateLoraCollapsed"
+                     @toggle="(name, checked) => onLoraToggle([name], checked)"
+                     @toggle-many="onLoraToggle"
+                     @focus="name => onLoraToggle([name], !selectedLoras.has(name))"/>
+          <div v-else class="empty">{{ loras.length ? "No matching LoRAs" : "No LoRAs" }}</div>
+        </div>
+
+        <div v-if="!wide" class="grip" :class="{active: imageHeight.resizing}" role="separator"
+             aria-orientation="horizontal" aria-label="Resize the image" :aria-valuenow="imageHeight.size" tabindex="0"
+             title="Drag to resize the image; double-click to fit it to the column width"
+             @pointerdown="imageHeight.onPointerDown" @keydown="imageHeight.onKeydown"
+             @dblclick="imageHeight.reset"><i></i></div>
+
+        <!-- Latest image or live preview; the input images in img2img and inpaint -->
+        <GenerateImageCell class="image-cell" :style="wide ? null : {height: `${imageHeight.size}px`}"
+                           :mode="mode" :result-url="shownImageUrl"
+                           :live-progress="livePreview ? sdWebUI.live.progress : null"
+                           :result-clickable="!!latestImage && !livePreview"
+                           :input-image="inputs.image" :input-mask="inputs.mask"
+                           @result-click="onResultClick" @upload="onInputUpload"
+                           @use-size="(width, height) => setParams({width, height})"/>
       </div>
+
+      <div class="column-grip side-grip" :class="{active: sideWidth.resizing}" role="separator"
+           aria-orientation="vertical" :aria-label="`Resize the ${shownSideTab === 'lora' ? 'LoRA' : 'references'} column`"
+           :aria-valuenow="sideWidth.size" tabindex="0" title="Drag to resize the column; double-click to restore it"
+           @pointerdown="sideWidth.onPointerDown" @keydown="sideWidth.onKeydown" @dblclick="sideWidth.reset"><i></i></div>
+
+      <div v-if="wide" class="column-grip image-grip" :class="{active: imageWidth.resizing}" role="separator"
+           aria-orientation="vertical" aria-label="Resize the image column" :aria-valuenow="imageWidth.size" tabindex="0"
+           title="Drag to resize the image column; double-click to fit it to the image"
+           @pointerdown="imageWidth.onPointerDown" @keydown="imageWidth.onKeydown" @dblclick="imageWidth.reset"><i></i></div>
 
       <!-- Negative prompt and parameters -->
       <div class="lower">
         <template v-if="has('negativePrompt')">
-          <div class="grip" :class="{active: resizing}" role="separator" aria-orientation="horizontal"
-               aria-label="Resize the negative prompt" :aria-valuenow="negativeHeight"
+          <div class="grip" :class="{active: negative.resizing}" role="separator" aria-orientation="horizontal"
+               aria-label="Resize the negative prompt" :aria-valuenow="negative.size"
                :aria-valuemin="NEGATIVE_HEIGHT.min" :aria-valuemax="NEGATIVE_HEIGHT.max" tabindex="0"
-               title="Drag to resize the negative prompt"
-               @pointerdown="onGripPointerDown" @keydown="onGripKeydown"><i></i></div>
+               title="Drag to resize the negative prompt; double-click to restore it"
+               @pointerdown="negative.onPointerDown" @keydown="negative.onKeydown" @dblclick="negative.reset"><i></i></div>
 
           <PromptField class="negative" label="Negative prompt" :tokens="has('tokens') ? sdWebUI.tokens?.negativePrompt : null"
-                       :style="{height: `${negativeHeight + 20}px`}"
+                       :style="{height: `${negative.size + 20}px`}"
                        :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"/>
         </template>
 
@@ -708,14 +772,6 @@ function onGripKeydown(e) {
                         @set="setParam"/>
         </div>
       </div>
-
-      <!-- Latest image or live preview; the input images in img2img and inpaint -->
-      <GenerateImageCell :mode="mode" :result-url="shownImageUrl"
-                         :live-progress="livePreview ? sdWebUI.live.progress : null"
-                         :result-clickable="!!latestImage && !livePreview"
-                         :input-image="inputs.image" :input-mask="inputs.mask"
-                         @result-click="onResultClick" @upload="onInputUpload"
-                         @use-size="(width, height) => setParams({width, height})"/>
     </fieldset>
   </div>
 </template>
@@ -729,9 +785,67 @@ function onGripKeydown(e) {
   padding: 10px 12px 12px;
   border: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(260px, 30vw, 360px);
+  /* Columns set inline from the grip sizes */
   grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "model  header"
+    "prompt side"
+    "lower  side";
   gap: 10px 14px;
+}
+
+.generate-grid.wide {
+  grid-template-areas:
+    "model  header image"
+    "prompt side   image"
+    "lower  side   image";
+}
+
+.model-row {
+  grid-area: model;
+}
+
+.lora-header {
+  grid-area: header;
+}
+
+.prompt {
+  grid-area: prompt;
+}
+
+.lower {
+  grid-area: lower;
+}
+
+/* The side panel, its grip and the image below it */
+.side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.side > .side-panel {
+  flex: 1;
+}
+
+.side > .image-cell {
+  flex: none;
+}
+
+/* Wide, the side panel and the image are grid items of their own */
+.wide .side {
+  display: contents;
+}
+
+.wide .side-panel {
+  grid-area: side;
+}
+
+.wide .image-cell {
+  grid-area: image;
 }
 
 /* ---------- Model row ---------- */
@@ -912,13 +1026,46 @@ function onGripKeydown(e) {
   background: var(--ib-border-2);
 }
 
+/* In the gap at the left of its column, over the whole grid height */
+.column-grip {
+  grid-row: 1 / -1;
+  justify-self: start;
+  width: 10px;
+  margin-left: -12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.side-grip {
+  grid-column: 2;
+}
+
+.image-grip {
+  grid-column: 3;
+}
+
+.column-grip i {
+  width: 4px;
+  height: 40px;
+  border-radius: 2px;
+  background: var(--ib-border-2);
+}
+
 .grip:hover i,
 .grip:focus-visible i,
-.grip.active i {
+.grip.active i,
+.column-grip:hover i,
+.column-grip:focus-visible i,
+.column-grip.active i {
   background: var(--ib-accent);
 }
 
-.grip:focus-visible {
+.grip:focus-visible,
+.column-grip:focus-visible {
   outline: none;
   background: var(--ib-accent-soft);
 }

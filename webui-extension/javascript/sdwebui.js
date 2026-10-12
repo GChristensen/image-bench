@@ -22,11 +22,12 @@ export function hookIntoSDWebUI(sendPopupFn, checkWebSocketFn) {
     interruptButton.addEventListener("mousedown", onInterruptMousedown);
     listenInterruptButtonMutations();
 
+    // "input" also fires when Image Bench sets the prompts (SDWebuiAdapter.setInputElementValue), "change" does not
     const promptInput = querySelector(SELECTORS.TXT2IMG_PROMPT);
-    promptInput.addEventListener("change", onPromptChange);
+    promptInput.addEventListener("input", onPromptChange);
 
     const negativePromptInput = querySelector(SELECTORS.TXT2IMG_NEG_PROMPT);
-    negativePromptInput.addEventListener("change", onNegativePromptChange);
+    negativePromptInput.addEventListener("input", onNegativePromptChange);
 
     const sendToTxt2ImgButton = querySelector(SELECTORS.SEND_TO_TXT2IMG);
     sendToTxt2ImgButton.addEventListener("click", onSendToTxt2ImgButtonClick);

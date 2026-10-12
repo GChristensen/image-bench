@@ -21,10 +21,13 @@ With ComfyUI, the images are saved to the ComfyUI `input` directory (`image_benc
   The mask file carries the selection in its color channels and the inverse in its alpha channel.
 
 In the other direction, the **Send to Photoshop** button on an image in the Image Bench window places it
-as a new layer of the active document (or opens it, if no document is open). The plugin stays connected to
-the server while Photoshop runs, even with the panel closed; the panel shows the connection state. After a Photoshop
-restart the plugin connects once its panel is shown (a docked panel is shown on startup) or a command is used.
-The server URL (default `http://127.0.0.1:7860`, ComfyUI usually `http://127.0.0.1:8188`) is set in the panel.
+as a new layer of the active document (or opens it, if no document is open). The layer is rasterized, so its pixels
+can be edited directly; check **Place as smart objects** in the panel to keep it a smart object instead. The plugin stays connected to
+the server while Photoshop runs, even with the panel closed, and retries every 5 seconds when the connection is lost.
+After a Photoshop restart the plugin connects once its panel is shown (a docked panel is shown on startup) or a command
+is used. The server URL (default `http://127.0.0.1:7860`, ComfyUI usually `http://127.0.0.1:8188`) is set in the panel:
+Enter connects to it, and so does the button next to it, which shows the connection state (Connected, Connecting...,
+Reconnect) along with a green, orange or red indicator.
 
 Requires Photoshop 2024 (25.0) or newer.
 

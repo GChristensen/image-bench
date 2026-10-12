@@ -276,8 +276,14 @@ function onRun() {
 
 const previewName = computed(() => `ControlNet ${unit.value + 1} ${form.preprocessor || ""} preview`);
 
-async function onPreviewToPhotoshop() {
-  const error = await sendUrlToPhotoshop(images.value.preview, previewName.value);
+const sourceImage = computed(() => shownSourceView.value === "mask" ? images.value.mask : images.value.image);
+const sourceName = computed(() => `ControlNet ${unit.value + 1} ${shownSourceView.value === "mask" ? "mask" : "image"}`);
+
+// Left click places the image as a layer of the active document, middle click opens it as a new document
+async function onToPhotoshop(e, url, name, newDocument) {
+  e.preventDefault();
+
+  const error = await sendUrlToPhotoshop(url, name, newDocument);
 
   if (error)
     await dialog.alert(error, {title: "Send to Photoshop"});
@@ -324,7 +330,7 @@ function onSavePreview() {
     <div class="controlnet-grid">
       <div class="images" :class="{single: !has('preprocessor')}">
         <!-- Control image or its mask -->
-        <ControlNetImagePane :image="shownSourceView === 'mask' ? images.mask : images.image"
+        <ControlNetImagePane :image="sourceImage"
                              :dark="shownSourceView === 'mask'" :droppable="connected"
                              :empty-text="ownImage
                                ? (shownSourceView === 'mask' ? 'No mask' : 'No control image') + '\nUpload, drop or paste one, or send it from Photoshop'
@@ -341,6 +347,11 @@ function onSavePreview() {
             <span v-else class="label-small">Source</span>
           </template>
           <template #actions>
+            <button class="btn outline photoshop" :disabled="!sourceImage"
+                    :title="`Left: send the ${shownSourceView === 'mask' ? 'mask' : 'control image'} to Photoshop, Middle: send to Photoshop as a new image`"
+                    @mousedown.left="onToPhotoshop($event, sourceImage, sourceName, false)"
+                    @mousedown.middle="onToPhotoshop($event, sourceImage, sourceName, true)"
+              ><AppIcon name="external" :size="13"/>To Photoshop</button>
             <button class="ib flat" :disabled="!connected"
                     :title="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
                     :aria-label="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
@@ -366,8 +377,10 @@ function onSavePreview() {
           </template>
           <template #actions>
             <button class="btn outline photoshop" :disabled="!images.preview"
-                    title="Place the preview as a layer of the active Photoshop document"
-                    @click="onPreviewToPhotoshop"><AppIcon name="external" :size="13"/>To Photoshop</button>
+                    title="Left: send the preview to Photoshop, Middle: send to Photoshop as a new image"
+                    @mousedown.left="onToPhotoshop($event, images.preview, previewName, false)"
+                    @mousedown.middle="onToPhotoshop($event, images.preview, previewName, true)"
+              ><AppIcon name="external" :size="13"/>To Photoshop</button>
             <button class="ib flat" :disabled="!images.preview" title="Copy the preview (Ctrl+C)"
                     aria-label="Copy the preview" @click="onCopyPreview"><AppIcon name="copy" :size="14"/></button>
             <button class="ib flat" :disabled="!images.preview" title="Save the preview" aria-label="Save the preview"

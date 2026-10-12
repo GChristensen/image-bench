@@ -11,54 +11,106 @@
         .row {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            margin-bottom: 10px;
-        }
-
-        sp-textfield, sp-button {
-            width: 100%;
+            gap: 2px;
+            margin-bottom: 6px;
         }
 
         .section {
-            padding-top: 8px;
+            padding-top: 4px;
             border-top: 1px solid var(--uxp-host-border-color, #444);
         }
 
-        #status {
-            min-height: 2.5em;
+        sp-label {
+            margin: 0;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: row;
+            gap: 4px;
+        }
+
+        .buttons sp-button {
+            flex: 1 1 0;
+            min-width: 0;
+            margin: 0;
+        }
+
+        .url-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .url-row sp-textfield {
+            flex: 1 1 auto;
+            width: auto;
+            min-width: 0;
+        }
+
+        #connection-dot {
+            flex: 0 0 auto;
+            width: 8px;
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e5615b;
+        }
+
+        #connection-dot.connecting {
+            background-color: #e8a33d;
+        }
+
+        #connection-dot.connected {
+            background-color: #4ca35b;
         }
 
         #connection {
-            display: block;
-            margin-bottom: 4px;
+            flex: 0 0 auto;
         }
 
-        #status.error, #connection.error {
+        #status {
+            min-height: 1.5em;
+        }
+
+        #status.error {
             color: #e5615b;
         }
     </style>
 </head>
 <body>
     <div class="row">
-        <sp-label>WebUI / ComfyUI URL</sp-label>
-        <sp-textfield id="webui-url" placeholder="http://127.0.0.1:7860"></sp-textfield>
+        <div class="url-row">
+            <sp-textfield id="webui-url" placeholder="http://127.0.0.1:7860"
+                          title="WebUI / ComfyUI URL"></sp-textfield>
+            <div id="connection-dot"></div>
+            <sp-action-button id="connection" title="Not connected: click or press Enter in the URL field to connect">Connect</sp-action-button>
+        </div>
     </div>
     <div class="row">
-        <sp-label>Generation</sp-label>
-        <sp-button id="send-image" variant="cta">Send image</sp-button>
-        <sp-button id="send-mask" variant="primary">Send selection as mask</sp-button>
-        <sp-button id="send-image-and-mask" variant="secondary">Send image and mask</sp-button>
+        <sp-label>To Image Bench: Generation</sp-label>
+        <div class="buttons">
+            <sp-button id="send-image" variant="cta" title="Send image">Image</sp-button>
+            <sp-button id="send-mask" variant="primary" title="Send selection as mask">Mask</sp-button>
+            <sp-button id="send-image-and-mask" variant="secondary" title="Send image and mask">Both</sp-button>
+        </div>
     </div>
     <div class="row section">
-        <sp-label>ControlNet (SD WebUI)</sp-label>
-        <sp-button id="send-cn-preprocess" variant="primary"
-                   title="Runs the preprocessor on the image and places the preview as a layer">Send to preprocess</sp-button>
-        <sp-button id="send-cn-image" variant="secondary"
-                   title="Uses the image as it is: sets the preprocessor to None and clears the preview">Use as control image</sp-button>
-        <sp-button id="send-cn-mask" variant="secondary"
-                   title="Checks Use Mask: ControlNet applies inside the selection">Send selection as mask</sp-button>
+        <sp-label title="ControlNet targets are supported by SD WebUI only">To Image Bench: ControlNet</sp-label>
+        <div class="buttons">
+            <sp-button id="send-cn-preprocess" variant="primary"
+                       title="Send to preprocess: runs the preprocessor on the image and places the preview as a layer">Preproc.</sp-button>
+            <sp-button id="send-cn-image" variant="secondary"
+                       title="Use as control image: sets the preprocessor to None and clears the preview">Image</sp-button>
+            <sp-button id="send-cn-mask" variant="secondary"
+                       title="Send selection as mask: checks Use Mask, ControlNet applies inside the selection">Mask</sp-button>
+        </div>
     </div>
-    <sp-detail id="connection" class="error">Not connected to the server</sp-detail>
+    <div class="row section">
+        <sp-checkbox id="smart-objects"
+                     title="Keep placed layers as smart objects (scalable without loss, but their pixels cannot be edited directly). Otherwise they are rasterized"
+            >Images from Image Bench as smart objects</sp-checkbox>
+    </div>
     <sp-detail id="status"></sp-detail>
     <script src="index.js"></script>
 </body>

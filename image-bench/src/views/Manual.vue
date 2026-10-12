@@ -145,10 +145,16 @@ onMounted(loadPluginStatus);
         without hunting for controls in the {{ HOST_NAME }} page.
       </p>
       <p>
+        For example, to upscale an image, you usually locate it in the filesystem, extract its id and prompt, enable
+        hires fix, after upscale disable it, and randomize the seed. In Image Bench you press a couple of buttons
+        to synchronize the parameters and upscale an image saved in a tray. All UI corresponding manipulations happen
+         automatically.
+      </p>
+      <p>
         Image Bench does not generate anything itself; it drives {{ HOST_NAME }}. The two stay in sync in both
         directions: Image Bench shows the
         {{ isWebUI ? "controls of the WebUI page" : "nodes of the open workflow" }}, and a change made on either
-        side appears on the other. You can therefore switch between them at any time. Every image that
+        side appears on the other. You can switch between them at any time. Every image that
         {{ HOST_NAME }} generates, even one started from {{ HOST_NAME }} itself, arrives in Image Bench together
         with its generation parameters.
       </p>
@@ -157,7 +163,7 @@ onMounted(loadPluginStatus);
         <div>
           Image Bench works through the {{ HOST_NAME }} page, so that page must stay open in a browser window and
           remain the active tab of that window. The window itself need not be visible: minimize it, move it to
-          another display or let other windows cover it, and keep only Image Bench and Photoshop on screen.
+          another display or let other windows cover it, and keep only Image Bench and Photoshop open.
         </div>
       </div>
       <p>The window is organised into the following tabs:</p>
@@ -167,7 +173,7 @@ onMounted(loadPluginStatus);
         <li><b>Explore</b> — runs one prompt on many checkpoints and LoRAs and shows the results side by side.</li>
         <li><b>Generated</b> — batches, variations and endless generation, with images streaming in as they
           finish.</li>
-        <li><b>Concept tray</b> and <b>Image tray</b> — lasting collections of the images worth keeping.</li>
+        <li><b>Concept tray</b> and <b>Image tray</b> — permanent collections of the images worth keeping.</li>
         <li v-if="isWebUI"><b>Upscaled</b> — upscaled (Hires. fix) versions of the images you choose.</li>
         <li><b>Settings</b> and <b>Manual</b> — the options of the window, and this manual.</li>
       </ul>
@@ -187,15 +193,15 @@ onMounted(loadPluginStatus);
       </p>
       <p>
         Keep that page open, and keep it as the active tab of its browser window. The browser window may be
-        minimized or hidden behind others, but if you bring another tab to the front in it, the browser slows the
+        minimized or hidden behind others, but if you make another tab active, the browser slows the
         page down and Image Bench starts to lag. If the page is closed or reloaded, the tab bar shows
         <span class="kbd warn">Disconnected from {{ HOST_NAME }}</span>; open Image Bench again from the page.
       </p>
       <div class="note">
         <AppIcon name="info" :size="15"/>
         <div>
-          The layout is designed for a window of <b>1200×800</b> pixels placed next to Photoshop, so that the two
-          share the screen while {{ HOST_NAME }} stays in the background. A larger window fits more images in a
+          The layout is designed for a window of <b>1200×800</b> pixels placed in a separate display above the main one with Photoshop,
+          so that the two share the screen while {{ HOST_NAME }} stays in the background. An Image Bench window with larger dimensions fits more images in a
           row; a smaller one still works, though some toolbars wrap onto two lines.
         </div>
       </div>
@@ -238,7 +244,10 @@ onMounted(loadPluginStatus);
         <li v-else><b>Mode</b> — set by the workflow rather than by a switch: txt2img by default, img2img when a
           load node is marked <code>ib:img</code>, and inpaint when a mask loader is marked <code>ib:mask</code>
           as well.</li>
-        <li><b>Result, Input and Mask</b> panes. Upload, drop or paste an input image or a mask onto its pane.</li>
+        <li><b>Result, Input and Mask</b> panes. Upload, drop or paste an input image or an img2img mask onto its pane.
+          In a wide window the image has a column of its own that fits the image size; otherwise it is below the
+          LoRA list and fits the column width. Drag the grips to resize the negative prompt, the LoRA column, the
+          image column or the image; double-click a grip to restore the automatic size.</li>
         <li><b>Generate</b> — makes one image and shows it with a live preview. Ask for more than one image (or
           for <AppIcon name="infinity" :size="13" class="inline-icon"/>), and the batch runs in the Generated tab
           instead. <b>Skip</b> abandons the current image; <b>Stop</b> ends the batch.</li>
@@ -246,6 +255,20 @@ onMounted(loadPluginStatus);
           decides which presets they offer. <b><AppIcon name="lock" :size="13" class="inline-icon"/> Prompt
           lock</b> covers the prompts in WebUI, so that they can only be edited here.</li>
       </ul>
+      <div v-if="isWebUI" class="note">
+        <AppIcon name="info" :size="15"/>
+        <div>
+          <b>How the UI preset follows the model.</b> When you choose a checkpoint here, the UI preset stays as it
+          is, so pick the matching preset with the buttons yourself. Model exploration, however, switches the
+          preset for each model automatically, judging by the model's folder and file name: a preset is chosen
+          when its name appears in them (<code>flux</code>, <code>klein</code>, <code>qwen</code>, ...), and
+          <code>sd</code>, <code>xl</code> and <code>zit</code> are recognised by <code>sd/</code>,
+          <code>sdxl</code> and <code>z-image</code>. When several match, the longest wins, so
+          <code>flux/klein/model.safetensors</code> selects <code>klein</code> rather than <code>flux</code>.
+          Models that match nothing keep the current preset. Sorting checkpoints into folders named after their
+          family (<code>sdxl/</code>, <code>flux/</code>, <code>klein/</code>, ...) makes this reliable.
+        </div>
+      </div>
       <p v-if="isComfy" class="muted">
         A control whose node cannot be found in the workflow is hidden, so a missing control usually points to a
         missing marker.
@@ -265,7 +288,8 @@ onMounted(loadPluginStatus);
         <li><b>Enable</b>, <b>model</b>, <b>weight</b>, and the <b>starting and ending steps</b>.</li>
         <li><b>Source</b> pane — the control image. Drop, paste or browse for it, or click
           <AppIcon name="controlnet" :size="13" class="inline-icon"/> <b>Send to ControlNet</b> on any image in
-          the lists to send it to the unit selected here.</li>
+          the lists to send it to the unit selected here. <b>To Photoshop</b> sends the shown control image or mask
+          to Photoshop.</li>
         <li><b>Preprocessor</b> and <b>Run preprocessor</b> — the result appears in the <b>Preview</b> pane,
           from where <b>To Photoshop</b> passes it on. <b>Pixel Perfect</b> derives the preprocessor resolution
           from the image and the generation size.
@@ -298,7 +322,7 @@ onMounted(loadPluginStatus);
           text (activation words).</li>
         <li><b>Presets</b> — save the checked models or LoRAs under a name, such as "SDXL anime" or "Flux".</li>
         <li><b>LoRA-free images</b> — when LoRAs are checked, each model also gets an image without them for
-          comparison. Settings can turn this off.<span v-if="isComfy"> In ComfyUI, exploring LoRAs requires a
+          comparison. The corresponding setting on the Settings tab can turn this off.<span v-if="isComfy"> In ComfyUI, exploring LoRAs requires a
             LoRA loader titled <code>ib:lora</code>.</span></li>
         <li><b>Save results</b> stores the whole comparison as a single HTML page; <b>Clear results</b> empties
           the tab.</li>
@@ -320,8 +344,8 @@ onMounted(loadPluginStatus);
           <AppIcon name="infinity" :size="13" class="inline-icon"/> keeps generating until you stop it.</li>
         <li v-if="isWebUI"><b>Variations…</b> — generates variations of the current seed. The variation seed and
           strength are set for the batch and cleared once it is done.</li>
-        <li v-if="isWebUI"><b>Apply preset</b> — applies a preset of the Config Presets extension before the
-          batch (shown only when that extension is installed).</li>
+        <!--li v-if="isWebUI"><b>Apply preset</b> — applies a preset of the Config Presets extension before the
+          batch (shown only when that extension is installed).</li-->
         <li>Move the images worth keeping to a tray with
           <AppIcon name="concept" :size="13" class="inline-icon"/> or
           <AppIcon name="palette" :size="13" class="inline-icon"/>. The tab is emptied whenever a new batch
@@ -332,10 +356,10 @@ onMounted(loadPluginStatus);
     <section id="manual-trays">
       <h2><AppIcon name="palette" :size="17"/>Concept tray and image tray</h2>
       <p>
-        The two trays are lasting collections, stored on the {{ HOST_NAME }} server, so they survive restarts.
+        The two trays are permanent collections, stored on the {{ HOST_NAME }} server, so they survive restarts.
         One way to use them: let the <b>concept tray</b> gather promising ideas — compositions, prompts, seeds
         to return to — and the <b>image tray</b> the images you mean to finish by upscaling, refining or editing
-        them in Photoshop. The same buttons move images from one tray to the other.
+        them in Photoshop. The same buttons copy images from one tray to the other.
       </p>
       <p>Both trays offer:</p>
       <ul>
@@ -352,6 +376,19 @@ onMounted(loadPluginStatus);
           file; <b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (parameters
           included) or a saved tray.</li>
       </ul>
+      <div class="note warn">
+        <AppIcon name="alert" :size="15"/>
+        <div>
+          <b>Re-generating an image uses the current parameters.</b> Buttons that make an image again —
+          <template v-if="isWebUI">upscale, upscale with denoising, </template>generate with steps — take only
+          the seed from the image (along with its variation seed, and the steps or denoising strength being
+          varied). The prompt, checkpoint, LoRAs, sampler, size and everything else come from what is currently
+          set in {{ HOST_NAME }}. Before using these buttons, bring {{ HOST_NAME }} in line with the image:
+          middle-click its <AppIcon name="seed" :size="13" class="inline-icon"/> button to reuse all of its
+          parameters.<template v-if="isWebUI"> An image whose prompt differs from the current txt2img prompt
+          carries the <AppIcon name="alert" :size="13" class="inline-icon"/> badge as a reminder.</template>
+        </div>
+      </div>
     </section>
 
     <section v-if="isWebUI" id="manual-upscaled">
@@ -384,26 +421,60 @@ onMounted(loadPluginStatus);
         in a new browser tab.
       </p>
       <p>
-        Images can be dragged into the input, reference and ControlNet panes. An image marked with
-        <AppIcon name="alert" :size="13" class="inline-icon"/> was made with a prompt that differs from the
-        current one.
+        Images can be dragged into the input, reference and ControlNet panes.<template v-if="isWebUI"> A txt2img
+          image marked with <AppIcon name="alert" :size="13" class="inline-icon"/> was made with a prompt or
+          negative prompt that differs from the current txt2img one.</template>
       </p>
     </section>
 
     <section id="manual-settings">
       <h2><AppIcon name="settings" :size="17"/>Settings and actions</h2>
-      <p>
-        <b>Settings</b> covers the accent color, the clearing of generated images,
-        <template v-if="isWebUI">the UI preset buttons and count button of the Generate tab, </template>
-        LoRA-free images in exploration and the Civitai domain<template v-if="isWebUI">, along with options for
-          the WebUI page itself: the Civitai info button, the Config Presets dropdown, and keeping prompts across
-          WebUI reloads</template>.
-      </p>
+      <p>The <b>Settings</b> tab holds the following options, which are saved on the {{ HOST_NAME }} server:</p>
+      <ul>
+        <li><b>Accent color</b> — the highlight color of the window: buttons, active tabs, selections.</li>
+        <li><b>Automatically clear generated images</b> — empties the Generated tab whenever a new batch starts
+          (and the Upscaled tab whenever a new upscale starts), so that it shows only the latest run. Turn it off
+          to let the images of successive runs accumulate.</li>
+        <template v-if="isWebUI">
+          <li><b>UI preset buttons</b> — which Forge UI presets the buttons of the Generate tab switch to. The
+            other presets remain available in the menu next to them.</li>
+          <li><b>Images set by the count button</b> — the number of images the count button of the Generate and
+            Generated tabs sets in one click. WebUI allows at most 100 images per batch; to go beyond that, raise
+            <code>"txt2img/Batch count/maximum"</code> and <code>"img2img/Batch count/maximum"</code> in
+            <code>ui-config.json</code> in the WebUI folder, then restart WebUI.</li>
+        </template>
+        <li><b>Generate LoRA-free images for each model when exploring LoRAs</b> — adds an image without any LoRA
+          to each model in Explore, as a baseline to compare the LoRAs against.</li>
+        <li v-if="isWebUI"><b>Add 'Civitai Model Info' settings button</b> — adds an ℹ️ button next to the
+          checkpoint list of the WebUI page, which opens the Civitai page of the selected checkpoint. It appears
+          or disappears when you return to the WebUI window.</li>
+        <li><b>Open models on</b> — the Civitai site that model pages open on: civitai.com, or civitai.red.</li>
+        <template v-if="isWebUI">
+          <li><b>Bring up the dropdown of the 'Config Presets' extension</b> — moves the preset dropdown of that
+            extension to the top of the results area of txt2img and img2img, where it is easier to reach.
+            It takes effect when the WebUI page is reloaded.</li>
+          <li><b>Remember prompts and generation parameters across WebUI reloads</b> — saves the prompts and
+            parameters of txt2img and img2img in the browser each time a generation starts, and puts them back
+            when the WebUI page is reloaded.</li>
+        </template>
+      </ul>
       <p>
         The <AppIcon name="more" :size="13" class="inline-icon"/> button at the right end of the tab bar opens the
-        maintenance actions: deleting the generated images, clearing all images and trays from the window, and
-        deleting every file in the Image Bench output folder.
+        maintenance actions. Each one asks for confirmation first; the ☢️ signs show how much it destroys:
       </p>
+      <ul>
+        <li><b>Delete generated images (keep tray images)</b> — permanently deletes every file and folder in the
+          {{ HOST_NAME }} output folder except the <code>image-bench</code> folder, which holds the tray images.
+          Use it to reclaim disk space while keeping the trays intact.</li>
+        <li><b>Clear all images and trays (UI only)</b> — removes all images from the window and empties both
+          trays. The image files themselves stay on disk.</li>
+        <li><b>Clear outputs (delete all files)</b> — does both of the above and deletes the
+          <code>image-bench</code> folder too: the whole output folder is emptied, tray images included. This
+          cannot be undone.</li>
+        <li v-if="isWebUI"><b>Clear saved generation parameters</b> — forgets the prompts and parameters saved by
+          "Remember prompts and generation parameters across WebUI reloads", so that nothing is restored at the
+          next reload.</li>
+      </ul>
     </section>
 
     <section id="manual-photoshop">
@@ -438,8 +509,7 @@ onMounted(loadPluginStatus);
             Creative Cloud app.</li>
           <li>Either way, restart Photoshop afterwards.</li>
           <li>The plugin is not signed by Adobe. If it is missing from the <b>Plugins</b> menu after the restart,
-            turn on <b>Preferences › Plugins › Enable Developer Mode</b> in Photoshop and restart it once more
-            (or run <code>just ps-enable</code> from an elevated shell in the repository).</li>
+            turn on <b>Preferences › Plugins › Enable Developer Mode</b> in Photoshop and restart it once more .</li>
         </ul>
       </div>
 
@@ -448,9 +518,10 @@ onMounted(loadPluginStatus);
         <li>In Photoshop, open <b>Plugins › Image Bench › Image Bench</b> and dock the panel.</li>
         <li>Enter the address of {{ HOST_NAME }} in the panel. The default is
           <code>{{ isComfy ? "http://127.0.0.1:8188" : "http://127.0.0.1:7860" }}</code>; this page is served from
-          <code>{{ hostOrigin }}</code>. The plugin talks to one host at a time.</li>
-        <li>The panel shows whether it is connected. Once connected, the plugin stays connected for as long as
-          Photoshop runs.</li>
+          <code>{{ hostOrigin }}</code>, and press Enter. The plugin talks to one host at a time.</li>
+        <li>The button next to the address shows the connection state (<b>Connected</b>, <b>Connecting...</b> or
+          <b>Reconnect</b>, with a green, orange or red dot) and reconnects when clicked. Once connected, the plugin
+          stays connected for as long as Photoshop runs.</li>
       </ol>
 
       <h3>Photoshop → {{ HOST_NAME }}</h3>
@@ -478,8 +549,9 @@ onMounted(loadPluginStatus);
       <h3>{{ HOST_NAME }} → Photoshop</h3>
       <p>
         The <AppIcon name="external" :size="13" class="inline-icon"/> <b>Send to Photoshop</b> button of any image,
-        like <b>To Photoshop</b> in the ControlNet preview, places the image as a new layer of the active document.
-        Middle-click it to open the image as a new document instead.
+        like <b>To Photoshop</b> in the ControlNet panes, places the image as a new layer of the active document.
+        Middle-click it to open the image as a new document instead. The layer is rasterized, so its pixels can be
+        edited directly; check <b>Place as smart objects</b> in the plugin panel to keep it a smart object instead.
       </p>
     </section>
 
@@ -554,9 +626,9 @@ onMounted(loadPluginStatus);
         <dd>Restart Photoshop after installing. If the plugin is still missing, enable Developer Mode under
           Preferences › Plugins and restart Photoshop again (see
           <a href="#" @click.prevent="scrollTo('photoshop')">Photoshop</a>).</dd>
-        <dt>The Photoshop panel shows "disconnected"</dt>
-        <dd>Check the address in the panel, and that {{ HOST_NAME }} is running. The plugin reconnects on its
-          own.</dd>
+        <dt>The Photoshop panel shows "Reconnect" with a red dot</dt>
+        <dd>Check the address in the panel, and that {{ HOST_NAME }} is running. The plugin retries every 5 seconds
+          on its own; click <b>Reconnect</b> to retry at once.</dd>
         <dt>Model exploration was aborted</dt>
         <dd>Parameters were changed in {{ HOST_NAME }} during the run<template v-if="isWebUI"> (by "Send to
           txt2img", for example)</template>. Start the exploration again.</dd>
@@ -759,6 +831,20 @@ dd {
 .note .app-icon {
   margin-top: 3px;
   color: var(--ib-accent);
+}
+
+.note.warn {
+  border-color: color-mix(in srgb, var(--ib-warn) 40%, transparent);
+  background: color-mix(in srgb, var(--ib-warn) 10%, transparent);
+}
+
+.note.warn > .app-icon {
+  color: var(--ib-warn);
+}
+
+.note .inline-icon {
+  margin-top: 0;
+  color: inherit;
 }
 
 .plugin-card {
