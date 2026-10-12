@@ -170,6 +170,10 @@ export const SELECTORS = {
     DROPDOWN_LIST: 'ul',
     DROPDOWN_OPTION: 'li',
 
+    // Header of a Gradio accordion, a child of the accordion block; it has the "open" class while expanded
+    ACCORDION_LABEL_WRAP: '.label-wrap',
+    ACCORDION_OPEN_CLASS: 'open',
+
     // Forge detection
     FORGE_INDICATOR: '[id^="forge"]',
 

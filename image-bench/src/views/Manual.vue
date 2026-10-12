@@ -463,7 +463,7 @@ onMounted(loadPluginStatus);
             It takes effect when the WebUI page is reloaded.</li>
           <li><b>Remember prompts and generation parameters across WebUI reloads</b> — saves the prompts and
             parameters of txt2img and img2img in the browser each time a generation starts, and puts them back
-            when the WebUI page is reloaded.</li>
+            when the WebUI page is reloaded. The seed and the variation seed are not remembered.</li>
         </template>
       </ul>
       <p>

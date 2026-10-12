@@ -141,6 +141,55 @@ export class SDWebuiAdapter extends DOMAdapter {
             return;
         }
 
+        // A dropdown in a collapsed accordion (e.g. Hires. fix) cannot be focused, so its option list never opens
+        const opened = element.getClientRects().length ? [] : this.openEnclosingAccordions(element);
+
+        if (opened.length) {
+            await this.sleep(100);
+        }
+
+        try {
+            await this.selectDropdownOption(element, value, exact);
+        } finally {
+            if (opened.length) {
+                // Let Gradio take the chosen option before the accordion is collapsed again
+                await this.sleep(100);
+                opened.reverse().forEach(labelWrap => labelWrap.click());
+            }
+        }
+    }
+
+    /**
+     * Expand the collapsed accordions that hide an element.
+     * Expanding the InputAccordion of Hires. fix also checks it while it is linked to its checkbox;
+     * collapsing it again unchecks it, so the state is kept
+     * @param {HTMLElement} element
+     * @returns {HTMLElement[]} Headers of the expanded accordions, innermost first, to collapse them again
+     */
+    openEnclosingAccordions(element) {
+        const opened = [];
+
+        for (let node = element.parentElement; node; node = node.parentElement) {
+            const labelWrap = Array.from(node.children).find(child =>
+                child.matches(SELECTORS.ACCORDION_LABEL_WRAP) && !child.contains(element));
+
+            if (labelWrap && !labelWrap.classList.contains(SELECTORS.ACCORDION_OPEN_CLASS)) {
+                labelWrap.click();
+                opened.push(labelWrap);
+            }
+        }
+
+        return opened;
+    }
+
+    /**
+     * Open the option list of a dropdown and choose the option of a value
+     * @param {HTMLInputElement} element
+     * @param {string} value
+     * @param {boolean} exact
+     * @returns {Promise<void>}
+     */
+    async selectDropdownOption(element, value, exact) {
         element.value = value;
 
         const focusEvent = new Event('focus', { bubbles: true, cancelable: true });

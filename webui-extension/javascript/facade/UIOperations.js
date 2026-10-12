@@ -34,6 +34,16 @@ const TAB_PARAM_SELECTORS = {
 
 const TAB_DROPDOWN_PARAMS = ['sampler', 'scheduler'];
 
+// Captured tab parameters not remembered across WebUI reloads: the seed and the variation seed
+const NOT_REMEMBERED_PARAMS = ['seed', 'subseed'];
+
+/**
+ * @param {Object|undefined} params - Tab parameters captured by captureTabParams()
+ * @returns {Object|undefined} The parameters without those not remembered across reloads
+ */
+const withoutUnremembered = params => params && Object.fromEntries(Object.entries(params)
+    .filter(([name]) => !NOT_REMEMBERED_PARAMS.includes(name)));
+
 const isSet = value => value !== undefined && value !== null;
 
 export class UIOperations {
@@ -546,7 +556,7 @@ export class UIOperations {
 
     /**
      * Capture txt2img and img2img prompts and parameters to be restored after a WebUI reload
-     * Model, VAE and clip skip are omitted, as WebUI persists them in its settings
+     * Model, VAE and clip skip are omitted, as WebUI persists them in its settings; the seeds are not remembered
      * @returns {Object} { uiPreset, txt2img, img2img }
      */
     captureUiParams() {
@@ -555,13 +565,13 @@ export class UIOperations {
         return {
             uiPreset: this.adapter.getInputValue('FORGE_UI_PRESET'),
             txt2img: {
-                ...this.captureTabParams('TXT2IMG'),
+                ...withoutUnremembered(this.captureTabParams('TXT2IMG')),
                 hiresFix: hires.hiresFix,
                 hiresScale: hires.scale,
                 hiresSteps: hires.steps,
                 hiresUpscaler: hires.upscaler
             },
-            img2img: this.captureTabParams('IMG2IMG')
+            img2img: withoutUnremembered(this.captureTabParams('IMG2IMG'))
         };
     }
 
@@ -601,8 +611,9 @@ export class UIOperations {
             await this.setUiPreset(params.uiPreset);
         }
 
-        await this.applyTabParams('TXT2IMG', params.txt2img);
-        await this.applyTabParams('IMG2IMG', params.img2img);
+        // Parameters saved by earlier versions may still hold the seeds
+        await this.applyTabParams('TXT2IMG', withoutUnremembered(params.txt2img));
+        await this.applyTabParams('IMG2IMG', withoutUnremembered(params.img2img));
 
         await this.applyHiresParams({
             hiresFix: params.txt2img?.hiresFix,
