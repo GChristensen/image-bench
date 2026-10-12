@@ -231,20 +231,24 @@ onMounted(loadPluginStatus);
           cursor.</li>
         <li><b>Checkpoint.</b> The <AppIcon name="info" :size="13" class="inline-icon"/> button next to it opens
           the model's Civitai page.</li>
-        <li><b>LoRA list.</b> Checking a LoRA adds its <code>&lt;lora:name:weight&gt;</code> tag, along with any
+        <li><b>LoRA list.</b> The field above it filters the list. Checking a LoRA adds its <code>&lt;lora:name:weight&gt;</code> tag, along with any
           activation text, to the prompt; unchecking it removes them. A LoRA stays checked for as long as its tag
           is in the prompt.
           <span v-if="isComfy">In ComfyUI this requires the <b>Image Bench Prompt</b> node (see
             <a href="#" @click.prevent="scrollTo('comfy-setup')">ComfyUI setup</a>).</span></li>
         <li><b>References</b> (beside the LoRA list) — the reference images of edit models such as Flux Kontext /
-          Klein or Qwen Image Edit. Drop, paste or browse for images, or drag them in from the image lists. The
+          Klein or Qwen Image Edit. Drop, paste or browse for images, or drag them in from the image lists.
+          <span v-if="isWebUI">The <b>Edit</b> switch in the header turns editing with the references on or off for
+            the current model (it is the WebUI setting of that model family); <b>Use</b> passes the images to the
+            model, and <b>Max side</b> limits their size (0 for no limit).</span>
+          <AppIcon name="trash" :size="13" class="inline-icon"/> removes all references. The
           <span class="kbd">Ps</span> <b>sends to</b> option decides whether an image arriving from Photoshop
           becomes the input image or a new reference.</li>
         <li><b>Sampling, Seed and Hires. fix</b> groups. A seed of −1 means a random seed; the reuse button takes
           the seed of the image shown in the Result pane.</li>
         <li><b>Session filmstrip</b> — the tabs at the right edge of the parameter groups switch between the
           <b>Parameters</b> and the <b>Session</b> filmstrip: the last 265 images generated while the popup is open,
-          each batch set apart. It appears by itself while a batch of more than one image runs, and hides when the
+          each batch set apart. The chevron above the tabs hides the parameter groups and the filmstrip. The filmstrip appears by itself while a batch of more than one image runs, and hides when the
           batch ends, unless you have scrolled or clicked it meanwhile (or the pointer is over it). Click an image to
           open it (<span class="kbd">←</span> / <span class="kbd">→</span> move the open image through the session); middle-click it to show it in the Result pane (middle-click it again to return to the latest image);
           right-click, the action keys and dragging to the trays work as on the image cards.</li>
@@ -256,12 +260,16 @@ onMounted(loadPluginStatus);
           load node is marked <code>ib:img</code>, and inpaint when a mask loader is marked <code>ib:mask</code>
           as well.</li>
         <li><b>Result, Input and Mask</b> panes. Upload, drop or paste an input image or an img2img mask onto its pane.
-          In a wide window the image has a column of its own that fits the image size; otherwise it is below the
+          The buttons of the Input pane also resize the generation to the size of the input image and show the
+          mask over it. In a wide window the image has a column of its own that fits the image size; otherwise it is below the
           LoRA list and fits the column width. Drag the grips to resize the negative prompt, the parameters and the filmstrip, the LoRA column, the
           image column or the image; double-click a grip to restore the automatic size.</li>
         <li><b>Generate</b> — makes one image and shows it with a live preview. Ask for more than one image (or
           for <AppIcon name="infinity" :size="13" class="inline-icon"/>), and the batch runs in the Generated tab
-          instead; clicking the <b>×</b> before the count resets it to 1. <b>Skip</b> abandons the current image; <b>Stop</b> ends the batch.</li>
+          instead; clicking the <b>×</b> before the count resets it to 1, and the button after it sets the count
+          chosen in Settings. While generating, <b>Generate</b> turns into <b>Stop</b>, which ends the
+          batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b> abandons the current
+          image.</li>
         <li v-if="isWebUI"><b>UI preset buttons</b> — switch the Forge UI preset (sd, xl, flux, ...); Settings
           decides which presets they offer. <b><AppIcon name="lock" :size="13" class="inline-icon"/> Prompt
           lock</b> covers the prompts in WebUI, so that they can only be edited here.</li>
@@ -294,19 +302,36 @@ onMounted(loadPluginStatus);
           shown; the toolbar switches between txt2img and img2img.</template>
         <template v-else>Unit N is the ControlNet apply node titled <code>ib:cn:N</code>.</template>
       </p>
+      <p>
+        The <b>Unit</b> buttons of the toolbar choose the unit; a dot marks the enabled ones. The unit chosen here
+        also receives the images sent with <b>Send to ControlNet</b> and the ControlNet commands of the Photoshop
+        plugin.
+      </p>
       <p>Each unit has the following controls:</p>
       <ul>
         <li><b>Enable</b>, <b>model</b>, <b>weight</b>, and the <b>starting and ending steps</b>.</li>
+        <li v-if="isWebUI"><b>Control type</b> — as in WebUI, it narrows the preprocessors and lists only the models
+          whose file names match it. <b>Refresh models</b> reloads the model list and shows all models, until the
+          control type changes. <b>Control mode</b> and <b>Resize mode</b> are those of WebUI.</li>
+        <li v-else><b>Refresh models</b> reloads the list of ControlNet models. The model is the loader connected
+          to the apply node, and <b>Enable</b> bypasses the unit's nodes.</li>
         <li><b>Source</b> pane — the control image. Drop, paste or browse for it, or click
           <AppIcon name="controlnet" :size="13" class="inline-icon"/> <b>Send to ControlNet</b> on any image in
           the lists to send it to the unit selected here. <b>To Photoshop</b> sends the shown control image or mask
           to Photoshop.</li>
         <li><b>Preprocessor</b> and <b>Run preprocessor</b> — the result appears in the <b>Preview</b> pane,
-          from where <b>To Photoshop</b> passes it on. <b>Pixel Perfect</b> derives the preprocessor resolution
+          from where <b>To Photoshop</b> passes it on (middle-click: as a new document); its other buttons copy,
+          save and clear the preview. <b>Pixel Perfect</b> derives the preprocessor resolution
           from the image and the generation size.
-          <span v-if="isComfy">Preprocessors require the comfyui_controlnet_aux node pack.</span></li>
-        <li><b>Use Mask</b> — restricts the unit to the masked area.
-          <span v-if="isComfy">This requires an Advanced-ControlNet apply node.</span></li>
+          <span v-if="isWebUI">Pixel Perfect and <b>Allow Preview</b> are checked for you the first time a unit is
+            used after the WebUI page is loaded.</span>
+          <span v-if="isComfy">Preprocessors require the comfyui_controlnet_aux node pack; without it the
+            preprocessor controls are hidden.</span></li>
+        <li><b>Use Mask</b> — restricts the unit to the masked area. The <b>Source</b> / <b>Mask</b> switch of the
+          pane then shows the mask (ControlNet applies where it is white), which is uploaded, dropped or pasted
+          like the control image.
+          <span v-if="isComfy">This requires an Advanced-ControlNet apply node; unchecking it bypasses the mask
+            loader.</span></li>
         <li v-if="isWebUI"><b>Upload independent control image</b> — in img2img, this is checked for you as soon
           as you set an image, because WebUI would otherwise use the img2img image.</li>
       </ul>
@@ -331,7 +356,10 @@ onMounted(loadPluginStatus);
           focused model) — the sampler, schedule type, steps, CFG, distilled CFG or shift to use with that model,
           since different model families need different settings. LoRAs have their own settings: weight and extra
           text (activation words).</li>
-        <li><b>Presets</b> — save the checked models or LoRAs under a name, such as "SDXL anime" or "Flux".</li>
+        <li><b>Presets</b> — save the checked models or LoRAs under a name, such as "SDXL anime" or "Flux". Choose a
+          preset to check its items, <AppIcon name="save" :size="13" class="inline-icon"/> saves the checked items
+          to it, and the menu next to it creates or deletes presets. <b>Clear</b> above the list unchecks all
+          items.</li>
         <li><b>LoRA-free images</b> — when LoRAs are checked, each model also gets an image without them for
           comparison. The corresponding setting on the Settings tab can turn this off.<span v-if="isComfy"> In ComfyUI, exploring LoRAs requires a
             LoRA loader titled <code>ib:lora</code>.</span></li>
@@ -340,8 +368,11 @@ onMounted(loadPluginStatus);
           model, a column per LoRA (plus the LoRA-free column). Back in By model, the number of images is 3 again.</li>
         <li><b>Save results</b> stores the whole comparison as a single HTML page; <b>Clear results</b> empties
           the tab.</li>
-        <li>The <AppIcon name="info" :size="13" class="inline-icon"/> button opens the Civitai page of the focused
-          model or LoRA.</li>
+        <li>The <AppIcon name="info" :size="13" class="inline-icon"/> button shows the Civitai information of the
+          focused model or LoRA: preview, version, base model and trained words, with buttons to open its Civitai
+          page and, for a LoRA, to use the trained words as its activation text. A model Civitai does not know
+          can be searched for by name. The first lookup of a model takes a while, since its file is hashed; see
+          <a href="#" @click.prevent="scrollTo('troubleshooting')">Troubleshooting</a> to refresh it.</li>
       </ul>
     </section>
 
@@ -378,7 +409,8 @@ onMounted(loadPluginStatus);
         dragging it onto the <b>Compare</b> tab, from files with <AppIcon name="upload" :size="13"
         class="inline-icon"/>, or from Photoshop with the plugin's <b>Compare</b> button. Like the trays, the tab
         keeps its images across restarts (in the <code>image-bench/compare</code> folder of the outputs directory),
-        and <AppIcon name="download" :size="13" class="inline-icon"/> downloads them as a .zip.
+        <AppIcon name="download" :size="13" class="inline-icon"/> downloads them as a .zip, and <b>Clear</b> removes
+        them all from the tab (the files stay on disk).
       </p>
       <ul>
         <li><b>Layout</b> — the images follow each other, separated by a thin line whose color the swatch button
@@ -395,11 +427,12 @@ onMounted(loadPluginStatus);
           <span class="kbd">R</span>) and drag on any image to select a rectangle, which then appears on every
           image at the same relative position. Drag inside it to move it and its handles to resize it. The menu next
           to the button fixes its aspect ratio; <span class="kbd">Shift</span> while dragging keeps the current
-          one.</li>
+          one; the <AppIcon name="close" :size="13" class="inline-icon"/> next to the menu removes the region. The region,
+          its aspect ratio and the separator color are remembered.</li>
         <li><b>Crops</b> (key <span class="kbd">X</span>) — shows only the region of every image, packed as large
           as the window allows. <AppIcon name="save" :size="13" class="inline-icon"/> saves the crops as one PNG at
-          their native resolution, and <AppIcon name="external" :size="13" class="inline-icon"/> sends that image to
-          Photoshop.</li>
+          their native resolution, and <AppIcon name="external" :size="13" class="inline-icon"/> opens that image in
+          Photoshop as a new document.</li>
         <li><b>Image actions</b> — hovering over an image shows its buttons (reuse seed, parameters, ControlNet,
           Photoshop, the trays, a comment shown below the buttons), a marking badge and <AppIcon name="close" :size="13" class="inline-icon"/>, which
           removes it from the tab (the file stays on disk). Middle-click or Shift+click an image to view it large;
@@ -486,7 +519,8 @@ onMounted(loadPluginStatus);
           or <span class="kbd">Shift</span>+<span class="kbd">S</span> reuses all the parameters (prompt, sampler,
           size, ...) in {{ HOST_NAME }}.</td></tr>
         <tr><td><AppIcon name="params" :size="14"/></td><td><span class="kbd">I</span> Shows the generation
-          parameters.</td></tr>
+          parameters, with buttons that show the Civitai information of the checkpoint and LoRAs of the image,
+          and the ControlNet images it was made with.</td></tr>
         <tr><td><AppIcon name="comment" :size="14"/></td><td><span class="kbd">C</span> Comments the image
           (trays, Compare).</td></tr>
         <tr><td><AppIcon name="steps" :size="14"/></td><td><span class="kbd">G</span> Generates the image with a
@@ -673,7 +707,9 @@ onMounted(loadPluginStatus);
         <tr><td><code>ib:cp</code></td><td>Checkpoint / UNET loader</td><td>Checkpoint list, model exploration</td></tr>
         <tr><td><code>ib:pp</code></td><td>Positive prompt (Image Bench Prompt, CLIPTextEncode, ...)</td><td>Prompt, LoRA list</td></tr>
         <tr><td><code>ib:np</code></td><td>Negative prompt</td><td>Negative prompt</td></tr>
-        <tr><td><code>ib:smp</code></td><td>KSampler or SamplerCustomAdvanced</td><td>Seed, steps, CFG, sampler, size, ...</td></tr>
+        <tr><td><code>ib:smp</code></td><td>KSampler or SamplerCustomAdvanced</td><td>Seed, steps, CFG, sampler, size, ...
+          (also found in the nodes connected to the sampler: RandomNoise, BasicScheduler, CFGGuider, FluxGuidance,
+          ModelSampling, the empty latent)</td></tr>
         <tr><td><code>ib:smp:1</code></td><td>Second-pass sampler</td><td>Hires. fix group</td></tr>
         <tr><td><code>ib:lora</code></td><td>LoraLoader</td><td>LoRA exploration</td></tr>
         <tr><td><code>ib:img</code> / <code>ib:mask</code></td><td>LoadImage / LoadImageMask</td><td>img2img, inpaint, images from Photoshop</td></tr>
@@ -743,6 +779,9 @@ onMounted(loadPluginStatus);
         <dt>The Photoshop panel shows "Reconnect" with a red dot</dt>
         <dd>Check the address in the panel, and that {{ HOST_NAME }} is running. The plugin retries every 5 seconds
           on its own; click <b>Reconnect</b> to retry at once.</dd>
+        <dt>The Civitai information of a model is outdated</dt>
+        <dd>Found models are stored in the <code>store/civitai</code> folder of the extension, one file per model
+          hash. Delete the file of the model (or the whole folder) to look it up again.</dd>
         <dt>Model exploration was aborted</dt>
         <dd>Parameters were changed in {{ HOST_NAME }} during the run<template v-if="isWebUI"> (by "Send to
           txt2img", for example)</template>. Start the exploration again.</dd>
