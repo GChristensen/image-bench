@@ -290,6 +290,22 @@ onBeforeMount(async () => {
   await Promise.all([loadChoices(), loadLoras()]);
 });
 
+const refreshing = ref(false);
+
+// Rescan the checkpoints and LoRAs in the host (its own lists are refreshed by the host page), then list them again
+async function refreshModels() {
+  refreshing.value = true;
+
+  try {
+    webUI.refreshModels();
+    await fetch("/image-bench/refresh_models", {method: "post"});
+    await Promise.all([loadChoices(), loadLoras()]);
+  }
+  finally {
+    refreshing.value = false;
+  }
+}
+
 // ---------- Generation ----------
 
 const generateImagesNumber = ref(1);
@@ -850,8 +866,13 @@ const gridStyle = computed(() => ({
           <span class="label-small">LoRA</span>
           <span v-if="selectedLoras.size" class="count" title="LoRAs in the prompt">{{ selectedLoras.size }}</span>
         </template>
-        <input v-if="shownSideTab === 'lora'" v-model="loraFilter" class="filter" type="search" placeholder="Filter…"
-               aria-label="Filter LoRAs">
+        <template v-if="shownSideTab === 'lora'">
+          <input v-model="loraFilter" class="filter" type="search" placeholder="Filter…" aria-label="Filter LoRAs">
+          <button type="button" class="ib" :class="{busy: refreshing}" :disabled="refreshing"
+                  title="Refresh the checkpoints and LoRAs" aria-label="Refresh the checkpoints and LoRAs"
+                  @click="refreshModels"
+            ><span v-if="refreshing" class="spinner"></span><AppIcon v-else name="refresh" :size="13"/></button>
+        </template>
         <template v-else>
           <span class="spacer"></span>
           <button v-if="references.edit !== null" type="button" class="edit-switch" role="switch"

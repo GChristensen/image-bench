@@ -110,6 +110,8 @@ export const SELECTORS = {
     // Model/VAE/Settings
     MODEL_CHECKPOINT: '#setting_sd_model_checkpoint input, .model_selection input',
     MODEL_REFRESH_BUTTON: '#refresh_sd_model_checkpoint, #forge_refresh_checkpoint',
+    // Hidden buttons clicked by the Refresh buttons of the LoRA extra networks pages, they rescan the LoRAs
+    LORA_REFRESH_BUTTON: '#txt2img_lora_extra_refresh_internal, #img2img_lora_extra_refresh_internal',
     SD_VAE: '#setting_sd_vae input',
     CLIP_SKIP: '#setting_CLIP_stop_at_last_layers input',
     FORGE_UI_PRESET: '#forge_ui_preset input',

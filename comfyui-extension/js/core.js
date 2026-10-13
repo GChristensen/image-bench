@@ -467,6 +467,8 @@ function handlePostMessage(event) {
         handleGenerateVaryingSteps(payload);
     else if (type === "UPSCALE_VARYING_DENOISING")
         handleUpscaleVaryingDenoising(payload);
+    else if (type === "REFRESH_MODELS")
+        app.refreshComboInNodes();  // As ComfyUI's own Refresh, the loader nodes list the new models
 }
 
 /**

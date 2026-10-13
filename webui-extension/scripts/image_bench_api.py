@@ -98,6 +98,7 @@ class ImageBenchApi():
         self.add_api_route("/models", self.get_models, methods=["GET"])
         self.add_api_route("/samplers", self.get_samplers, methods=["GET"])
         self.add_api_route("/loras", self.get_loras, methods=["GET"])
+        self.add_api_route("/refresh_models", self.refresh_models, methods=["POST"])
         self.add_api_route("/webui_options", self.get_webui_options, methods=["GET"])
         self.add_api_route("/webui_options", self.write_webui_options, methods=["POST"])
         self.add_api_route("/controlnet/choices", self.get_controlnet_choices, methods=["GET"])
@@ -448,6 +449,16 @@ class ImageBenchApi():
                 "filename": model.filename
             })
         return JSONResponse(jsonable_encoder(models_list))
+
+    def refresh_models(self):
+        """Rescan the checkpoints and LoRAs (as /sdapi/v1/refresh-checkpoints and refresh-loras, which need --api)"""
+        sd_models.list_models()
+
+        networks = sys.modules.get("networks")  # Module of the built-in sd_forge_lora extension
+        if networks is not None:
+            networks.list_available_networks()
+
+        return JSONResponse({})
 
     def get_samplers(self):
         """Get lists of available samplers and schedulers"""

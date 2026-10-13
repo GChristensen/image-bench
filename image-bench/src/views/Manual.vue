@@ -231,7 +231,8 @@ onMounted(loadPluginStatus);
           cursor.</li>
         <li><b>Checkpoint.</b> The <AppIcon name="info" :size="13" class="inline-icon"/> button next to it opens
           the model's Civitai page.</li>
-        <li><b>LoRA list.</b> The field above it filters the list. Checking a LoRA adds its <code>&lt;lora:name:weight&gt;</code> tag, along with any
+        <li><b>LoRA list.</b> The field above it filters the list. The <AppIcon name="refresh" :size="13"/> button
+          beside it rescans the checkpoints and LoRAs, here and in {{ HOST_NAME }}, after models were added. Checking a LoRA adds its <code>&lt;lora:name:weight&gt;</code> tag, along with any
           activation text, to the prompt; unchecking it removes them. A LoRA stays checked for as long as its tag
           is in the prompt.
           <span v-if="isComfy">In ComfyUI this requires the <b>Image Bench Prompt</b> node (see

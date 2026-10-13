@@ -82,6 +82,11 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'MIRROR_SUBSCRIBE', active });
   };
 
+  // Refresh the checkpoint and LoRA lists of the host UI
+  const refreshModels = () => {
+    sendWebUIMessage({ type: 'REFRESH_MODELS' });
+  };
+
   const setWebUIParams = (params) => {
     sendWebUIMessage({ type: 'SET_WEBUI_PARAMS', params });
   };
@@ -132,6 +137,7 @@ export function useWebUIBridge() {
     controlNetAction,
     setControlNetImage,
     setControlNetTab,
+    refreshModels,
     setWebUIParams,
     reuseSeed,
     lockWebUIPrompts,

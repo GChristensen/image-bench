@@ -217,6 +217,12 @@ async def get_models(request):
     return web.json_response(models_list)
 
 
+# The model lists need no rescan: folder_paths revalidates its cache by the folder modification times
+@PromptServer.instance.routes.post(BASE_PATH + "/refresh_models")
+async def refresh_models(request):
+    return web.json_response({})
+
+
 # Samplers endpoint
 @PromptServer.instance.routes.get(BASE_PATH + "/samplers")
 async def get_samplers(request):

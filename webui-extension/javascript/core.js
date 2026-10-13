@@ -294,6 +294,17 @@ async function onMessage(msg) {
         await controlNet.setUnitImage(payload.unit, payload.kind, payload.file)
     else if (payload.type === "SET_CONTROLNET_TAB")
         await controlNet.setTab(payload.tab)
+    else if (payload.type === "REFRESH_MODELS")
+        refreshModelLists()
+}
+
+/**
+ * Refresh the checkpoint dropdown and the LoRA cards of the extra networks pages, as their Refresh buttons do
+ */
+function refreshModelLists() {
+    document.querySelector(SELECTORS.MODEL_REFRESH_BUTTON)?.click();
+    document.querySelectorAll(SELECTORS.LORA_REFRESH_BUTTON)
+        .forEach(button => button.dispatchEvent(new Event("click")));
 }
 
 /**
