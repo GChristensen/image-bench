@@ -28,6 +28,7 @@ import SeedGroup from "@/components/generate/SeedGroup.vue";
 import HiresGroup from "@/components/generate/HiresGroup.vue";
 import Img2ImgGroup from "@/components/generate/Img2ImgGroup.vue";
 import SessionStrip from "@/components/generate/SessionStrip.vue";
+import PngInfoDialog from "@/components/generate/PngInfoDialog.vue";
 import {withCurrent} from "@/components/generate/choices.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
@@ -44,6 +45,7 @@ import {fetchModelInfo} from "@/civitai.js";
 import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
+import {imageFilesFromDataTransfer} from "@/imageFiles.js";
 
 // A value edited here is not overwritten by the polled WebUI value for this long,
 // which covers the send delay and the next poll
@@ -101,7 +103,8 @@ const has = useFeatures("generate", () => sdWebUI.features);
 // The WebUI parameters as edited here: prompt, negativePrompt, width, height, steps, cfg, shift, seed, subseed,
 // subseedStrength, sampler, scheduler, denoising, uiPreset, checkpoint, modules (VAE / Text Encoder file names,
 // null without the Forge Neo dropdown); txt2img: hiresUpscaler, hiresScale,
-// hiresSteps (denoising is that of hires. fix); img2img and inpaint: resizeMode, maskMode, inpaintArea, maskedContent
+// hiresSteps (denoising is that of hires. fix); img2img and inpaint: resizeMode, maskMode, inpaintArea, maskedContent.
+// hiresFix (txt2img) is only set (PNG Info), not reported
 const form = reactive({});
 const editedAt = {};
 let pending = {};
@@ -448,6 +451,64 @@ function clearPrompts() {
   setParams(has("negativePrompt") ? {prompt: "", negativePrompt: ""} : {prompt: ""});
 }
 
+// ---------- PNG Info ----------
+
+const pngInfo = ref(null);
+
+// Context of the parameter mapping (src/infotext.js)
+const pngInfoContext = computed(() => ({
+  has,
+  mode: mode.value,
+  sliderKind: sdWebUI.sliderKind,
+  checkpoints: checkpointChoices.value,
+  samplers: samplerChoices.value,
+  schedulers: schedulerChoices.value,
+  upscalers: sdWebUI.options.upscalers ?? [],
+  modules: hasModules.value ? modules.value : null
+}));
+
+function openPngInfo(file = null) {
+  pngInfo.value = {file};
+}
+
+/**
+ * Apply the image parameters chosen in PNG Info like edits; the Hires. fix checkbox is not a mirrored
+ * parameter, it follows them
+ * @param {Object} values - Generate tab parameters
+ */
+function onPngInfoApply({hiresFix, ...values}) {
+  pngInfo.value = null;
+
+  if (values.checkpoint === checkpointValue.value)
+    delete values.checkpoint;
+
+  setParams(values);
+  flushParams();
+
+  if (hiresFix !== undefined)
+    webUI.setWebUIParams({hiresFix});
+}
+
+// An image dropped on the prompt (a file or a card of the image lists) opens PNG Info; text is dropped as usual
+const isImageDrag = e => e.dataTransfer?.types.includes("Files") || e.dataTransfer?.types.includes("application/x-image-bench");
+
+function onPromptDragOver(e) {
+  if (isImageDrag(e))
+    e.preventDefault();
+}
+
+async function onPromptDrop(e) {
+  if (!isImageDrag(e))
+    return;
+
+  e.preventDefault();
+
+  const [file] = await imageFilesFromDataTransfer(e.dataTransfer);
+
+  if (file)
+    openPngInfo(file);
+}
+
 // ---------- Image ----------
 
 const latestImage = computed(() => {
@@ -545,7 +606,9 @@ function onKeydown(e) {
   if (e.key !== "Escape" && e.key !== "Esc")
     return;
 
-  if (showParamsOverlay.value)
+  if (pngInfo.value)
+    pngInfo.value = null;
+  else if (showParamsOverlay.value)
     showParamsOverlay.value = false;
   else if (showImageOverlay.value)
     showImageOverlay.value = false;
@@ -800,6 +863,8 @@ const gridStyle = computed(() => ({
                 @hide-overlay="showImageOverlay = false"/>
   <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage" :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
+  <PngInfoDialog v-if="pngInfo" :context="pngInfoContext" :file="pngInfo.file"
+                 @close="pngInfo = null" @apply="onPngInfoApply"/>
 
   <div class="view-container generate">
     <div class="toolbar">
@@ -830,6 +895,8 @@ const gridStyle = computed(() => ({
       <div class="toolbar-spacer"></div>
 
       <span v-if="!connected" class="chip">Waiting for {{ HOST_NAME }}…</span>
+      <button class="ib" :disabled="!connected" title="PNG Info: apply the generation parameters of an image (or drop an image on the prompt)"
+              aria-label="PNG Info" @click="openPngInfo()"><AppIcon name="fileSearch" :size="14"/></button>
       <button class="ib danger" :disabled="!connected" title="Clear the prompts" aria-label="Clear the prompts"
               @click="clearPrompts"><AppIcon name="eraser" :size="14"/></button>
       <button v-if="has('promptLock')" class="btn outline lock-button" :class="{on: sdWebUI.promptsLocked}" :aria-pressed="sdWebUI.promptsLocked"
@@ -914,7 +981,8 @@ const gridStyle = computed(() => ({
 
       <!-- Prompt and LoRAs -->
       <PromptField class="prompt" label="Prompt" :tokens="has('tokens') ? sdWebUI.tokens?.prompt : null"
-                   :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"/>
+                   :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"
+                   @dragover="onPromptDragOver" @drop="onPromptDrop"/>
 
       <!-- LoRAs or references with the image below them; wide, the image is in a column of its own -->
       <div class="side">

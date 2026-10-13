@@ -15,7 +15,7 @@ from server import PromptServer
 import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, explore_export, loras, persist, photoshop, photoshop_plugin
+from shared import civitai, explore_export, loras, persist, photoshop, photoshop_plugin, pnginfo
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
 from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
@@ -468,6 +468,18 @@ async def upload_compare(request):
         return web.json_response({"error": str(e)})
 
     return web.json_response(image)
+
+
+@PromptServer.instance.routes.post(BASE_PATH + "/png_info")
+async def png_info(request):
+    """Infotext and parameters of an uploaded image (PNG text, EXIF or comment)"""
+    reader = await request.multipart()
+    field = await reader.next()
+
+    if field is None:
+        return web.Response(text="No file provided", status=400)
+
+    return web.json_response(pnginfo.image_info(await field.read()))
 
 
 # WebSocket endpoint for real-time communication

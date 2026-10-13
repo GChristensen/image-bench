@@ -54,6 +54,11 @@ const IMG2IMG_RADIO_PARAMS = {
     maskedContent: 'IMG2IMG_MASKED_CONTENT_ID'
 };
 
+// Applied before the others: UI preset, checkpoint and VAE / Text Encoder
+const MODEL_PARAMS = ['uiPreset', 'checkpoint', 'modules'];
+
+const stripHash = title => String(title ?? '').replace(/ \[[^\]]+\]$/, '');
+
 /**
  * @param {UIOperations} uiOperations - WebUI operations facade
  * @param {SDWebuiAdapter} adapter - DOM adapter
@@ -265,15 +270,27 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
 
     async function doApplyParams(params) {
         const tab = tabOf(uiOperations.getGenerationMode());
+        // The UI preset resets the sampling parameters, which may come with it
+        const entries = Object.entries(params)
+            .sort(([a], [b]) => MODEL_PARAMS.includes(b) - MODEL_PARAMS.includes(a));
 
-        for (const [name, value] of Object.entries(params)) {
+        for (const [name, value] of entries) {
             if (value === undefined || value === null)
                 continue;
 
             if (name === 'uiPreset')
                 await uiOperations.setUiPreset(value);
-            else if (name === 'checkpoint')
+            else if (name === 'checkpoint') {
+                // Another checkpoint brings its UI preset, unless the preset is set too
+                if (!('uiPreset' in params) && stripHash(adapter.getInputValue('MODEL_CHECKPOINT')) !== stripHash(value))
+                    await uiOperations.applyUiPresetForModel(value);
+
                 await uiOperations.restoreModel(value);
+            }
+            else if (name === 'hiresFix') {
+                if (tab === 'TXT2IMG')
+                    adapter.toggleHiresFix(value, !value);
+            }
             else if (name === 'modules')
                 await uiOperations.setModules(value);
             else if (name in TAB_DROPDOWN_PARAMS)

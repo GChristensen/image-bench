@@ -278,6 +278,13 @@ onMounted(loadPluginStatus);
           decides which presets they offer. <b><AppIcon name="lock" :size="13" class="inline-icon"/> Prompt
           lock</b> covers the prompts in WebUI, so that they can only be edited here;
           <AppIcon name="eraser" :size="13" class="inline-icon"/> left of it clears the prompt and the negative prompt.</li>
+        <li><b><AppIcon name="fileSearch" :size="13" class="inline-icon"/> PNG Info</b> — shows the generation
+          parameters of an image chosen, dropped or pasted there (PNG, or the EXIF of a JPEG or WebP), and
+          <b>Apply</b> sets the checked groups in the shown mode: prompt, negative prompt, model<template
+          v-if="isWebUI"> (checkpoint with its UI preset, VAE / Text Encoder)</template>, sampling, size, seed and
+          Hires. fix (denoising in img2img). Values {{ HOST_NAME }} does not have, such as a missing checkpoint,
+          are listed and left out. Dropping an image or an image card on the prompt opens it too.<template
+          v-if="isComfy"> Only images with WebUI parameters are read; ComfyUI workflow images are not.</template></li>
         <li v-if="isWebUI"><b>VAE / Text Encoder</b> — the small button before the checkpoint list switches it
           with the VAE / Text Encoder list of Forge Neo, which has the same size. The icon shows what is shown:
           <AppIcon name="box" :size="13" class="inline-icon"/> the checkpoint,

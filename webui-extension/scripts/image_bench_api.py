@@ -30,6 +30,7 @@ from shared import explore_export
 from shared import loras
 from shared import photoshop
 from shared import photoshop_plugin
+from shared import pnginfo
 from shared import tray
 
 DEFAULT_CONFIG = """{
@@ -87,6 +88,7 @@ class ImageBenchApi():
         self.add_api_route("/compare", self.get_compare, methods=["GET"])
         self.add_api_route("/compare", self.write_compare, methods=["POST"])
         self.add_api_route("/compare_upload", self.compare_upload, methods=["POST"])
+        self.add_api_route("/png_info", self.png_info, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
         self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
@@ -407,6 +409,16 @@ class ImageBenchApi():
             return JSONResponse(content={"error": str(e)})
 
         return JSONResponse(content=image)
+
+    async def png_info(self, file: UploadFile):
+        """Infotext and parameters of an uploaded image, read as WebUI reads them (PNG text, EXIF, NovelAI)"""
+        def read_infotext(image):
+            try:
+                return webui_images.read_info_from_image(image)[0]
+            except Exception:
+                return pnginfo.read_infotext(image)
+
+        return JSONResponse(content=pnginfo.image_info(await file.read(), read_infotext))
 
     async def write_tray(self, request: Request, kind):
         tray_data = json.loads(await request.body())
