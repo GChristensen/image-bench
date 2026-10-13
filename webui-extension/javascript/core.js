@@ -262,7 +262,7 @@ async function onMessage(msg) {
         setImageSeed(payload)
     else if (payload.type === "SET_IMAGE_PARAMS")
         setImageParams(payload)
-    else if (payload.type === "GENERATE_VARYING_STEPS")
+    else if (payload.type === "GENERATE_VARYING_STEPS" || payload.type === "GENERATE_VARYING_MODULES")
         await handleGenerateVaryingSteps(payload)
     else if (payload.type === "UPSCALE_VARYING_DENOISING")
         await handleUpscaleVaryingDenoising(payload)

@@ -278,6 +278,14 @@ onMounted(loadPluginStatus);
           decides which presets they offer. <b><AppIcon name="lock" :size="13" class="inline-icon"/> Prompt
           lock</b> covers the prompts in WebUI, so that they can only be edited here;
           <AppIcon name="eraser" :size="13" class="inline-icon"/> left of it clears the prompt and the negative prompt.</li>
+        <li v-if="isWebUI"><b>VAE / Text Encoder</b> — the small button before the checkpoint list switches it
+          with the VAE / Text Encoder list of Forge Neo, which has the same size. The icon shows what is shown:
+          <AppIcon name="box" :size="13" class="inline-icon"/> the checkpoint,
+          <AppIcon name="puzzle" :size="13" class="inline-icon"/> the modules. The modules list checks VAE and text
+          encoder files and changes them in WebUI at once; the tooltip of the checkpoint list names the chosen
+          modules. Forge keeps the modules per UI preset, so switching the preset brings its own modules.
+          Reusing all parameters of an image, upscaling it and generating it with other steps choose the image's
+          modules as well, if its parameters name them (<code>Module 1</code>, ...) and the files exist.</li>
       </ul>
       <div v-if="isWebUI" class="note">
         <AppIcon name="info" :size="15"/>
@@ -475,6 +483,11 @@ onMounted(loadPluginStatus);
           view. <b>Clear</b> removes all images of the tray. The files stay on disk either way.</li>
         <li><b>Generate with steps</b> <AppIcon name="steps" :size="13" class="inline-icon"/> — asks for a list of
           step counts and generates the image again with each of them, in the Generated tab.</li>
+        <li v-if="isWebUI"><b>Generate with text encoders</b> <AppIcon name="puzzle" :size="13" class="inline-icon"/>
+          — lists the text encoder files, filtered by the name of the image's own encoder (which is checked), and
+          generates the image again with each checked one, its seed and other modules kept. If the image used
+          several encoders (CLIP-L and T5), the one whose name is most like the checked one is replaced. The
+          modules set before are restored afterwards.</li>
         <li v-if="isWebUI"><b>Upscale with denoising</b> <AppIcon name="denoise" :size="13" class="inline-icon"/>
           — asks for a list of denoising strengths and upscales the image with each of them. <b>Upscale
           selected</b>, shown in the toolbar next to it, upscales each of them.</li>

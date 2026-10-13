@@ -19,6 +19,8 @@ const WEBUI_FEATURES = {
     variations: true,
     variationSeed: true,
     uiPreset: true,
+    // VAE / Text Encoder dropdown of Forge Neo, switched with the checkpoint dropdown
+    modules: true,
     tokens: true,
     promptLock: true,
     img2imgOptions: true,
@@ -45,6 +47,7 @@ const COMFY_FEATURES = {
     variations: false,
     variationSeed: false,
     uiPreset: false,
+    modules: false,
     tokens: false,
     promptLock: false,
     img2imgOptions: false,

@@ -256,6 +256,21 @@ async def get_loras(request):
     return web.json_response(loras_list)
 
 
+# VAE / Text Encoder modules, as listed by WebUI (Forge); the Generate tab does not set them in ComfyUI
+@PromptServer.instance.routes.get(BASE_PATH + "/modules")
+async def get_modules(request):
+    """List of the VAE and text encoder files as [{name, kind}], kind "vae" or "te" """
+    import folder_paths
+
+    te_folder = "text_encoders" if "text_encoders" in folder_paths.folder_names_and_paths else "clip"
+    modules_list = [{"name": name, "kind": kind}
+                    for folder, kind in (("vae", "vae"), (te_folder, "te"))
+                    for name in folder_paths.get_filename_list(folder)]
+    modules_list.sort(key=lambda m: m["name"].lower())
+
+    return web.json_response(modules_list)
+
+
 @PromptServer.instance.routes.get(BASE_PATH + "/civitai/model_info")
 async def get_civitai_model_info(request):
     """Civitai page and metadata of a checkpoint or LoRA, by name and/or hash"""

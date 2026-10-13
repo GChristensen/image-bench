@@ -175,6 +175,8 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
         params.shift = sliderKind ? adapter.getInputValue(`${tab}_DISTILLED_CFG`) : null;
         params.uiPreset = adapter.getInputValue('FORGE_UI_PRESET');
         params.checkpoint = adapter.getInputValue('MODEL_CHECKPOINT');
+        // Null without the Forge Neo modules dropdown
+        params.modules = uiOperations.getModules();
 
         const options = {
             uiPresets: params.uiPreset === null ? [] : uiOperations.getUiPresetChoices(),
@@ -272,6 +274,8 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
                 await uiOperations.setUiPreset(value);
             else if (name === 'checkpoint')
                 await uiOperations.restoreModel(value);
+            else if (name === 'modules')
+                await uiOperations.setModules(value);
             else if (name in TAB_DROPDOWN_PARAMS)
                 await adapter.setDropdownValue(`${tab}_${TAB_DROPDOWN_PARAMS[name]}`, value, true);
             else if (name in HIRES_DROPDOWN_PARAMS) {

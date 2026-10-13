@@ -98,6 +98,7 @@ class ImageBenchApi():
         self.add_api_route("/models", self.get_models, methods=["GET"])
         self.add_api_route("/samplers", self.get_samplers, methods=["GET"])
         self.add_api_route("/loras", self.get_loras, methods=["GET"])
+        self.add_api_route("/modules", self.get_modules, methods=["GET"])
         self.add_api_route("/refresh_models", self.refresh_models, methods=["POST"])
         self.add_api_route("/webui_options", self.get_webui_options, methods=["GET"])
         self.add_api_route("/webui_options", self.write_webui_options, methods=["POST"])
@@ -458,7 +459,44 @@ class ImageBenchApi():
         if networks is not None:
             networks.list_available_networks()
 
+        main_entry = self.get_forge_main_entry()
+        if main_entry is not None:
+            main_entry.refresh_models()
+
         return JSONResponse({})
+
+    @staticmethod
+    def get_forge_main_entry():
+        """modules_forge.main_entry of Forge, which lists the VAE / Text Encoder modules; None in other WebUIs"""
+        try:
+            from modules_forge import main_entry
+        except ImportError:
+            return None
+
+        return main_entry if hasattr(main_entry, "module_list") else None
+
+    def get_modules(self):
+        """VAE / Text Encoder modules of Forge as [{name, kind}], kind "vae" or "te" by the folder of the file"""
+        main_entry = self.get_forge_main_entry()
+
+        if main_entry is None:
+            return JSONResponse([])
+
+        if not main_entry.module_list:
+            main_entry.refresh_models()
+
+        from modules import paths
+
+        te_dirs = [os.path.join(paths.models_path, "text_encoder"), *(getattr(shared.cmd_opts, "text_encoder_dirs", None) or [])]
+        te_roots = [os.path.normcase(os.path.abspath(d)) + os.sep for d in te_dirs if d]
+
+        def get_kind(path):
+            path = os.path.normcase(os.path.abspath(path))
+            return "te" if any(path.startswith(root) for root in te_roots) else "vae"
+
+        modules_list = [{"name": name, "kind": get_kind(path)} for name, path in main_entry.module_list.items()]
+        modules_list.sort(key=lambda m: m["name"].lower())
+        return JSONResponse(modules_list)
 
     def get_samplers(self):
         """Get lists of available samplers and schedulers"""

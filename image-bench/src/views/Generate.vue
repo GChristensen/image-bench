@@ -19,6 +19,7 @@ import NumberStepper from "@/components/NumberStepper.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
 import PromptField from "@/components/PromptField.vue";
 import ReferencesPanel from "@/components/ReferencesPanel.vue";
+import ModulesSelect from "@/components/ModulesSelect.vue";
 import ResizeToInput from "@/components/ResizeToInput.vue";
 import SizeSelect from "@/components/SizeSelect.vue";
 import UiPresetSelect from "@/components/UiPresetSelect.vue";
@@ -40,6 +41,7 @@ import {useImageOperations} from "@/composables/useImageOperations.js";
 import {HOST_NAME} from "@/host.js";
 import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModelInfo} from "@/civitai.js";
+import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
 
@@ -58,10 +60,11 @@ const MODES = [
 ];
 
 // Parameters common to all modes, not remembered per mode
-const GLOBAL_PARAMS = ["uiPreset", "checkpoint"];
+const GLOBAL_PARAMS = ["uiPreset", "checkpoint", "modules"];
 
 const NEGATIVE_HEIGHT_KEY = "imageBench_generateNegativeHeight";
 const SIDE_TAB_KEY = "imageBench_generateSideTab";
+const MODEL_SLOT_KEY = "imageBench_generateModelSlot";
 const PHOTOSHOP_TARGET_KEY = "imageBench_generatePhotoshopTarget";
 const PARAMS_COLLAPSED_KEY = "imageBench_generateParamsCollapsed";
 const SIDE_WIDTH_KEY = "imageBench_generateSideWidth";
@@ -96,7 +99,8 @@ const has = useFeatures("generate", () => sdWebUI.features);
 // ---------- Mirrored parameters ----------
 
 // The WebUI parameters as edited here: prompt, negativePrompt, width, height, steps, cfg, shift, seed, subseed,
-// subseedStrength, sampler, scheduler, denoising, uiPreset, checkpoint; txt2img: hiresUpscaler, hiresScale,
+// subseedStrength, sampler, scheduler, denoising, uiPreset, checkpoint, modules (VAE / Text Encoder file names,
+// null without the Forge Neo dropdown); txt2img: hiresUpscaler, hiresScale,
 // hiresSteps (denoising is that of hires. fix); img2img and inpaint: resizeMode, maskMode, inpaintArea, maskedContent
 const form = reactive({});
 const editedAt = {};
@@ -197,6 +201,7 @@ onDeactivated(() => {
 // ---------- Choices ----------
 
 const checkpoints = ref([]);
+const modules = ref([]);
 const samplers = ref([]);
 const schedulers = ref([]);
 
@@ -206,6 +211,18 @@ const stripHash = title => title.replace(/ \[[^\]]+\]$/, "");
 const checkpointChoices = computed(() => sdWebUI.options.checkpoints ?? checkpoints.value);
 const samplerChoices = computed(() => sdWebUI.options.samplers ?? samplers.value);
 const schedulerChoices = computed(() => sdWebUI.options.schedulers ?? schedulers.value);
+
+// The VAE / Text Encoder dropdown takes the place of the checkpoint dropdown, switched by the button before them
+const modelSlot = ref(storage.getItem(MODEL_SLOT_KEY) === "modules" ? "modules" : "checkpoint");
+const hasModules = computed(() => has("modules") && Array.isArray(form.modules));
+const shownModelSlot = computed(() => hasModules.value ? modelSlot.value : "checkpoint");
+
+watch(modelSlot, slot => storage.setItem(MODEL_SLOT_KEY, slot));
+
+const checkpointTitle = computed(() => hasModules.value
+  ? `${checkpointValue.value}
+VAE / Text Encoder: ${modulesSummary(form.modules) || "built-in"}`
+  : checkpointValue.value);
 
 // WebUI may report the checkpoint with or without its hash
 const checkpointValue = computed(() => {
@@ -218,6 +235,11 @@ const checkpointValue = computed(() => {
     ?? checkpointChoices.value.find(title => stripHash(title) === stripHash(value))
     ?? value;
 });
+
+async function loadModules(reload = false) {
+  if (has("modules"))
+    modules.value = await fetchModules(reload);
+}
 
 async function loadChoices() {
   const sortByName = (list, nameOf) =>
@@ -287,7 +309,7 @@ function onLoraToggle(names, checked) {
 }
 
 onBeforeMount(async () => {
-  await Promise.all([loadChoices(), loadLoras()]);
+  await Promise.all([loadChoices(), loadLoras(), loadModules()]);
 });
 
 const refreshing = ref(false);
@@ -299,7 +321,7 @@ async function refreshModels() {
   try {
     webUI.refreshModels();
     await fetch("/image-bench/refresh_models", {method: "post"});
-    await Promise.all([loadChoices(), loadLoras()]);
+    await Promise.all([loadChoices(), loadLoras(), loadModules(true)]);
   }
   finally {
     refreshing.value = false;
@@ -830,8 +852,17 @@ const gridStyle = computed(() => ({
                         :model-value="form.uiPreset" :presets="config.generateUiPresets"
                         :choices="sdWebUI.options.uiPresets"
                         @update:model-value="v => setParam('uiPreset', v)"/>
-        <div v-if="has('checkpoint')" class="select-wrap checkpoint">
-          <select :value="checkpointValue" aria-label="Checkpoint" :title="checkpointValue"
+        <button v-if="hasModules" type="button" class="ib flat slot-switch"
+                :title="shownModelSlot === 'modules'
+                  ? 'VAE / Text Encoder. Click to show the checkpoint'
+                  : 'Checkpoint. Click to show the VAE / Text Encoder'"
+                :aria-label="shownModelSlot === 'modules' ? 'Show the checkpoint' : 'Show the VAE / Text Encoder'"
+                @click="modelSlot = shownModelSlot === 'modules' ? 'checkpoint' : 'modules'"
+          ><AppIcon :name="shownModelSlot === 'modules' ? 'puzzle' : 'box'" :size="14"/></button>
+        <ModulesSelect v-if="shownModelSlot === 'modules'" class="checkpoint" :model-value="form.modules"
+                       :choices="modules" @update:model-value="v => setParam('modules', v)"/>
+        <div v-else-if="has('checkpoint')" class="select-wrap checkpoint">
+          <select :value="checkpointValue" aria-label="Checkpoint" :title="checkpointTitle"
                   @change="e => setParam('checkpoint', e.target.value)">
             <option v-for="title in withCurrent(checkpointChoices, checkpointValue)" :key="title" :value="title">{{ title }}</option>
           </select>
@@ -1090,6 +1121,12 @@ const gridStyle = computed(() => ({
 
 .checkpoint {
   flex: 1 1 160px;
+}
+
+/* Close to the dropdown it switches, the gap of the row is too wide */
+.slot-switch {
+  width: 18px;
+  margin-right: -4px;
 }
 
 .size {

@@ -226,6 +226,94 @@ export class SDWebuiAdapter extends DOMAdapter {
     }
 
     /**
+     * Chosen values of a Gradio multiselect dropdown
+     * @param {string} elemId - Element id of the dropdown block
+     * @returns {string[]|null} Null if the dropdown is absent
+     */
+    getMultiselectValues(elemId) {
+        const block = getElementById(elemId);
+
+        if (!block)
+            return null;
+
+        return Array.from(block.querySelectorAll(SELECTORS.MULTISELECT_TOKEN))
+            .map(token => token.querySelector('span')?.textContent.trim())
+            .filter(Boolean);
+    }
+
+    /**
+     * Choose exactly the given values in a Gradio multiselect dropdown, as the user does: the remove buttons
+     * of the other tokens are clicked, then the missing options. A value matches an option with or without
+     * its file extension (infotext names modules without it). Nothing changes if a value has no option
+     * @param {string} elemId - Element id of the dropdown block
+     * @param {string[]} values
+     * @returns {Promise<boolean>} Whether all values are chosen
+     */
+    async setMultiselectValues(elemId, values) {
+        const block = getElementById(elemId);
+        const input = block?.querySelector(SELECTORS.DROPDOWN_INPUT);
+
+        if (!input)
+            return false;
+
+        // Only model file extensions: names like qwen_2.5_vl have dots
+        const matches = (option, value) => option === value || option.replace(/\.(safetensors|sft|gguf|ckpt|pt|pth|bin)$/i, '') === value;
+        const missing = () => {
+            const current = this.getMultiselectValues(elemId);
+            return values.filter(value => !current.some(option => matches(option, value)));
+        };
+
+        const listOptions = () =>
+            Array.from(block.querySelector(SELECTORS.DROPDOWN_LIST)?.querySelectorAll(SELECTORS.DROPDOWN_OPTION) ?? []);
+
+        // The options are listed only while the input is focused
+        const openOptions = async () => {
+            input.dispatchEvent(new Event('focus', {bubbles: true, cancelable: true}));
+            input.focus();
+            await this.sleep(200);
+            return listOptions();
+        };
+        const optionName = option => option.getAttribute('data-value') || option.getAttribute('aria-label') || '';
+
+        if (missing().length) {
+            const options = await openOptions();
+            input.blur();
+
+            if (!missing().every(value => options.some(option => matches(optionName(option), value)))) {
+                console.log(`Some of ${values.join(', ')} are not available in ${elemId}.`);
+                return false;
+            }
+        }
+
+        for (const token of Array.from(block.querySelectorAll(SELECTORS.MULTISELECT_TOKEN))) {
+            const name = token.querySelector('span')?.textContent.trim() ?? '';
+
+            if (!values.some(value => matches(name, value))) {
+                token.querySelector(SELECTORS.MULTISELECT_TOKEN_REMOVE)?.click();
+                await this.sleep(50);
+            }
+        }
+
+        const toAdd = missing();
+
+        if (toAdd.length) {
+            await openOptions();
+
+            // The list is rendered again after each choice
+            for (const value of toAdd) {
+                const option = listOptions().find(option => matches(optionName(option), value));
+
+                option?.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true, view: window, button: 0}));
+                await this.sleep(50);
+            }
+
+            input.blur();
+        }
+
+        return !missing().length;
+    }
+
+    /**
      * Click a button element
      * @param {string} selectorKey - Key from SELECTORS constant
      * @returns {boolean} Whether the button was clicked

@@ -9,7 +9,7 @@ import { ImageProcessingStrategy } from './ImageProcessingStrategy.js';
 export class VaryingParametersStrategy extends ImageProcessingStrategy {
     /**
      * Create queue from parameter variations
-     * @param {Object} options - { image: object, steps: string, denoising: string }
+     * @param {Object} options - { image: object, steps: string, denoising: string, moduleSets: string[][] }
      */
     initialize(options) {
         const images = [];
@@ -42,6 +42,19 @@ export class VaryingParametersStrategy extends ImageProcessingStrategy {
             this.setDenoising = true;
         }
         
+        // Varying VAE / Text Encoder modules (Forge Neo): each set replaces the "Module N" infotext entries
+        if (options.moduleSets?.length) {
+            for (const modules of options.moduleSets) {
+                const parameters = Object.fromEntries(Object.entries(options.image.parameters)
+                    .filter(([key]) => !/^module \d+$/.test(key)));
+
+                modules.forEach((name, index) => parameters[`module ${index + 1}`] = name);
+                images.push({...options.image, parameters});
+            }
+
+            this.reproduce = true;
+        }
+
         // Initialize with created image queue
         this.queue = images;
         this.totalItems = images.length;

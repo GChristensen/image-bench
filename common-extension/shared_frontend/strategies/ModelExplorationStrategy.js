@@ -11,6 +11,8 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.currentModel = null;
         this.modelBeforeExplore = null;
         this.uiPresetBeforeExplore = null;
+        // VAE / Text Encoder of Forge Neo, which the UI presets change
+        this.modulesBeforeExplore = null;
         this.paramsBeforeExplore = null;
         this.paramsBeforeModel = null;
         this.promptBeforeExplore = null;
@@ -73,6 +75,7 @@ export class ModelExplorationStrategy extends QueueProcessor {
         this.modelBeforeExplore = await this.uiOperations.backupModel();
         console.log('[ModelExploration] Backed up model:', this.modelBeforeExplore);
         this.uiPresetBeforeExplore = await this.uiOperations.backupUiPreset();
+        this.modulesBeforeExplore = this.uiOperations.getModules?.() ?? null;
 
         if (options.models.some(m => m.params)) {
             this.paramsBeforeExplore = await this.uiOperations.backupGenerationParams();
@@ -223,8 +226,10 @@ export class ModelExplorationStrategy extends QueueProcessor {
             console.log('[ModelExploration] Restoring original model:', this.modelBeforeExplore);
             await this.uiOperations.restoreUiPreset(this.uiPresetBeforeExplore);
             await this.uiOperations.restoreModel(this.modelBeforeExplore);
+            await this.uiOperations.restoreModules?.(this.modulesBeforeExplore);
             this.modelBeforeExplore = null;
             this.uiPresetBeforeExplore = null;
+            this.modulesBeforeExplore = null;
         } else {
             console.log('[ModelExploration] No model to restore');
         }

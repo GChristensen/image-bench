@@ -3,6 +3,7 @@ import {messageBus} from "./shared/messaging/MessageBus.js";
 import {sleep} from "./shared/utils.js";
 import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
 import {adapter} from "./adapters/adapter.js";
+import {getImageModules} from "./facade/UIOperations.js";
 
 // Dependencies injected from core.js
 let sendPopupMessage;
@@ -189,6 +190,12 @@ export async function setImageParams(options) {
 
     if ("vae" in params)
         await adapter.setDropdownValue('SD_VAE', params["vae"]);
+
+    // VAE / Text Encoder of Forge Neo; images without them keep those of the preset
+    const modules = getImageModules(params);
+
+    if (modules.length)
+        await adapter.setMultiselectValues(SELECTORS.FORGE_MODULES_ID, modules);
 
     if ("prompt" in params)
         adapter.setInputValue('TXT2IMG_PROMPT', params["prompt"]);

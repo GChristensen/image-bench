@@ -107,6 +107,11 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'GENERATE_VARYING_STEPS', image, steps });
   };
 
+  // Generate an image again with each set of VAE / Text Encoder modules (file names)
+  const generateVaryingModules = (image, moduleSets) => {
+    sendWebUIMessage({ type: 'GENERATE_VARYING_MODULES', image, moduleSets });
+  };
+
   const upscaleVaryingDenoising = (image, denoising) => {
     sendWebUIMessage({ type: 'UPSCALE_VARYING_DENOISING', image, denoising });
   };
@@ -143,6 +148,7 @@ export function useWebUIBridge() {
     lockWebUIPrompts,
     generateVariations,
     generateVaryingSteps,
+    generateVaryingModules,
     upscaleVaryingDenoising,
     stopGeneration,
     skipGeneration

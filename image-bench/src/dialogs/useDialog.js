@@ -67,6 +67,18 @@ export const dialog = {
   },
 
   /**
+   * Filterable checklist (FilterChecklist.vue); Enter confirms
+   * @param {string} message
+   * @param {{title?: string, items: {value: string, label: string, group?: string, note?: string}[],
+   *          groups?: Object, selected?: string[], filter?: string, emptyText?: string,
+   *          okText?: string | ((count: number) => string)}} options
+   * @returns {Promise<string[]|null>} Checked values in the order they were checked, null if cancelled or none
+   */
+  checklist(message, options) {
+    return open('checklist', message, options, null);
+  },
+
+  /**
    * Civitai model info (preview, base model, trained words) with "Open on Civitai" and extra actions
    * @param {Object} info - Found result of /image-bench/civitai/model_info
    * @param {{actions?: {id: string, label: string}[]}} options

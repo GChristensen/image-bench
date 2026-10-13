@@ -2,13 +2,14 @@
 import { computed, onMounted, ref } from 'vue';
 import { useLocalStorage } from '@/composables/useLocalStorage.js';
 import ComboInput from '@/dialogs/ComboInput.vue';
+import FilterChecklist from '@/components/FilterChecklist.vue';
 import ModelInfoContent from '@/dialogs/ModelInfoContent.vue';
 
 const props = defineProps({
   entry: {
     type: Object,
     required: true,
-    validator: (value) => ['alert', 'confirm', 'prompt', 'modelInfo'].includes(value.kind)
+    validator: (value) => ['alert', 'confirm', 'prompt', 'checklist', 'modelInfo'].includes(value.kind)
   }
 });
 
@@ -18,12 +19,20 @@ const storage = useLocalStorage();
 
 const options = computed(() => props.entry.options);
 const isPrompt = computed(() => props.entry.kind === 'prompt');
+const isChecklist = computed(() => props.entry.kind === 'checklist');
 const title = computed(() => options.value.title || (isPrompt.value ? '' : props.entry.kind === 'confirm' ? 'Confirm' : 'Image Bench'));
 
 const inputValue = ref(options.value.defaultValue ?? '');
 const inputRef = ref(null);
 const comboRef = ref(null);
 const okRef = ref(null);
+const checklistRef = ref(null);
+
+const checked = ref([...(options.value.selected ?? [])]);
+const checklistFilter = ref(options.value.filter ?? '');
+const okText = computed(() => typeof options.value.okText === 'function'
+  ? options.value.okText(checked.value.length)
+  : options.value.okText || 'OK');
 
 const historyKey = computed(() => `imageBench_promptHistory_${options.value.storageKey || 'default'}`);
 const historySize = computed(() => options.value.historySize || 10);
@@ -55,6 +64,10 @@ function confirm() {
   }
   else if (props.entry.kind === 'modelInfo') {
     emit('close', 'open');
+  }
+  else if (isChecklist.value) {
+    if (checked.value.length)
+      emit('close', [...checked.value]);
   }
   else {
     const value = String(inputValue.value).trim();
@@ -93,6 +106,8 @@ onMounted(() => setTimeout(() => {
     input?.focus();
     input?.select();
   }
+  else if (isChecklist.value)
+    checklistRef.value?.focus();
   else
     okRef.value?.focus();
 }));
@@ -110,7 +125,9 @@ defineExpose({onEnterKey, onEscapeKey});
       <div class="dialog-body">
         <label v-if="isPrompt" class="dialog-message" :for="`dialog-input-${entry.id}`">{{ entry.message }}</label>
         <ModelInfoContent v-else-if="entry.kind === 'modelInfo'" :info="options.info"/>
-        <p v-else class="dialog-message">{{ entry.message }}</p>
+        <p v-else-if="entry.message" class="dialog-message">{{ entry.message }}</p>
+        <FilterChecklist v-if="isChecklist" ref="checklistRef" v-model="checked" v-model:filter="checklistFilter"
+                         :items="options.items" :groups="options.groups" :empty-text="options.emptyText"/>
         <ComboInput v-if="isPrompt && options.dropdown"
                     :id="`dialog-input-${entry.id}`"
                     ref="comboRef"
@@ -134,7 +151,8 @@ defineExpose({onEnterKey, onEscapeKey});
         <button v-for="action in options.actions || []" :key="action.id" class="btn outline"
                 @click="emit('close', action.id)">{{ action.label }}</button>
         <button v-if="entry.kind !== 'alert'" class="btn outline" @click="cancel">{{ options.cancelText || 'Cancel' }}</button>
-        <button ref="okRef" class="btn" :class="options.danger ? 'stop' : 'primary'" @click="confirm">{{ options.okText || 'OK' }}</button>
+        <button ref="okRef" class="btn" :class="options.danger ? 'stop' : 'primary'"
+                :disabled="isChecklist && !checked.length" @click="confirm">{{ okText }}</button>
       </div>
     </div>
   </div>

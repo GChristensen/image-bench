@@ -10,6 +10,8 @@ export class ImageProcessingStrategy extends QueueProcessor {
         super(uiOperations, messageBus);
         this.setSteps = false;
         this.setDenoising = false;
+        // Generate the images again as they are (with their own Hires. fix) instead of upscaling them
+        this.reproduce = false;
         this.paramsBackup = null;
         // Parameters of the current image being set
         this.applying = null;
@@ -63,12 +65,12 @@ export class ImageProcessingStrategy extends QueueProcessor {
 
         const parameters = imageData.parameters;
 
-        // Set all generation parameters of the image; generating with other steps reproduces
+        // Set all generation parameters of the image; generating with other steps or modules reproduces
         // the image's own Hires. fix, otherwise the image is upscaled with Hires. fix.
         // finish() waits for this, so that it restores the parameters after they are set
         this.applying = (async () => {
             await this.uiOperations.applyImageParameters(parameters, {
-                upscale: !this.setSteps,
+                upscale: !this.setSteps && !this.reproduce,
                 setDenoising: this.setDenoising
             });
 
@@ -142,6 +144,7 @@ export class ImageProcessingStrategy extends QueueProcessor {
         this.paramsBackup = null;
         this.setDenoising = false;
         this.setSteps = false;
+        this.reproduce = false;
 
         // Restore the parameters set before processing (also when interrupted)
         await this.applying?.catch(() => {});

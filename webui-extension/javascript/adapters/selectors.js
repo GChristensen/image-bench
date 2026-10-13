@@ -116,6 +116,8 @@ export const SELECTORS = {
     CLIP_SKIP: '#setting_CLIP_stop_at_last_layers input',
     FORGE_UI_PRESET: '#forge_ui_preset input',
     FORGE_UI_PRESET_ID: 'forge_ui_preset',
+    // Multiselect dropdown "VAE / Text Encoder" of Forge Neo
+    FORGE_MODULES_ID: 'setting_sd_modules',
 
     // Hires fix
     HIRES_CHECKBOX: 'txt2img_hr-visible-checkbox',
@@ -171,6 +173,9 @@ export const SELECTORS = {
     DROPDOWN_BLOCK: '.block',
     DROPDOWN_LIST: 'ul',
     DROPDOWN_OPTION: 'li',
+    // Chosen values of a multiselect dropdown: a token with the value and its remove button
+    MULTISELECT_TOKEN: '.token',
+    MULTISELECT_TOKEN_REMOVE: '.token-remove',
 
     // Header of a Gradio accordion, a child of the accordion block; it has the "open" class while expanded
     ACCORDION_LABEL_WRAP: '.label-wrap',

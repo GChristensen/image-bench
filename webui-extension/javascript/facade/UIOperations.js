@@ -10,6 +10,23 @@ import { SELECTORS } from '../adapters/selectors.js';
 const DEFAULT_UI_PRESETS = ['sd', 'xl', 'flux', 'klein', 'qwen', 'lumina', 'zit', 'wan', 'anima', 'ernie', 'pid', 'krea'];
 
 // Presets whose value is searched in the model name by a different term
+/**
+ * VAE / Text Encoder modules of image parameters: the "Module 1", "Module 2", ... infotext entries
+ * (file names without the extension), in their order
+ * @param {Object} parameters - Image parameters, with lowercase keys
+ * @returns {string[]}
+ */
+export function getImageModules(parameters) {
+    return Object.keys(parameters ?? {})
+        .map(key => key.match(/^module (\d+)$/))
+        .filter(Boolean)
+        .sort((a, b) => a[1] - b[1])
+        .map(match => String(parameters[match[0]]));
+}
+
+// Extensions of the module files; infotext names modules without them
+const MODULE_EXTENSION = /\.(safetensors|sft|gguf|ckpt|pt|pth|bin)$/i;
+
 const UI_PRESET_SEARCH_TERMS = {
     sd: 'sd/',
     xl: 'sdxl',
@@ -220,8 +237,8 @@ export class UIOperations {
     // ==================== IMAGE PARAMETERS (upscaling, varying steps / denoising) ====================
 
     /**
-     * Backup everything applyImageParameters() may change: the shown tab, UI preset, checkpoint, clip skip,
-     * txt2img prompts and parameters and its Hires. fix
+     * Backup everything applyImageParameters() may change: the shown tab, UI preset, checkpoint, VAE / Text Encoder,
+     * clip skip, txt2img prompts and parameters and its Hires. fix
      * @returns {Promise<Object>}
      */
     async backupImageParams() {
@@ -229,6 +246,7 @@ export class UIOperations {
             tab: this.adapter.isImg2ImgTab() ? 'img2img' : 'txt2img',
             uiPreset: this.adapter.getInputValue('FORGE_UI_PRESET'),
             model: this.adapter.getInputValue('MODEL_CHECKPOINT'),
+            modules: this.getModules(),
             clipSkip: this.adapter.getInputValue('CLIP_SKIP'),
             txt2img: this.captureTabParams('TXT2IMG'),
             hires: this.captureHiresParams()
@@ -254,6 +272,9 @@ export class UIOperations {
             await this.restoreModel(backup.model);
         }
 
+        // The preset sets its own modules
+        await this.restoreModules(backup.modules);
+
         this.setClipSkip(backup.clipSkip);
         await this.applyTabParams('TXT2IMG', backup.txt2img);
         await this.applyHiresParams(backup.hires);
@@ -275,6 +296,13 @@ export class UIOperations {
             // The preset resets the sampling parameters, which are set below
             await this.applyUiPresetForModel(model);
             await this.restoreModel(model);
+        }
+
+        // Images without modules in the infotext keep those of the preset
+        const modules = getImageModules(parameters);
+
+        if (modules.length) {
+            await this.setModules(modules);
         }
 
         // WebUI omits the default clip skip from the infotext
@@ -378,6 +406,49 @@ export class UIOperations {
      */
     async restoreModel(modelName) {
         await this.adapter.setDropdownValue('MODEL_CHECKPOINT', modelName);
+    }
+
+    /**
+     * VAE / Text Encoder modules chosen in Forge Neo
+     * @returns {string[]|null} File names, null if WebUI has no modules dropdown
+     */
+    getModules() {
+        return this.adapter.getMultiselectValues(SELECTORS.FORGE_MODULES_ID);
+    }
+
+    /**
+     * Choose exactly the given VAE / Text Encoder modules; nothing changes if one of them is not available
+     * @param {string[]} modules - File names, with or without the extension
+     * @returns {Promise<boolean>} Whether the modules are set
+     */
+    async setModules(modules) {
+        const current = this.getModules();
+
+        if (current === null || !Array.isArray(modules)) {
+            return false;
+        }
+
+        const stripExtension = name => name.replace(MODULE_EXTENSION, '');
+        const key = list => list.map(stripExtension).sort().join('|');
+
+        if (key(current) === key(modules)) {
+            return true;
+        }
+
+        const set = await this.adapter.setMultiselectValues(SELECTORS.FORGE_MODULES_ID, modules);
+        await this.adapter.sleep(333);
+        return set;
+    }
+
+    /**
+     * Restore the modules returned by getModules()
+     * @param {string[]|null} modules
+     * @returns {Promise<void>}
+     */
+    async restoreModules(modules) {
+        if (Array.isArray(modules)) {
+            await this.setModules(modules);
+        }
     }
 
     /**

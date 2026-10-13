@@ -12,6 +12,9 @@ import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas, isWebUI} from "@/host.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
+import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
+
+const VARYING_TEXT_ENCODERS_KEY = "imageBench_varyingTextEncoders";
 
 /**
  * Actions on a single image, defined once for the image card, its context menu and the keys on a hovered card.
@@ -62,6 +65,57 @@ async function generateVaryingSteps(image) {
     storage.setVaryingSteps(steps);
     useWebUIBridge().generateVaryingSteps(useImageOperations().cloneImage(image), steps);
   }
+}
+
+/**
+ * Generate the image again with each text encoder checked in a dialog (Forge Neo); the other modules are kept.
+ * The dialog lists the encoders whose names start like the image's own one, which is checked
+ */
+async function generateVaryingTextEncoders(image) {
+  if (!await ensureGenerationIdle())
+    return;
+
+  const title = "Generate with text encoders";
+  const encoders = (await fetchModules()).filter(module => module.kind === "te").map(module => module.name);
+
+  if (!encoders.length) {
+    await dialog.alert("WebUI lists no text encoder files (models/text_encoder).", {title});
+    return;
+  }
+
+  const imageModules = getImageModules(image.parameters);
+  const imageEncoders = encoders.filter(fileName => imageModules.some(name => isModule(name, fileName)));
+  const filter = imageEncoders.length ? (/^[a-z0-9]+/i.exec(stripExtension(imageEncoders[0]))?.[0] ?? "").toLowerCase() : "";
+
+  // The encoders checked last time, of the same kind as the image's
+  const storage = useLocalStorage();
+  const remembered = storage.getJsonItem(VARYING_TEXT_ENCODERS_KEY, [])
+    .filter(name => encoders.includes(name) && name.toLowerCase().includes(filter));
+
+  const chosen = await dialog.checklist(
+    "The image is generated again with each checked text encoder, its VAE and other modules are kept.",
+    {
+      title,
+      items: encoders.map(name => ({value: name, label: stripExtension(name), note: imageEncoders.includes(name) ? "image" : ""})),
+      selected: [...new Set([...imageEncoders, ...remembered])],
+      filter,
+      okText: count => count > 0 ? `Generate ${count}` : "Generate"
+    });
+
+  if (!chosen)
+    return;
+
+  storage.setJsonItem(VARYING_TEXT_ENCODERS_KEY, chosen);
+
+  const generatedImagesStore = useGeneratedImagesStore();
+
+  if (useAppConfigStore().automaticallyClearGeneratedImages)
+    generatedImagesStore.clear();
+
+  generatedImagesStore.startingGeneration();
+
+  const moduleSets = chosen.map(encoder => replaceTextEncoder(imageModules, encoders, encoder));
+  useWebUIBridge().generateVaryingModules(useImageOperations().cloneImage(image), moduleSets);
 }
 
 async function upscaleVaryingDenoising(image) {
@@ -121,6 +175,11 @@ export const IMAGE_ACTIONS = [
     id: "steps", side: "left", group: 1, icon: "steps", label: "Generate with steps", key: "G",
     visible: (image, ctx) => ctx.isTray && !image.img2img,
     run: image => generateVaryingSteps(image)
+  },
+  {
+    id: "textEncoders", side: "left", group: 1, icon: "puzzle", label: "Generate with text encoders", key: "E",
+    visible: (image, ctx) => isWebUI && ctx.isTray && !image.img2img && hasParameters(image),
+    run: image => generateVaryingTextEncoders(image)
   },
   {
     id: "upscale", side: "left", group: 1, icon: "upscale", label: "Upscale with the current WebUI settings", key: "U",
