@@ -80,6 +80,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Keep the session filmstrip of the Generate tab shown when a batch ends (disabled unless set to true)
+    const keepSessionStrip = computed({
+        get() {
+            return _config.keepSessionStrip ?? false;
+        },
+        set(v) {
+            _config.keepSessionStrip = v;
+            return persist();
+        }
+    });
+
     // Remember txt2img prompts and parameters across WebUI reloads (disabled unless set to true)
     const persistGenerationParams = computed({
         get() {
@@ -163,6 +174,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,
         flashGeneratedTab,
+        keepSessionStrip,
         persistGenerationParams,
         generateUiPresets,
         generatePresetImages,

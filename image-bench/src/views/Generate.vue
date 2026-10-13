@@ -608,7 +608,8 @@ watch(paramsCollapsed, collapsed => storage.setItem(PARAMS_COLLAPSED_KEY, String
 const lowerTab = ref("params");
 
 // Shown for a batch, also over collapsed parameters, the filmstrip is hidden when the batch ends unless
-// it has been used meanwhile; under the pointer it is hidden when the pointer leaves it
+// it has been used meanwhile or the keepSessionStrip setting is on; under the pointer it is hidden when
+// the pointer leaves it
 const stripAutoShown = ref(false);
 const stripHovered = ref(false);
 let stripHidePending = false;
@@ -636,6 +637,12 @@ function autoShowStrip() {
 function autoHideStrip() {
   if (!stripAutoShown.value)
     return;
+
+  // Kept by the setting as if it had been used
+  if (config.keepSessionStrip) {
+    keepStrip();
+    return;
+  }
 
   if (stripHovered.value) {
     stripHidePending = true;

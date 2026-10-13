@@ -44,8 +44,10 @@ function setGenerateUiPreset(index, value) {
     <h3>Generation</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.flashGeneratedTab"
     >Flash the Generated tab when an image generated from the Generate tab arrives</label>
+    <h3>Generate Tab</h3>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.keepSessionStrip"
+    >Keep the session filmstrip shown when a batch ends</label>
     <template v-if="isWebUI">
-      <h3>Generate Tab</h3>
       <div class="setting-label generate-setting">
         <span>UI preset buttons</span>
         <select v-for="(preset, index) in appConfigStore.generateUiPresets" :key="index" :value="preset"

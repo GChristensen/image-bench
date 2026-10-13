@@ -249,7 +249,8 @@ onMounted(loadPluginStatus);
         <li><b>Session filmstrip</b> — the tabs at the right edge of the parameter groups switch between the
           <b>Parameters</b> and the <b>Session</b> filmstrip: the last 265 images generated while the popup is open,
           each batch set apart. The chevron above the tabs hides the parameter groups and the filmstrip. The filmstrip appears by itself while a batch of more than one image runs, and hides when the
-          batch ends, unless you have scrolled or clicked it meanwhile (or the pointer is over it). Click an image to
+          batch ends, unless you have scrolled or clicked it meanwhile (or the pointer is over it) or
+          <b>Keep the session filmstrip shown when a batch ends</b> is checked in the settings. Click an image to
           open it (<span class="kbd">←</span> / <span class="kbd">→</span> move the open image through the session); middle-click it to show it in the Result pane (middle-click it again to return to the latest image);
           right-click, the action keys and dragging to the trays work as on the image cards.</li>
         <li v-if="isWebUI"><b>Mode switch</b> (at the right of the toolbar) — txt2img, img2img or Inpaint. It
