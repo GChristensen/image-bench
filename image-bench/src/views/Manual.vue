@@ -344,7 +344,10 @@ onMounted(loadPluginStatus);
           save and clear the preview. <b>Pixel Perfect</b> derives the preprocessor resolution
           from the image and the generation size.
           <span v-if="isWebUI">Pixel Perfect and <b>Allow Preview</b> are checked for you the first time a unit is
-            used after the WebUI page is loaded.</span>
+            used after the WebUI page is loaded. The sliders of the preprocessor (e.g. <i>Remove Near %</i> and
+            <i>Remove Background %</i> of depth_leres, and <i>Resolution</i> without Pixel Perfect) appear under it,
+            synchronized with WebUI. If they change after the preview was made, the preview shows
+            <b>Parameters changed — run again</b>.</span>
           <span v-if="isComfy">Preprocessors require the comfyui_controlnet_aux node pack; without it the
             preprocessor controls are hidden.</span></li>
         <li><b>Use Mask</b> — restricts the unit to the masked area. The <b>Source</b> / <b>Mask</b> switch of the

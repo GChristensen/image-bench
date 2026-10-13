@@ -34,7 +34,9 @@ const WEBUI_FEATURES = {
     controlMode: true,
     resizeMode: true,
     allowPreview: true,
-    clearImage: true
+    clearImage: true,
+    // Resolution and threshold sliders of the preprocessor
+    preprocessorParams: true
   },
   images: {
     sendToControlNet: true
@@ -63,7 +65,8 @@ const COMFY_FEATURES = {
     controlMode: false,
     resizeMode: false,
     allowPreview: false,
-    clearImage: false
+    clearImage: false,
+    preprocessorParams: false
   },
   images: {
     sendToControlNet: true

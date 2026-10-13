@@ -157,6 +157,26 @@ function setGuidance(name, value) {
 // In img2img, the unit has its own image only with an independent image; WebUI hides its image options otherwise
 const ownImage = computed(() => tab.value === "txt2img" || !!form.independent);
 
+// Choices shown shorter, so that they fit in one row; the full choice is their title
+const CONTROL_MODE_LABELS = {
+  "My prompt is more important": "Prompt",
+  "ControlNet is more important": "ControlNet"
+};
+
+// ---------- Preprocessor sliders ----------
+
+const PREPROCESSOR_SLIDERS = ["processorRes", "thresholdA", "thresholdB"];
+
+// The sliders WebUI shows for the preprocessor (Resolution only without Pixel Perfect), with its labels and ranges
+const preprocessorSliders = computed(() => has("preprocessorParams") && current.value
+  ? PREPROCESSOR_SLIDERS.filter(name => cn.sliders[name]?.visible).map(name => ({name, ...cn.sliders[name]}))
+  : []);
+
+function setSliderParam(name, value) {
+  if (value !== "" && Number.isFinite(Number(value)))
+    setParam(name, Number(value));
+}
+
 // ---------- Choices ----------
 
 // Preprocessors and models of the control type, as WebUI offers them
@@ -205,6 +225,25 @@ function onRefreshModels() {
 
 const images = computed(() => cn.images.tab === tab.value && cn.images.unit === unit.value
   ? cn.images : {image: null, mask: null, preview: null});
+
+// The preprocessor and its slider values as WebUI reports them, taken when a preview arrives;
+// the preview is stale when they change after it was made (WebUI may keep it)
+const preprocessorSignature = computed(() => current.value && cn.params
+  ? JSON.stringify([cn.params.preprocessor, ...preprocessorSliders.value.map(slider => cn.params[slider.name])])
+  : null);
+const previewSignature = ref(null);
+
+watch(() => images.value.preview, preview => previewSignature.value = preview ? preprocessorSignature.value : null,
+  {immediate: true});
+
+// A preview reported before the parameters is taken as made with them
+watch(preprocessorSignature, signature => {
+  if (images.value.preview && previewSignature.value === null)
+    previewSignature.value = signature;
+});
+
+const previewStale = computed(() => !!images.value.preview && previewSignature.value !== null
+  && preprocessorSignature.value !== null && previewSignature.value !== preprocessorSignature.value);
 
 // Source pane: the control image or its mask (with Use Mask)
 const sourceView = ref("image");
@@ -300,7 +339,7 @@ function onSavePreview() {
 // ---------- Layout ----------
 
 const CONTROLS_WIDTH_KEY = "imageBench_controlnetControlsWidth";
-const CONTROLS_WIDTH = {min: 280, default: 325};
+const CONTROLS_WIDTH = {min: 280, default: 338};
 const IMAGES_MIN_WIDTH = 360;
 const GRID_GAP = 14;
 
@@ -423,6 +462,9 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
                     aria-label="Clear the preview" @click="webUI.controlNetAction(unit, 'clearPreview')"
               ><AppIcon name="close" :size="14"/></button>
           </template>
+          <button v-if="previewStale" type="button" class="chip stale" :disabled="!connected || !ownImage || cn.running"
+                  title="The preprocessor parameters changed after the preview was made; click to run the preprocessor"
+                  @click="onRun"><AppIcon name="refresh" :size="12"/>Parameters changed — run again</button>
         </ControlNetImagePane>
       </div>
 
@@ -460,6 +502,16 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
             <AppIcon name="chevron" :size="14"/>
           </span>
         </label>
+        <div v-if="preprocessorSliders.length" class="preprocessor-params">
+          <label v-for="slider in preprocessorSliders" :key="slider.name" class="slider">
+            <span class="slider-label" :title="slider.label">{{ slider.label }}</span>
+            <input type="range" :min="slider.min" :max="slider.max" :step="slider.step"
+                   :value="form[slider.name] ?? slider.min"
+                   @input="e => setSliderParam(slider.name, e.target.value)">
+            <NumberStepper :model-value="form[slider.name] ?? ''" :min="slider.min" :max="slider.max" :step="slider.step"
+                           :label="slider.label" @update:model-value="v => setSliderParam(slider.name, v)"/>
+          </label>
+        </div>
         <label class="field">Model
           <span class="select-wrap">
             <select :value="form.model" :title="form.model" @change="e => setParam('model', e.target.value)">
@@ -469,7 +521,6 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
           </span>
         </label>
 
-        <div class="group-header label-small">Strength</div>
         <label class="slider">Control weight
           <input type="range" min="0" max="2" step="0.05" :value="form.weight ?? 1"
                  @input="e => setParam('weight', Number(e.target.value))">
@@ -493,8 +544,8 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
         <div v-if="has('controlMode')" class="field">Control mode
           <div class="seg control-mode" role="radiogroup" aria-label="Control mode">
             <button v-for="name in cn.options.controlMode" :key="name" type="button" role="radio"
-                    :class="{on: form.controlMode === name}" :aria-checked="form.controlMode === name"
-                    @click="setParam('controlMode', name)">{{ name }}</button>
+                    :class="{on: form.controlMode === name}" :aria-checked="form.controlMode === name" :title="name"
+                    @click="setParam('controlMode', name)">{{ CONTROL_MODE_LABELS[name] ?? name }}</button>
           </div>
         </div>
         <label v-if="has('resizeMode')" class="field" :class="{off: !ownImage}">Resize mode
@@ -661,6 +712,23 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
   height: 26px;
 }
 
+.stale {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 24px;
+  border: 1px solid var(--ib-accent-border);
+  background: var(--ib-accent-soft);
+  color: var(--ib-accent);
+  cursor: pointer;
+}
+
+.stale:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 /* ---------- Controls ---------- */
 
 .checks {
@@ -695,17 +763,19 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
   opacity: 0.45;
 }
 
+/* Labels at the left, in the label column of the sliders, to save height */
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   min-width: 0;
   color: var(--ib-text-2);
   font-size: 11px;
 }
 
 .field .select-wrap {
-  flex: none;
+  min-width: 0;
 }
 
 .group-header {
@@ -738,6 +808,27 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
   width: auto;
   min-width: 0;
   height: 24px;
+}
+
+/* Sliders of the preprocessor, indented under it; the label column is narrower by the indent,
+   so that the ranges line up with the other sliders */
+.preprocessor-params {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -4px;
+  padding-left: 8px;
+  border-left: 2px solid var(--ib-accent-border);
+}
+
+.preprocessor-params .slider {
+  grid-template-columns: 86px minmax(0, 1fr) 96px;
+}
+
+.slider-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .control-mode {

@@ -24,6 +24,8 @@ const PREPROCESS_TIMEOUT = 120000;
 const CHECKBOX_PARAMS = ['enabled', 'pixelPerfect', 'allowPreview', 'useMask', 'independent'];
 const RADIO_PARAMS = ['controlType', 'controlMode', 'resizeMode'];
 const DROPDOWN_PARAMS = ['preprocessor', 'model'];
+// Preprocessor sliders: Resolution (hidden with Pixel Perfect) and the two thresholds of the preprocessor
+const SLIDER_PARAMS = ['processorRes', 'thresholdA', 'thresholdB'];
 // Checked when the popup or Photoshop first uses a unit
 const DEFAULT_CHECKED = ['pixelPerfect', 'allowPreview'];
 
@@ -165,7 +167,42 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
         for (const name of DROPDOWN_PARAMS)
             params[name] = get(name)?.querySelector(SELECTORS.DROPDOWN_INPUT)?.value ?? null;
 
-        return {tab, unit, units, available: true, params, options, running};
+        // Forge relabels the preprocessor sliders and sets their ranges for each preprocessor
+        const sliders = {};
+
+        for (const name of SLIDER_PARAMS) {
+            const slider = describeSlider(get(name));
+
+            params[name] = slider ? toNumber(get(name).querySelector(SELECTORS.NUMBER_INPUT)?.value) : null;
+            sliders[name] = slider;
+        }
+
+        return {tab, unit, units, available: true, params, options, sliders, running};
+    }
+
+    /**
+     * @param {HTMLElement|null} block - Gradio slider
+     * @returns {{label: string, min: number, max: number, step: number, visible: boolean}|null} null if it is absent
+     */
+    function describeSlider(block) {
+        const input = block?.querySelector(SELECTORS.RANGE_INPUT) ?? block?.querySelector(SELECTORS.NUMBER_INPUT);
+
+        if (!input)
+            return null;
+
+        const label = block.querySelector(SELECTORS.BLOCK_LABEL) ?? block.querySelector('label');
+        const attribute = (name, fallback) => {
+            const value = parseFloat(input.getAttribute(name));
+            return Number.isFinite(value) ? value : fallback;
+        };
+
+        return {
+            label: label?.textContent.trim() ?? '',
+            min: attribute('min', 0),
+            max: attribute('max', 100),
+            step: attribute('step', 1),
+            visible: getComputedStyle(block).display !== 'none'
+        };
     }
 
     /**
@@ -228,8 +265,8 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
                     if (input)
                         await adapter.setDropdownElementValue(input, value, true);
                 }
-                else if (name === 'weight')
-                    setNumber(get('weight')?.querySelector(SELECTORS.NUMBER_INPUT), value);
+                else if (name === 'weight' || SLIDER_PARAMS.includes(name))
+                    setNumber(get(name)?.querySelector(SELECTORS.NUMBER_INPUT), value);
                 else if (name === 'guidanceStart')
                     setNumber(get('timestepRange')?.querySelector(SELECTORS.RANGE_SLIDER_MIN), value);
                 else if (name === 'guidanceEnd')

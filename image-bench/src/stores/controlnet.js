@@ -21,10 +21,13 @@ export const useControlNetStore = defineStore('controlNet', () => {
     const available = ref(null)
     // Parameters of the unit (CONTROLNET_STATE), null until received: enabled, pixelPerfect, allowPreview, useMask,
     // independent (img2img, else null), controlType, preprocessor, model, weight, guidanceStart, guidanceEnd,
-    // controlMode, resizeMode
+    // controlMode, resizeMode, processorRes, thresholdA, thresholdB (WebUI, null without the slider)
     const params = ref(null)
     // Radio choices: controlType, controlMode, resizeMode
     const options = ref({controlType: [], controlMode: [], resizeMode: []})
+    // Preprocessor sliders as WebUI shows them for the preprocessor: {processorRes, thresholdA, thresholdB},
+    // each {label, min, max, step, visible} or null if absent; their values are in params
+    const sliders = ref({})
     // Features the host page reports as present or missing ({name: boolean}), null if it reports none (WebUI)
     const features = ref(null)
     // The preprocessor is running
@@ -40,6 +43,7 @@ export const useControlNetStore = defineStore('controlNet', () => {
             available.value = e.available;
             params.value = e.available ? e.params : null;
             options.value = e.options ?? {controlType: [], controlMode: [], resizeMode: []};
+            sliders.value = e.sliders ?? {};
             features.value = e.features ?? null;
             running.value = e.running;
         }
@@ -53,5 +57,5 @@ export const useControlNetStore = defineStore('controlNet', () => {
         storage.setItem(UNIT_KEY, String(index));
     }
 
-    return {selectedUnit, tab, unit, units, available, params, options, features, running, images, onSDEvent, selectUnit};
+    return {selectedUnit, tab, unit, units, available, params, options, sliders, features, running, images, onSDEvent, selectUnit};
 })

@@ -18,6 +18,10 @@ const CONTROLNET_ELEMENT_IDS = {
     refreshModels: 'controlnet_refresh_models',
     weight: 'controlnet_control_weight_slider',
     timestepRange: 'controlnet_control_step_slider',
+    // Preprocessor sliders, relabeled and shown or hidden by Forge for each preprocessor
+    processorRes: 'controlnet_preprocessor_resolution_slider',
+    thresholdA: 'controlnet_threshold_A_slider',
+    thresholdB: 'controlnet_threshold_B_slider',
     controlMode: 'controlnet_control_mode_radio',
     resizeMode: 'controlnet_resize_mode_radio',
     // Forge canvases: the control image, its mask and the preprocessor preview
@@ -159,6 +163,9 @@ export const SELECTORS = {
     // gradio_rangeslider (the timestep range): number inputs of both ends
     RANGE_SLIDER_MIN: 'input[data-testid="min-input"]',
     RANGE_SLIDER_MAX: 'input[data-testid="max-input"]',
+    // Gradio slider: its range input and label
+    RANGE_INPUT: 'input[type="range"]',
+    BLOCK_LABEL: '[data-testid="block-info"]',
     CHECKBOX_INPUT: 'input[type="checkbox"]',
     NUMBER_INPUT: 'input[type="number"]',
     DROPDOWN_INPUT: 'input',
