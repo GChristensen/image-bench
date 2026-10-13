@@ -5,7 +5,7 @@
  * in the result pane of the Generate tab (again: back to the latest); the context menu, the action keys
  * and dragging to the trays work as on the image cards.
  */
-import {nextTick, ref, watch} from "vue";
+import {nextTick, onActivated, onMounted, ref, watch} from "vue";
 import {KIND_SESSION} from "@/consts.js";
 import {openImageMenu} from "@/contextMenu.js";
 import {startImageDrag, endImageDrag} from "@/imageDrag.js";
@@ -38,6 +38,7 @@ const emit = defineEmits(["select", "open", "showParams", "interact"]);
 
 const strip = ref(null);
 let atEnd = true;
+let scrollPosition = 0;
 
 const ctx = {
   kind: KIND_SESSION,
@@ -61,21 +62,53 @@ function scrollToEnd() {
 
 function onScroll() {
   const element = strip.value;
+
+  // Hidden or detached, the strip loses its scroll position; it is restored when shown again
+  if (!element.isConnected || !element.clientWidth)
+    return;
+
   atEnd = element.scrollLeft + element.clientWidth >= element.scrollWidth - END_TOLERANCE;
+  scrollPosition = element.scrollLeft;
 }
 
-watch(() => props.images.length, async () => {
+// Shown again (hidden by v-show, or the Generate tab moved out by KeepAlive): back to the end or the position
+async function restoreScroll() {
+  await nextTick();
+
+  if (atEnd)
+    scrollToEnd();
+  else if (strip.value)
+    strip.value.scrollLeft = scrollPosition;
+}
+
+// Created again when the parameter area is expanded, the strip starts at the newest images
+onMounted(() => {
+  if (props.active)
+    restoreScroll();
+});
+
+onActivated(() => {
+  if (props.active)
+    restoreScroll();
+});
+
+// The newest image, since the length stays the same at the image limit
+watch(() => props.images.at(-1)?.sessionId, async () => {
   if (atEnd && props.active) {
     await nextTick();
     scrollToEnd();
   }
 });
 
-watch(() => props.active, async active => {
-  if (active && atEnd) {
-    await nextTick();
+// A thumbnail without its size in the parameters takes its width only when loaded
+function onImageLoad() {
+  if (atEnd && props.active)
     scrollToEnd();
-  }
+}
+
+watch(() => props.active, active => {
+  if (active)
+    restoreScroll();
 });
 
 // A vertical wheel scrolls the strip
@@ -114,6 +147,7 @@ function onMouseLeave(e) {
          :class="{'run-start': index > 0 && image.run !== images[index - 1].run}"
          v-memo="[image === selected, index > 0 && image.run !== images[index - 1].run]">
       <img :src="createImageLink(image)" :class="{selected: image === selected}" :style="aspectStyle(image)" alt="" loading="lazy"
+           @load="onImageLoad"
            :title="image === selected ? 'Click to open; shown in the result pane: middle-click to show the latest image' : 'Click to open; middle-click to show in the result pane'"
            @click="emit('open', image)" @mousedown.middle.prevent @auxclick="onAuxClick($event, image)"
            @contextmenu="onContextMenu($event, image)"

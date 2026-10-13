@@ -1,6 +1,7 @@
 <script setup>
 
-import {computed, nextTick, onBeforeMount, ref, shallowRef, toRaw, watch} from "vue";
+import {computed, nextTick, onBeforeMount, onBeforeUnmount, onMounted, reactive, ref, shallowRef, toRaw, watch} from "vue";
+import {useDragSize} from "@/composables/useDragSize.js";
 import GeneratedImage from "@/components/GeneratedImage.vue";
 import {createImageGenerationParams, createImageLink, ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
@@ -419,6 +420,37 @@ function onKeydown(e) {
     showParamsOverlay.value = false;
   }
 }
+
+// ---------- Layout ----------
+
+const LIST_WIDTH_KEY = "imageBench_exploreListWidth";
+const LIST_WIDTH = {min: 260, default: 340};
+const IMAGES_MIN_WIDTH = 360;
+
+// Width of the container; an estimate until it is measured
+const containerElement = ref(null);
+const containerWidth = ref(window.innerWidth);
+let containerObserver = null;
+
+onMounted(() => {
+  containerObserver = new ResizeObserver(([entry]) => {
+    // A deactivated (kept alive) tab is detached and measures 0
+    if (entry.contentRect.width)
+      containerWidth.value = entry.contentRect.width;
+  });
+
+  containerObserver.observe(containerElement.value);
+});
+
+onBeforeUnmount(() => containerObserver?.disconnect());
+
+const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
+  axis: "x",
+  direction: 1,
+  min: LIST_WIDTH.min,
+  max: () => Math.max(LIST_WIDTH.min, containerWidth.value - IMAGES_MIN_WIDTH),
+  fallback: LIST_WIDTH.default
+}));
 </script>
 
 <template>
@@ -472,8 +504,8 @@ function onKeydown(e) {
       <button class="btn" :disabled="exploreImagesStore.generationInProgress || !modelImages.length"
               @click="exploreImagesStore.clear()"><AppIcon name="eraser" :size="14"/>Clear results</button>
     </div>
-    <div class="explore-container">
-      <div class="model-list">
+    <div ref="containerElement" class="explore-container">
+      <div class="model-list" :style="{width: `${listWidth.size}px`}">
         <div class="seg">
           <button :class="{on: activeTab === TAB_CHECKPOINTS}" @click="activeTab = TAB_CHECKPOINTS"
             >Checkpoints<span class="count">{{ checkpoints.selected.value.size }}/{{ checkpoints.items.value.length }}</span></button>
@@ -502,6 +534,11 @@ function onKeydown(e) {
           @info="onModelInfo"
         />
       </div>
+      <div class="column-grip" :class="{active: listWidth.resizing}" role="separator"
+           aria-orientation="vertical" aria-label="Resize the model list" :aria-valuenow="listWidth.size"
+           tabindex="0" title="Drag to resize the column; double-click to restore it"
+           @pointerdown="listWidth.onPointerDown" @keydown="listWidth.onKeydown"
+           @dblclick="listWidth.reset"><i></i></div>
       <div class="generated-images-wrapper">
         <div class="generated-images scrollable" ref="generatedImagesElement">
           <div v-if="matrixRows" class="matrix" :style="{'--columns': exploreImagesStore.matrixColumns.length}">
@@ -572,7 +609,6 @@ function onKeydown(e) {
 }
 
 .model-list {
-  width: 340px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -580,6 +616,39 @@ function onKeydown(e) {
   padding: 10px;
   background: var(--ib-surface);
   border-right: 1px solid var(--ib-border);
+}
+
+/* Over the border of the model list, taking no width of its own */
+.column-grip {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 10px;
+  margin: 0 -5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.column-grip i {
+  width: 4px;
+  height: 40px;
+  border-radius: 2px;
+  background: var(--ib-border-2);
+}
+
+.column-grip:hover i,
+.column-grip:focus-visible i,
+.column-grip.active i {
+  background: var(--ib-accent);
+}
+
+.column-grip:focus-visible {
+  outline: none;
+  background: var(--ib-accent-soft);
 }
 
 .generated-images-wrapper {

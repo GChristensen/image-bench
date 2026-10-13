@@ -7,7 +7,11 @@
  */
 import {computed, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
+import ImageActionButtons from "@/components/ImageActionButtons.vue";
 import {getImageSize, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
+import {imageActionHint, runImageAction, visibleActionGroups} from "@/imageActions.js";
+import {useShiftKey} from "@/composables/useShiftKey.js";
+import {KIND_GENERATED} from "@/consts.js";
 
 const props = defineProps({
   // Generation mode: txt2img, img2img, inpaint or other (another img2img mode, without input)
@@ -34,6 +38,11 @@ const props = defineProps({
   },
   inputMask: {
     type: String,
+    default: null
+  },
+  // Image of the result view whose send actions are offered on hover, null while generating
+  actionImage: {
+    type: Object,
     default: null
   }
 });
@@ -100,6 +109,28 @@ async function onPaste(e) {
   }
 }
 
+// ---------- Send actions of the result (the right side of an image card) ----------
+
+const actionContext = {kind: KIND_GENERATED, isTray: false, upscalable: false, handlers: {}};
+
+const actionGroups = computed(() => props.actionImage && shownView.value === "result"
+  ? visibleActionGroups(props.actionImage, actionContext, "right") : []);
+
+const shiftDown = useShiftKey();
+const hovered = ref(false);
+const hoveredAction = ref(null);
+const showAlt = computed(() => hovered.value && shiftDown.value);
+const actionHint = computed(() => hoveredAction.value && imageActionHint(hoveredAction.value, showAlt.value));
+
+function onAction(action, alt) {
+  runImageAction(action, props.actionImage, actionContext, alt);
+}
+
+function onCellLeave() {
+  hovered.value = false;
+  hoveredAction.value = null;
+}
+
 async function onUseSize() {
   const size = await getImageSize(props.inputImage);
 
@@ -110,7 +141,8 @@ async function onUseSize() {
 
 <template>
   <div class="cell" :class="{dragover: dragOver}" :tabindex="hasInput ? 0 : undefined"
-       @dragover.prevent="dragOver = hasInput" @dragleave="dragOver = false" @drop.prevent="onDrop" @paste="onPaste">
+       @dragover.prevent="dragOver = hasInput" @dragleave="dragOver = false" @drop.prevent="onDrop" @paste="onPaste"
+       @mouseenter="hovered = true" @mouseleave="onCellLeave">
 
     <button v-if="shownView === 'result'" type="button" class="view" :class="{clickable: resultClickable}"
             :title="liveProgress !== null ? 'Live preview' : resultClickable ? 'Click to view' : ''"
@@ -143,12 +175,6 @@ async function onUseSize() {
                 :aria-selected="shownView === 'mask'" @click="show('mask')">Mask</button>
       </div>
 
-      <div class="uploads">
-        <button type="button" class="overlay-button" title="Upload the input image (or drop or paste it here)"
-                @click="onUpload('image')"><AppIcon name="upload" :size="12"/>Image</button>
-        <button v-if="hasMask" type="button" class="overlay-button" title="Upload the mask"
-                @click="onUpload('mask')"><AppIcon name="upload" :size="12"/>Mask</button>
-      </div>
 
       <div v-if="shownView === 'input' && inputImage" class="input-actions">
         <button v-if="hasMask && inputMask" type="button" class="overlay-button" :class="{on: maskOverlay}"
@@ -166,6 +192,21 @@ async function onUseSize() {
         <img v-if="hasMask && inputMask" class="mask-overlay" :src="inputMask" alt="">
       </button>
     </template>
+
+    <!-- Uploads of the input, below them the send actions of the result on hover -->
+    <div class="top-right">
+      <div v-if="hasInput" class="uploads">
+        <button type="button" class="overlay-button" title="Upload the input image (or drop or paste it here)"
+                @click="onUpload('image')"><AppIcon name="upload" :size="12"/>Image</button>
+        <button v-if="hasMask" type="button" class="overlay-button" title="Upload the mask"
+                @click="onUpload('mask')"><AppIcon name="upload" :size="12"/>Mask</button>
+      </div>
+      <template v-if="actionGroups.length">
+        <ImageActionButtons class="result-actions" :groups="actionGroups" :show-alt="showAlt"
+                            @run="onAction" @hover="action => hoveredAction = action"/>
+        <span v-if="actionHint" class="action-hint">{{ actionHint }}</span>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -261,12 +302,43 @@ async function onUseSize() {
   font-size: 11.5px;
 }
 
-.uploads {
+.top-right {
   position: absolute;
   top: 8px;
   right: 8px;
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 4px;
+  pointer-events: none;
+}
+
+.top-right > * {
+  pointer-events: auto;
+}
+
+.uploads {
+  display: flex;
+  gap: 4px;
+}
+
+/* The send actions show on hover, like on an image card */
+.result-actions {
+  visibility: hidden;
+}
+
+.cell:hover .result-actions {
+  visibility: visible;
+}
+
+.action-hint {
+  max-width: 260px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(17, 19, 23, 0.85);
+  color: var(--ib-text);
+  font-size: 11px;
+  pointer-events: none;
 }
 
 .input-actions {

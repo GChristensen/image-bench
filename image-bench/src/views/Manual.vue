@@ -250,7 +250,8 @@ onMounted(loadPluginStatus);
           <b>Parameters</b> and the <b>Session</b> filmstrip: the last 265 images generated while the popup is open,
           each batch set apart. The chevron above the tabs hides the parameter groups and the filmstrip. The filmstrip appears by itself while a batch of more than one image runs, and hides when the
           batch ends, unless you have scrolled or clicked it meanwhile (or the pointer is over it) or
-          <b>Keep the session filmstrip shown when a batch ends</b> is checked in the settings. Click an image to
+          <b>Keep the session filmstrip shown when a batch ends</b> is checked in the settings.
+          <AppIcon name="trash" :size="13" class="inline-icon"/> below the tabs empties the filmstrip. Click an image to
           open it (<span class="kbd">←</span> / <span class="kbd">→</span> move the open image through the session); middle-click it to show it in the Result pane (middle-click it again to return to the latest image);
           right-click, the action keys and dragging to the trays work as on the image cards.</li>
         <li v-if="isWebUI"><b>Mode switch</b> (at the right of the toolbar) — txt2img, img2img or Inpaint. It
@@ -262,7 +263,8 @@ onMounted(loadPluginStatus);
           as well.</li>
         <li><b>Result, Input and Mask</b> panes. Upload, drop or paste an input image or an img2img mask onto its pane.
           The buttons of the Input pane also resize the generation to the size of the input image and show the
-          mask over it. In a wide window the image has a column of its own that fits the image size; otherwise it is below the
+          mask over it. While no generation runs, hovering the Result pane shows the send buttons of an image card
+          (ControlNet, Photoshop, Compare, the trays) for the image shown. In a wide window the image has a column of its own that fits the image size; otherwise it is below the
           LoRA list and fits the column width. Drag the grips to resize the negative prompt, the parameters and the filmstrip, the LoRA column, the
           image column or the image; double-click a grip to restore the automatic size.</li>
         <li><b>Generate</b> — makes one image and shows it with a live preview. Ask for more than one image (or
@@ -273,7 +275,8 @@ onMounted(loadPluginStatus);
           image.</li>
         <li v-if="isWebUI"><b>UI preset buttons</b> — switch the Forge UI preset (sd, xl, flux, ...); Settings
           decides which presets they offer. <b><AppIcon name="lock" :size="13" class="inline-icon"/> Prompt
-          lock</b> covers the prompts in WebUI, so that they can only be edited here.</li>
+          lock</b> covers the prompts in WebUI, so that they can only be edited here;
+          <AppIcon name="eraser" :size="13" class="inline-icon"/> left of it clears the prompt and the negative prompt.</li>
       </ul>
       <div v-if="isWebUI" class="note">
         <AppIcon name="info" :size="15"/>

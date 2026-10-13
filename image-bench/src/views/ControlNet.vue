@@ -7,7 +7,7 @@
  * In WebUI img2img a unit uses the img2img image unless it has an independent image, which an image set here turns on.
  * ComfyUI reports which parts the workflow has (features, see src/host.js).
  */
-import {computed, onActivated, onDeactivated, reactive, ref, watch} from "vue";
+import {computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import ControlNetImagePane from "@/components/ControlNetImagePane.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
@@ -18,6 +18,7 @@ import {HOST_NAME, isComfy} from "@/host.js";
 import {copyImageToClipboard, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {sendUrlToPhotoshop} from "@/photoshop.js";
 import {dialog} from "@/dialogs/useDialog.js";
+import {useDragSize} from "@/composables/useDragSize.js";
 
 // A value edited here is not overwritten by the polled WebUI value for this long,
 // which covers the send delay and the next poll
@@ -295,6 +296,39 @@ function onSavePreview() {
   link.download = `${previewName.value.replace(/\s+/g, "_")}.png`;
   link.click();
 }
+
+// ---------- Layout ----------
+
+const CONTROLS_WIDTH_KEY = "imageBench_controlnetControlsWidth";
+const CONTROLS_WIDTH = {min: 280, default: 325};
+const IMAGES_MIN_WIDTH = 360;
+const GRID_GAP = 14;
+
+// Content width of the grid; an estimate until it is measured
+const gridElement = ref(null);
+const gridWidth = ref(window.innerWidth - 24);
+let gridObserver = null;
+
+onMounted(() => {
+  gridObserver = new ResizeObserver(([entry]) => {
+    // A deactivated (kept alive) tab is detached and measures 0
+    if (entry.contentRect.width)
+      gridWidth.value = entry.contentRect.width;
+  });
+
+  gridObserver.observe(gridElement.value);
+});
+
+onBeforeUnmount(() => gridObserver?.disconnect());
+
+const controlsWidth = reactive(useDragSize(CONTROLS_WIDTH_KEY, {
+  axis: "x",
+  min: CONTROLS_WIDTH.min,
+  max: () => Math.max(CONTROLS_WIDTH.min, gridWidth.value - IMAGES_MIN_WIDTH - GRID_GAP),
+  fallback: CONTROLS_WIDTH.default
+}));
+
+const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${controlsWidth.size}px`}));
 </script>
 
 <template>
@@ -327,7 +361,7 @@ function onSavePreview() {
       </div>
     </div>
 
-    <div class="controlnet-grid">
+    <div ref="gridElement" class="controlnet-grid" :style="gridStyle">
       <div class="images" :class="{single: !has('preprocessor')}">
         <!-- Control image or its mask -->
         <ControlNetImagePane :image="sourceImage"
@@ -473,6 +507,12 @@ function onSavePreview() {
           </span>
         </label>
       </fieldset>
+
+      <div class="column-grip" :class="{active: controlsWidth.resizing}" role="separator"
+           aria-orientation="vertical" aria-label="Resize the parameters column" :aria-valuenow="controlsWidth.size"
+           tabindex="0" title="Drag to resize the column; double-click to restore it"
+           @pointerdown="controlsWidth.onPointerDown" @keydown="controlsWidth.onKeydown"
+           @dblclick="controlsWidth.reset"><i></i></div>
     </div>
   </div>
 </template>
@@ -483,11 +523,12 @@ function onSavePreview() {
   min-height: 0;
   padding: 10px 12px 12px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(280px, 32vw, 380px);
   gap: 14px;
 }
 
 .images {
+  grid-column: 1;
+  grid-row: 1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -500,6 +541,8 @@ function onSavePreview() {
 }
 
 .controls {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   min-height: 0;
   margin: 0;
@@ -509,6 +552,39 @@ function onSavePreview() {
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
+}
+
+/* In the gap at the left of the parameters column, over its whole height */
+.column-grip {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
+  width: 10px;
+  margin-left: -12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.column-grip i {
+  width: 4px;
+  height: 40px;
+  border-radius: 2px;
+  background: var(--ib-border-2);
+}
+
+.column-grip:hover i,
+.column-grip:focus-visible i,
+.column-grip.active i {
+  background: var(--ib-accent);
+}
+
+.column-grip:focus-visible {
+  outline: none;
+  background: var(--ib-accent-soft);
 }
 
 /* ---------- Toolbar ---------- */

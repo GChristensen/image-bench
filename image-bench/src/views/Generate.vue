@@ -406,6 +406,10 @@ function toggleLock() {
   webUI.lockWebUIPrompts(lock);
 }
 
+function clearPrompts() {
+  setParams(has("negativePrompt") ? {prompt: "", negativePrompt: ""} : {prompt: ""});
+}
+
 // ---------- Image ----------
 
 const latestImage = computed(() => {
@@ -788,6 +792,8 @@ const gridStyle = computed(() => ({
       <div class="toolbar-spacer"></div>
 
       <span v-if="!connected" class="chip">Waiting for {{ HOST_NAME }}…</span>
+      <button class="ib danger" :disabled="!connected" title="Clear the prompts" aria-label="Clear the prompts"
+              @click="clearPrompts"><AppIcon name="eraser" :size="14"/></button>
       <button v-if="has('promptLock')" class="btn outline lock-button" :class="{on: sdWebUI.promptsLocked}" :aria-pressed="sdWebUI.promptsLocked"
               :disabled="!connected"
               :title="sdWebUI.promptsLocked ? 'Allow editing the prompts in WebUI' : 'Cover the prompts in WebUI, so that they are edited only here'"
@@ -890,6 +896,7 @@ const gridStyle = computed(() => ({
                            :live-progress="livePreview ? sdWebUI.live.progress : null"
                            :result-clickable="!!resultImage && !livePreview"
                            :input-image="inputs.image" :input-mask="inputs.mask"
+                           :action-image="generating || livePreview ? null : resultImage"
                            @result-click="onResultClick" @upload="onInputUpload"
                            @use-size="(width, height) => setParams({width, height})"/>
       </div>
@@ -967,6 +974,9 @@ const gridStyle = computed(() => ({
                       :aria-selected="lowerTab === 'session'" title="Images generated in this session"
                       @click="showLowerTab('session')">Session<span v-if="sessionImagesStore.images.length"
                       class="count">{{ sessionImagesStore.images.length }}</span></button>
+              <button v-if="lowerTab === 'session' && sessionImagesStore.images.length" type="button"
+                      class="params-toggle clear-session" title="Clear the filmstrip" aria-label="Clear the filmstrip"
+                      @click="sessionImagesStore.clear()"><AppIcon name="trash" :size="13"/></button>
             </div>
           </div>
         </template>
@@ -1366,6 +1376,12 @@ const gridStyle = computed(() => ({
 .params-toggle:hover {
   background: var(--ib-elev-2);
   color: var(--ib-text);
+}
+
+/* At the bottom of the tab column */
+.clear-session {
+  margin-top: auto;
+  margin-bottom: 2px;
 }
 
 .params-toggle.restore :deep(svg) {

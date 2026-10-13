@@ -1,4 +1,4 @@
-import {shallowRef, triggerRef} from "vue";
+import {shallowRef} from "vue";
 import {defineStore} from "pinia";
 import {createImageData} from "@/sdwebui.js";
 import {isComfy} from "@/host.js";
@@ -48,16 +48,14 @@ export const useSessionImagesStore = defineStore("sessionImages", () => {
       image.run = run;
       image.sessionId = nextId++;
 
-      const list = images.value;
-
-      list.push(image);
-
-      if (list.length > SESSION_LIMIT)
-        list.splice(0, list.length - SESSION_LIMIT);
-
-      triggerRef(images);
+      // A new array, so that the filmstrip receiving it as a prop sees the change
+      images.value = [...images.value, image].slice(-SESSION_LIMIT);
     }
   }
 
-  return {images, onSDEvent};
+  function clear() {
+    images.value = [];
+  }
+
+  return {images, onSDEvent, clear};
 });
