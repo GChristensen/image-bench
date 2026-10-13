@@ -24,7 +24,7 @@ const VARYING_TEXT_ENCODERS_KEY = "imageBench_varyingTextEncoders";
  *   {kind, isTray, upscalable, handlers}
  * handlers are the operations of the view that shows the image:
  *   showParams(image), upscale(image), addComment(image), openImage(image),
- *   filterMarking(marking), removeMarking(image), activeMarkingFilter()
+ *   filterMarking(marking), removeMarking(image), activeMarkingFilter(), deleteImage(image)
  *
  * An action with `alt` has an alternative that runs on a middle click, a Shift+click or Shift+key.
  * visible(image, ctx) must cover both hosts.

@@ -6,7 +6,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 /**
  * Context menu of an image (card or overlay), rendered by ImageContextMenu.vue, which is mounted once in App.vue.
  * The state is module-level, so that one menu is open at a time.
- * {x, y, items}: items are {icon, label, hint, run}, {separator: true} or {label, submenu: [items]}
+ * {x, y, items}: items are {icon, label, hint, danger, run}, {separator: true} or {label, submenu: [items]}
  */
 export const contextMenu = shallowRef(null);
 
@@ -72,6 +72,13 @@ function imageMenuItems(image, ctx) {
       items.push({separator: true});
 
     items.push(...others);
+  }
+
+  if (ctx.handlers.deleteImage) {
+    if (items.length)
+      items.push({separator: true});
+
+    items.push({icon: "trash", label: "Delete", danger: true, run: () => ctx.handlers.deleteImage(image)});
   }
 
   return items;

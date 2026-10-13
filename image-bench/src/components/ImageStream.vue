@@ -112,7 +112,9 @@
 
   // Resolves to true if the image was deleted
   async function onDeleteImage(image) {
-    if (!await dialog.confirm("Remove this image from the tray?", {okText: "Remove", danger: true}))
+    const from = isTray ? "the tray" : "the list";
+
+    if (!await dialog.confirm(`Remove this image from ${from}?`, {okText: "Remove", danger: true}))
       return false;
 
     const removedImage = images.value.find(i => i.imagePath === image.imagePath);
@@ -228,6 +230,7 @@
                        @select="s => image.selected = s"
                        @upscale-image="(i, p) => $emit('upscaleImage', i, p)"
                        @add-comment="onAddComment(image)"
+                       @delete-image="onDeleteImage(image)"
                        @set-marking="onSetMarking(image)"
                        @filter-marking="onFilterMarking"
       ></GeneratedImage>

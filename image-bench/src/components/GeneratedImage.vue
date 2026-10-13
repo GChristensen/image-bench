@@ -13,7 +13,7 @@
   import MarkingPicker from "@/components/MarkingPicker.vue";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams',
-    'select', 'upscaleImage', 'addComment']);
+    'select', 'upscaleImage', 'addComment', 'deleteImage']);
 
   const props = defineProps({
     isTray: {
@@ -82,6 +82,7 @@
       openImage: () => emit("imageOpen"),
       filterMarking: marking => emit("filterMarking", marking),
       removeMarking: () => removeMarking(),
+      deleteImage: () => emit("deleteImage"),
       activeMarkingFilter: () => props.markingFilter
     }
   };

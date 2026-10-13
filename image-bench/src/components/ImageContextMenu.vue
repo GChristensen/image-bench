@@ -85,7 +85,7 @@ function onItemClick(item) {
             </button>
           </div>
         </div>
-        <button v-else role="menuitem" @click="onItemClick(item)">
+        <button v-else role="menuitem" :class="{danger: item.danger}" @click="onItemClick(item)">
           <AppIcon v-if="item.icon" :name="item.icon" :size="14" class="item-icon"/>
           <span v-else class="item-icon"></span>
           <span class="item-label">{{ item.label }}</span>
