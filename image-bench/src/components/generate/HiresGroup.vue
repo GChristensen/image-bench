@@ -1,6 +1,7 @@
 <script setup>
 /**
- * Hires. fix parameters of txt2img in the Generate tab (in ComfyUI the second sampler, marked ib:smp:1)
+ * Hires. fix parameters of txt2img in the Generate tab (in ComfyUI the second sampler, marked ib:smp:1),
+ * with the Hires. fix checkbox in the header (in ComfyUI the switch marked ib:hr; without it the pass always runs)
  */
 import AppIcon from "@/components/AppIcon.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
@@ -26,8 +27,12 @@ const emit = defineEmits(['set']);
 </script>
 
 <template>
-  <div class="group">
-    <div class="group-header label-small">Hires. fix</div>
+  <div class="group" :class="{off: has('hiresFix') && form.hiresFix === false}">
+    <label v-if="has('hiresFix')" class="group-header label-small toggle">
+      <input type="checkbox" :checked="!!form.hiresFix" @change="e => emit('set', 'hiresFix', e.target.checked)">
+      Hires. fix
+    </label>
+    <div v-else class="group-header label-small">Hires. fix</div>
     <label v-if="has('hiresUpscaler')" class="field">Upscaler
       <span class="select-wrap">
         <select :value="form.hiresUpscaler" @change="e => emit('set', 'hiresUpscaler', e.target.value)">
@@ -55,3 +60,22 @@ const emit = defineEmits(['set']);
 </template>
 
 <style scoped src="./groups.css"></style>
+
+<style scoped>
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.toggle input {
+  margin: 0;
+}
+
+/* Parameters of a switched off Hires. fix stay editable, dimmed */
+.group.off > .field,
+.group.off > .pair {
+  opacity: 0.45;
+}
+</style>

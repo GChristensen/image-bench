@@ -49,8 +49,6 @@ const sdWebUIStateStore = useSDWebUIStateStore();
 const controlNetStore = useControlNetStore();
 const projectsStore = useProjectsStore();
 const hasOpener = computed(() => !!window.opener);
-// Upscaling is not implemented for ComfyUI
-const isWebUI = import.meta.env.MODE === 'webui';
 
 // Composables
 const webUI = useWebUIBridge();
@@ -253,7 +251,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
                   :class="{'drop-target': dropTargetKind === KIND_IMAGE_TRAY}"
                   @dragover="onTrayDragOver($event, KIND_IMAGE_TRAY)" @dragleave="onTrayDragLeave"
                   @drop.prevent="onTrayDrop(KIND_IMAGE_TRAY)" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
-      <RouterLink v-if="isWebUI" to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
+      <RouterLink to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <RouterLink to="/library" class="tab" id="library-tab"><AppIcon name="library" :size="14"/>Library</RouterLink>
       <div class="tab-spacer"></div>
       <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"

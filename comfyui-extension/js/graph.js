@@ -137,14 +137,38 @@ export function findUpstream(target, {via = [], deep = false, types = null, stop
     return null;
 }
 
+// Input type of the growing input groups of V3 nodes (TextEncodeQwenImage21 "images": images.image_1, ...)
+const AUTOGROW_TYPE = 'COMFY_AUTOGROW_V3';
+
 /**
- * Whether an input of a node is optional in its node definition
+ * Whether an input of a node is optional in its node definition. A slot of an Autogrow group ("images.image_2")
+ * is optional beyond the minimum count of its template
  * @param {Object} node
  * @param {string} inputName
  * @returns {boolean}
  */
 function isOptionalInput(node, inputName) {
-    return !!node.constructor?.nodeData?.input?.optional?.[inputName];
+    const definition = node.constructor?.nodeData?.input;
+
+    if (definition?.optional?.[inputName])
+        return true;
+
+    const separator = inputName.indexOf('.');
+
+    if (separator < 0)
+        return false;
+
+    const group = inputName.slice(0, separator);
+    const name = inputName.slice(separator + 1);
+    const spec = definition?.required?.[group] ?? definition?.optional?.[group];
+
+    if (spec?.[0] !== AUTOGROW_TYPE)
+        return false;
+
+    const template = spec[1]?.template ?? {};
+    const index = template.names ? template.names.indexOf(name) : Number(name.slice(template.prefix?.length ?? 0));
+
+    return !!definition.optional?.[group] || index >= (template.min ?? 1);
 }
 
 /**

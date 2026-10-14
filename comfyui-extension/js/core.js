@@ -416,6 +416,8 @@ async function handlePhotoshopImage(event) {
 // Popup messages that start a generation, refused while one is active
 const GENERATION_MESSAGES = new Set(["GENERATE_IMAGE", "EXPLORE_MODELS", "BATCH_GENERATE", "GENERATE_VARIATIONS",
     "UPSCALE_IMAGES", "GENERATE_VARYING_STEPS", "UPSCALE_VARYING_DENOISING"]);
+// Those whose images go to the Upscaled tab
+const UPSCALE_MESSAGES = new Set(["UPSCALE_IMAGES", "UPSCALE_VARYING_DENOISING"]);
 
 /**
  * Whether ComfyUI is running or has queued prompts, or a strategy is running (also between its prompts)
@@ -440,7 +442,14 @@ function handlePostMessage(event) {
         console.log('[Image Bench] Received message:', type);
 
     if (GENERATION_MESSAGES.has(type) && isGenerationActive()) {
+        // Ends the wait of the tab that started the request (routed by the state when the popup receives it)
+        const runningState = getGenerationState();
+
+        if (UPSCALE_MESSAGES.has(type))
+            setGenerationState("HIRES_FIX");
+
         sendPopupMessage({type: "GENERATION_FINISHED"});
+        setGenerationState(runningState);
         showAlert("A generation is in progress. Please wait until it finishes or stop it.");
         return;
     }
@@ -580,67 +589,63 @@ async function handleGenerateVariations(options) {
 }
 
 /**
- * Handle image processing (upscaling) request
- * @param {Object} options - Processing options
+ * Generate images again from their parameters with a strategy of ImageProcessingStrategy
+ * @param {string} name - Key of the strategy in strategies (processing or varying)
+ * @param {string} state - Generation state: HIRES_FIX (upscaled images) or SEQUENTIAL_GENERATION
+ * @param {Object} options - Options of the strategy
  */
-async function handleProcessImages(options) {
-    console.log('[Image Bench] handleProcessImages() called');
-    console.warn('[Image Bench] Image processing not yet implemented for ComfyUI');
-    const state = options?.setSteps ? "SEQUENTIAL_GENERATION" : "HIRES_FIX";
-    setGenerationState(state);
-    // TODO: Implement processing strategy for ComfyUI
-}
-
-/**
- * Handle varying steps generation request
- * @param {Object} options - Varying steps options
- * @param {Object} options.image - Source image with parameters
- * @param {string} [options.steps] - Comma-separated step values (e.g., "10,20,30")
- * @param {string} [options.denoising] - Comma-separated denoising values (optional)
- */
-async function handleGenerateVaryingSteps(options) {
-    console.log('[Image Bench] handleGenerateVaryingSteps() called with options:', options);
-
+async function startImageStrategy(name, state, options) {
     if (!strategies) {
         console.error('[Image Bench] Strategies not initialized');
         return;
     }
 
-    // Set generation state
-    setGenerationState("SEQUENTIAL_GENERATION");
-    console.log('[Image Bench] Generation state set to: SEQUENTIAL_GENERATION');
+    // Upscaling regenerates the images with the Hires. fix pass of the workflow
+    if (state === "HIRES_FIX" && !uiOperations.getHiresSamplerTarget()) {
+        // The popup routes the message by the state when it receives it (synchronously): to the Upscaled tab,
+        // which waits for the run
+        setGenerationState(state);
+        sendPopupMessage({type: "GENERATION_FINISHED"});
+        setGenerationState("BATCH_GENERATION");
+        showAlert('Unable to upscale: the workflow has no Hires. fix sampler (a node marked "ib:smp:1").');
+        return;
+    }
+
+    setGenerationState(state);
 
     try {
-        // Stop any existing strategy
-        if (currentStrategy && currentStrategy.isActive) {
-            console.log('[Image Bench] Stopping existing strategy');
+        if (currentStrategy && currentStrategy.isActive)
             await currentStrategy.finish();
-        }
 
-        // Use the pre-created varying parameters strategy
-        currentStrategy = strategies.varying;
-        console.log('[Image Bench] Using varying parameters strategy:', currentStrategy);
-
-        // Start processing
-        console.log('[Image Bench] Calling strategy.process()...');
+        currentStrategy = strategies[name];
         await currentStrategy.process(options);
-
-        console.log('[Image Bench] Varying steps generation started successfully');
     } catch (error) {
-        console.error('[Image Bench] Failed to start varying steps generation:', error);
-        console.error('[Image Bench] Error stack:', error.stack);
+        console.error(`[Image Bench] Failed to start the ${name} strategy:`, error);
     }
 }
 
 /**
- * Handle varying denoising upscale request
- * @param {Object} options - Varying denoising options
+ * Upscale images: generate them again with Hires. fix switched on (ib:hr)
+ * @param {Object} options - {images}
+ */
+async function handleProcessImages(options) {
+    await startImageStrategy("processing", options?.setSteps ? "SEQUENTIAL_GENERATION" : "HIRES_FIX", options);
+}
+
+/**
+ * Generate an image again with each number of steps
+ * @param {Object} options - {image, steps: "10, 20, 30"}
+ */
+async function handleGenerateVaryingSteps(options) {
+    await startImageStrategy("varying", "SEQUENTIAL_GENERATION", options);
+}
+
+/**
+ * Upscale an image with each Hires. fix denoising strength
+ * @param {Object} options - {image, denoising: "0.3, 0.4, 0.5"}
  */
 async function handleUpscaleVaryingDenoising(options) {
-    console.log('[Image Bench] handleUpscaleVaryingDenoising() called');
-    console.warn('[Image Bench] Varying denoising upscale not yet implemented for ComfyUI');
-    setGenerationState("HIRES_FIX");
-    // TODO: Implement varying denoising strategy for ComfyUI
+    await startImageStrategy("varying", "HIRES_FIX", options);
 }
 
 /**

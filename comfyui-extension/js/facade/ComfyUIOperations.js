@@ -110,6 +110,41 @@ export class ComfyUIOperations {
     }
 
     /**
+     * Get the switches of the Hires. fix pass (ib:hr, e.g. an If/Else Switch choosing the image of the first
+     * or the second pass)
+     * @returns {Array<{target: Object, widgetName: string}>}
+     */
+    getHiresFixSwitches() {
+        const role = MARKER_ROLES.hiresFix;
+
+        return getMarkerTargets(this.app, role, this.nodeConfig)
+            .map(target => ({target, widgetName: getRoleWidgetName(role, this.nodeConfig, target)}))
+            .filter(({target, widgetName}) => widgetName && getTargetWidget(target, widgetName));
+    }
+
+    /**
+     * @returns {boolean|null} Whether Hires. fix is on, null if the workflow has no switch for it
+     */
+    getHiresFix() {
+        const [first] = this.getHiresFixSwitches();
+        return first ? !!getTargetWidget(first.target, first.widgetName).value : null;
+    }
+
+    /**
+     * Set all Hires. fix switches
+     * @param {boolean} enabled
+     * @returns {boolean} Whether the workflow has a switch
+     */
+    setHiresFix(enabled) {
+        const switches = this.getHiresFixSwitches();
+
+        for (const {target, widgetName} of switches)
+            setTargetWidgetValue(target, widgetName, !!enabled);
+
+        return switches.length > 0;
+    }
+
+    /**
      * Report a parameter that is not found in the workflow
      * @param {string} name
      * @param {boolean} found
@@ -676,14 +711,15 @@ export class ComfyUIOperations {
     }
 
     /**
-     * Toggle hires fix (no-op in ComfyUI)
-     * Hires fix in ComfyUI is handled via LatentUpscale nodes in the workflow
+     * Toggle the Hires. fix switches (ib:hr), like the WebUI checkbox; nothing without them
      * @param {boolean} onlyEnable - Only enable, don't toggle off
      * @param {boolean} onlyDisable - Only disable, don't toggle on
      */
     toggleHiresFix(onlyEnable = false, onlyDisable = false) {
-        // No-op: Hires fix is workflow-specific in ComfyUI
-        console.warn('toggleHiresFix not applicable to ComfyUI - use LatentUpscale nodes');
+        const enabled = this.getHiresFix();
+
+        if (enabled !== null)
+            this.setHiresFix(onlyEnable ? true : onlyDisable ? false : !enabled);
     }
 
     /**
@@ -790,7 +826,8 @@ export class ComfyUIOperations {
      * Set all generation parameters of an image found in the workflow.
      * Choices unknown to the workflow (e.g. WebUI sampler names of a WebUI image) are skipped
      * @param {Object} parameters - Image parameters object (from /history or a WebUI infotext)
-     * @param {Object} options - { setDenoising: boolean (denoising strength of the parameters) }
+     * @param {Object} options - { setDenoising: boolean (denoising strength of the parameters),
+     *   upscale: boolean (switch Hires. fix on) }
      * @returns {Promise<void>}
      */
     async applyImageParameters(parameters, options = {}) {
@@ -800,6 +837,8 @@ export class ComfyUIOperations {
             return !Array.isArray(list) || list.includes(value);
         };
         const choice = (widget, value) => isSet(value) && accepts(widget, value) ? value : undefined;
+        // A WebUI infotext has the size as "1024x768"
+        const [sizeWidth, sizeHeight] = String(parameters['size'] ?? '').split('x').map(Number);
 
         this.params.apply({
             prompt: parameters['prompt'],
@@ -810,12 +849,28 @@ export class ComfyUIOperations {
             cfg: parameters['cfg'] ?? parameters['cfg scale'],
             sampler: choice(this.params.locate('sampler')?.widget, parameters['sampler']),
             scheduler: choice(this.params.locate('scheduler')?.widget,
-                parameters['scheduler'] ?? parameters['schedule type'])
+                parameters['scheduler'] ?? parameters['schedule type']),
+            width: parameters['width'] ?? (sizeWidth || undefined),
+            height: parameters['height'] ?? (sizeHeight || undefined),
+            // The Generate tab's shift field: Distilled CFG (FluxGuidance) or Shift, whichever the workflow has
+            shift: parameters['guidance'] ?? parameters['distilled cfg scale'] ?? parameters['shift']
         }, 'txt2img');
 
-        const denoise = options.setDenoising ? parameters['denoising strength'] : parameters['denoise'];
-        if (isSet(denoise)) {
-            this.setDenoise(denoise);
+        // The denoising strength of the parameters is that of Hires. fix (as in WebUI txt2img), if the workflow has it
+        if (options.setDenoising) {
+            const name = this.getHiresSamplerTarget() ? 'hiresDenoise' : 'denoise';
+            const denoising = parameters['denoising strength'];
+
+            if (isSet(denoising))
+                this.warnIfMissing(name, this.params.setValue(name, denoising));
+        }
+        else if (isSet(parameters['denoise'])) {
+            this.setDenoise(parameters['denoise']);
+        }
+
+        // Upscaling regenerates the image with the Hires. fix pass of the workflow switched on
+        if (options.upscale) {
+            this.setHiresFix(true);
         }
 
         this.app.graph.setDirtyCanvas(true, true);

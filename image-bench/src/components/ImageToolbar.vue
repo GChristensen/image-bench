@@ -105,7 +105,6 @@ const emit = defineEmits([
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
 const selectable = computed(() => props.isTray || props.kind === KIND_UPSCALED);
 const generateImagesNumber = ref(props.presetImages);
-const isWebUI = import.meta.env.MODE === 'webui';
 const generateForever = computed(() => generateImagesNumber.value === -1);
 let finiteImagesNumber = generateImagesNumber.value;
 
@@ -153,7 +152,7 @@ defineExpose({generateImagesNumber});
     <template v-if="selectable && selectedCount">
       <div class="vsep"></div>
       <span class="selection-count">{{ selectedCount }} selected</span>
-      <button v-if="isTray && isWebUI" class="btn primary" :disabled="upscaleInProgress"
+      <button v-if="isTray" class="btn primary" :disabled="upscaleInProgress"
               :title="upscaleInProgress ? 'An upscale is in progress' : 'Upscale the selected images'"
               @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
       <button class="btn outline remove-selected" title="Remove the selected images from this view (the files stay on disk)"

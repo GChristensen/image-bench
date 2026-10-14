@@ -57,13 +57,8 @@ def get_node_config_path():
 
 
 def get_image_bench_dir():
-    """Get the image-bench output directory"""
-    # Try to find ComfyUI output directory
-    comfy_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    output_dir = os.path.join(comfy_root, "output")
-
-    # Create image-bench subdirectory in output
-    image_bench_dir = os.path.join(output_dir, "image-bench")
+    """Get the image-bench directory in the ComfyUI output directory (which --output-directory may move)"""
+    image_bench_dir = os.path.join(folder_paths.get_output_directory(), "image-bench")
     os.makedirs(image_bench_dir, exist_ok=True)
 
     return image_bench_dir
@@ -155,14 +150,11 @@ async def get_node_config(request):
 async def get_system_info(request):
     """Get system information including paths"""
     try:
-        comfy_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        image_bench_dir = get_image_bench_dir()
-        output_dir = os.path.join(comfy_root, "output")
-
         return web.json_response({
-            "comfyui_root": comfy_root,
-            "output_dir": output_dir,
-            "image_bench_dir": image_bench_dir
+            "comfyui_root": folder_paths.base_path,
+            "output_dir": folder_paths.get_output_directory(),
+            "temp_dir": folder_paths.get_temp_directory(),
+            "image_bench_dir": get_image_bench_dir()
         })
     except Exception as e:
         return web.Response(text=str(e), status=500)
@@ -175,9 +167,7 @@ async def get_system_info(request):
 async def clear_outputs_dir(request):
     """Clear all files in the ComfyUI output directory"""
     try:
-        comfy_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        output_dir = os.path.join(comfy_root, "output")
-        persist.clear_directory(output_dir)
+        persist.clear_directory(folder_paths.get_output_directory())
         return web.Response(text="OK")
     except Exception as e:
         return web.Response(text=str(e), status=500)
@@ -371,6 +361,11 @@ async def update_tray(request, kind):
     try:
         tray_data = json.loads(await request.text())
 
+        # The file of a new image is where its /view URL points (its imagePath may be outdated)
+        for image in tray_data.get("images", []):
+            if not image.get("_tray_processed"):
+                image["imagePath"] = resolve_view_path(image.get("imageUrl")) or image.get("imagePath")
+
         # Copy the new images to the tray directory and update their paths
         await save_tray_images(tray_data, kind, get_image_bench_dir(), "comfyui")
 
@@ -426,6 +421,26 @@ async def download_tray(request):
         return web.Response(text=str(e), status=500)
 
 
+def resolve_view_path(image_url):
+    """File path of a /view URL (filename, subfolder, type), as /view resolves it; None if it is not one"""
+    query = parse_qs(urlparse(image_url or "").query)
+    filename = (query.get("filename") or [""])[0]
+    subfolder = (query.get("subfolder") or [""])[0]
+    base_dir = folder_paths.get_directory_by_type((query.get("type") or ["output"])[0])
+
+    if not filename or not base_dir:
+        return None
+
+    base_dir = os.path.abspath(base_dir)
+    path = os.path.abspath(os.path.join(base_dir, subfolder, filename))
+
+    # Like /view, nothing outside the directory of the type (an absolute subfolder may be on another drive)
+    try:
+        return path if os.path.commonpath([base_dir, path]) == base_dir else None
+    except ValueError:
+        return None
+
+
 @PromptServer.instance.routes.post(BASE_PATH + "/explore_export")
 async def explore_export_handler(request):
     """Stream the exploration results as a single self-contained HTML page"""
@@ -434,17 +449,8 @@ async def explore_export_handler(request):
     roots = [folder_paths.get_output_directory(), folder_paths.get_temp_directory()]
 
     def resolve_path(image):
-        # Resolve like /view does: imagePath lacks the subfolder
-        query = parse_qs(urlparse(image.get("imageUrl") or "").query)
-        filename = (query.get("filename") or [""])[0]
-        subfolder = (query.get("subfolder") or [""])[0]
-        base_dir = folder_paths.get_directory_by_type((query.get("type") or ["output"])[0])
-
-        if not filename or not base_dir:
-            return None
-
-        path = os.path.join(base_dir, subfolder, filename)
-        return path if explore_export.is_allowed_image(path, roots) else None
+        path = resolve_view_path(image.get("imageUrl"))
+        return path if path and explore_export.is_allowed_image(path, roots) else None
 
     response = web.StreamResponse(headers={
         "Content-Type": "text/html; charset=utf-8",

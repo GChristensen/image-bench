@@ -10,10 +10,13 @@ export async function extractImageInfo(nodeId, output, promptId) {
         // The output already contains all image information we need
         for (const imageData of output.images) {
             try {
-                console.log(imageData)
-                // Construct full image path
-                const imageUrl = `/view?filename=${imageData.filename}&type=${imageData.type || 'output'}&subfolder=${imageData.subfolder || ''}`;
-                const imagePath = getSystemPaths().output_dir + "/" + imageData.filename;
+                const type = imageData.type || 'output';
+                const subfolder = imageData.subfolder || '';
+                const imageUrl = `/view?filename=${imageData.filename}&type=${type}&subfolder=${subfolder}`;
+                // Path of the file as /view resolves it: in the output (or temp) directory, with the subfolder
+                const paths = getSystemPaths();
+                const baseDir = type === 'temp' ? paths.temp_dir ?? paths.output_dir : paths.output_dir;
+                const imagePath = [baseDir, subfolder, imageData.filename].filter(Boolean).join("/");
 
                 images.push({
                     imageUrl,
@@ -45,7 +48,8 @@ export const MARKER_ROLES = {
     image: {marker: 'img', configKey: 'image', requireWidget: true},
     mask: {marker: 'mask', configKey: 'mask', requireWidget: true},
     controlnet: {marker: 'cn', configKey: 'controlnet', requireWidget: true},
-    reference: {marker: 'ref', configKey: 'reference', requireWidget: true}
+    reference: {marker: 'ref', configKey: 'reference', requireWidget: true},
+    hiresFix: {marker: 'hr', configKey: 'hires_fix', requireWidget: true}
 };
 
 /**
@@ -571,8 +575,10 @@ function extractSamplerFromHistory(historyPrompt, nodeConfig, executionIds) {
     return params;
 }
 
-// Located generation parameters (params.js) read from /history, by their image parameter names
-const HISTORY_PARAMS = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'denoise'];
+// Located generation parameters (params.js) read from /history, by their image parameter names;
+// the size and the guidance / shift let an image be generated again as it was
+const HISTORY_PARAMS = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'denoise', 'width', 'height',
+    'guidance', 'shift'];
 
 /**
  * Extract checkpoint/model from history prompt

@@ -15,7 +15,7 @@ import {HOST_NAME, isWebUI} from "@/host.js";
  */
 
 // The views that are not trays, as named in the confirmations
-export const VIEWS = isWebUI ? "Generated, Explore and Upscaled tabs" : "Generated and Explore tabs";
+export const VIEWS = "Generated, Explore and Upscaled tabs";
 
 export function clearViews() {
   useExploreImagesStore().clear();

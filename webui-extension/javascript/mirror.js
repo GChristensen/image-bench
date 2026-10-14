@@ -169,6 +169,8 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
         if (tab === 'TXT2IMG') {
             for (const [name, key] of [...Object.entries(HIRES_INPUT_PARAMS), ...Object.entries(HIRES_DROPDOWN_PARAMS)])
                 params[name] = adapter.getInputValue(key);
+
+            params.hiresFix = adapter.getElement('HIRES_CHECKBOX')?.checked ?? null;
         }
         else {
             for (const [name, key] of Object.entries(IMG2IMG_RADIO_PARAMS))
@@ -374,15 +376,11 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
     }
 
     /**
-     * Parameters of the shown generation mode for a project, with the Hires. fix checkbox of txt2img
+     * Parameters of the shown generation mode for a project (with the Hires. fix checkbox of txt2img)
      * @returns {{mode: string, params: Object}}
      */
     function captureSnapshot() {
         const {mode, params} = captureState();
-
-        if (mode === 'txt2img')
-            params.hiresFix = adapter.getElement('HIRES_CHECKBOX')?.checked ?? null;
-
         return {mode, params};
     }
 

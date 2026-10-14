@@ -106,9 +106,9 @@ const has = useFeatures("generate", () => sdWebUI.features);
 
 // The WebUI parameters as edited here: prompt, negativePrompt, width, height, steps, cfg, shift, seed, subseed,
 // subseedStrength, sampler, scheduler, denoising, uiPreset, checkpoint, modules (VAE / Text Encoder file names,
-// null without the Forge Neo dropdown); txt2img: hiresUpscaler, hiresScale,
-// hiresSteps (denoising is that of hires. fix); img2img and inpaint: resizeMode, maskMode, inpaintArea, maskedContent.
-// hiresFix (txt2img) is only set (PNG Info), not reported
+// null without the Forge Neo dropdown); txt2img: hiresFix (the checkbox; null without the ComfyUI ib:hr switch),
+// hiresUpscaler, hiresScale, hiresSteps (denoising is that of hires. fix); img2img and inpaint: resizeMode,
+// maskMode, inpaintArea, maskedContent.
 const form = reactive({});
 const editedAt = {};
 let pending = {};

@@ -10,7 +10,7 @@ import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
-import {hostHas, isWebUI} from "@/host.js";
+import {HOST_NAME, hostHas, isWebUI} from "@/host.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
 
@@ -182,13 +182,13 @@ export const IMAGE_ACTIONS = [
     run: image => generateVaryingTextEncoders(image)
   },
   {
-    id: "upscale", side: "left", group: 1, icon: "upscale", label: "Upscale with the current WebUI settings", key: "U",
-    visible: (image, ctx) => isWebUI && ctx.upscalable && !image.img2img,
+    id: "upscale", side: "left", group: 1, icon: "upscale", label: `Upscale with the current ${HOST_NAME} settings`, key: "U",
+    visible: (image, ctx) => ctx.upscalable && !image.img2img,
     run: (image, ctx) => ctx.handlers.upscale?.(image)
   },
   {
     id: "denoising", side: "left", group: 1, icon: "denoise", label: "Upscale with denoising", key: "D",
-    visible: (image, ctx) => isWebUI && ctx.isTray && !image.img2img,
+    visible: (image, ctx) => ctx.isTray && !image.img2img,
     run: image => upscaleVaryingDenoising(image)
   },
   {

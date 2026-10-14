@@ -13,7 +13,7 @@ const SECTIONS = [
   {id: "generated", title: "Generated"},
   {id: "compare", title: "Compare"},
   {id: "trays", title: "Concept & image trays"},
-  ...(isWebUI ? [{id: "upscaled", title: "Upscaled"}] : []),
+  {id: "upscaled", title: "Upscaled"},
   {id: "library", title: "Library"},
   {id: "images", title: "Working with images"},
   {id: "settings", title: "Settings & actions"},
@@ -178,7 +178,7 @@ onMounted(loadPluginStatus);
         <li><b>Compare</b> — chosen images side by side, and the same region of each of them, for picking the
           best of several variants.</li>
         <li><b>Concept tray</b> and <b>Image tray</b> — permanent collections of the images worth keeping.</li>
-        <li v-if="isWebUI"><b>Upscaled</b> — upscaled (Hires. fix) versions of the images you choose.</li>
+        <li><b>Upscaled</b> — upscaled (Hires. fix) versions of the images you choose.</li>
         <li><b>Library</b> — projects, which keep the trays and the generation parameters of a piece of work, and
           snippets, prompt text inserted from the Generate tab.</li>
         <li><AppIcon name="settings" :size="13" class="inline-icon"/> <b>Settings</b> and
@@ -516,9 +516,11 @@ onMounted(loadPluginStatus);
           generates the image again with each checked one, its seed and other modules kept. If the image used
           several encoders (CLIP-L and T5), the one whose name is most like the checked one is replaced. The
           modules set before are restored afterwards.</li>
-        <li v-if="isWebUI"><b>Upscale with denoising</b> <AppIcon name="denoise" :size="13" class="inline-icon"/>
-          — asks for a list of denoising strengths and upscales the image with each of them. <b>Upscale
-          selected</b>, shown in the toolbar next to it, upscales each of them.</li>
+        <li><b>Upscale with denoising</b> <AppIcon name="denoise" :size="13" class="inline-icon"/>
+          — asks for a list of Hires. fix denoising strengths and upscales the image with each of them. <b>Upscale
+          selected</b>, shown in the toolbar next to it, upscales each of them.<template v-if="isComfy"> Upscaling
+          needs a workflow with a Hires. fix sampler (<code>ib:smp:1</code>); its <code>ib:hr</code> switch is
+          turned on for the run and restored afterwards.</template></li>
         <li><b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (parameters
           included) or a tray archive (.zip), such as the files in <code>ib_project/trays</code> of a project. The
           trays themselves are saved into the projects of the
@@ -527,24 +529,28 @@ onMounted(loadPluginStatus);
       <div class="note warn">
         <AppIcon name="alert" :size="15"/>
         <div>
-          <b>Re-generating an image uses the current parameters.</b> Buttons that make an image again —
-          <template v-if="isWebUI">upscale, upscale with denoising, </template>generate with steps — take only
+          <b>Re-generating an image uses the current {{ isWebUI ? "parameters" : "workflow" }}.</b> Buttons that
+          make an image again — upscale, upscale with denoising, generate with steps —
+          <template v-if="isComfy">set the image's prompt (with its LoRA tags), model, seed, steps, CFG, sampler,
+          size and Distilled CFG / Shift in the marked nodes, and run the workflow that is open: its other nodes,
+          references and Hires. fix settings are used as they are. Generate the drafts and upscale them with the
+          same workflow, or one with the same structure.</template><template v-else>take only
           the seed from the image (along with its variation seed, and the steps or denoising strength being
           varied). The prompt, checkpoint, LoRAs, sampler, size and everything else come from what is currently
           set in {{ HOST_NAME }}. Before using these buttons, bring {{ HOST_NAME }} in line with the image:
           middle-click (or Shift+click) its <AppIcon name="seed" :size="13" class="inline-icon"/> button to reuse
-          all of its parameters.<template v-if="isWebUI"> An image whose prompt differs from the current txt2img prompt
+          all of its parameters. An image whose prompt differs from the current txt2img prompt
           carries the <AppIcon name="alert" :size="13" class="inline-icon"/> badge as a reminder.</template>
         </div>
       </div>
     </section>
 
-    <section v-if="isWebUI" id="manual-upscaled">
+    <section id="manual-upscaled">
       <h2><AppIcon name="upscale" :size="17"/>Upscaled</h2>
       <p>
         Here appear the results of the <AppIcon name="upscale" :size="13" class="inline-icon"/> upscale button:
         the image is generated again from its parameters, this time with Hires. fix, using the Hires. fix
-        settings currently set in WebUI.
+        settings currently set in {{ isWebUI ? "WebUI" : "the workflow (the Hires. fix group of the Generate tab)" }}.
       </p>
       <p>
         Like the trays, the tab keeps its images until you remove them: they are copied to the
@@ -640,9 +646,9 @@ onMounted(loadPluginStatus);
           (trays, Compare).</td></tr>
         <tr><td><AppIcon name="steps" :size="14"/></td><td><span class="kbd">G</span> Generates the image with a
           list of step counts (trays).</td></tr>
-        <tr v-if="isWebUI"><td><AppIcon name="upscale" :size="14"/></td><td><span class="kbd">U</span> Upscales the
+        <tr><td><AppIcon name="upscale" :size="14"/></td><td><span class="kbd">U</span> Upscales the
           image.</td></tr>
-        <tr v-if="isWebUI"><td><AppIcon name="denoise" :size="14"/></td><td><span class="kbd">D</span> Upscales the
+        <tr><td><AppIcon name="denoise" :size="14"/></td><td><span class="kbd">D</span> Upscales the
           image with a list of denoising strengths (trays).</td></tr>
         <tr><td><AppIcon name="controlnet" :size="14"/></td><td><span class="kbd">N</span> Sends the image to the
           control image of the ControlNet tab.</td></tr>
@@ -716,7 +722,7 @@ onMounted(loadPluginStatus);
       </p>
       <ul>
         <li><b>Clear generated images</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> — removes all
-          images from the Generated<template v-if="isWebUI">, Upscaled</template> and Explore tabs. The trays, the
+          images from the Generated, Upscaled and Explore tabs. The trays, the
           Compare tab, the prompts and the parameters are kept, and no files are deleted.</li>
         <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
           name="nuke" :size="13" class="inline-icon"/> — for starting a new project: also empties both trays and the
@@ -726,7 +732,7 @@ onMounted(loadPluginStatus);
         <li><b>Delete all output files</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
           name="nuke" :size="13" class="inline-icon"/><AppIcon name="nuke" :size="13" class="inline-icon"/> —
           clears all tabs and trays and permanently deletes every file and folder in the {{ HOST_NAME }} output
-          folder, tray<template v-if="isWebUI"> and upscaled</template> images included. This cannot be
+          folder, tray and upscaled images included. This cannot be
           undone.</li>
         <li v-if="isWebUI"><b>Reset saved generation parameters</b> <AppIcon name="reset" :size="13"
           class="inline-icon"/> — forgets the prompts and parameters saved by "Remember prompts and generation
@@ -824,13 +830,15 @@ onMounted(loadPluginStatus);
       </p>
       <table class="markers">
         <tr><th>Marker</th><th>Node</th><th>Needed for</th></tr>
-        <tr><td><code>ib:cp</code></td><td>Checkpoint / UNET loader</td><td>Checkpoint list, model exploration</td></tr>
+        <tr><td><code>ib:cp</code></td><td>Checkpoint, UNET or GGUF loader (ComfyUI-GGUF, KJNodes)</td><td>Checkpoint list, model exploration</td></tr>
         <tr><td><code>ib:pp</code></td><td>Positive prompt (Image Bench Prompt, CLIPTextEncode, ...)</td><td>Prompt, LoRA list</td></tr>
         <tr><td><code>ib:np</code></td><td>Negative prompt</td><td>Negative prompt</td></tr>
         <tr><td><code>ib:smp</code></td><td>KSampler or SamplerCustomAdvanced</td><td>Seed, steps, CFG, sampler, size, ...
           (also found in the nodes connected to the sampler: RandomNoise, BasicScheduler, CFGGuider, FluxGuidance,
           ModelSampling, the empty latent)</td></tr>
         <tr><td><code>ib:smp:1</code></td><td>Second-pass sampler</td><td>Hires. fix group</td></tr>
+        <tr><td><code>ib:hr</code></td><td>If/Else Switch between the first-pass and the Hires. fix image</td>
+          <td>Hires. fix checkbox; the Upscale action</td></tr>
         <tr><td><code>ib:lora</code></td><td>LoraLoader</td><td>LoRA exploration</td></tr>
         <tr><td><code>ib:img</code> / <code>ib:mask</code></td><td>LoadImage / LoadImageMask</td><td>img2img, inpaint, images from Photoshop</td></tr>
         <tr><td><code>ib:ref:0</code>, <code>ib:ref:1</code>, ...</td><td>LoadImage of edit-model references</td><td>References panel</td></tr>

@@ -52,8 +52,6 @@ const COMFY_FEATURES = {
     variationSeed: false,
     uiPreset: false,
     modules: false,
-    // Hires. fix checkbox of txt2img, set from PNG Info (ComfyUI has the Hires. fix sampler or not)
-    hiresFix: false,
     tokens: false,
     promptLock: false,
     img2imgOptions: false,

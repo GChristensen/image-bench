@@ -150,6 +150,7 @@ export function createParamRegistry(ops) {
         params.prompt = prompt?.value ?? null;
         params.negativePrompt = negativePrompt?.value ?? null;
         params.checkpoint = checkpoint?.value ?? null;
+        params.hiresFix = ops.getHiresFix();
 
         const options = {
             checkpoints: getWidgetChoices(checkpoint) ?? undefined,
@@ -170,6 +171,7 @@ export function createParamRegistry(ops) {
             size: !!(located.width && located.height),
             denoising: !!located[resolveName('denoising', mode, located)],
             hires: !!ops.getHiresSamplerTarget(),
+            hiresFix: params.hiresFix !== null,
             hiresSteps: !!located.hiresSteps,
             hiresScale: !!located.hiresScale,
             hiresUpscaler: !!located.hiresUpscaler
@@ -196,6 +198,8 @@ export function createParamRegistry(ops) {
                 ops.setPromptWidgetValue(name === 'prompt' ? 'positive' : 'negative', value);
             else if (name === 'checkpoint')
                 ops.setCheckpoint(value);
+            else if (name === 'hiresFix')
+                ops.setHiresFix(value);
             else if (name === 'seed')
                 applySeed(located.seed, Number(value));
             else

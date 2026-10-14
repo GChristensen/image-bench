@@ -65,10 +65,12 @@ cannot reliably guess which node it should drive. You tell it by adding a **mark
    [below](#image-bench-prompt-node)), or keep the encoder, and title it `ib:pp`.
 2. Title the negative prompt encoder `ib:np`.
 3. Title the sampler `ib:smp` (`KSampler`, or `SamplerCustomAdvanced` for Flux / Qwen style workflows).
-4. Title the checkpoint (or `UNETLoader`) `ib:cp`.
+4. Title the checkpoint (or `UNETLoader`, or a GGUF loader: `Unet Loader (GGUF)` of ComfyUI-GGUF, `GGUF Loader KJ` of
+   KJNodes) `ib:cp`.
 5. Optional:
    - img2img: title the `LoadImage` of the input image `ib:img`; inpaint: also title the mask loader `ib:mask`.
-   - Hires. fix: title the second-pass sampler `ib:smp:1`.
+   - Hires. fix: title the second-pass sampler `ib:smp:1`, and an `If/Else Switch` choosing between the images of
+     the two passes `ib:hr` (the Hires. fix checkbox).
    - Edit models: title the `LoadImage` nodes of the reference images `ib:ref:0`, `ib:ref:1`, ...
    - ControlNet: title each ControlNet apply node `ib:cn:0`, `ib:cn:1`, ...
    - LoRA exploration: title a `LoraLoader` `ib:lora`.
@@ -81,9 +83,10 @@ A marker has the form `ib:<type>` or `ib:<type>:<index>`:
 
 | Marker | Node role | Accepted node types | Widgets used |
 |--------|-----------|---------------------|--------------|
-| `ib:cp` | Checkpoint / model loader | `CheckpointLoaderSimple`, `CheckpointLoader`, `unCLIPCheckpointLoader`, `UNETLoader` | `ckpt_name` (`unet_name` for `UNETLoader`) |
+| `ib:cp` | Checkpoint / model loader | `CheckpointLoaderSimple`, `CheckpointLoader`, `unCLIPCheckpointLoader`, `UNETLoader`, `UnetLoaderGGUF` / `UnetLoaderGGUFAdvanced` (ComfyUI-GGUF), `GGUFLoaderKJ` (KJNodes) | `ckpt_name` (`unet_name` for `UNETLoader` and the ComfyUI-GGUF loaders, `model_name` for `GGUFLoaderKJ`) |
 | `ib:smp` (`ib:smp:0`) | Sampler | `KSampler`, `KSamplerAdvanced`, `SamplerCustom`, `SamplerCustomAdvanced` | Its own widgets, and those of the nodes linked to it (see [Generation Parameters](#generation-parameters)) |
 | `ib:smp:1` | Second-pass (Hires. fix) sampler | same as `ib:smp` | `steps`, `denoise` and the upscale nodes in front of it |
+| `ib:hr` | Hires. fix switch | `ComfySwitchNode` (If/Else Switch), `ComfySoftSwitchNode`, `PrimitiveBoolean` | `switch` (`value` for `PrimitiveBoolean`); all marked nodes are set together |
 | `ib:pp` | Positive prompt | `ImageBenchPrompt`, `String Literal`, `CLIPTextEncode`, `CLIPTextEncodeSDXL`, `CLIPTextEncodeFlux`, `CLIPTextEncodeSD3`, `TextEncodeQwenImage21` | `text` (`string` for `String Literal`, `prompt` for `TextEncodeQwenImage21`) |
 | `ib:np` | Negative prompt | same as positive prompt | `text` (`string` for `String Literal`, `negative_prompt` for `TextEncodeQwenImage21`) |
 | `ib:lora` | LoRA loader of LoRA exploration | `LoraLoader`, `LoraLoaderModelOnly` | `lora_name`, `strength_model`, `strength_clip` (those the node has) |
@@ -112,6 +115,7 @@ What each marker is needed for and what happens without it:
 | `ib:cp` | Generate tab checkpoint list; model exploration (switching checkpoints, restoring the original one afterwards); reading the model of a finished generation | **None** — the Generate tab hides the checkpoint, model exploration fails with "No marked checkpoint node found". Reading generation info falls back to the first node of an accepted type. |
 | `ib:smp` | Every sampler parameter of the Generate tab; seed, `control_after_generate` and steps for batch generation, varying parameters, upscaling/hires; reading sampler parameters of a finished generation | The first `KSampler` node (for reading generation info: the first node of any accepted sampler type). |
 | `ib:smp:1` | Hires. fix group of the Generate tab (txt2img) | **None** — the group is hidden. |
+| `ib:hr` | Hires. fix checkbox of the Generate tab; the Upscale action switches it on for its runs and restores it afterwards | **None** — the checkbox is hidden and the Hires. fix pass always runs; Upscale generates the image again as it is. |
 | `ib:pp` | Generate tab prompt and LoRA list; writing the prompt in strategies; reading the prompt of a finished generation | The first `CLIPTextEncode` node in the graph. |
 | `ib:np` | Generate tab negative prompt; writing/reading the negative prompt | The second `CLIPTextEncode` node in the graph. Without either, the Generate tab hides the negative prompt (e.g. Flux). |
 | `ib:lora` | LoRA exploration: sets `lora_name` and both strengths to the LoRA's weight for each explored LoRA; the LoRA-free run sets the strengths to 0, which skips loading the LoRA. A bypassed or muted marked node is enabled during exploration. Its LoRA, strengths and mode are restored afterwards. The LoRA's activation text is appended to the prompt. | **None** — exploration with LoRAs selected is refused with an alert. |
@@ -190,16 +194,24 @@ markers:
 | Shift (when there is no `FluxGuidance`) | `ModelSamplingSD3` / `ModelSamplingAuraFlow` `.shift` along the `model` input | the same, in front of the guider |
 | Width × height | `EmptyLatentImage`, `EmptySD3LatentImage`, `EmptyFlux2LatentImage`, ... linked to `latent_image`, or the `PrimitiveInt` nodes feeding its `width` / `height` | the same (Flux.2 workflows feed `Flux2Scheduler` from the same primitives) |
 
-With `ib:smp:1` the Hires. fix group of txt2img edits its `steps` and `denoise`, the `scale_by` of the
-`LatentUpscaleBy` / `ImageScaleBy` in front of it, and the upscaler: `UpscaleModelLoader.model_name`, else the
-`upscale_method` of the scale node.
+With `ib:smp:1` the Hires. fix group of txt2img edits its `steps` and `denoise` (or those of a `BasicScheduler` /
+`Flux2Scheduler` and a `SplitSigmasDenoise` on its `sigmas`), the `scale_by` of the `LatentUpscaleBy` /
+`ImageScaleBy` in front of it, and the upscaler: `UpscaleModelLoader.model_name`, else the `upscale_method` of the
+scale node.
+
+The Hires. fix checkbox needs a switch marked `ib:hr`. Use the core **If/Else Switch** (`ComfySwitchNode`): `on_false`
+from the first pass image, `on_true` from the Hires. fix image, its output to the save node. Its inputs are lazy, so
+the Hires. fix nodes do not run while it is off. (Bypassing the Hires. fix nodes instead would not pass the first pass
+image on.)
 
 Links are followed through Reroute nodes and into the subgraph a node is in. Where these nodes live is configured in
 the `generation_params` section of `node_config.json` (see [Generation parameter locators](#generation-parameter-locators)),
 so other node types can be added there. Every field whose node is not found is hidden.
 
 The checkpoint, sampler, scheduler and upscaler lists are the choices of the workflow widgets, so a `UNETLoader`
-lists the diffusion models.
+lists the diffusion models and a GGUF loader the `.gguf` files. Model exploration (the Explore tab) lists the `checkpoints`
+folder only, so with a `UNETLoader` or GGUF loader marked `ib:cp` it offers no usable models; switch them in the
+Generate tab's model list instead.
 
 ### Seed
 
@@ -350,8 +362,8 @@ page** after editing it. Support for custom nodes is added there, not in code.
 
 #### Marker roles
 
-The sections `checkpoint`, `sampler`, `positive_prompt`, `negative_prompt`, `lora`, `image`, `mask` and `reference`
-share the same shape:
+The sections `checkpoint`, `sampler`, `positive_prompt`, `negative_prompt`, `lora`, `image`, `mask`, `reference` and
+`hires_fix` share the same shape:
 
 ```json
 "checkpoint": {
@@ -477,6 +489,42 @@ Text-to-image with the Generate tab LoRA list (an **Image Bench Prompt** node ma
 The Flux.2 workflows set the size with **Width** / **Height** primitives shared by the latent and the scheduler, which
 the Generate tab edits. Pick a LoRA in **Load LoRA** only if you enable it for a manual run.
 
+FLUX.2 [dev], Qwen Image 2.1 and Ideogram 4 with every Generate tab feature that ComfyUI offers for them: the LoRA list,
+Hires. fix or inpainting, and for the edit models FLUX.2 and Qwen four reference slots (`ib:ref:0`–`ib:ref:3`,
+bypassed while empty) for the References panel:
+
+| Workflow | Generate tab mode | Adds |
+|----------|-------------------|------|
+| `image_flux2_dev_full.json` | txt2img | References (scaled to 1 MP → `VAE Encode` → `Reference Latent` chain), Hires. fix (`ib:smp:1`: upscaler model, a `Flux2Scheduler` for the new size, denoising by `Split Sigmas Denoise`; `ib:hr` switch) |
+| `image_flux2_dev_inpaint.json` | Inpaint | `ib:img` / `ib:mask` (Photoshop or the Input / Mask cells), `Differential Diffusion`, denoising by `Split Sigmas Denoise`, composite through the mask; references |
+| `image_qwen_image_2_1_full.json` | txt2img | References (the `images` inputs of `Text Encode Qwen Image 2.1`), Hires. fix (`ib:smp:1`: upscaler model, a second `KSampler` at denoising 0.4; `ib:hr` switch) |
+| `image_qwen_image_2_1_inpaint.json` | Inpaint | `ib:img` / `ib:mask`, `Differential Diffusion`, composite through the mask; references |
+| `image_ideogram4_full.json` | txt2img | Ideogram 4: `Dual Model CFG Guider` (CFG scale) with the unconditional model, `CFG Override`, `Ideogram 4 Scheduler` (steps; its `mu` is the Shift field), Hires. fix as in the FLUX.2 workflow; no references or negative prompt (the model takes neither) |
+| `image_ideogram4_inpaint.json` | Inpaint | Ideogram 4 with `ib:img` / `ib:mask`, `Differential Diffusion`, denoising by `Split Sigmas Denoise`, composite through the mask |
+
+The Hires. fix pass upscales with an upscaler model (`Load Upscale Model`, the Upscaler list of the Generate tab;
+`RealESRGAN_x4plus` by default, which must be installed in `models/upscale_models`) and resizes the result to the
+first pass size × *Upscale by*. The **Hires. fix ib:hr** switch is the Hires. fix checkbox: generate drafts with it off,
+then use **Upscale** on the ones you keep (see [Upscaling](#upscaling)).
+
+ComfyUI has no ControlNet for these models, so the ControlNet tab shows no units with them; with FLUX.2 and Qwen a
+pose or depth map can be given as a reference instead.
+
+## Upscaling
+
+The **Upscale** (U) and **Upscale with denoising** (D) buttons of the image cards, and **Upscale selected** of the trays,
+generate images again with the Hires. fix pass of the open workflow, as WebUI does with its Hires. fix checkbox. The
+results go to the **Upscaled** tab, which keeps them in `image-bench/upscaled` of the output directory.
+
+- The workflow needs a Hires. fix sampler (`ib:smp:1`); without one the buttons report that it is missing. A switch
+  marked `ib:hr` is turned on for the run and restored afterwards; without one the Hires. fix pass always runs.
+- Each image is generated again from its parameters, as read from ComfyUI's history: prompt (with its LoRA tags),
+  model, seed, steps, CFG, sampler, scheduler, size and Distilled CFG / Shift. Everything else, references included,
+  comes from the open workflow, so upscale with the workflow the images were made with (or one with the same nodes).
+- **Upscale with denoising** asks for denoising strengths and sets each one as the Hires. fix denoising.
+- **Generate with steps** (G) generates an image again with each of a list of step counts, Hires. fix as it is set.
+- The parameters of the workflow are restored when the run ends or is stopped.
+
 Anima:
 
 - `image_anima_lora.json`: a flat Anima text-to-image workflow with every node already marked
@@ -532,7 +580,7 @@ comfyui-extension/
 | LoRAs in the prompt | Built in | Image Bench Prompt node |
 | References | Forge ImageStitch gallery | `ib:ref` LoadImage slots |
 | ControlNet | Forge ControlNet Integrated units | `ib:cn` apply nodes; preprocessors via comfyui_controlnet_aux |
-| Upscaling / hires of existing images | Yes | Not yet |
+| Upscaling / hires of existing images | Hires. fix checkbox | `ib:smp:1` Hires. fix pass, `ib:hr` switch |
 
 ## Development
 

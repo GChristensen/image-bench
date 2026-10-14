@@ -5,13 +5,19 @@
       "CheckpointLoaderSimple",
       "CheckpointLoader",
       "unCLIPCheckpointLoader",
-      "UNETLoader"
+      "UNETLoader",
+      "UnetLoaderGGUF",
+      "UnetLoaderGGUFAdvanced",
+      "GGUFLoaderKJ"
     ],
     "widgetNames": {
       "CheckpointLoaderSimple": "ckpt_name",
       "CheckpointLoader": "ckpt_name",
       "unCLIPCheckpointLoader": "ckpt_name",
-      "UNETLoader": "unet_name"
+      "UNETLoader": "unet_name",
+      "UnetLoaderGGUF": "unet_name",
+      "UnetLoaderGGUFAdvanced": "unet_name",
+      "GGUFLoaderKJ": "model_name"
     }
   },
   "sampler": {
@@ -144,6 +150,20 @@
       "LoadImage": "image"
     }
   },
+  "hires_fix": {
+    "_comment": "The switch of the Hires. fix pass, e.g. an If/Else Switch choosing between the images of the first and the second pass. All marked nodes are set together.",
+    "marker": "hr",
+    "nodeTypes": [
+      "ComfySwitchNode",
+      "ComfySoftSwitchNode",
+      "PrimitiveBoolean"
+    ],
+    "widgetNames": {
+      "ComfySwitchNode": "switch",
+      "ComfySoftSwitchNode": "switch",
+      "PrimitiveBoolean": "value"
+    }
+  },
   "generation_params": {
     "_comment": "Where the Generate tab parameters live, relative to the sampler marked ib:smp (role sampler) or ib:smp:1 (role hiresSampler). The first locator that resolves wins: a widget of the sampler itself, or of a node of `types` reached through the inputs in `via`, then further upstream with `deep` (true: through any input, a name: through that input only). Deep walks do not pass the sampler node types.",
     "seed": [
@@ -174,7 +194,8 @@
         "deep": true,
         "types": [
           "BasicScheduler",
-          "Flux2Scheduler"
+          "Flux2Scheduler",
+          "Ideogram4Scheduler"
         ],
         "widget": "steps"
       }
@@ -189,7 +210,8 @@
         ],
         "types": [
           "CFGGuider",
-          "DualCFGGuider"
+          "DualCFGGuider",
+          "DualModelGuider"
         ],
         "widget": "cfg"
       }
@@ -234,6 +256,16 @@
         "deep": true,
         "types": [
           "BasicScheduler"
+        ],
+        "widget": "denoise"
+      },
+      {
+        "via": [
+          "sigmas"
+        ],
+        "deep": true,
+        "types": [
+          "SplitSigmasDenoise"
         ],
         "widget": "denoise"
       }
@@ -282,6 +314,16 @@
           "ModelSamplingAuraFlow"
         ],
         "widget": "shift"
+      },
+      {
+        "via": [
+          "sigmas"
+        ],
+        "deep": true,
+        "types": [
+          "Ideogram4Scheduler"
+        ],
+        "widget": "mu"
       }
     ],
     "width": [
@@ -356,7 +398,9 @@
         ],
         "deep": true,
         "types": [
-          "BasicScheduler"
+          "BasicScheduler",
+          "Flux2Scheduler",
+          "Ideogram4Scheduler"
         ],
         "widget": "steps"
       }
@@ -374,6 +418,17 @@
         "deep": true,
         "types": [
           "BasicScheduler"
+        ],
+        "widget": "denoise"
+      },
+      {
+        "role": "hiresSampler",
+        "via": [
+          "sigmas"
+        ],
+        "deep": true,
+        "types": [
+          "SplitSigmasDenoise"
         ],
         "widget": "denoise"
       }
