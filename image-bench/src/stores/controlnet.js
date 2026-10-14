@@ -32,8 +32,9 @@ export const useControlNetStore = defineStore('controlNet', () => {
     const features = ref(null)
     // The preprocessor is running
     const running = ref(false)
-    // Images of the unit (CONTROLNET_IMAGES): sources, null where there is none
-    const images = ref({tab: null, unit: null, image: null, mask: null, preview: null})
+    // Images of the unit (CONTROLNET_IMAGES): sources, null where there is none;
+    // pose is the OpenPose JSON of the preview as a data URL (WebUI, openpose preprocessors)
+    const images = ref({tab: null, unit: null, image: null, mask: null, preview: null, pose: null})
 
     function onSDEvent(e) {
         if (e.type === "CONTROLNET_STATE") {
@@ -48,7 +49,7 @@ export const useControlNetStore = defineStore('controlNet', () => {
             running.value = e.running;
         }
         else if (e.type === "CONTROLNET_IMAGES") {
-            images.value = {tab: e.tab, unit: e.unit, image: e.image, mask: e.mask, preview: e.preview};
+            images.value = {tab: e.tab, unit: e.unit, image: e.image, mask: e.mask, preview: e.preview, pose: e.pose ?? null};
         }
     }
 

@@ -292,6 +292,8 @@ async function onMessage(msg) {
         await controlNet.runAction(payload.unit, payload.action)
     else if (payload.type === "SET_CONTROLNET_IMAGE")
         await controlNet.setUnitImage(payload.unit, payload.kind, payload.file)
+    else if (payload.type === "SET_CONTROLNET_POSE")
+        await controlNet.setPose(payload.unit, payload.pose)
     else if (payload.type === "SET_CONTROLNET_TAB")
         await controlNet.setTab(payload.tab)
     else if (payload.type === "REFRESH_MODELS")

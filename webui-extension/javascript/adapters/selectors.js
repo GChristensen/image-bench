@@ -163,6 +163,12 @@ export const SELECTORS = {
     // gradio_rangeslider (the timestep range): number inputs of both ends
     RANGE_SLIDER_MIN: 'input[data-testid="min-input"]',
     RANGE_SLIDER_MAX: 'input[data-testid="max-input"]',
+    // Hidden OpenPose elements of the preprocessor preview group: the pose JSON link (a data URL), and the textbox
+    // and button that render an edited pose into the preview
+    CONTROLNET_PREVIEW_GROUP: '.cnet-generated-image-group',
+    CONTROLNET_POSE_LINK: '.cnet-download-pose a',
+    CONTROLNET_POSE_TEXTBOX: '.cnet-pose-json textarea',
+    CONTROLNET_POSE_RENDER: '.cnet-render-pose',
     // Gradio slider: its range input and label
     RANGE_INPUT: 'input[type="range"]',
     BLOCK_LABEL: '[data-testid="block-info"]',

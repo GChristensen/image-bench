@@ -19,6 +19,9 @@ const EVENT_DELAY = 500;
 const UNIT_RENDER_TIMEOUT = 1000;
 const IMAGE_TIMEOUT = 10000;
 const PREPROCESS_TIMEOUT = 120000;
+// A pose is rendered by the WebUI backend
+const POSE_RENDER_TIMEOUT = 30000;
+const POSE_URL_PREFIX = 'data:application/json;base64,';
 
 // Parameters by the kind of their WebUI component (element names of SELECTORS.CONTROLNET_ELEMENT)
 const CHECKBOX_PARAMS = ['enabled', 'pixelPerfect', 'allowPreview', 'useMask', 'independent'];
@@ -65,6 +68,29 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
 
     function getCanvasImage(tab, index, name) {
         return adapter.getImageSourceOf(element(tab, index, name)?.querySelector(SELECTORS.FORGE_CANVAS_IMAGE));
+    }
+
+    /**
+     * Hidden OpenPose elements of the preview group: the JSON link that an openpose preprocessor fills,
+     * and the textbox and button that render an edited pose into the preview
+     * @returns {{link: HTMLAnchorElement|null, textbox: HTMLTextAreaElement|null, render: HTMLElement|null}}
+     */
+    function poseElements(tab, index) {
+        const group = element(tab, index, 'preview')?.closest(SELECTORS.CONTROLNET_PREVIEW_GROUP);
+
+        return {
+            link: group?.querySelector(SELECTORS.CONTROLNET_POSE_LINK) ?? null,
+            textbox: group?.querySelector(SELECTORS.CONTROLNET_POSE_TEXTBOX) ?? null,
+            render: group?.querySelector(SELECTORS.CONTROLNET_POSE_RENDER) ?? null
+        };
+    }
+
+    /**
+     * @returns {string|null} The pose JSON of the preview as a data URL, null if the preprocessor made none
+     */
+    function getPose(tab, index) {
+        const url = poseElements(tab, index).link?.getAttribute('href') || '';
+        return url.startsWith(POSE_URL_PREFIX) && url.length > POSE_URL_PREFIX.length ? url : null;
     }
 
     /**
@@ -211,12 +237,15 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
      * @param {'txt2img'|'img2img'} tab
      */
     function sendImages(tab) {
+        const preview = getCanvasImage(tab, unit, 'preview');
         const images = {
             image: getCanvasImage(tab, unit, 'image'),
             mask: getCanvasImage(tab, unit, 'mask'),
-            preview: getCanvasImage(tab, unit, 'preview')
+            preview,
+            // OpenPose JSON of the preview, edited in the OpenPose editor of the popup
+            pose: preview ? getPose(tab, unit) : null
         };
-        const signature = [tab, unit, images.image, images.mask, images.preview]
+        const signature = [tab, unit, images.image, images.mask, images.preview, images.pose]
             .map(source => typeof source === 'string' ? `${source.length}:${source.slice(0, 64)}:${source.slice(-64)}` : source)
             .join('|');
 
@@ -330,6 +359,47 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
                 await loadImage(tab, unitIndex, file);
 
             pollIfActive();
+        });
+    }
+
+    /**
+     * Render a pose edited in the OpenPose editor into the preview of a unit, which then becomes the control image
+     * (WebUI checks "use preview as input"), as the editor of sd-webui-controlnet did
+     * @param {number} unitIndex
+     * @param {string} pose - Pose JSON as a data URL
+     * @returns {Promise<void>}
+     */
+    function setPose(unitIndex, pose) {
+        return enqueue(async () => {
+            const tab = getTab();
+
+            if (!await showUnit(tab, unitIndex))
+                return;
+
+            const {textbox, render} = poseElements(tab, unitIndex);
+
+            if (!textbox || !render || typeof pose !== 'string' || !pose.startsWith(POSE_URL_PREFIX)) {
+                showAlert('The edited pose cannot be passed to ControlNet: its OpenPose elements are not found in WebUI.');
+                return;
+            }
+
+            const previous = getCanvasImage(tab, unitIndex, 'preview');
+
+            if (adapter.setCheckedIn(element(tab, unitIndex, 'allowPreview'), true))
+                await adapter.sleep(EVENT_DELAY);
+
+            setRunning(true);
+
+            try {
+                adapter.setInputElementValue(textbox, pose);
+                render.click();
+                await adapter.waitFor(() => {
+                    const source = getCanvasImage(tab, unitIndex, 'preview');
+                    return source && source !== previous;
+                }, POSE_RENDER_TIMEOUT);
+            } finally {
+                setRunning(false);
+            }
         });
     }
 
@@ -528,5 +598,5 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
         }
     }
 
-    return {subscribe, applyParams, runAction, setUnitImage, setTab, onPhotoshopImage};
+    return {subscribe, applyParams, runAction, setUnitImage, setPose, setTab, onPhotoshopImage};
 }

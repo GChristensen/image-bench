@@ -6,10 +6,12 @@
  * The unit shown here also receives the images sent to ControlNet from Photoshop.
  * In WebUI img2img a unit uses the img2img image unless it has an independent image, which an image set here turns on.
  * ComfyUI reports which parts the workflow has (features, see src/host.js).
+ * In WebUI the pose of an openpose preview is edited in sd-webui-openpose-editor (OpenposeEditorModal).
  */
 import {computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import ControlNetImagePane from "@/components/ControlNetImagePane.vue";
+import OpenposeEditorModal from "@/components/OpenposeEditorModal.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import {useControlNetStore} from "@/stores/controlnet.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
@@ -19,6 +21,7 @@ import {copyImageToClipboard, imageFilesFromDataTransfer, pickImageFiles} from "
 import {sendUrlToPhotoshop} from "@/photoshop.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useDragSize} from "@/composables/useDragSize.js";
+import {ensureOpenposeEditor} from "@/openposeEditor.js";
 
 // A value edited here is not overwritten by the polled WebUI value for this long,
 // which covers the send delay and the next poll
@@ -224,7 +227,7 @@ function onRefreshModels() {
 // ---------- Images ----------
 
 const images = computed(() => cn.images.tab === tab.value && cn.images.unit === unit.value
-  ? cn.images : {image: null, mask: null, preview: null});
+  ? cn.images : {image: null, mask: null, preview: null, pose: null});
 
 // The preprocessor and its slider values as WebUI reports them, taken when a preview arrives;
 // the preview is stale when they change after it was made (WebUI may keep it)
@@ -334,6 +337,27 @@ function onSavePreview() {
   link.href = images.value.preview;
   link.download = `${previewName.value.replace(/\s+/g, "_")}.png`;
   link.click();
+}
+
+// ---------- OpenPose editor ----------
+
+// Openpose preprocessors make the pose JSON of their preview, as Forge tells them
+const openposePreview = computed(() => has("openposeEditor") && /openpose/i.test(form.preprocessor || "")
+  && !!images.value.preview);
+
+// Pose and background of the open editor, taken when it opens; null while it is closed
+const poseEdit = ref(null);
+
+async function onEditPose() {
+  const {pose, image} = images.value;
+
+  if (pose && await ensureOpenposeEditor())
+    poseEdit.value = {unit: unit.value, pose, image};
+}
+
+function onPoseEdited(pose) {
+  webUI.setControlNetPose(poseEdit.value.unit, pose);
+  poseEdit.value = null;
 }
 
 // ---------- Layout ----------
@@ -449,6 +473,10 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
             <span class="label-small">Preview</span>
           </template>
           <template #actions>
+            <button v-if="openposePreview" class="btn outline photoshop"
+                    :disabled="!connected || !images.pose || cn.running"
+                    :title="images.pose ? 'Edit the pose in the OpenPose editor' : 'Run the preprocessor to get the pose'"
+                    @click="onEditPose"><AppIcon name="pencil" :size="13"/>Edit pose</button>
             <button class="btn outline photoshop" :disabled="!images.preview"
                     title="Left: send the preview to Photoshop, Middle: send to Photoshop as a new image"
                     @mousedown.left="onToPhotoshop($event, images.preview, previewName, false)"
@@ -565,6 +593,10 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
            @pointerdown="controlsWidth.onPointerDown" @keydown="controlsWidth.onKeydown"
            @dblclick="controlsWidth.reset"><i></i></div>
     </div>
+
+    <OpenposeEditorModal v-if="poseEdit" :pose="poseEdit.pose" :image="poseEdit.image"
+                         :title="`OpenPose editor — ControlNet ${poseEdit.unit + 1}`"
+                         @apply="onPoseEdited" @close="poseEdit = null"/>
   </div>
 </template>
 

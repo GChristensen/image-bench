@@ -72,6 +72,11 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'SET_CONTROLNET_IMAGE', unit, kind, file });
   };
 
+  // Render a pose edited in the OpenPose editor (JSON data URL) into the preview of a ControlNet unit
+  const setControlNetPose = (unit, pose) => {
+    sendWebUIMessage({ type: 'SET_CONTROLNET_POSE', unit, pose });
+  };
+
   // Show the WebUI generation tab whose ControlNet is mirrored: 'txt2img' or 'img2img'
   const setControlNetTab = (tab) => {
     sendWebUIMessage({ type: 'SET_CONTROLNET_TAB', tab });
@@ -141,6 +146,7 @@ export function useWebUIBridge() {
     setControlNetParams,
     controlNetAction,
     setControlNetImage,
+    setControlNetPose,
     setControlNetTab,
     refreshModels,
     setWebUIParams,

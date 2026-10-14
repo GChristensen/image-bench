@@ -36,7 +36,9 @@ const WEBUI_FEATURES = {
     allowPreview: true,
     clearImage: true,
     // Resolution and threshold sliders of the preprocessor
-    preprocessorParams: true
+    preprocessorParams: true,
+    // Editing the pose of openpose previews in sd-webui-openpose-editor
+    openposeEditor: true
   },
   images: {
     sendToControlNet: true
@@ -66,7 +68,8 @@ const COMFY_FEATURES = {
     resizeMode: false,
     allowPreview: false,
     clearImage: false,
-    preprocessorParams: false
+    preprocessorParams: false,
+    openposeEditor: false
   },
   images: {
     sendToControlNet: true

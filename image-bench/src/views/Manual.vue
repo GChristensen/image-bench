@@ -350,6 +350,12 @@ onMounted(loadPluginStatus);
             <b>Parameters changed — run again</b>.</span>
           <span v-if="isComfy">Preprocessors require the comfyui_controlnet_aux node pack; without it the
             preprocessor controls are hidden.</span></li>
+        <li v-if="isWebUI"><AppIcon name="pencil" :size="13" class="inline-icon"/> <b>Edit pose</b> — after an
+          openpose preprocessor ran, this button of the Preview pane opens the pose in the OpenPose editor
+          (the <a href="https://github.com/fabiencomte/sd-webui-openpose-editor" target="_blank" rel="noopener"
+          >sd-webui-openpose-editor</a> extension, which you are asked to install if it is missing), with the
+          control image as its background. <b>Send pose to ControlNet</b> in the editor renders the edited pose
+          into the preview, which the unit then uses as its control image.</li>
         <li><b>Use Mask</b> — restricts the unit to the masked area. The <b>Source</b> / <b>Mask</b> switch of the
           pane then shows the mask (ControlNet applies where it is white), which is uploaded, dropped or pasted
           like the control image.
