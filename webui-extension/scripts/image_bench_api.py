@@ -31,6 +31,7 @@ from shared import loras
 from shared import photoshop
 from shared import photoshop_plugin
 from shared import pnginfo
+from shared import projects
 from shared import tray
 
 DEFAULT_CONFIG = """{
@@ -44,6 +45,7 @@ EXTENSION_CONFIG_FILE = "config.json"
 IMAGE_TRAY_FILE = tray.TRAY_FILES["image_tray"]
 CONCEPT_TRAY_FILE = tray.TRAY_FILES["concept_tray"]
 UPSCALED_FILE = tray.TRAY_FILES["upscaled"]
+SNIPPETS_FILE = "snippets.json"
 
 TERMINATE_WEBSOCKET = object()
 
@@ -106,6 +108,10 @@ class ImageBenchApi():
         self.add_api_route("/webui_options", self.write_webui_options, methods=["POST"])
         self.add_api_route("/controlnet/choices", self.get_controlnet_choices, methods=["GET"])
         self.add_api_route("/civitai/model_info", self.get_civitai_model_info, methods=["GET"])
+        self.add_api_route("/snippets", self.get_snippets, methods=["GET"])
+        self.add_api_route("/snippets", self.write_snippets, methods=["POST"])
+        self.add_api_route("/snippets/webui_styles", self.get_webui_styles, methods=["GET"])
+        self.add_api_route("/projects/{action}", self.projects_action, methods=["GET", "POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
         self.add_api_route("/photoshop/upload", self.photoshop_upload, methods=["POST"])
@@ -377,6 +383,60 @@ class ImageBenchApi():
         base_dir = self.get_file_path("", upper=True)
         await persist.write_store_file_from_request(base_dir, "explore_presets.json", request)
         return Response("", media_type="application/json")
+
+    def get_snippets(self):
+        return self.serve_store_file(SNIPPETS_FILE)
+
+    async def write_snippets(self, request: Request):
+        base_dir = self.get_file_path("", upper=True)
+        await persist.write_store_file_from_request(base_dir, SNIPPETS_FILE, request)
+        return Response("", media_type="application/json")
+
+    @staticmethod
+    def get_webui_styles():
+        """The styles of WebUI (styles.csv), imported as snippets"""
+        styles = getattr(getattr(shared, "prompt_styles", None), "styles", None) or {}
+
+        return JSONResponse([{"name": style.name, "prompt": style.prompt or "",
+                              "negative_prompt": style.negative_prompt or ""}
+                             for name, style in styles.items() if name and name != "None"])
+
+    async def projects_action(self, action: str, request: Request):
+        """Projects of the Library tab (see projects.dispatch)"""
+        files = {}
+        form = None
+        body = None
+
+        if request.headers.get("content-type", "").startswith("multipart/form-data"):
+            form = {}
+
+            for key, value in (await request.form()).multi_items():
+                if hasattr(value, "read"):
+                    files[key] = (value.filename, await value.read())
+                else:
+                    form[key] = value
+        elif request.method == "POST":
+            body = await request.body()
+
+        store_dir = self.get_file_path("store", upper=True)
+        config = persist.read_json_file(self.get_file_path(EXTENSION_CONFIG_FILE, upper=True)) or {}
+
+        try:
+            args = projects.parse_args(dict(request.query_params), form, body, files)
+            result = await asyncio.to_thread(projects.dispatch, action, args, files, config, store_dir,
+                                             self.image_bench_dir, "webui")
+        except projects.ProjectError as e:
+            return JSONResponse({"error": str(e)}, status_code=e.status)
+        except OSError as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+        if isinstance(result, projects.FileResult):
+            if result.path:
+                return FileResponse(result.path, media_type=result.media_type, headers={"Cache-Control": "no-cache"})
+
+            return Response(result.content, media_type=result.media_type, headers={"Cache-Control": "no-cache"})
+
+        return JSONResponse(result)
 
     def get_image_tray(self):
         return self.serve_store_file(IMAGE_TRAY_FILE)

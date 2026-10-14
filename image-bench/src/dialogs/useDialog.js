@@ -57,10 +57,12 @@ export const dialog = {
   /**
    * Text input with a history of the last values per storageKey (10 unless historySize is given).
    * The history is shown as browser autocomplete, or as an editable dropdown when dropdown is true.
+   * With checkbox, a checkbox is shown under the input and the result is {value, checked}.
    * @param {string} message
    * @param {{defaultValue?: string, storageKey?: string, placeholder?: string, title?: string,
-   *          dropdown?: boolean, historySize?: number}} options
-   * @returns {Promise<string|null>} Trimmed input value, or null if cancelled or empty
+   *          dropdown?: boolean, historySize?: number, okText?: string,
+   *          checkbox?: {label: string, checked?: boolean}}} options
+   * @returns {Promise<string|{value: string, checked: boolean}|null>} Trimmed input value, or null if cancelled or empty
    */
   prompt(message, options = {}) {
     return open('prompt', message, options, null);

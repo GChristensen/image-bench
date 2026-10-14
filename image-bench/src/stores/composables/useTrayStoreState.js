@@ -1,7 +1,18 @@
 import { triggerRef } from 'vue';
 import { useImageStoreState } from './useImageStoreState.js';
-import { useDebounce } from '@/composables/useDebounce.js';
 import { pickTagColor } from './tagColors.js';
+
+const PERSIST_DELAY = 500;
+
+// Called with the kind of a tray after it was saved on the server (the Library tracks the unsaved changes)
+const persistListeners = new Set();
+
+/**
+ * @param {(kind: string) => void} listener
+ */
+export function onTrayPersisted(listener) {
+  persistListeners.add(listener);
+}
 
 /**
  * Composable for tray-specific store state and actions
@@ -10,7 +21,8 @@ import { pickTagColor } from './tagColors.js';
  */
 export function useTrayStoreState(kind) {
   const baseStore = useImageStoreState(kind);
-  const { debounce } = useDebounce();
+  let persistTimer = null;
+  let persisting = Promise.resolve();
 
   // Override init to load from server
   async function init() {
@@ -44,11 +56,30 @@ export function useTrayStoreState(kind) {
         console.error('[Image Bench] Failed to parse persist response:', error);
         // Continue anyway - persist succeeded even if parsing failed
       }
+
+      persistListeners.forEach(listener => listener(kind));
     }
   }
 
-  // Debounced persist function to reduce server calls
-  const persist = debounce(_persistToServer, 500);
+  // Debounced to reduce server calls
+  function persist() {
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      persistTimer = null;
+      persisting = _persistToServer();
+    }, PERSIST_DELAY);
+  }
+
+  // Save a pending change at once (before a project is saved or opened)
+  async function flush() {
+    if (persistTimer) {
+      clearTimeout(persistTimer);
+      persistTimer = null;
+      persisting = _persistToServer();
+    }
+
+    await persisting;
+  }
 
   // Images keep their original path in sourcePath after being copied to the tray directory
   function isInTray(imageData) {
@@ -88,6 +119,7 @@ export function useTrayStoreState(kind) {
     addImage,
     colorAndPersist,
     persist,
+    flush,
     clear
   };
 }

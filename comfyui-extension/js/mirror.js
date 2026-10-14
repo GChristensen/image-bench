@@ -177,5 +177,5 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
         SET_GENERATION_MODE: () => {}
     };
 
-    return {handlers, getPhotoshopTarget: () => photoshopTarget, pollIfActive};
+    return {handlers, getMode, getPhotoshopTarget: () => photoshopTarget, pollIfActive};
 }

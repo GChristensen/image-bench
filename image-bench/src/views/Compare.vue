@@ -161,13 +161,6 @@ async function onClear() {
     store.clear();
 }
 
-function onDownload() {
-  const link = document.createElement("a");
-  link.href = "/image-bench/download_image_tray?kind=" + KIND_COMPARE;
-  link.download = KIND_COMPARE + ".zip";
-  link.click();
-}
-
 async function onFilesChosen(e) {
   for (const file of e.target.files) {
     const formData = new FormData();
@@ -540,7 +533,6 @@ onDeactivated(() => {
                     :separator-color="separatorInfo.color"
                     :exporting="exporting"
                     @upload="fileInput.click()"
-                    @download="onDownload"
                     @toggle-select="selecting = !selecting"
                     @clear-region="region = null"
                     @toggle-crop="cropView = !cropView"

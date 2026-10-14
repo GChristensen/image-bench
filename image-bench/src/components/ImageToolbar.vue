@@ -134,11 +134,10 @@ defineExpose({generateImagesNumber});
 
 <template>
   <div class="toolbar">
-    <!-- Tray I/O; the upscaled images can be downloaded too -->
+    <!-- The upscaled images can be downloaded; the trays are saved into the projects of the Library -->
     <button v-if="kind === KIND_UPSCALED" class="ib" title="Download upscaled images (.zip)"
             aria-label="Download upscaled images" @click="$emit('save')"><AppIcon name="download"/></button>
     <template v-if="isTray">
-      <button class="ib" title="Download tray (.zip)" aria-label="Download tray" @click="$emit('save')"><AppIcon name="download"/></button>
       <button class="ib" title="Import images (.png, .zip)" aria-label="Import images" @click="$emit('open')"><AppIcon name="upload"/></button>
       <div class="vsep"></div>
       <button class="btn outline select-all" @click="$emit('select-all')"><AppIcon name="checks" :size="14"/>{{ selectAllText }}</button>

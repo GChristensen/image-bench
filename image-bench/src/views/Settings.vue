@@ -1,12 +1,51 @@
 <script setup>
 import {useAppConfigStore} from "@/stores/appConfig.js";
-import {computed} from "vue";
+import {computed, ref, watch} from "vue";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
+import {useProjectsStore} from "@/stores/projects.js";
 import {ACCENT_COLORS, KNOWN_UI_PRESETS} from "@/consts.js";
+import {HOST_NAME} from "@/host.js";
+import AppIcon from "@/components/AppIcon.vue";
 
 const appConfigStore = useAppConfigStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
+const projectsStore = useProjectsStore();
 const isWebUI = import.meta.env.MODE === 'webui';
+
+// ---------- Project root ----------
+
+const projectRoot = ref(appConfigStore.projectRoot);
+// Result of the check: {exists, writable, projects, error}, null before
+const rootCheck = ref(null);
+const checking = ref(false);
+
+watch(() => appConfigStore.projectRoot, root => projectRoot.value = root);
+
+async function checkRoot() {
+  checking.value = true;
+
+  try {
+    const response = await fetch(`/image-bench/projects/check?${new URLSearchParams({root: projectRoot.value.trim()})}`);
+    rootCheck.value = await response.json();
+  } catch (error) {
+    rootCheck.value = {error: error.message};
+  } finally {
+    checking.value = false;
+  }
+}
+
+async function saveRoot() {
+  const root = projectRoot.value.trim();
+
+  if (root === appConfigStore.projectRoot)
+    return;
+
+  appConfigStore.projectRoot = root;
+  await appConfigStore.persist();
+  await checkRoot();
+  await projectsStore.loadTree();
+  await projectsStore.loadCurrent();
+}
 
 // The presets reported by WebUI once the Generate tab was shown, the known ones until then
 const uiPresetChoices = computed(() => {
@@ -67,6 +106,22 @@ function setGenerateUiPreset(index, value) {
             then restart WebUI.</span></span>
       </label>
     </template>
+    <h3>Library</h3>
+    <div class="setting-label root-setting">
+      <label for="project-root">Project root</label>
+      <input id="project-root" v-model="projectRoot" type="text" spellcheck="false"
+             placeholder="D:\Projects or \\server\share\projects" @change="saveRoot" @keydown.enter="saveRoot">
+      <button class="btn outline" :disabled="checking || !projectRoot.trim()" @click="checkRoot">Check</button>
+    </div>
+    <div class="setting-label root-help">
+      The folder of the projects as the {{ HOST_NAME }} server sees it: a local path or a network (UNC) path.
+      <span v-if="rootCheck" class="root-status" :class="{ok: rootCheck.exists && rootCheck.writable}">
+        <AppIcon :name="rootCheck.exists && rootCheck.writable ? 'check' : 'alert'" :size="13"/>
+        <template v-if="rootCheck.exists && rootCheck.writable">Exists and writable · {{ rootCheck.projects }} projects</template>
+        <template v-else-if="rootCheck.exists">Exists, but is not writable</template>
+        <template v-else>{{ rootCheck.error || "Not found" }}</template>
+      </span>
+    </div>
     <h3>Model Exploration</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.exploreLoraFreeImages"
     >Generate LoRA-free images for each model when exploring LoRAs</label>
@@ -192,6 +247,48 @@ a:hover {
 
 .generate-setting input {
   width: 80px;
+}
+
+.root-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.root-setting input {
+  width: 420px;
+  height: 26px;
+  margin: 0;
+  padding: 0 8px;
+  border: 1px solid var(--ib-border);
+  border-radius: 5px;
+  background: var(--ib-elev);
+  color: var(--ib-text);
+  font-family: var(--ib-mono);
+  font-size: 12px;
+}
+
+.root-setting input:focus {
+  outline: none;
+  border-color: var(--ib-accent-border);
+}
+
+.root-help {
+  margin-top: 4px;
+  color: var(--ib-muted);
+  font-size: 12px;
+}
+
+.root-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  color: var(--ib-warn);
+}
+
+.root-status.ok {
+  color: var(--ib-info);
 }
 
 .accent-setting {

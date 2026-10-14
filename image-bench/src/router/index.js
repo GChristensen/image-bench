@@ -7,6 +7,7 @@ import Generate from "@/views/Generate.vue";
 import ControlNet from "@/views/ControlNet.vue";
 import Manual from "@/views/Manual.vue";
 import Compare from "@/views/Compare.vue";
+import Library from "@/views/Library.vue";
 
 const scrollBehavior = (to, from) => {
   if (to.name === from.name) {
@@ -108,6 +109,11 @@ const router = createRouter({
           top: 0
         },
       },
+    },
+    {
+      path: '/library',
+      name: 'library',
+      component: Library
     },
     {
       path: '/settings',

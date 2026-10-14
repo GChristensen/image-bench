@@ -172,6 +172,15 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
         if (!get('enabled'))
             return {tab, unit, units, available: false, running};
 
+        return {tab, unit, units, available: true, ...readUnit(tab, unit), running};
+    }
+
+    /**
+     * Parameters of a unit, the choices of its radio groups and its preprocessor sliders
+     * @returns {{params: Object, options: Object, sliders: Object}}
+     */
+    function readUnit(tab, index) {
+        const get = name => element(tab, index, name);
         const toNumber = value => value === null || value === undefined || value === '' ? null : Number(value);
         const range = get('timestepRange');
         const params = {
@@ -203,7 +212,7 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
             sliders[name] = slider;
         }
 
-        return {tab, unit, units, available: true, params, options, sliders, running};
+        return {params, options, sliders};
     }
 
     /**
@@ -376,31 +385,40 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
             if (!await showUnit(tab, unitIndex))
                 return;
 
-            const {textbox, render} = poseElements(tab, unitIndex);
-
-            if (!textbox || !render || typeof pose !== 'string' || !pose.startsWith(POSE_URL_PREFIX)) {
+            if (!await renderPose(tab, unitIndex, pose))
                 showAlert('The edited pose cannot be passed to ControlNet: its OpenPose elements are not found in WebUI.');
-                return;
-            }
-
-            const previous = getCanvasImage(tab, unitIndex, 'preview');
-
-            if (adapter.setCheckedIn(element(tab, unitIndex, 'allowPreview'), true))
-                await adapter.sleep(EVENT_DELAY);
-
-            setRunning(true);
-
-            try {
-                adapter.setInputElementValue(textbox, pose);
-                render.click();
-                await adapter.waitFor(() => {
-                    const source = getCanvasImage(tab, unitIndex, 'preview');
-                    return source && source !== previous;
-                }, POSE_RENDER_TIMEOUT);
-            } finally {
-                setRunning(false);
-            }
         });
+    }
+
+    /**
+     * Render a pose (JSON data URL) into the preview of a unit
+     * @returns {Promise<boolean>} Whether the unit has the OpenPose elements
+     */
+    async function renderPose(tab, unitIndex, pose) {
+        const {textbox, render} = poseElements(tab, unitIndex);
+
+        if (!textbox || !render || typeof pose !== 'string' || !pose.startsWith(POSE_URL_PREFIX))
+            return false;
+
+        const previous = getCanvasImage(tab, unitIndex, 'preview');
+
+        if (adapter.setCheckedIn(element(tab, unitIndex, 'allowPreview'), true))
+            await adapter.sleep(EVENT_DELAY);
+
+        setRunning(true);
+
+        try {
+            adapter.setInputElementValue(textbox, pose);
+            render.click();
+            await adapter.waitFor(() => {
+                const source = getCanvasImage(tab, unitIndex, 'preview');
+                return source && source !== previous;
+            }, POSE_RENDER_TIMEOUT);
+        } finally {
+            setRunning(false);
+        }
+
+        return true;
     }
 
     /**
@@ -598,5 +616,147 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
         }
     }
 
-    return {subscribe, applyParams, runAction, setUnitImage, setPose, setTab, onPhotoshopImage};
+    // ---------- Projects ----------
+
+    /**
+     * The enabled units of a generation tab for a project: their parameters, images and edited poses
+     * @param {'txt2img'|'img2img'} tab
+     * @returns {Promise<{index: number, params: Object, image: Blob|null, mask: Blob|null, pose: string|null}[]>}
+     */
+    async function captureUnits(tab) {
+        await applying;
+
+        const count = adapter.getTabCountIn(document.getElementById(SELECTORS.CONTROLNET_TABS(tab)));
+        const units = [];
+
+        for (let index = 0; index < count; index++) {
+            if (!adapter.isCheckedIn(element(tab, index, 'enabled')))
+                continue;
+
+            const params = readUnit(tab, index).params;
+            const preview = getCanvasImage(tab, index, 'preview');
+
+            units.push({
+                index,
+                params,
+                image: await toBlob(getCanvasImage(tab, index, 'image')),
+                mask: params.useMask ? await toBlob(getCanvasImage(tab, index, 'mask')) : null,
+                pose: preview ? getPose(tab, index) : null
+            });
+        }
+
+        return units;
+    }
+
+    async function toBlob(source) {
+        if (!source)
+            return null;
+
+        try {
+            return await (await fetch(source)).blob();
+        } catch (error) {
+            console.warn('[Image Bench] Unable to read a ControlNet image:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Restore the units of a project in a generation tab; the other units are disabled
+     * @param {'txt2img'|'img2img'} tab
+     * @param {Object[]} units - As captured by captureUnits(), with the images as files
+     * @returns {Promise<number[]>} Indexes of the units not found in WebUI
+     */
+    async function restoreUnits(tab, units) {
+        const missing = [];
+
+        await enqueue(async () => {
+            const count = adapter.getTabCountIn(document.getElementById(SELECTORS.CONTROLNET_TABS(tab)));
+            const indexes = new Set(units.map(entry => entry.index));
+
+            for (let index = 0; index < count; index++)
+                if (!indexes.has(index) && adapter.isCheckedIn(element(tab, index, 'enabled')))
+                    adapter.setCheckedIn(element(tab, index, 'enabled'), false);
+
+            for (const entry of units) {
+                if (entry.index < count && await showUnit(tab, entry.index))
+                    await restoreUnit(tab, entry);
+                else
+                    missing.push(entry.index);
+            }
+
+            // Back to the unit shown in the popup
+            await showUnit(tab, unit);
+            setTimeout(pollIfActive, APPLY_SETTLE_DELAY);
+        });
+
+        return missing;
+    }
+
+    async function restoreUnit(tab, {index, params, image, mask, pose}) {
+        const get = name => element(tab, index, name);
+        const isSet = value => value !== null && value !== undefined;
+        const setChecked = async (name, value) => {
+            if (isSet(value) && adapter.setCheckedIn(get(name), value))
+                await adapter.sleep(EVENT_DELAY);
+        };
+
+        // An independent image clears the image of the unit
+        if (tab === 'img2img')
+            await setChecked('independent', !!params.independent);
+
+        // The control type filters the preprocessors and models
+        if (params.controlType && adapter.getRadioValueIn(get('controlType')) !== params.controlType) {
+            adapter.setRadioValueIn(get('controlType'), params.controlType);
+            await adapter.sleep(EVENT_DELAY);
+        }
+
+        for (const name of DROPDOWN_PARAMS) {
+            const input = get(name)?.querySelector(SELECTORS.DROPDOWN_INPUT);
+
+            if (input && params[name] && input.value !== params[name])
+                await adapter.setDropdownElementValue(input, params[name], true);
+        }
+
+        await setChecked('pixelPerfect', params.pixelPerfect);
+        await setChecked('allowPreview', params.allowPreview);
+
+        for (const name of ['controlMode', 'resizeMode'])
+            if (params[name])
+                adapter.setRadioValueIn(get(name), params[name]);
+
+        for (const name of ['weight', ...SLIDER_PARAMS])
+            if (isSet(params[name]))
+                setNumber(get(name)?.querySelector(SELECTORS.NUMBER_INPUT), params[name]);
+
+        if (isSet(params.guidanceStart))
+            setNumber(get('timestepRange')?.querySelector(SELECTORS.RANGE_SLIDER_MIN), params.guidanceStart);
+
+        if (isSet(params.guidanceEnd))
+            setNumber(get('timestepRange')?.querySelector(SELECTORS.RANGE_SLIDER_MAX), params.guidanceEnd);
+
+        if (image)
+            await loadCanvas(tab, index, 'image', image);
+        else
+            get('image')?.querySelector(SELECTORS.FORGE_CANVAS_REMOVE)?.click();
+
+        // Checking Use Mask puts an empty mask into the canvas, which the mask then replaces
+        if (mask) {
+            if (adapter.setCheckedIn(get('useMask'), true)) {
+                await adapter.waitFor(() => getCanvasImage(tab, index, 'mask'), IMAGE_TIMEOUT);
+                await adapter.sleep(EVENT_DELAY);
+            }
+
+            await loadCanvas(tab, index, 'mask', mask);
+        }
+        else
+            await setChecked('useMask', false);
+
+        if (pose)
+            await renderPose(tab, index, pose);
+
+        adapter.setCheckedIn(get('enabled'), params.enabled ?? true);
+    }
+
+    return {subscribe, applyParams, runAction, setUnitImage, setPose, setTab, onPhotoshopImage,
+            captureUnits, restoreUnits};
 }

@@ -20,10 +20,13 @@ import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
 import ImageContextMenu from "@/components/ImageContextMenu.vue";
+import ProjectChip from "@/components/ProjectChip.vue";
 import {installImageActionKeys} from "@/composables/useImageActionKeys.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas} from "@/host.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
+import {useProjectsStore} from "@/stores/projects.js";
+import {handleHostResponse} from "@/hostRequest.js";
 
 // Messages too frequent to log
 const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS", "INPUT_IMAGES", "CONTROLNET_STATE", "CONTROLNET_IMAGES"];
@@ -44,6 +47,7 @@ const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
 const controlNetStore = useControlNetStore();
+const projectsStore = useProjectsStore();
 const hasOpener = computed(() => !!window.opener);
 // Upscaling is not implemented for ComfyUI
 const isWebUI = import.meta.env.MODE === 'webui';
@@ -96,6 +100,7 @@ onBeforeMount(async () => {
   await compareStore.init();
   await upscaledImageStore.init();
   await configPresetsStore.init();
+  await projectsStore.init();
 
   webUI.initializePrompts();
 
@@ -105,6 +110,10 @@ onBeforeMount(async () => {
 });
 
 async function onSDEvent(e) {
+  // Answers to requests of the popup (hostRequest.js)
+  if (handleHostResponse(e))
+    return;
+
   // Messages from the host page, which must not open dialogs in its own window
   if (e.type === "SHOW_ALERT") {
     dialog.alert(e.message);
@@ -143,13 +152,25 @@ async function onSDEvent(e) {
   }
 }
 
+// Ctrl+S saves the current project, instead of the page
+function onSaveKey(e) {
+  if (e.code === "KeyS" && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+    e.preventDefault();
+
+    if (projectsStore.hasCurrent && !projectsStore.busy)
+      projectsStore.save();
+  }
+}
+
 onMounted(() => {
   window.onSDEvent = onSDEvent;
   initManualHint();
   installImageActionKeys();
+  window.addEventListener("keydown", onSaveKey);
 });
 
 onUnmounted(() => {
+  window.removeEventListener("keydown", onSaveKey);
   clearTimeout(manualHintTimer);
   // Clean up window event handler
   if (window.onSDEvent === onSDEvent) {
@@ -233,13 +254,16 @@ async function switchTabAccordingToGenerationMode(e, state) {
                   @dragover="onTrayDragOver($event, KIND_IMAGE_TRAY)" @dragleave="onTrayDragLeave"
                   @drop.prevent="onTrayDrop(KIND_IMAGE_TRAY)" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
       <RouterLink v-if="isWebUI" to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
+      <RouterLink to="/library" class="tab" id="library-tab"><AppIcon name="library" :size="14"/>Library</RouterLink>
       <div class="tab-spacer"></div>
       <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
         ><AppIcon name="book" :size="13"/>New to Image Bench? Read the manual</a>
       <span v-if="!hasOpener" class="chip window-warning" title="The opener SD WebUI window is closed or was reloaded"
         ><AppIcon name="alert" :size="13"/>Disconnected from WebUI</span>
-      <RouterLink to="/settings" class="tab" ref="settingsTab"><AppIcon name="settings" :size="14"/>Settings</RouterLink>
-      <RouterLink to="/manual" class="tab"><AppIcon name="book" :size="14"/>Manual</RouterLink>
+      <ProjectChip/>
+      <RouterLink to="/settings" class="tab icon-tab" ref="settingsTab" title="Settings" aria-label="Settings"
+        ><AppIcon name="settings" :size="15"/></RouterLink>
+      <RouterLink to="/manual" class="tab icon-tab" title="Manual" aria-label="Manual"><AppIcon name="book" :size="15"/></RouterLink>
       <button class="ib flat actions-button" @click="showActionsModal = true"
               title="Clean up (clear images, delete outputs, reset parameters)" aria-label="Clean up"
         ><AppIcon name="broom" :size="16"/></button>
@@ -289,6 +313,11 @@ async function switchTabAccordingToGenerationMode(e, state) {
     white-space: nowrap;
     border-bottom: 2px solid transparent;
     cursor: pointer;
+  }
+
+  /* Settings and Manual: icons only, the tab bar is full at 1200 px */
+  .tab.icon-tab {
+    padding: 0 8px;
   }
 
   .tab:hover {

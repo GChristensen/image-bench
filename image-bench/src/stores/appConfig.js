@@ -129,6 +129,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Root directory of the projects of the Library tab, as the server sees it (local or UNC path)
+    const projectRoot = computed({
+        get() {
+            return _config.projectRoot ?? "";
+        },
+        set(v) {
+            _config.projectRoot = String(v ?? "").trim();
+            return persist();
+        }
+    });
+
     const accentColor = computed({
         get() {
             return ACCENT_COLORS[_config.accentColor] ? _config.accentColor : DEFAULT_ACCENT_COLOR;
@@ -178,6 +189,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         persistGenerationParams,
         generateUiPresets,
         generatePresetImages,
+        projectRoot,
         accentColor
     };
 });

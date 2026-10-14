@@ -196,8 +196,17 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         if (!resolved)
             return {...base, available: false};
 
+        return {...base, available: true, ...readUnit(resolved, unit),
+                options: {controlType: [], controlMode: [], resizeMode: []}};
+    }
+
+    /**
+     * Parameters of a unit and the features its nodes provide
+     * @returns {{params: Object, features: Object}}
+     */
+    function readUnit(resolved, index) {
         const {target, loader, preprocessor, mask, hasMaskInput} = resolved;
-        const choice = getChoice(unit);
+        const choice = getChoice(index);
         const aux = hasPreprocessorNode();
         const value = name => getTargetWidget(target, name)?.value ?? null;
 
@@ -224,8 +233,7 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
             model: !!loader
         };
 
-        return {...base, available: true, params, features,
-                options: {controlType: [], controlMode: [], resizeMode: []}};
+        return {params, features};
     }
 
     /**
@@ -521,6 +529,79 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
             showAlert(error);
     }
 
+    // ---------- Projects ----------
+
+    /**
+     * The enabled units for a project: their parameters and images (the files of their LoadImage nodes)
+     * @returns {Promise<{index: number, params: Object, image: Blob|null, mask: Blob|null, pose: null}[]>}
+     */
+    async function captureUnits() {
+        const units = [];
+
+        for (let index = 0; index < getUnitTargets().length; index++) {
+            const resolved = resolveUnit(index);
+
+            if (!resolved || !isEnabled(resolved.target))
+                continue;
+
+            const {params} = readUnit(resolved, index);
+            const image = resolved.image && getTargetImageUrl(resolved.image.target, resolved.image.widgetName);
+            const mask = params.useMask && getTargetImageUrl(resolved.mask.target, resolved.mask.widgetName);
+
+            units.push({index, params, image: await toBlob(image), mask: await toBlob(mask), pose: null});
+        }
+
+        return units;
+    }
+
+    async function toBlob(url) {
+        if (!url)
+            return null;
+
+        try {
+            const response = await fetch(url);
+            return response.ok ? await response.blob() : null;
+        } catch (error) {
+            console.warn('[Image Bench] Unable to read a ControlNet image:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Restore the units of a project; without its workflow (a project of WebUI) the other units are disabled
+     * @param {Object[]} units - As captured by captureUnits(), with the images as files
+     * @param {boolean} withWorkflow - The workflow of the project was loaded, which has the state of the other units
+     * @returns {Promise<number[]>} Indexes of the units not found in the workflow
+     */
+    async function restoreUnits(units, withWorkflow) {
+        const missing = [];
+        const indexes = new Set(units.map(entry => entry.index));
+
+        if (!withWorkflow)
+            getUnitTargets().forEach((target, index) => indexes.has(index) || setEnabled(target, false));
+
+        for (const {index, params, image, mask} of units) {
+            if (!resolveUnit(index)) {
+                missing.push(index);
+                continue;
+            }
+
+            if (image)
+                await loadUnitImage(index, 'image', image);
+
+            if (mask)
+                await loadUnitImage(index, 'mask', mask);
+
+            const {pixelPerfect, preprocessor, model, weight, guidanceStart, guidanceEnd, useMask, enabled} = params;
+            applyParams(index, {pixelPerfect, preprocessor, model, weight, guidanceStart, guidanceEnd,
+                                useMask: !!mask && useMask, enabled: enabled ?? true});
+            previews.delete(index);
+        }
+
+        pollIfActive();
+        return missing;
+    }
+
     const handlers = {
         CONTROLNET_SUBSCRIBE: payload => subscribe(payload.active, payload.unit),
         SET_CONTROLNET_PARAMS: payload => applyParams(payload.unit, payload.params),
@@ -530,5 +611,5 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         SET_CONTROLNET_TAB: () => {}
     };
 
-    return {handlers, ownsPrompt, onPhotoshopImage};
+    return {handlers, ownsPrompt, onPhotoshopImage, captureUnits, restoreUnits};
 }

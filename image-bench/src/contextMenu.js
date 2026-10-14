@@ -4,7 +4,8 @@ import {useImageOperations} from "@/composables/useImageOperations.js";
 import {dialog} from "@/dialogs/useDialog.js";
 
 /**
- * Context menu of an image (card or overlay), rendered by ImageContextMenu.vue, which is mounted once in App.vue.
+ * Context menu of an image (card or overlay) or of another item (openContextMenu), rendered by ImageContextMenu.vue,
+ * which is mounted once in App.vue.
  * The state is module-level, so that one menu is open at a time.
  * {x, y, items}: items are {icon, label, hint, danger, run}, {separator: true} or {label, submenu: [items]}
  */
@@ -16,6 +17,16 @@ export function closeContextMenu() {
 
 export function isContextMenuOpen() {
   return !!contextMenu.value;
+}
+
+/**
+ * Open a context menu of other items (e.g. the Library trees) at the pointer position
+ * @param {MouseEvent} event
+ * @param {Object[]} items - {icon, label, hint, danger, run} or {separator: true}
+ */
+export function openContextMenu(event, items) {
+  event.preventDefault();
+  contextMenu.value = {x: event.clientX, y: event.clientY, items};
 }
 
 /**

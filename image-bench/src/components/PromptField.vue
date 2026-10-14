@@ -42,6 +42,9 @@ async function onKeydown(e) {
 
   element.setSelectionRange(edit.selectionStart, edit.selectionEnd);
 }
+
+// The Snippets panel inserts at the caret of the textarea
+defineExpose({textarea});
 </script>
 
 <template>

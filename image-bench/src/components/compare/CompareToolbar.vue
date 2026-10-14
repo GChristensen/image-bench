@@ -49,14 +49,12 @@ defineProps({
   }
 });
 
-defineEmits(["upload", "download", "toggleSelect", "update:aspect", "clearRegion", "toggleCrop", "zoom",
+defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCrop", "zoom",
   "cycleSeparator", "savePng", "sendToPhotoshop", "clear"]);
 </script>
 
 <template>
   <div class="toolbar">
-    <button class="ib" title="Download the images (.zip)" aria-label="Download the images"
-            :disabled="!imageCount" @click="$emit('download')"><AppIcon name="download"/></button>
     <button class="ib" title="Add images from files (.png, .jpg, .webp)" aria-label="Add images from files"
             @click="$emit('upload')"><AppIcon name="upload"/></button>
 

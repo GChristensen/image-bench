@@ -298,6 +298,51 @@ async function onMessage(msg) {
         await controlNet.setTab(payload.tab)
     else if (payload.type === "REFRESH_MODELS")
         refreshModelLists()
+    else if (payload.type === "PROJECT_CAPTURE")
+        await respond(payload, captureProject)
+    else if (payload.type === "PROJECT_RESTORE")
+        await respond(payload, () => restoreProject(payload.snapshot))
+}
+
+/**
+ * Answer a request of the popup with HOST_RESPONSE
+ * @param {{requestId: number}} payload
+ * @param {() => Promise<any>} handler
+ */
+async function respond(payload, handler) {
+    try {
+        sendPopupMessage({type: "HOST_RESPONSE", requestId: payload.requestId, result: await handler()});
+    } catch (error) {
+        console.error(error);
+        sendPopupMessage({type: "HOST_RESPONSE", requestId: payload.requestId, error: error.message || String(error)});
+    }
+}
+
+/**
+ * Parameters of a project: those of the shown generation mode and the enabled ControlNet units of its tab
+ * @returns {Promise<Object>}
+ */
+async function captureProject() {
+    await mirror.settled();
+
+    const {mode, params} = mirror.captureSnapshot();
+    const tab = mode === 'txt2img' ? 'txt2img' : 'img2img';
+
+    return {mode, params, controlnet: {tab, units: await controlNet.captureUnits(tab)}};
+}
+
+/**
+ * Restore the parameters of a project captured by captureProject()
+ * @param {Object} snapshot - {mode, params, controlnet: {units}} with the ControlNet images as files
+ * @returns {Promise<{missingUnits: number[]}>}
+ */
+async function restoreProject({mode, params, controlnet}) {
+    await mirror.restoreSnapshot(mode, params || {});
+
+    const tab = mode === 'txt2img' ? 'txt2img' : 'img2img';
+    const missingUnits = controlnet ? await controlNet.restoreUnits(tab, controlnet.units || []) : [];
+
+    return {missingUnits};
 }
 
 /**

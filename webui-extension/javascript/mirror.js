@@ -373,6 +373,33 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
         return applying;
     }
 
+    /**
+     * Parameters of the shown generation mode for a project, with the Hires. fix checkbox of txt2img
+     * @returns {{mode: string, params: Object}}
+     */
+    function captureSnapshot() {
+        const {mode, params} = captureState();
+
+        if (mode === 'txt2img')
+            params.hiresFix = adapter.getElement('HIRES_CHECKBOX')?.checked ?? null;
+
+        return {mode, params};
+    }
+
+    /**
+     * Restore the parameters of a project: show the WebUI tab of its mode (another img2img mode tab is kept)
+     * and apply them
+     * @param {string} mode
+     * @param {Object} params
+     * @returns {Promise<void>}
+     */
+    function restoreSnapshot(mode, params) {
+        if (['txt2img', 'img2img', 'inpaint'].includes(mode))
+            return setMode(mode, params);
+
+        return applyParams(params);
+    }
+
     function pollIfActive() {
         if (timer)
             poll();
@@ -448,5 +475,6 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
         return overlay;
     }
 
-    return {subscribe, applyParams, setMode, setInputImage, editReferences, settled, reuseSeed, setPromptsLocked};
+    return {subscribe, applyParams, setMode, setInputImage, editReferences, settled, reuseSeed, setPromptsLocked,
+            captureSnapshot, restoreSnapshot};
 }

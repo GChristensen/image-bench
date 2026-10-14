@@ -14,6 +14,7 @@ const SECTIONS = [
   {id: "compare", title: "Compare"},
   {id: "trays", title: "Concept & image trays"},
   ...(isWebUI ? [{id: "upscaled", title: "Upscaled"}] : []),
+  {id: "library", title: "Library"},
   {id: "images", title: "Working with images"},
   {id: "settings", title: "Settings & actions"},
   {id: "photoshop", title: "Photoshop"},
@@ -178,7 +179,11 @@ onMounted(loadPluginStatus);
           best of several variants.</li>
         <li><b>Concept tray</b> and <b>Image tray</b> — permanent collections of the images worth keeping.</li>
         <li v-if="isWebUI"><b>Upscaled</b> — upscaled (Hires. fix) versions of the images you choose.</li>
-        <li><b>Settings</b> and <b>Manual</b> — the options of the window, and this manual.</li>
+        <li><b>Library</b> — projects, which keep the trays and the generation parameters of a piece of work, and
+          snippets, prompt text inserted from the Generate tab.</li>
+        <li><AppIcon name="settings" :size="13" class="inline-icon"/> <b>Settings</b> and
+          <AppIcon name="book" :size="13" class="inline-icon"/> <b>Manual</b> (at the right end of the tab bar) —
+          the options of the window, and this manual.</li>
       </ul>
       <p>
         A Photoshop plugin comes with the extension. It sends images from Photoshop to {{ HOST_NAME }} and places
@@ -229,6 +234,13 @@ onMounted(loadPluginStatus);
         <li><b>Prompt and negative prompt.</b> As in WebUI, <span class="kbd">Ctrl</span>+<span class="kbd">↑</span> /
           <span class="kbd">↓</span> raises or lowers the attention of the selected text, or of the word at the
           cursor.</li>
+        <li><b>Snippets</b> <AppIcon name="snippet" :size="13" class="inline-icon"/> (in the toolbar) — opens a
+          floating panel with the snippets of the <a href="#" @click.prevent="scrollTo('library')">Library</a>.
+          Click a snippet to insert it at the caret of the prompt you last clicked into (the panel shows which one)
+          and add its negative part to the negative prompt; middle-click inserts only the part of that prompt, and
+          Shift+click wraps the selected text where the snippet has <code>{}</code>. <span class="kbd">Ctrl</span>+<span
+          class="kbd">Z</span> undoes an insertion. <b>From selection</b> makes a snippet of the selected prompt text.
+          Drag the panel by its header and resize it by its corner.</li>
         <li><b>Checkpoint.</b> The <AppIcon name="info" :size="13" class="inline-icon"/> button next to it opens
           the model's Civitai page.</li>
         <li><b>LoRA list.</b> The field above it filters the list. The <AppIcon name="refresh" :size="13"/> button
@@ -437,9 +449,9 @@ onMounted(loadPluginStatus);
         class="inline-icon"/> button (key <span class="kbd">A</span>) in any view or the large image view, by
         dragging it onto the <b>Compare</b> tab, from files with <AppIcon name="upload" :size="13"
         class="inline-icon"/>, or from Photoshop with the plugin's <b>Compare</b> button. Like the trays, the tab
-        keeps its images across restarts (in the <code>image-bench/compare</code> folder of the outputs directory),
-        <AppIcon name="download" :size="13" class="inline-icon"/> downloads them as a .zip, and <b>Clear</b> removes
-        them all from the tab (the files stay on disk).
+        keeps its images across restarts (in the <code>image-bench/compare</code> folder of the outputs directory)
+        and is saved with the trays into a <a href="#" @click.prevent="scrollTo('library')">project</a>.
+        <b>Clear</b> removes them all from the tab (the files stay on disk).
       </p>
       <ul>
         <li><b>Layout</b> — the images follow each other, separated by a thin line whose color the swatch button
@@ -507,9 +519,10 @@ onMounted(loadPluginStatus);
         <li v-if="isWebUI"><b>Upscale with denoising</b> <AppIcon name="denoise" :size="13" class="inline-icon"/>
           — asks for a list of denoising strengths and upscales the image with each of them. <b>Upscale
           selected</b>, shown in the toolbar next to it, upscales each of them.</li>
-        <li><b>Download</b> <AppIcon name="download" :size="13" class="inline-icon"/> saves the tray as a .zip
-          file; <b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (parameters
-          included) or a saved tray.</li>
+        <li><b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (parameters
+          included) or a tray archive (.zip), such as the files in <code>ib_project/trays</code> of a project. The
+          trays themselves are saved into the projects of the
+          <a href="#" @click.prevent="scrollTo('library')">Library</a>.</li>
       </ul>
       <div class="note warn">
         <AppIcon name="alert" :size="15"/>
@@ -537,6 +550,74 @@ onMounted(loadPluginStatus);
         Like the trays, the tab keeps its images until you remove them: they are copied to the
         <code>image-bench/upscaled</code> folder of the outputs directory and survive restarts. A colored bar marks the images of one upscale run. <AppIcon name="download" :size="13" class="inline-icon"/> downloads
         them as a .zip, which can be imported into a tray.
+      </p>
+    </section>
+
+    <section id="manual-library">
+      <h2><AppIcon name="library" :size="17"/>Library</h2>
+      <p>
+        The Library tab has two parts, switched at the top of its left column: <b>Projects</b> and <b>Snippets</b>.
+      </p>
+      <h3>Projects</h3>
+      <p>
+        A project keeps a piece of work: the image tray, the concept tray and the Compare tab (the
+        <i>workspace</i>), the parameters of the Generate and ControlNet tabs with the ControlNet images, and in
+        ComfyUI the workflow. The projects are folders under the <b>project root</b>, which you set in Settings: a
+        folder of the {{ HOST_NAME }} server computer, also a network (UNC) path such as
+        <code>\\server\share\projects</code>, since {{ HOST_NAME }} may run on another computer. A folder
+        containing an <code>ib_project</code> folder is a project; Image Bench keeps its data there, and the
+        other image files of the project folder (your edits, Photoshop files, references) are listed in the
+        project.
+      </p>
+      <ul>
+        <li><b>The tree</b> — folders and projects. Create them with the buttons above the tree or the context
+          menu, rename them (<span class="kbd">F2</span>), move them by dragging onto a folder or with
+          <b>Move to…</b>, and delete them (<span class="kbd">Del</span>; to the Recycle Bin on local drives).
+          <b>Copy path</b> copies the path on the server; <b>Show in Explorer</b> is offered when {{ HOST_NAME }}
+          runs on this computer. The letter after a project tells the host it was saved in: <b>W</b> (WebUI) or
+          <b>C</b> (ComfyUI).</li>
+        <li><b>Search</b> — words find projects by name and prompt; <code>#tag</code> keeps the projects with the
+          tag, and <code>host:comfy</code> or <code>host:webui</code> those of a host. The results are listed with
+          their folders. The tags under the field, with their counts, add themselves to the search.</li>
+        <li><b>The current project</b> is shown at the right of the tab bar, with a dot while the trays have
+          changed since the last save. Its <AppIcon name="save" :size="13" class="inline-icon"/> button or
+          <span class="kbd">Ctrl</span>+<span class="kbd">S</span> saves the workspace into it; nothing is saved
+          automatically. Image Bench remembers the current project across restarts.</li>
+        <li><b>New project</b> creates the folder and, unless unchecked, saves the workspace into it and makes it
+          current.</li>
+        <li><b>Open</b> (or double-click) restores the trays and the parameters of a project and makes it current.
+          If the current project has unsaved changes, you are asked to save or discard them first. The menu next
+          to Open restores only the trays or only the parameters, merges the trays of the project into the
+          workspace, or saves the workspace into the project shown. <b>Revert</b> restores the saved state of the
+          current project.</li>
+        <li><b>Parameters</b> are those of the shown generation mode, as they were when the project was saved, with
+          the enabled ControlNet units and their images and edited poses. Input and reference images are not
+          saved. <b>Apply to Generate</b> restores them without the trays. Values that {{ HOST_NAME }} does not
+          have (a missing checkpoint, LoRA or ControlNet model) keep their current value and are listed after
+          opening. A project saved in the other host is opened too: samplers, schedulers and checkpoints are
+          matched by their names, and what has no counterpart is listed.</li>
+        <li><b>Final image</b> — the image the project led to: drop an image or a card on it, choose a file, or
+          set an image of the tabs below with <AppIcon name="star" :size="13" class="inline-icon"/>. It is copied
+          into <code>ib_project</code> and is kept even if the workspace is not saved. A project saved without a
+          final image takes the image marked 🏁 in the image tray (else in the concept tray).</li>
+        <li><b>Tags</b> and <b>notes</b> are saved at once. Click a tag to search by it.</li>
+        <li><b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b> and <b>Files</b> (tabs under the parameters) — the
+          images of the trays as the project was last saved, and the image files of the project folder, also PSD and
+          TIFF. Hovering over a tray image shows its buttons: reuse seed (middle-click: all parameters), generation
+          parameters, reuse the prompts and all parameters <AppIcon name="sliders" :size="13" class="inline-icon"/>,
+          set as final, add to compare, send to ControlNet and to Photoshop. Click one to view it
+          (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click to open it in
+          a new tab, right-click for the menu (final image, Compare, Photoshop).</li>
+      </ul>
+      <h3>Snippets</h3>
+      <p>
+        Snippets are pieces of prompt text, organised in folders, with an optional negative part, inserted from
+        the Snippets panel of the Generate tab. <code>{}</code> in a snippet stands for the selected prompt
+        text, which Shift+click wraps, e.g. <code>(({}:1.2))</code>. Edit a snippet in the right pane; the changes
+        are saved as you type. Drag snippets to reorder them or onto a folder. The
+        <AppIcon name="download" :size="13" class="inline-icon"/> button imports the styles of a WebUI
+        <code>styles.csv</code> file<template v-if="isWebUI"> or of this WebUI</template> as snippets
+        (<code>{prompt}</code> becomes <code>{}</code>).
       </p>
     </section>
 
@@ -611,6 +692,8 @@ onMounted(loadPluginStatus);
             <code>"txt2img/Batch count/maximum"</code> and <code>"img2img/Batch count/maximum"</code> in
             <code>ui-config.json</code> in the WebUI folder, then restart WebUI.</li>
         </template>
+        <li><b>Project root</b> — the folder of the projects of the Library, as the {{ HOST_NAME }} server sees it
+          (a local or network path). <b>Check</b> tells whether it exists and is writable.</li>
         <li><b>Generate LoRA-free images for each model when exploring LoRAs</b> — adds an image without any LoRA
           to each model in Explore, as a baseline to compare the LoRAs against.</li>
         <li v-if="isWebUI"><b>Add 'Civitai Model Info' settings button</b> — adds an ℹ️ button next to the
@@ -633,10 +716,13 @@ onMounted(loadPluginStatus);
       </p>
       <ul>
         <li><b>Clear generated images</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> — removes all
-          images from the Generated<template v-if="isWebUI">, Upscaled</template> and Explore tabs. The trays are
-          kept, and no files are deleted.</li>
-        <li><b>Clear all images and trays</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
-          name="nuke" :size="13" class="inline-icon"/> — also empties both trays. The image files stay on disk.</li>
+          images from the Generated<template v-if="isWebUI">, Upscaled</template> and Explore tabs. The trays, the
+          Compare tab, the prompts and the parameters are kept, and no files are deleted.</li>
+        <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
+          name="nuke" :size="13" class="inline-icon"/> — for starting a new project: also empties both trays and the
+          Compare tab, clears the prompts and sets a random seed<template v-if="isWebUI"> (the variation seed is
+          cleared too)</template>, and closes the current project, whose saved state is kept. The other
+          parameters stay, and the image files stay on disk.</li>
         <li><b>Delete all output files</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
           name="nuke" :size="13" class="inline-icon"/><AppIcon name="nuke" :size="13" class="inline-icon"/> —
           clears all tabs and trays and permanently deletes every file and folder in the {{ HOST_NAME }} output
@@ -776,6 +862,8 @@ onMounted(loadPluginStatus);
         <tr><td><span class="kbd">←</span> <span class="kbd">→</span></td><td>Previous or next image in the image view</td></tr>
         <tr><td><span class="kbd">Esc</span></td><td>Close the image view, or the topmost dialog</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">U</span></td><td>Unselect all images</td></tr>
+        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>Save the workspace into the
+          current project</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+click</td><td>Switch between full size and fit to screen in the image view</td></tr>
         <tr><td>Middle click</td><td>On an image, open it in a new tab. On a button, perform its alternative action
           (reuse all parameters, open as a new Photoshop document); on a marking, remove it</td></tr>

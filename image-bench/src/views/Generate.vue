@@ -29,6 +29,7 @@ import HiresGroup from "@/components/generate/HiresGroup.vue";
 import Img2ImgGroup from "@/components/generate/Img2ImgGroup.vue";
 import SessionStrip from "@/components/generate/SessionStrip.vue";
 import PngInfoDialog from "@/components/generate/PngInfoDialog.vue";
+import SnippetsPanel from "@/components/generate/SnippetsPanel.vue";
 import {withCurrent} from "@/components/generate/choices.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
@@ -46,6 +47,8 @@ import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
 import {imageFilesFromDataTransfer} from "@/imageFiles.js";
+import {appendToPrompt, insertIntoTextarea, useSnippetsStore} from "@/stores/snippets.js";
+import {useRouter} from "vue-router";
 
 // A value edited here is not overwritten by the polled WebUI value for this long,
 // which covers the send delay and the next poll
@@ -69,6 +72,7 @@ const SIDE_TAB_KEY = "imageBench_generateSideTab";
 const MODEL_SLOT_KEY = "imageBench_generateModelSlot";
 const PHOTOSHOP_TARGET_KEY = "imageBench_generatePhotoshopTarget";
 const PARAMS_COLLAPSED_KEY = "imageBench_generateParamsCollapsed";
+const SNIPPETS_OPEN_KEY = "imageBench_generateSnippetsOpen";
 const SIDE_WIDTH_KEY = "imageBench_generateSideWidth";
 const IMAGE_WIDTH_KEY = "imageBench_generateImageWidth";
 const IMAGE_HEIGHT_KEY = "imageBench_generateImageHeight";
@@ -509,6 +513,61 @@ async function onPromptDrop(e) {
     openPngInfo(file);
 }
 
+// ---------- Snippets ----------
+
+const router = useRouter();
+const snippets = useSnippetsStore();
+const snippetsOpen = ref(storage.getItem(SNIPPETS_OPEN_KEY) === "true");
+const promptField = ref(null);
+const negativeField = ref(null);
+// Prompt that receives the snippets: the one last focused
+const snippetTarget = ref("prompt");
+
+watch(snippetsOpen, open => storage.setItem(SNIPPETS_OPEN_KEY, String(open)));
+
+const promptTextarea = name => (name === "negativePrompt" ? negativeField : promptField).value?.textarea ?? null;
+
+/**
+ * Insert a snippet at the caret of the target prompt; on click its other part is added to the other prompt
+ * @param {Object} snippet - {prompt, negative}
+ * @param {'click'|'middle'|'wrap'} mode
+ */
+function onSnippetInsert(snippet, mode) {
+  const target = has("negativePrompt") ? snippetTarget.value : "prompt";
+  const other = target === "prompt" ? "negativePrompt" : "prompt";
+  const own = target === "prompt" ? snippet.prompt : snippet.negative;
+  const rest = target === "prompt" ? snippet.negative : snippet.prompt;
+  const textarea = promptTextarea(target);
+
+  if (own && textarea && !textarea.disabled)
+    insertIntoTextarea(textarea, own, mode === "wrap");
+
+  if (mode !== "middle" && rest && (other === "prompt" || has("negativePrompt")))
+    setParam(other, appendToPrompt(form[other] ?? "", rest));
+}
+
+async function onSnippetFromSelection(folderId) {
+  const target = has("negativePrompt") ? snippetTarget.value : "prompt";
+  const textarea = promptTextarea(target);
+  const text = textarea?.value.slice(textarea.selectionStart, textarea.selectionEnd).trim();
+
+  if (!text) {
+    await dialog.alert("Select the text of the snippet in a prompt first.", {title: "Snippets"});
+    return;
+  }
+
+  const name = await dialog.prompt("Name of the snippet:", {title: "New snippet", defaultValue: text.slice(0, 40),
+                                                            okText: "Create"});
+
+  if (name)
+    snippets.addSnippet(folderId, target === "prompt" ? {name, prompt: text} : {name, negative: text});
+}
+
+function onSnippetEdit(id) {
+  snippets.revealed = id || true;
+  router.push("/library");
+}
+
 // ---------- Image ----------
 
 const latestImage = computed(() => {
@@ -612,6 +671,8 @@ function onKeydown(e) {
     showParamsOverlay.value = false;
   else if (showImageOverlay.value)
     showImageOverlay.value = false;
+  else if (snippetsOpen.value)
+    snippetsOpen.value = false;
 }
 
 onActivated(() => document.addEventListener("keydown", onKeydown));
@@ -865,6 +926,9 @@ const gridStyle = computed(() => ({
                      @hide-overlay="showParamsOverlay = false"/>
   <PngInfoDialog v-if="pngInfo" :context="pngInfoContext" :file="pngInfo.file"
                  @close="pngInfo = null" @apply="onPngInfoApply"/>
+  <SnippetsPanel v-if="snippetsOpen" :target="has('negativePrompt') ? snippetTarget : 'prompt'"
+                 @insert="onSnippetInsert" @close="snippetsOpen = false"
+                 @from-selection="onSnippetFromSelection" @edit="onSnippetEdit"/>
 
   <div class="view-container generate">
     <div class="toolbar">
@@ -895,6 +959,9 @@ const gridStyle = computed(() => ({
       <div class="toolbar-spacer"></div>
 
       <span v-if="!connected" class="chip">Waiting for {{ HOST_NAME }}…</span>
+      <button class="ib" :class="{on: snippetsOpen}" :aria-pressed="snippetsOpen"
+              title="Snippets: insert prompt text of the Library at the caret" aria-label="Snippets"
+              @mousedown.prevent @click="snippetsOpen = !snippetsOpen"><AppIcon name="snippet" :size="14"/></button>
       <button class="ib" :disabled="!connected" title="PNG Info: apply the generation parameters of an image (or drop an image on the prompt)"
               aria-label="PNG Info" @click="openPngInfo()"><AppIcon name="fileSearch" :size="14"/></button>
       <button class="ib danger" :disabled="!connected" title="Clear the prompts" aria-label="Clear the prompts"
@@ -980,9 +1047,9 @@ const gridStyle = computed(() => ({
       </div>
 
       <!-- Prompt and LoRAs -->
-      <PromptField class="prompt" label="Prompt" :tokens="has('tokens') ? sdWebUI.tokens?.prompt : null"
+      <PromptField ref="promptField" class="prompt" label="Prompt" :tokens="has('tokens') ? sdWebUI.tokens?.prompt : null"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"
-                   @dragover="onPromptDragOver" @drop="onPromptDrop"/>
+                   @dragover="onPromptDragOver" @drop="onPromptDrop" @focusin="snippetTarget = 'prompt'"/>
 
       <!-- LoRAs or references with the image below them; wide, the image is in a column of its own -->
       <div class="side">
@@ -1040,9 +1107,11 @@ const gridStyle = computed(() => ({
                title="Drag to resize the negative prompt; double-click to restore it"
                @pointerdown="negative.onPointerDown" @keydown="negative.onKeydown" @dblclick="negative.reset"><i></i></div>
 
-          <PromptField class="negative" label="Negative prompt" :tokens="has('tokens') ? sdWebUI.tokens?.negativePrompt : null"
+          <PromptField ref="negativeField" class="negative" label="Negative prompt"
+                       :tokens="has('tokens') ? sdWebUI.tokens?.negativePrompt : null"
                        :style="{height: `${negative.size + 20}px`}"
-                       :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"/>
+                       :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"
+                       @focusin="snippetTarget = 'negativePrompt'"/>
         </template>
 
         <div v-if="lowerCollapsed" class="groups-collapsed">

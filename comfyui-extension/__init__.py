@@ -15,7 +15,7 @@ from server import PromptServer
 import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, explore_export, loras, persist, photoshop, photoshop_plugin, pnginfo
+from shared import civitai, explore_export, loras, persist, photoshop, photoshop_plugin, pnginfo, projects
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
 from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
@@ -38,6 +38,7 @@ BASE_PATH = "/image-bench"
 IMAGE_TRAY_FILE = TRAY_FILES["image_tray"]
 CONCEPT_TRAY_FILE = TRAY_FILES["concept_tray"]
 EXPLORE_PRESETS_FILE = "explore_presets.json"
+SNIPPETS_FILE = "snippets.json"
 
 
 def get_extension_root():
@@ -199,6 +200,66 @@ async def update_explore_presets(request):
         return web.Response(text="", content_type="application/json")
     except Exception as e:
         return web.Response(text=str(e), status=500)
+
+
+# Snippets of the Library tab, inserted into the prompts of the Generate tab
+@PromptServer.instance.routes.get(BASE_PATH + "/snippets")
+async def get_snippets(request):
+    content = persist.serve_store_file_content(get_extension_root(), SNIPPETS_FILE)
+    return web.Response(text=content, content_type="application/json")
+
+
+@PromptServer.instance.routes.post(BASE_PATH + "/snippets")
+async def update_snippets(request):
+    try:
+        await persist.write_store_file_from_request(get_extension_root(), SNIPPETS_FILE, request)
+        return web.Response(text="", content_type="application/json")
+    except Exception as e:
+        return web.Response(text=str(e), status=500)
+
+
+# Projects of the Library tab (see projects.dispatch)
+async def projects_action(request):
+    files = {}
+    form = None
+    body = None
+
+    if request.content_type.startswith("multipart/"):
+        form = {}
+
+        for key, value in (await request.post()).items():
+            if hasattr(value, "file"):
+                files[key] = (value.filename, value.file.read())
+            else:
+                form[key] = value
+    elif request.method == "POST":
+        body = await request.read()
+
+    store_dir = os.path.join(get_extension_root(), "store")
+    config = persist.read_json_file(get_config_path()) or {}
+
+    try:
+        args = projects.parse_args(dict(request.query), form, body, files)
+        result = await asyncio.to_thread(projects.dispatch, request.match_info["action"], args, files, config,
+                                         store_dir, get_image_bench_dir(), "comfyui")
+    except projects.ProjectError as e:
+        return web.json_response({"error": str(e)}, status=e.status)
+    except OSError as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+    if isinstance(result, projects.FileResult):
+        if result.path:
+            return web.FileResponse(result.path, headers={"Content-Type": result.media_type,
+                                                          "Cache-Control": "no-cache"})
+
+        return web.Response(body=result.content, content_type=result.media_type,
+                            headers={"Cache-Control": "no-cache"})
+
+    return web.json_response(result)
+
+
+PromptServer.instance.routes.get(BASE_PATH + "/projects/{action}")(projects_action)
+PromptServer.instance.routes.post(BASE_PATH + "/projects/{action}")(projects_action)
 
 
 # Models endpoint

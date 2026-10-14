@@ -29,6 +29,8 @@ const okRef = ref(null);
 const checklistRef = ref(null);
 
 const checked = ref([...(options.value.selected ?? [])]);
+// Prompt with a checkbox under the input (options.checkbox: {label, checked})
+const checkboxChecked = ref(!!options.value.checkbox?.checked);
 const checklistFilter = ref(options.value.filter ?? '');
 const okText = computed(() => typeof options.value.okText === 'function'
   ? options.value.okText(checked.value.length)
@@ -74,7 +76,7 @@ function confirm() {
 
     if (value) {
       saveToHistory(value);
-      emit('close', value);
+      emit('close', options.value.checkbox ? {value, checked: checkboxChecked.value} : value);
     }
     else
       cancel();
@@ -146,6 +148,8 @@ defineExpose({onEnterKey, onEscapeKey});
             <option v-for="item in history" :key="item" :value="item"/>
           </datalist>
         </template>
+        <label v-if="isPrompt && options.checkbox" class="dialog-check">
+          <input v-model="checkboxChecked" type="checkbox">{{ options.checkbox.label }}</label>
       </div>
       <div class="dialog-footer">
         <button v-for="action in options.actions || []" :key="action.id" class="btn outline"
@@ -223,6 +227,17 @@ defineExpose({onEnterKey, onEscapeKey});
 
 .dialog-input:focus {
   border-color: var(--ib-accent-border);
+}
+
+.dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ib-text-2);
+}
+
+.dialog-check input {
+  margin: 0;
 }
 
 .dialog-footer {

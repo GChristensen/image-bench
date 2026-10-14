@@ -1,11 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue';
-import {useExploreImagesStore} from "@/stores/explore.js";
-import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
-import {useImageTrayStore} from "@/stores/imageTray.js";
-import {useConceptTrayStore} from "@/stores/conceptTray.js";
-import {useUpscaledImagesStore} from "@/stores/upscaled.js";
-import {useCompareStore} from "@/stores/compare.js";
+import {clearViews, clearViewsAndTrays, startBlankWorkspace, VIEWS} from "@/workspace.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {HOST_NAME, isWebUI} from "@/host.js";
@@ -24,43 +19,18 @@ const emit = defineEmits(['close']);
 const GENERATION_PARAMS_KEY = "image-bench-generation-params";
 const storage = useLocalStorage();
 
-const exploreImagesStore = useExploreImagesStore();
-const generatedImagesStore = useGeneratedImagesStore();
-const conceptTrayStore = useConceptTrayStore();
-const imageTrayStore = useImageTrayStore();
-const upscaledImageStore = useUpscaledImagesStore();
-const compareStore = useCompareStore();
-
-// The views that are not trays, as named in the confirmations
-const VIEWS = isWebUI ? "Generated, Explore and Upscaled tabs" : "Generated and Explore tabs";
-
-function clearViews() {
-  exploreImagesStore.clear();
-  generatedImagesStore.clear();
-  upscaledImageStore.clear();
-}
-
-function clearViewsAndTrays() {
-  clearViews();
-  imageTrayStore.clear();
-  conceptTrayStore.clear();
-  compareStore.clear();
-}
-
 async function onClearViewsClick() {
-  if (await dialog.confirm(`Removes all images from the ${VIEWS}. The image and concept trays and the Compare tab are kept, `
-      + "and no files are deleted from disk.", {title: "Clear generated images", okText: "Clear"})) {
+  if (await dialog.confirm(`Removes all images from the ${VIEWS}. The image and concept trays, the Compare tab, `
+      + "the prompts and the parameters are kept, and no files are deleted from disk.",
+      {title: "Clear generated images", okText: "Clear"})) {
     clearViews();
     emit('close');
   }
 }
 
 async function onClearAllClick() {
-  if (await dialog.confirm(`Removes all images from the ${VIEWS} and empties the image and concept trays and the Compare tab. `
-      + "No files are deleted from disk.", {title: "Clear all images", okText: "Clear", danger: true})) {
-    clearViewsAndTrays();
+  if (await startBlankWorkspace())
     emit('close');
-  }
 }
 
 async function onDeleteOutputsClick() {
@@ -119,11 +89,11 @@ onUnmounted(() => {
             <div class="actions-modal-body">
               <button class="action-button" @click="onClearViewsClick">
                 <span class="action-icons"><AppIcon name="nuke" :size="16"/></span>
-                <span class="action-text">Clear generated images<small>Trays are kept, files stay on disk</small></span>
+                <span class="action-text">Clear generated images<small>Trays, prompts and parameters are kept, files stay on disk</small></span>
               </button>
               <button class="action-button" @click="onClearAllClick">
                 <span class="action-icons"><AppIcon v-for="n in 2" :key="n" name="nuke" :size="16"/></span>
-                <span class="action-text">Clear all images and trays<small>Files stay on disk</small></span>
+                <span class="action-text">Start a blank workspace<small>Clears all images, trays and prompts, randomizes the seed, closes the project; files stay on disk</small></span>
               </button>
               <button class="action-button danger" @click="onDeleteOutputsClick">
                 <span class="action-icons"><AppIcon v-for="n in 3" :key="n" name="nuke" :size="16"/></span>

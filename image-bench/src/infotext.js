@@ -51,7 +51,7 @@ const baseName = path => String(path).split(/[\\/]/).pop().replace(/\.(safetenso
  * @param {string[]} choices
  * @returns {string|null}
  */
-function matchCheckpoint(model, hash, choices) {
+export function matchCheckpoint(model, hash, choices) {
   if (hash) {
     const byHash = choices.find(title => title.endsWith(` [${hash}]`));
 
@@ -75,7 +75,7 @@ const choiceKey = value => String(value).toLowerCase()
  * @param {string[]|undefined} choices - Unknown choices take the value as it is
  * @returns {string|null}
  */
-function matchChoice(value, choices) {
+export function matchChoice(value, choices) {
   if (!choices?.length)
     return value;
 
