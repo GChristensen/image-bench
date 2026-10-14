@@ -1,8 +1,9 @@
 <script setup>
 import {useAppConfigStore} from "@/stores/appConfig.js";
-import {computed, ref, watch} from "vue";
+import {computed, onMounted, ref, watch} from "vue";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useProjectsStore} from "@/stores/projects.js";
+import {checkDocsRoot, useDocsStore} from "@/stores/docs.js";
 import {ACCENT_COLORS, KNOWN_UI_PRESETS} from "@/consts.js";
 import {HOST_NAME} from "@/host.js";
 import AppIcon from "@/components/AppIcon.vue";
@@ -10,6 +11,7 @@ import AppIcon from "@/components/AppIcon.vue";
 const appConfigStore = useAppConfigStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
 const projectsStore = useProjectsStore();
+const docsStore = useDocsStore();
 const isWebUI = import.meta.env.MODE === 'webui';
 
 // ---------- Project root ----------
@@ -46,6 +48,50 @@ async function saveRoot() {
   await projectsStore.loadTree();
   await projectsStore.loadCurrent();
 }
+
+// ---------- Docs root ----------
+
+const docsRoot = ref(appConfigStore.docsRoot);
+// Result of the check: {exists, docs, default, error}, null before
+const docsCheck = ref(null);
+const checkingDocs = ref(false);
+// The docs folder of the extension, used when the setting is empty
+const defaultDocsRoot = ref("");
+
+watch(() => appConfigStore.docsRoot, root => docsRoot.value = root);
+
+async function checkDocs() {
+  checkingDocs.value = true;
+
+  try {
+    docsCheck.value = await checkDocsRoot(docsRoot.value.trim());
+    defaultDocsRoot.value = docsCheck.value.default ?? defaultDocsRoot.value;
+  } catch (error) {
+    docsCheck.value = {error: error.message};
+  } finally {
+    checkingDocs.value = false;
+  }
+}
+
+async function saveDocsRoot() {
+  const root = docsRoot.value.trim();
+
+  if (root === appConfigStore.docsRoot)
+    return;
+
+  appConfigStore.docsRoot = root;
+  await appConfigStore.persist();
+  await checkDocs();
+  await docsStore.loadTree();
+}
+
+onMounted(async () => {
+  try {
+    defaultDocsRoot.value = (await checkDocsRoot("")).default ?? "";
+  } catch {
+    // Shown without the default path
+  }
+});
 
 // The presets reported by WebUI once the Generate tab was shown, the known ones until then
 const uiPresetChoices = computed(() => {
@@ -120,6 +166,22 @@ function setGenerateUiPreset(index, value) {
         <template v-if="rootCheck.exists && rootCheck.writable">Exists and writable · {{ rootCheck.projects }} projects</template>
         <template v-else-if="rootCheck.exists">Exists, but is not writable</template>
         <template v-else>{{ rootCheck.error || "Not found" }}</template>
+      </span>
+    </div>
+    <div class="setting-label root-setting">
+      <label for="docs-root">Docs root</label>
+      <input id="docs-root" v-model="docsRoot" type="text" spellcheck="false"
+             :placeholder="defaultDocsRoot || 'The docs folder of the extension'" @change="saveDocsRoot"
+             @keydown.enter="saveDocsRoot">
+      <button class="btn outline" :disabled="checkingDocs" @click="checkDocs">Check</button>
+    </div>
+    <div class="setting-label root-help">
+      The folder of the Markdown documents of the Library as the {{ HOST_NAME }} server sees it; empty for the docs
+      folder of the extension.
+      <span v-if="docsCheck" class="root-status" :class="{ok: docsCheck.exists}">
+        <AppIcon :name="docsCheck.exists ? 'check' : 'alert'" :size="13"/>
+        <template v-if="docsCheck.exists">Exists · {{ docsCheck.docs }} documents</template>
+        <template v-else>{{ docsCheck.error || "Not found" }}</template>
       </span>
     </div>
     <h3>Model Exploration</h3>

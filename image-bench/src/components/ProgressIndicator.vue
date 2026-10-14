@@ -1,13 +1,13 @@
 <script>
 import {reactive, watchEffect} from "vue";
+import {APP_TITLE} from "@/host.js";
 
 // Labels of the mounted indicators (kept-alive tabs included), the latest one is shown in the window title
 const activeLabels = reactive(new Map());
-const baseTitle = document.title;
 
 watchEffect(() => {
   const labels = [...activeLabels.values()];
-  document.title = labels.length ? `[${labels[labels.length - 1]}] ${baseTitle}` : baseTitle;
+  document.title = labels.length ? `[${labels[labels.length - 1]}] ${APP_TITLE}` : APP_TITLE;
 });
 </script>
 

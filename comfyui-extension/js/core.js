@@ -16,6 +16,7 @@ import {createReferences} from "./references.js";
 import {createMirror} from "./mirror.js";
 import {createControlNet} from "./controlnet.js";
 import {createProjects} from "./projects.js";
+import {createWorkflows} from "./workflows.js";
 import {messageBus} from "./shared/messaging/messageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager} from "./shared/popup.js";
@@ -161,8 +162,10 @@ function initializeTabModules() {
     });
 
     const projects = createProjects(ctx, {mirror, controlNet});
+    const workflows = createWorkflows(ctx);
 
-    messageHandlers = {...mirror.handlers, ...controlNet.handlers, ...generation.handlers, ...projects.handlers};
+    messageHandlers = {...mirror.handlers, ...controlNet.handlers, ...generation.handlers, ...projects.handlers,
+                       ...workflows.handlers};
 }
 
 /**

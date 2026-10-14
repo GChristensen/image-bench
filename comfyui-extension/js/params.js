@@ -19,7 +19,7 @@ const CONTROL_WIDGET = 'control_after_generate';
  * @param {Object} widget
  * @returns {Array|null} The choices of a combo widget
  */
-function getWidgetChoices(widget) {
+export function getWidgetChoices(widget) {
     const values = widget?.options?.values;
     const list = typeof values === 'function' ? values() : values;
     return Array.isArray(list) ? list : null;

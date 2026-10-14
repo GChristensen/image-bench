@@ -20,6 +20,7 @@ import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
 import ImageContextMenu from "@/components/ImageContextMenu.vue";
+import ToastHost from "@/components/ToastHost.vue";
 import ProjectChip from "@/components/ProjectChip.vue";
 import {installImageActionKeys} from "@/composables/useImageActionKeys.js";
 import {dialog} from "@/dialogs/useDialog.js";
@@ -276,6 +277,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
   <ActionsModal :show="showActionsModal" @close="showActionsModal = false" />
   <ImageContextMenu />
   <DialogHost />
+  <ToastHost />
   </div>
 </template>
 

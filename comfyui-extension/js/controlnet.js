@@ -16,6 +16,7 @@ import {findUpstream, getLinkedSource, MODE_ALWAYS, MODE_BYPASS} from "./graph.j
 import {getImageSize, getMaskPreview, getTargetImageUrl, setLoadImage, uploadInputImage,
         uploadInputMask} from "./images.js";
 import {sendImageToPhotoshop} from "./shared/photoshop-send.js";
+import {getWidgetChoices} from "./params.js";
 
 const POLL_INTERVAL = 600;
 const APPLY_SETTLE_DELAY = 300;
@@ -196,8 +197,10 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         if (!resolved)
             return {...base, available: false};
 
+        // The models are those the loader node offers (custom loaders may list other folders than "controlnet")
         return {...base, available: true, ...readUnit(resolved, unit),
-                options: {controlType: [], controlMode: [], resizeMode: []}};
+                options: {controlType: [], controlMode: [], resizeMode: [],
+                          models: getWidgetChoices(widgetOf(resolved.loader)) ?? undefined}};
     }
 
     /**

@@ -213,6 +213,9 @@ watch(() => form.controlType, (type, oldType) => {
     loadChoices(type);
 }, {immediate: true});
 
+// ComfyUI reports the models of the unit's loader node, which replace the list of the backend
+const modelChoices = computed(() => cn.options.models ?? choices.value.models);
+
 // The current value is offered even if the list does not contain it
 function withCurrent(list, value) {
   return value && !list.includes(value) ? [value, ...list] : list;
@@ -543,7 +546,7 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
         <label class="field">Model
           <span class="select-wrap">
             <select :value="form.model" :title="form.model" @change="e => setParam('model', e.target.value)">
-              <option v-for="name in withCurrent(choices.models, form.model)" :key="name" :value="name">{{ name }}</option>
+              <option v-for="name in withCurrent(modelChoices, form.model)" :key="name" :value="name">{{ name }}</option>
             </select>
             <AppIcon name="chevron" :size="14"/>
           </span>

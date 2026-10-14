@@ -13,6 +13,9 @@ export const isComfy = HOST === "comfy";
 // Name of the host application shown in the views
 export const HOST_NAME = isComfy ? "ComfyUI" : "WebUI";
 
+// Window title, telling the popups of the two hosts apart; the progress of a generation is put in front of it
+export const APP_TITLE = `Image Bench – ${HOST_NAME}`;
+
 const WEBUI_FEATURES = {
   generate: {
     modeSwitch: true,
@@ -25,7 +28,9 @@ const WEBUI_FEATURES = {
     promptLock: true,
     img2imgOptions: true,
     referencesEnabled: true,
-    referenceMaxSize: true
+    referenceMaxSize: true,
+    // Dropdown of the workflows of the extension (ComfyUI)
+    workflowSelect: false
   },
   controlnet: {
     tabSwitch: true,
@@ -56,7 +61,8 @@ const COMFY_FEATURES = {
     promptLock: false,
     img2imgOptions: false,
     referencesEnabled: false,
-    referenceMaxSize: false
+    referenceMaxSize: false,
+    workflowSelect: true
   },
   controlnet: {
     tabSwitch: false,

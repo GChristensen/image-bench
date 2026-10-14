@@ -7,6 +7,7 @@ import os
 import sys
 import asyncio
 import json
+import shutil
 import time
 from urllib.parse import parse_qs, urlparse
 import aiohttp
@@ -305,6 +306,40 @@ async def get_loras(request):
         })
 
     return web.json_response(loras_list)
+
+
+# Folder of the saved workflows of ComfyUI's Workflows sidebar that receives the workflows of the extension
+SAVED_WORKFLOWS_FOLDER = "Image Bench"
+
+
+def copy_bundled_workflows():
+    """
+    Copy the workflows of the extension (workflows/) into the saved workflows of the default user, so that the
+    Workflows sidebar and the workflow dropdown of the Generate tab list them. Only missing files are copied:
+    a workflow edited and saved there is kept
+    """
+    source_dir = os.path.join(get_extension_root(), "workflows")
+    target_dir = os.path.join(folder_paths.get_user_directory(), "default", "workflows", SAVED_WORKFLOWS_FOLDER)
+
+    try:
+        names = [name for name in os.listdir(source_dir) if name.lower().endswith(".json")]
+    except OSError:
+        return
+
+    for name in names:
+        target = os.path.join(target_dir, name)
+
+        if os.path.exists(target):
+            continue
+
+        try:
+            os.makedirs(target_dir, exist_ok=True)
+            shutil.copy2(os.path.join(source_dir, name), target)
+        except OSError as e:
+            print(f"[Image Bench] Unable to copy the workflow {name}: {e}")
+
+
+copy_bundled_workflows()
 
 
 # VAE / Text Encoder modules, as listed by WebUI (Forge); the Generate tab does not set them in ComfyUI

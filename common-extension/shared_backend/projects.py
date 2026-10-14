@@ -11,6 +11,7 @@ below it. ib_project/ holds:
     controlnet/         control images of the parameter snapshot
     workflow.json       ComfyUI workflow of the parameter snapshot
     thumbs/             thumbnails of the image files of the project directory
+    file_info.json      generation parameters of the image files of the project directory (by name, size and time)
 
 The trays of the store directory are the workspace, which is saved into a project and restored from it.
 store/current_project.json points to the current project, with the hashes of the tray store files at the last save
@@ -47,6 +48,7 @@ WORKFLOW_FILE = "workflow.json"
 CONTROLNET_DIR = "controlnet"
 TRAYS_DIR = "trays"
 THUMBS_DIR = "thumbs"
+FILE_INFO_FILE = "file_info.json"
 INDEX_FILE = "project_index.json"
 CURRENT_FILE = "current_project.json"
 
@@ -60,6 +62,8 @@ FINAL_MARKING = "\U0001F3C1"
 ARCHIVE_TRAY_FILE = TRAY_FILES["image_tray"]
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif", ".psd", ".tif", ".tiff"}
+# Images whose generation parameters are read (infotext, or the prompt of ComfyUI)
+INFO_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 # Served as they are; other images are converted to PNG
 BROWSER_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif"}
 MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
@@ -337,15 +341,57 @@ def list_files(directory: str) -> List[Dict[str, Any]]:
     return files
 
 
+def add_file_parameters(directory: str, data_dir: str, files: List[Dict[str, Any]]) -> None:
+    """
+    Add the generation parameters of the image files ("parameters", left out if they have none), read once and kept
+    in ib_project/file_info.json by name, size and modification time
+    """
+    from .pnginfo import image_info
+
+    cache_path = os.path.join(data_dir, FILE_INFO_FILE)
+    cached = read_json(cache_path, {})
+    cached = cached if isinstance(cached, dict) else {}
+    cache = {}
+
+    for file in files:
+        if os.path.splitext(file["name"])[1].lower() not in INFO_EXTENSIONS:
+            continue
+
+        key = f"{file['size']}|{file['modified']}"
+        entry = cached.get(file["name"])
+
+        if not entry or entry.get("key") != key:
+            try:
+                with open(os.path.join(directory, *split_path(file["name"])), "rb") as source:
+                    parameters = image_info(source.read()).get("parameters") or {}
+            except OSError:
+                continue
+
+            entry = {"key": key, "parameters": parameters}
+
+        cache[file["name"]] = entry
+
+        if entry["parameters"]:
+            file["parameters"] = entry["parameters"]
+
+    if cache != cached:
+        try:
+            write_json(cache_path, cache)
+        except OSError:
+            pass  # A read-only project is read again the next time
+
+
 def get_project(root: str, path: str) -> Dict[str, Any]:
     directory, data_dir = project_paths(root, path)
     data = read_project_file(data_dir)
+    files = list_files(directory)
+    add_file_parameters(directory, data_dir, files)
 
     return {
         "path": relative(root, directory),
         "name": os.path.basename(directory),
         "data": data,
-        "files": list_files(directory),
+        "files": files,
         "trays": {kind: os.path.isfile(os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")) for kind in TRAY_KINDS}
     }
 
@@ -440,6 +486,25 @@ def cached_thumbnail(data_dir: str, key: str, open_source) -> FileResult:
 
 
 # ---------- File system ----------
+
+def add_file(root: str, path: str, filename: Optional[str], content: Optional[bytes]) -> Dict[str, Any]:
+    """Save an image into a project directory under its name (another name if it is taken)"""
+    directory, _ = project_paths(root, path)
+    name = os.path.basename((filename or "").replace("\\", "/")) or "image.png"
+
+    if content is None:
+        raise ProjectError("No file")
+
+    if os.path.splitext(name)[1].lower() not in IMAGE_EXTENSIONS:
+        raise ProjectError("Not an image file.", 415)
+
+    target = unique_file_path(directory, check_name(name))
+
+    with open(target, "wb") as file:
+        file.write(content)
+
+    return {"name": os.path.basename(target), "project": get_project(root, path)}
+
 
 def create_folder(root: str, parent: str, name: str) -> Dict[str, Any]:
     directory = os.path.join(resolve(root, parent), check_name(name))
@@ -588,6 +653,24 @@ def delete(root: str, store_dir: str, path: str) -> Dict[str, Any]:
 
     update_current_path(store_dir, path, None)
     return {}
+
+
+def delete_file(root: str, path: str, name: str) -> Dict[str, Any]:
+    """Delete an image file of a project directory (into the Recycle Bin where it is available); not in ib_project"""
+    if split_path(name)[:1] and split_path(name)[0].lower() == PROJECT_DIR:
+        raise ProjectError("Files of ib_project cannot be deleted.")
+
+    file_path = project_file_path(root, path, name)
+
+    if os.path.splitext(file_path)[1].lower() not in IMAGE_EXTENSIONS:
+        raise ProjectError("Not an image file.", 415)
+
+    if can_trash(file_path):
+        trash(file_path)
+    else:
+        os.unlink(file_path)
+
+    return get_project(root, path)
 
 
 def reveal(root: str, path: str) -> Dict[str, Any]:
@@ -1148,6 +1231,21 @@ def dispatch(action: str, args: Dict[str, Any], files: Dict[str, Any], config: D
     root = get_root(config)
     path = args.get("path") or ""
 
+    # The docs of the Library tab, under their own root
+    if action.startswith("doc"):
+        from . import docs
+        docs_root = docs.get_root(config, store_dir)
+
+        if action == "docs_tree":
+            return docs.get_tree(docs_root, store_dir)
+        if action == "docs_check":
+            check = str(args.get("root") or "").strip()
+            return docs.check_root(os.path.normpath(check) if check else docs.default_root(store_dir), store_dir)
+        if action == "doc":
+            return docs.get_doc(docs_root, path)
+        if action == "doc_asset":
+            return docs.get_asset(docs_root, path)
+
     if action == "tree":
         return get_tree(root, store_dir)
     if action == "check":
@@ -1179,6 +1277,11 @@ def dispatch(action: str, args: Dict[str, Any], files: Dict[str, Any], config: D
         return reveal(root, path)
     if action == "update":
         return update_project(root, path, args.get("changes") or {})
+    if action == "delete_file":
+        return delete_file(root, path, args.get("name") or "")
+    if action == "add_file":
+        upload = files.get("file")
+        return add_file(root, path, upload[0] if upload else None, upload[1] if upload else None)
     if action == "set_final":
         upload = files.get("file")
         return set_final(root, path, name=args.get("name"), kind=args.get("kind"), member=args.get("member"),

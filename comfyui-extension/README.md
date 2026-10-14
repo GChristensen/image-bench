@@ -473,8 +473,10 @@ The extension creates a `config.json` file with the popup settings (edited in th
 
 ## Example Workflows
 
-`example_workflows/` (listed in ComfyUI's template browser under this extension) contains workflows with every node
-already marked. Each one has a note with the model's settings and download links.
+`workflows/` (listed in ComfyUI's template browser under this extension) contains workflows with every node
+already marked. At startup they are copied into the `Image Bench` folder of the saved workflows of the default user
+(`user/default/workflows/Image Bench/`, only the missing files), so the Workflows sidebar and the workflow dropdown
+of the Generate tab list them. Each one has a note with the model's settings and download links.
 
 Text-to-image with the Generate tab LoRA list (an **Image Bench Prompt** node marked `ib:pp`) and a bypassed
 `ib:lora` loader for LoRA exploration:
@@ -534,6 +536,15 @@ Anima:
   limits the re-noised latent area (`Set Latent Noise Mask`, `denoise` 0.9), and the result is pasted back
   into the original through the original selection (`Image Composite Masked`), so nothing outside it changes.
   Send the image and mask once before queueing, since the loaders refer to the files the plugin writes.
+- `image_anima_full.json`: Anima base v1.0 with every feature: LoRA list, Shift (`ModelSamplingAuraFlow`), two
+  ControlNet units with the community VACE models for Anima, depth (`ib:cn:0`, Depth Anything V2 preprocessor) and
+  canny (`ib:cn:1`, Canny preprocessor), each with an effect mask; one reference (`ib:ref:0`, scaled to the generation
+  size and concatenated to the latent by ComfyUI-Cosmos-Reference, first pass only); Hires. fix (`ib:smp:1`, upscaler
+  model, `ib:hr` switch). The VACE models load only with the
+  [PineCookie fork of ComfyUI-Advanced-ControlNet](https://github.com/PineCookie/ComfyUI-Advanced-ControlNet/tree/fix/anima-vace-hardening)
+  (branch `fix/anima-vace-hardening`, in place of the original package); the preprocessors need comfyui_controlnet_aux.
+  For the 40- and 52-block Anima models put ComfyUI-Anima-Remap's *Anima VACE ControlNet Remap* between each VACE
+  loader and its apply node.
 
 ## How It Works
 

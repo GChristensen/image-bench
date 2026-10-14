@@ -23,7 +23,7 @@ export const useControlNetStore = defineStore('controlNet', () => {
     // independent (img2img, else null), controlType, preprocessor, model, weight, guidanceStart, guidanceEnd,
     // controlMode, resizeMode, processorRes, thresholdA, thresholdB (WebUI, null without the slider)
     const params = ref(null)
-    // Radio choices: controlType, controlMode, resizeMode
+    // Radio choices: controlType, controlMode, resizeMode; ComfyUI also sends models (those of the unit's loader node)
     const options = ref({controlType: [], controlMode: [], resizeMode: []})
     // Preprocessor sliders as WebUI shows them for the preprocessor: {processorRes, thresholdA, thresholdB},
     // each {label, min, max, step, visible} or null if absent; their values are in params

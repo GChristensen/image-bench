@@ -37,6 +37,16 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'SET_GENERATION_MODE', mode, params });
   };
 
+  // Open a saved ComfyUI workflow by its path, or switch to its tab if it is open
+  const loadWorkflow = (path) => {
+    sendWebUIMessage({ type: 'LOAD_WORKFLOW', path });
+  };
+
+  // Read the saved ComfyUI workflows again
+  const syncWorkflows = () => {
+    sendWebUIMessage({ type: 'SYNC_WORKFLOWS' });
+  };
+
   // Put an image file into the input of the shown img2img mode
   const setInputImage = (kind, file) => {
     sendWebUIMessage({ type: 'SET_INPUT_IMAGE', kind, file });
@@ -138,6 +148,8 @@ export function useWebUIBridge() {
     batchGenerate,
     generateImage,
     setGenerationMode,
+    loadWorkflow,
+    syncWorkflows,
     setInputImage,
     editReferences,
     setPhotoshopTarget,

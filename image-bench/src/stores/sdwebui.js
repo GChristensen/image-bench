@@ -29,6 +29,10 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
     const inputs = ref({mode: null, image: null, mask: null})
     // WebUI is generating or interrupting, whoever started it
     const busy = ref(false)
+    // ComfyUI: the active workflow {path, name, modified} (null in WebUI or if unknown) and the saved workflows
+    // [{path, name}] of the Workflows sidebar (name: the path below the workflows folder, without .json)
+    const workflow = ref(null)
+    const workflows = ref([])
     const promptsLocked = ref(false)
 
     // Progress and live preview of the running generation (LIVE_PROGRESS)
@@ -51,6 +55,8 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
             features.value = e.features ?? null;
             busy.value = e.busy;
             promptsLocked.value = e.locked;
+            workflow.value = e.workflow ?? null;
+            workflows.value = e.workflows ?? [];
         }
         else if (e.type === "INPUT_IMAGES") {
             inputs.value = {mode: e.mode, image: e.image, mask: e.mask};
@@ -71,7 +77,7 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
         storage.setItem(PROMPTS_LOCK_KEY, String(lock));
     }
 
-    return {prompt, negativePrompt, mode, params, sliderKind, tokens, options, features, references, inputs, busy, promptsLocked,
+    return {prompt, negativePrompt, mode, params, sliderKind, tokens, options, features, references, inputs, busy, workflow, workflows, promptsLocked,
             live, onSDEvent,
             isPromptsLockRemembered, setPromptsLockRemembered};
 })

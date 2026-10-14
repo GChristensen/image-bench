@@ -1,6 +1,7 @@
 """
-Generation parameters (infotext) of an image file, shown by the PNG Info dialog of the Generate tab.
-WebUI reads the infotext with its own reader (PNG text, JPEG/WebP EXIF, NovelAI); ComfyUI with read_infotext().
+Generation parameters (infotext) of an image file, shown by the PNG Info dialog of the Generate tab and the images of
+the project folders. WebUI reads the infotext with its own reader (PNG text, JPEG/WebP EXIF, NovelAI); ComfyUI with
+read_infotext(). An image saved by ComfyUI has no infotext: its prompt is turned into one (comfy_prompt.py).
 Both parse it into the parameters of the image trays (tray.pnginfo_to_dict(): lowercase keys, "size": "WxH").
 """
 
@@ -10,6 +11,7 @@ from typing import Any, Callable, Dict, Optional
 
 from PIL import Image
 
+from .comfy_prompt import read_comfy_infotext
 from .tray import pnginfo_to_dict, prompts_from_pnginfo
 
 # A "key: value" pair of the parameter line, as WebUI matches it (modules/infotext_utils.py)
@@ -95,7 +97,7 @@ def image_info(file_data: bytes, reader: Callable[[Image.Image], Optional[str]] 
     """
     try:
         with Image.open(io.BytesIO(file_data)) as image:
-            infotext = reader(image) or ""
+            infotext = reader(image) or read_comfy_infotext(image.info or {}) or ""
             width, height = image.size
     except Exception as e:
         return {"error": f"Not an image: {e}"}

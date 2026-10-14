@@ -29,6 +29,7 @@ import HiresGroup from "@/components/generate/HiresGroup.vue";
 import Img2ImgGroup from "@/components/generate/Img2ImgGroup.vue";
 import SessionStrip from "@/components/generate/SessionStrip.vue";
 import PngInfoDialog from "@/components/generate/PngInfoDialog.vue";
+import WorkflowSelect from "@/components/generate/WorkflowSelect.vue";
 import SnippetsPanel from "@/components/generate/SnippetsPanel.vue";
 import {withCurrent} from "@/components/generate/choices.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
@@ -199,6 +200,15 @@ function flushParams() {
 }
 
 onActivated(() => webUI.subscribeMirror(true));
+
+// ---------- Workflows (ComfyUI) ----------
+
+// The workflow files may change outside of the sidebar
+onActivated(() => {
+  if (has("workflowSelect"))
+    webUI.syncWorkflows();
+});
+
 
 onDeactivated(() => {
   flushParams();
@@ -971,6 +981,11 @@ const gridStyle = computed(() => ({
               :title="sdWebUI.promptsLocked ? 'Allow editing the prompts in WebUI' : 'Cover the prompts in WebUI, so that they are edited only here'"
               @click="toggleLock"
         ><AppIcon :name="sdWebUI.promptsLocked ? 'lock' : 'unlock'" :size="14"/>{{ sdWebUI.promptsLocked ? "WebUI prompts locked" : "Lock WebUI prompts" }}</button>
+      <template v-if="has('workflowSelect')">
+        <span class="toolbar-divider"></span>
+        <WorkflowSelect class="workflow-select" :workflows="sdWebUI.workflows" :active="sdWebUI.workflow"
+                        :disabled="!connected || generating" @select="path => webUI.loadWorkflow(path)"/>
+      </template>
       <span v-if="has('modeSwitch')" class="toolbar-divider"></span>
       <div v-if="has('modeSwitch')" class="seg modes" role="radiogroup" aria-label="Generation mode">
         <button v-for="item in MODES" :key="item.value" type="button" role="radio" :class="{on: mode === item.value}"
@@ -1611,6 +1626,11 @@ const gridStyle = computed(() => ({
 
 .modes {
   flex: none;
+}
+
+.workflow-select {
+  flex: 0 1 260px;
+  min-width: 140px;
 }
 
 .modes button {

@@ -222,8 +222,9 @@ const gridItems = computed(() => {
     return files.value.map(file => ({
       key: file.name, name: file.name, url: fileUrl(file.name),
       thumb: fileUrl(file.name, {thumb: true, version: file.modified}),
-      title: file.name, final: {name: file.name},
-      image: {imageUrl: fileUrl(file.name), imagePath: baseName(file.name)}
+      title: [file.name, file.parameters?.prompt].filter(Boolean).join("\n\n"), final: {name: file.name},
+      // The generation parameters read from the file (infotext, or the prompt of a ComfyUI image)
+      image: {imageUrl: fileUrl(file.name), imagePath: baseName(file.name), parameters: file.parameters}
     }));
 
   const tray = trays.value[imageTab.value];
@@ -357,13 +358,20 @@ async function sendToPhotoshop(url, name) {
 }
 
 function onItemMenu(e, item) {
-  openContextMenu(e, [
+  const items = [
     {icon: "star", label: "Set as the final image", run: () => store.setFinal(project.value.path, item.final)},
     {icon: "compare", label: "Add to compare", run: () => addToCompare(item.url, item.name)},
     {icon: "external", label: "Send to Photoshop", run: () => sendToPhotoshop(item.url, item.name)},
     {separator: true},
     {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")}
-  ]);
+  ];
+
+  // Files of the project folder only; the images of the saved trays are part of their archives
+  if (imageTab.value === "files")
+    items.push({separator: true},
+      {icon: "trash", label: "Delete file…", danger: true, run: () => store.deleteFile(project.value.path, item.name)});
+
+  openContextMenu(e, items);
 }
 
 function onItemAuxClick(e, item) {

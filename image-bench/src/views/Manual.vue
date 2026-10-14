@@ -179,8 +179,8 @@ onMounted(loadPluginStatus);
           best of several variants.</li>
         <li><b>Concept tray</b> and <b>Image tray</b> — permanent collections of the images worth keeping.</li>
         <li><b>Upscaled</b> — upscaled (Hires. fix) versions of the images you choose.</li>
-        <li><b>Library</b> — projects, which keep the trays and the generation parameters of a piece of work, and
-          snippets, prompt text inserted from the Generate tab.</li>
+        <li><b>Library</b> — docs, your Markdown notes; snippets, prompt text inserted from the Generate tab; and
+          projects, which keep the trays and the generation parameters of a piece of work.</li>
         <li><AppIcon name="settings" :size="13" class="inline-icon"/> <b>Settings</b> and
           <AppIcon name="book" :size="13" class="inline-icon"/> <b>Manual</b> (at the right end of the tab bar) —
           the options of the window, and this manual.</li>
@@ -291,7 +291,8 @@ onMounted(loadPluginStatus);
           lock</b> covers the prompts in WebUI, so that they can only be edited here;
           <AppIcon name="eraser" :size="13" class="inline-icon"/> left of it clears the prompt and the negative prompt.</li>
         <li><b><AppIcon name="fileSearch" :size="13" class="inline-icon"/> PNG Info</b> — shows the generation
-          parameters of an image chosen, dropped or pasted there (PNG, or the EXIF of a JPEG or WebP), and
+          parameters of an image chosen, dropped or pasted there (PNG, or the EXIF of a JPEG or WebP; for an image
+          saved by ComfyUI, the prompts, checkpoint, LoRAs and sampling read from its workflow prompt), and
           <b>Apply</b> sets the checked groups in the shown mode: prompt, negative prompt, model<template
           v-if="isWebUI"> (checkpoint with its UI preset, VAE / Text Encoder)</template>, sampling, size, seed and
           Hires. fix (denoising in img2img). Values {{ HOST_NAME }} does not have, such as a missing checkpoint,
@@ -562,7 +563,22 @@ onMounted(loadPluginStatus);
     <section id="manual-library">
       <h2><AppIcon name="library" :size="17"/>Library</h2>
       <p>
-        The Library tab has two parts, switched at the top of its left column: <b>Projects</b> and <b>Snippets</b>.
+        The Library tab has three parts, switched at the top of its left column: <b>Docs</b>, <b>Snippets</b> and
+        <b>Projects</b>.
+      </p>
+      <h3>Docs</h3>
+      <p>
+        Docs shows the Markdown files (<code>.md</code>) under the docs root (Settings › Library; by default the
+        <code>model_docs</code> folder of the extension) in a tree; folders without documents are left out. Click a
+        document to read it in the right pane. Docs are read-only: edit the files with any editor and press
+        <AppIcon name="refresh" :size="13" class="inline-icon"/> to read them again. Images and links to other
+        documents relative to a document work; other links open in a new window.
+      </p>
+      <p>
+        Tag lists (<code>.csv</code> files of tag autocompletion, e.g. the Anima or Danbooru tags: tag, category,
+        post count, aliases) are shown with a search field instead: type part of a tag or of one of its aliases
+        (spaces and underscores are the same) to find it; exact and leading matches come first, then the more used
+        tags. Click a tag to copy it with spaces for underscores, as it is written in prompts.
       </p>
       <h3>Projects</h3>
       <p>
@@ -613,7 +629,7 @@ onMounted(loadPluginStatus);
           parameters, reuse the prompts and all parameters <AppIcon name="sliders" :size="13" class="inline-icon"/>,
           set as final, add to compare, send to ControlNet and to Photoshop. Click one to view it
           (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click to open it in
-          a new tab, right-click for the menu (final image, Compare, Photoshop).</li>
+          a new tab, right-click for the menu (final image, Compare, Photoshop, and deleting a file of the project folder).</li>
       </ul>
       <h3>Snippets</h3>
       <p>
@@ -663,8 +679,8 @@ onMounted(loadPluginStatus);
       </table>
       <p>
         Right-click an image (or the large image) for a menu with all of its actions, as well as opening it in a
-        new window, copying it to the clipboard and, for a marked image, showing only its marking or removing
-        it. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
+        new window, copying it into the folder of the current project (at once, under another name if the name is
+        taken) and, for a marked image, showing only its marking or removing it. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
       </p>
       <p>
         Click an image to view it large. In that view, <span class="kbd">←</span> and
@@ -700,6 +716,8 @@ onMounted(loadPluginStatus);
         </template>
         <li><b>Project root</b> — the folder of the projects of the Library, as the {{ HOST_NAME }} server sees it
           (a local or network path). <b>Check</b> tells whether it exists and is writable.</li>
+        <li><b>Docs root</b> — the folder of the Markdown documents of the Library; empty for the
+          <code>model_docs</code> folder of the extension. <b>Check</b> counts the documents in it.</li>
         <li><b>Generate LoRA-free images for each model when exploring LoRAs</b> — adds an image without any LoRA
           to each model in Explore, as a baseline to compare the LoRAs against.</li>
         <li v-if="isWebUI"><b>Add 'Civitai Model Info' settings button</b> — adds an ℹ️ button next to the
@@ -851,7 +869,13 @@ onMounted(loadPluginStatus);
           without them. Place it between the checkpoint loader and the text encoder and title it
           <code>ib:pp</code>, and the LoRA list works just as it does in WebUI.</li>
         <li><b>Example workflows</b>, with every node already marked, are listed under Image Bench in the ComfyUI
-          template browser.</li>
+          template browser, and are copied into the <i>Image Bench</i> folder of your saved workflows (only the
+          missing ones, so your saved edits are kept).</li>
+        <li><b>Workflow dropdown</b> (at the right of the Generate toolbar) — the saved workflows of the ComfyUI
+          Workflows sidebar as a folder tree with a filter (Enter takes the first match). Choosing one opens it as the
+          sidebar does: it switches to its tab if
+          it is open (keeping its changes), else opens it. The dropdown follows the active ComfyUI tab; • marks
+          unsaved changes.</li>
         <li>Two node packs are optional: <b>comfyui_controlnet_aux</b> for ControlNet preprocessors, and
           <b>ComfyUI-Advanced-ControlNet</b> for ControlNet masks.</li>
         <li>A marker can also go on a subgraph node; promote the widgets that Image Bench should change.</li>

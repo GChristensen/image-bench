@@ -36,6 +36,8 @@ async function call(action, args = {}, {method = "POST", form = null} = {}) {
   const query = method === "GET" ? "?" + new URLSearchParams(args) : "";
   const response = await fetch(`/image-bench/projects/${action}${query}`, {
     method,
+    // The answers change with the folders; never from the browser cache
+    cache: "no-store",
     body: method === "GET" ? undefined : form ?? JSON.stringify(args),
     headers: method === "GET" || form ? undefined : {"Content-Type": "application/json"}
   });
@@ -461,6 +463,12 @@ export const useProjectsStore = defineStore("projects", () => {
     const follow = path => path === oldPath || path?.startsWith(oldPath + "/")
       ? newPath + path.slice(oldPath.length) : path;
 
+    // The tab bar chip follows the current project at once; the backend has moved it too
+    if (hasCurrent.value && follow(current.value.path) !== current.value.path) {
+      const path = follow(current.value.path);
+      current.value = {...current.value, path, name: baseName(path)};
+    }
+
     await loadTree();
     await loadCurrent();
 
@@ -543,6 +551,44 @@ export const useProjectsStore = defineStore("projects", () => {
     }
   }
 
+  /**
+   * Save an image file into a project directory, under another name if it is taken
+   * @param {string} path - The current project by default
+   * @param {File} file
+   * @returns {Promise<string>} Name of the saved file
+   * @throws {Error} With the message of the backend
+   */
+  async function addFile(file, path = current.value.path) {
+    const form = new FormData();
+    form.append("data", JSON.stringify({path}));
+    form.append("file", file, file.name || "image.png");
+
+    const result = await call("add_file", {}, {form});
+    showProject(result.project);
+    return result.name;
+  }
+
+  /**
+   * Delete an image file of a project directory, after a confirmation
+   * @param {string} path
+   * @param {string} name - Relative to the project directory
+   * @returns {Promise<boolean>} Whether it was deleted
+   */
+  async function deleteFile(path, name) {
+    const target = tree.value?.trash ? "moved to the Recycle Bin" : "deleted permanently";
+
+    if (!await dialog.confirm(`Delete "${name}" from the project folder? It is ${target}.`,
+      {title: "Delete file", okText: "Delete", danger: true}))
+      return false;
+
+    const result = await run(null, () => call("delete_file", {path, name}));
+
+    if (result)
+      showProject(result);
+
+    return !!result;
+  }
+
   async function init() {
     await loadCurrent();
   }
@@ -553,6 +599,6 @@ export const useProjectsStore = defineStore("projects", () => {
     init, loadTree, loadCurrent, loadProject, select, findNode,
     save, saveInto, open, close,
     createProject, createFolder, rename, move, remove, reveal,
-    updateProject, setFinal
+    updateProject, setFinal, addFile, deleteFile
   };
 });

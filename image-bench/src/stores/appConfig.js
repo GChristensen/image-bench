@@ -140,6 +140,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Folder of the Markdown docs of the Library tab; empty: the docs folder of the extension
+    const docsRoot = computed({
+        get() {
+            return _config.docsRoot ?? "";
+        },
+        set(v) {
+            _config.docsRoot = String(v ?? "").trim();
+            return persist();
+        }
+    });
+
     const accentColor = computed({
         get() {
             return ACCENT_COLORS[_config.accentColor] ? _config.accentColor : DEFAULT_ACCENT_COLOR;
@@ -190,6 +201,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         generateUiPresets,
         generatePresetImages,
         projectRoot,
+        docsRoot,
         accentColor
     };
 });
