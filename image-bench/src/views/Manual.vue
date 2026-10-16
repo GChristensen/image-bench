@@ -472,13 +472,14 @@ onMounted(loadPluginStatus);
           one; the <AppIcon name="close" :size="13" class="inline-icon"/> next to the menu removes the region. The region,
           its aspect ratio and the separator color are remembered.</li>
         <li><b>Crops</b> (key <span class="kbd">X</span>) — shows only the region of every image, packed as large
-          as the window allows. <AppIcon name="save" :size="13" class="inline-icon"/> saves the crops as one PNG at
+          as the window allows. The wheel scales them around the pointer (the zoom buttons too: 100% is the
+          native resolution of the largest crop), and dragging pans them. <AppIcon name="save" :size="13" class="inline-icon"/> saves the crops as one PNG at
           their native resolution, and <AppIcon name="external" :size="13" class="inline-icon"/> opens that image in
           Photoshop as a new document.</li>
         <li><b>Image actions</b> — hovering over an image shows its buttons (reuse seed, parameters, ControlNet,
           Photoshop, the trays, a comment shown below the buttons), a marking badge and <AppIcon name="close" :size="13" class="inline-icon"/>, which
           removes it from the tab (the file stays on disk). Middle-click or Shift+click an image to view it large
-          (in Crops, click it);
+          (in Crops, click or middle-click it);
           <span class="kbd">←</span> / <span class="kbd">→</span> page through the images there.</li>
         <li><b>Clear</b> — <b>Marked</b> / <b>Unmarked</b> remove the images with or without a marking, and
           <b>All</b> all of them; the files stay on disk.</li>

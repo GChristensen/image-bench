@@ -1,12 +1,14 @@
 <script setup>
-import {computed, onBeforeUnmount, onMounted, ref} from "vue";
+import {computed, nextTick, onBeforeUnmount, onMounted, ref} from "vue";
 import {openImageMenu} from "@/contextMenu.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
 import {cropAspect, packGrid} from "@/components/compare/compareGeometry.js";
 import CompareChrome from "@/components/compare/CompareChrome.vue";
 
 /**
- * The region of each image of the Compare tab, packed into the grid with the largest cells that fit
+ * The region of each image of the Compare tab, packed into the grid with the largest cells that fit. The wheel
+ * scales the cells around the pointer (zoom relative to that fit, keeping the columns), a left drag pans them, and
+ * a click without a drag opens the image.
  */
 const props = defineProps({
   images: {
@@ -30,26 +32,48 @@ const props = defineProps({
     type: Number,
     default: 2
   },
+  // Scale of the cells relative to the fit
+  zoom: {
+    type: Number,
+    default: 1
+  },
   ctx: {
     type: Object,
     required: true
   }
 });
 
-const emit = defineEmits(["remove", "setMarking", "open"]);
+const emit = defineEmits(["remove", "setMarking", "open", "update:zoom"]);
+
+const ZOOM_STEP = 1.25;
+// Up to this many times the native pixels of the largest crop
+const MAX_NATIVE_ZOOM = 4;
+// Pointer movement in pixels that makes a press a pan instead of a click
+const DRAG_THRESHOLD = 4;
 
 const rootElement = ref(null);
+const gridElement = ref(null);
 const area = ref({width: 0, height: 0});
 const hoveredIndex = ref(-1);
+const panning = ref(false);
 
 const aspect = computed(() => cropAspect(props.region, props.images.map(image => props.sizes[image.imageUrl])));
+// The fit layout, also the columns of the export
 const grid = computed(() => packGrid(props.images.length, aspect.value, area.value.width, area.value.height,
   props.separatorWidth));
 const fillers = computed(() => grid.value.cols * grid.value.rows - props.images.length);
 
+// Zoom at which the largest crop is shown in its native pixels
+const nativeZoom = computed(() => {
+  const widths = props.images.map(image => props.sizes[image.imageUrl]).filter(Boolean)
+    .map(size => props.region.w * size.w);
+  return widths.length && grid.value.cellWidth ? Math.max(...widths) / grid.value.cellWidth : 1;
+});
+const maxZoom = computed(() => Math.max(2, nativeZoom.value * MAX_NATIVE_ZOOM));
+
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${grid.value.cols}, ${grid.value.cellWidth}px)`,
-  gridAutoRows: `${grid.value.cellHeight}px`,
+  gridTemplateColumns: `repeat(${grid.value.cols}, ${Math.floor(grid.value.cellWidth * props.zoom)}px)`,
+  gridAutoRows: `${Math.floor(grid.value.cellHeight * props.zoom)}px`,
   gap: `${props.separatorWidth}px`,
   background: props.separatorColor
 }));
@@ -61,15 +85,117 @@ const imageStyle = computed(() => {
 });
 
 let observer = null;
+let laidOut = false;
 
 onMounted(() => {
-  observer = new ResizeObserver(([entry]) => {
+  observer = new ResizeObserver(async ([entry]) => {
     area.value = {width: entry.contentRect.width, height: entry.contentRect.height};
+
+    // A zoom kept from before shows the middle of the grid
+    if (!laidOut) {
+      laidOut = true;
+      await nextTick();
+      const element = rootElement.value;
+      element.scrollLeft = (element.scrollWidth - element.clientWidth) / 2;
+      element.scrollTop = (element.scrollHeight - element.clientHeight) / 2;
+    }
   });
   observer.observe(rootElement.value);
 });
 
-onBeforeUnmount(() => observer?.disconnect());
+onBeforeUnmount(() => {
+  observer?.disconnect();
+  removePanListeners?.();
+});
+
+// ---------- Zoom ----------
+
+// The grid point under the client point (the middle of the area without one) stays there
+async function setZoom(k, clientX, clientY) {
+  const next = Math.min(maxZoom.value, Math.max(1, k));
+  const element = rootElement.value;
+
+  if (next === props.zoom || !element)
+    return;
+
+  const areaRect = element.getBoundingClientRect();
+  clientX ??= areaRect.left + areaRect.width / 2;
+  clientY ??= areaRect.top + areaRect.height / 2;
+
+  const before = gridElement.value.getBoundingClientRect();
+  const fx = (clientX - before.left) / before.width;
+  const fy = (clientY - before.top) / before.height;
+
+  emit("update:zoom", next);
+  await nextTick();
+
+  const after = gridElement.value.getBoundingClientRect();
+  element.scrollLeft += after.left + fx * after.width - clientX;
+  element.scrollTop += after.top + fy * after.height - clientY;
+}
+
+function onWheel(e) {
+  if (!e.deltaY)
+    return;
+
+  e.preventDefault();
+  setZoom(e.deltaY < 0 ? props.zoom * ZOOM_STEP : props.zoom / ZOOM_STEP, e.clientX, e.clientY);
+}
+
+// ---------- Pan ----------
+
+let removePanListeners = null;
+// The click that ends a pan does not open the image
+let suppressClick = false;
+
+function onMouseDown(e) {
+  // Middle click opens the image on auxclick; no autoscroll
+  if (e.button === 1) {
+    e.preventDefault();
+    return;
+  }
+
+  if (e.button !== 0 || e.target.closest(".compare-chrome"))
+    return;
+
+  e.preventDefault();
+
+  const element = rootElement.value;
+  const start = {x: e.clientX, y: e.clientY, left: element.scrollLeft, top: element.scrollTop};
+
+  const move = ev => {
+    const dx = ev.clientX - start.x;
+    const dy = ev.clientY - start.y;
+
+    if (!panning.value && Math.hypot(dx, dy) < DRAG_THRESHOLD)
+      return;
+
+    panning.value = true;
+    element.scrollLeft = start.left - dx;
+    element.scrollTop = start.top - dy;
+  };
+  const up = () => {
+    finish();
+
+    if (panning.value) {
+      suppressClick = true;
+      setTimeout(() => suppressClick = false);
+    }
+
+    panning.value = false;
+  };
+  const finish = () => {
+    window.removeEventListener("mousemove", move);
+    window.removeEventListener("mouseup", up);
+    removePanListeners = null;
+  };
+
+  window.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", up);
+  removePanListeners = finish;
+}
+
+// ---------- Cells ----------
 
 function onCellEnter(e, image, index) {
   hoveredIndex.value = index;
@@ -86,19 +212,30 @@ function onCellLeave(e) {
   clearHoveredImageTarget(e.currentTarget);
 }
 
+// A click or a middle click opens the image in the overlay
+function onCellClick(index) {
+  if (!suppressClick)
+    emit("open", index);
+}
 
-defineExpose({grid});
+function onCellAuxClick(e, index) {
+  if (e.button === 1)
+    emit("open", index);
+}
+
+defineExpose({grid, nativeZoom, setZoom});
 </script>
 
 <template>
-  <div ref="rootElement" class="crop-area">
-    <div class="crop-grid" :style="gridStyle">
+  <div ref="rootElement" class="crop-area" :class="{zoomed: zoom > 1, panning}"
+       @wheel="onWheel" @mousedown="onMouseDown">
+    <div ref="gridElement" class="crop-grid" :style="gridStyle">
       <div v-for="(image, index) in images" :key="image.imageUrl" class="crop-cell"
            @mouseenter="onCellEnter($event, image, index)" @mouseleave="onCellLeave"
-           @click="emit('open', index)" @mousedown.middle.prevent
+           @click="onCellClick(index)" @auxclick="onCellAuxClick($event, index)"
            @contextmenu="openImageMenu($event, image, ctx)">
         <img :src="image.imageUrl" :style="imageStyle" draggable="false" alt="">
-        <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index"
+        <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
                        @remove="emit('remove', image)" @set-marking="marking => emit('setMarking', image, marking)"
                        @open="emit('open', index)"/>
       </div>
@@ -108,24 +245,39 @@ defineExpose({grid});
 </template>
 
 <style scoped>
+/* Scrolled by dragging; without scrollbars, which would change the fit */
 .crop-area {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-width: none;
 }
 
+.crop-area::-webkit-scrollbar {
+  display: none;
+}
+
+/* Centered while it fits, and scrollable to every edge when zoomed */
 .crop-grid {
   display: grid;
+  margin: auto;
+  flex: none;
 }
 
-/* A click opens the image in the overlay */
 .crop-cell {
   position: relative;
   overflow: hidden;
   cursor: pointer;
+}
+
+.crop-area.zoomed .crop-cell {
+  cursor: grab;
+}
+
+.crop-area.panning,
+.crop-area.panning * {
+  cursor: grabbing !important;
 }
 
 .crop-cell img {

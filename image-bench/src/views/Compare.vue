@@ -240,8 +240,18 @@ function setZoom(k, point = center.value) {
   updateZoomLabel();
 }
 
-// "fit" or a zoom in pixels of the first image
+// Scale of the crops relative to their fit, kept while the whole images are shown
+const cropZoom = ref(1);
+// In pixels of the largest crop
+const cropZoomLabel = computed(() => cropGrid.value ? `${Math.round(cropZoom.value / cropGrid.value.nativeZoom * 100)}%` : "");
+
+// "fit" or a zoom in pixels of the first image (of the largest crop in the crops)
 function onZoom(mode) {
+  if (cropView.value) {
+    cropGrid.value?.setZoom(mode === "fit" ? 1 : mode * cropGrid.value.nativeZoom);
+    return;
+  }
+
   const element = firstItemElement();
 
   if (mode === "fit" || !element || !store.images.length)
@@ -541,8 +551,8 @@ onDeactivated(() => {
                     :has-region="!!region"
                     :crop-view="cropView"
                     v-model:aspect="aspect"
-                    :zoom="zoom"
-                    :zoom-label="zoomLabel"
+                    :zoom="cropView ? cropZoom : zoom"
+                    :zoom-label="cropView ? cropZoomLabel : zoomLabel"
                     :separator-name="separatorInfo.name"
                     :separator-color="separatorInfo.color"
                     :exporting="exporting"
@@ -569,6 +579,7 @@ onDeactivated(() => {
               :region="region"
               :separator-color="separatorInfo.color"
               :separator-width="SEPARATOR_WIDTH"
+              v-model:zoom="cropZoom"
               :ctx="actionContext"
               @remove="store.removeImage"
               @set-marking="setMarking"

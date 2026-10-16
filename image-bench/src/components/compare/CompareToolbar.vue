@@ -1,11 +1,12 @@
 <script setup>
+import {computed} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import {REGION_ASPECTS} from "@/components/compare/compareGeometry.js";
 
 /**
  * Presentational toolbar of the Compare tab
  */
-defineProps({
+const props = defineProps({
   imageCount: {
     type: Number,
     default: 0
@@ -53,6 +54,9 @@ defineProps({
   }
 });
 
+// The image the zoom presets and the label refer to
+const pixelsOf = computed(() => props.cropView ? "largest crop" : "first image");
+
 defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCrop", "zoom",
   "cycleSeparator", "savePng", "sendToPhotoshop", "removeMarked", "clear"]);
 </script>
@@ -87,16 +91,16 @@ defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCr
       <button class="ib" title="Send the crops to Photoshop as a new document" aria-label="Send the crops to Photoshop"
               :disabled="exporting" @click="$emit('sendToPhotoshop')"><AppIcon name="external" :size="14"/></button>
     </template>
-    <template v-else>
-      <div class="vsep"></div>
-      <div class="toolbar-group">
-        <button class="btn small" :class="{on: zoom === 1}" title="Fit the images (Ctrl+wheel zooms)"
-                @click="$emit('zoom', 'fit')"><AppIcon name="fit" :size="13"/></button>
-        <button class="btn small" title="Actual pixels of the first image" @click="$emit('zoom', 1)">100%</button>
-        <button class="btn small" title="Twice the actual pixels of the first image" @click="$emit('zoom', 2)">200%</button>
-      </div>
-      <span v-if="zoom !== 1" class="zoom-label" title="Zoom in pixels of the first image">{{ zoomLabel }}</span>
-    </template>
+
+    <div class="vsep"></div>
+    <div class="toolbar-group">
+      <button class="btn small" :class="{on: zoom === 1}"
+              :title="cropView ? 'Fit the crops (the wheel zooms, dragging pans)' : 'Fit the images (Ctrl+wheel zooms)'"
+              @click="$emit('zoom', 'fit')"><AppIcon name="fit" :size="13"/></button>
+      <button class="btn small" :title="`Actual pixels of the ${pixelsOf}`" @click="$emit('zoom', 1)">100%</button>
+      <button class="btn small" :title="`Twice the actual pixels of the ${pixelsOf}`" @click="$emit('zoom', 2)">200%</button>
+    </div>
+    <span v-if="zoom !== 1" class="zoom-label" :title="`Zoom in pixels of the ${pixelsOf}`">{{ zoomLabel }}</span>
 
     <div class="vsep"></div>
     <button class="ib" :title="`Separator: ${separatorName} (click to change)`" aria-label="Separator color"
