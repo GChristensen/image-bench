@@ -1,6 +1,7 @@
 The full "omni" system has three components, only one of which is open: H3-Context-IR (multimodal input preprocessor, API-only) and H3-Regenerate-2K (in-context upscaling to the marketed "2K" output, API-only) are not released. **H3-Base**, the 33B dense transformer, is what you download and run — locally you are capped at its native 768p output; the "native 2K" marketing claims describe the API pipeline, not the open weights.
 
 ## Encoder/VAE
+- Repos: HF [MiniMaxAI/MiniMax-H3](https://huggingface.co/MiniMaxAI/MiniMax-H3) · ComfyUI [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)
 - Text encoder: full Qwen3-VL-32B/ Prompt limit: 7,000 characters. Stable support for 11 languages (Arabic, Chinese, English, French, German, Italian, Japanese, Korean, Portuguese, Russian, Spanish).
 
 ## Recommended Defaults (FL2VA, base, no Turbo)

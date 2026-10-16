@@ -1,5 +1,6 @@
 ## Encoder/VAE
 
+- Repos: HF [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) · ComfyUI: same repo (ships `comfy-int8` files), no Comfy-Org repack
 - Video VAE: causal (inherited from the LTX-Video lineage). Two selectable decoders — a diffusion decoder ("DiffVAE", higher quality/slower) and a lightweight convolutional decoder (faster). Files: `ltx-2.5-video-vae-bf16.safetensors` / `ltx-2.5-video-vae-conv-bf16.safetensors` (fast decoder). Whether LTX-2.5 reuses LTX-Video-13B's exact 32x spatial / 8x temporal / 128-channel compression ratios is unconfirmed [?].
 - Audio VAE: `ltx-2.5-audio-vae-bf16.safetensors` — stereo audio at 16kHz as mel-spectrograms, decoded to 24kHz stereo via a modified HiFi-GAN vocoder.
 - Text encoder: `gemma4-12b-with-proj-ltx-2.5-bf16.safetensors` (per official filenames). This may be a real "Gemma 4" release, an internal codename, or a documentation error — verify on the HF model card before citing it [?]. LTX-2 base itself used Gemma3-12B with a learned projection + bidirectional "text connector" and learnable "thinking tokens." Token limit/language coverage not stated anywhere found [?].

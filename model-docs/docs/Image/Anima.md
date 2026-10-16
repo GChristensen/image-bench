@@ -1,5 +1,6 @@
 
 ## Encoder/VAE
+- Repos: HF [circlestone-labs/Anima](https://huggingface.co/circlestone-labs/Anima) · ComfyUI: same repo, `split_files/`
 - Text encoder: `qwen_3_06b_base.safetensors`
 - VAE: `qwen_image_vae.safetensors`
 

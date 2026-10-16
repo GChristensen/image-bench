@@ -1,4 +1,5 @@
 ## Encoder/VAE
+- Repos: HF [krea/Krea-2-Raw](https://huggingface.co/krea/Krea-2-Raw), [krea/Krea-2-Turbo](https://huggingface.co/krea/Krea-2-Turbo) · ComfyUI [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2)
 - Text encoder: `Qwen3-VL-4B`
 - VAE: `qwen_image_vae.safetensors`
 

@@ -1,5 +1,6 @@
 ## Encoder/VAE
 
+- Repos: HF [black-forest-labs/FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev) · ComfyUI [Comfy-Org/flux1-dev](https://huggingface.co/Comfy-Org/flux1-dev)
 - VAE: `ae.safetensors`
 - Text encoders: CLIP-L, T5-XXL
 

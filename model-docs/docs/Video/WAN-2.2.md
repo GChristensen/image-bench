@@ -1,5 +1,6 @@
 ## Encoder/VAE
 
+- Repos: HF [Wan-AI/Wan2.2-T2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B), [Wan-AI/Wan2.2-I2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B), [Wan-AI/Wan2.2-TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) · ComfyUI [Comfy-Org/Wan_2.2_ComfyUI_Repackaged](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged)
 - Video VAE — two different VAEs in this family, easy to mix up:
   - T2V-A14B / I2V-A14B use the **Wan2.1** VAE, `wan_2.1_vae.safetensors`. Causal, temporal compression 4x, spatial 8x8, 16 latent channels.
   - TI2V-5B uses the new **Wan2.2-VAE**, `wan2.2_vae.safetensors`. Causal, temporal compression 4x, spatial 16x16 (double the 2.1 VAE), 16 latent channels. Combined with the DiT's 2x2 patchify, total effective compression reaches 4x32x32 = 4096x — this is what lets the 5B dense model handle 720p without an oversized latent grid, at the cost of coarser per-token spatial detail.

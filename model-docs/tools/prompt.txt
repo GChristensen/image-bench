@@ -1,142 +1,145 @@
 You are a technical reference for local image-generation models. I run models locally
 and need accurate, actionable specs — not marketing copy. Please, provide output in clear readable language.
 Don't put long free-text explanations inside table cells — cap table use to short, uniformly-sized values (numbers, filenames, single words). Anything needing a sentence of explanation goes in a bullet or definition list, not a table row, since one long cell blows up every row's width.
-In Markdown (GitHub-flavored) tables, pad every cell with trailing spaces so all | characters in a column line up, and make separator rows |---|---| span the full width of each column. Use # headings for sections and fenced ``` code blocks for configs. please do not make tables wider than 100 characters.
+In Markdown (GitHub-flavored) tables, pad every cell with trailing spaces so all | characters in a column line up, and make separator rows |---|---| span the full width of each column. Please do not make tables wider than 100 characters.
 
 MODEL: SDXL
 MY SETUP: RTX 3090 + 32Gb RAM / ComfyUI | Forge Neo
 
 RULES
-1. Accuracy beats completeness. "Unknown" is an acceptable answer; inventing a number is not.
-2. Tag every specific number, filename, or repo id with confidence:
-   [C] confirmed by the model card / official docs
-   [W] widely-used community consensus
-   [?] uncertain, verify before trusting
-3. If the model name is ambiguous or refers to a family, list the candidates, state which
-   one you're answering about, and say why.
+1. Accuracy beats completeness. Leaving a fact out is acceptable; inventing a number is not.
+2. Mark every specific number, filename, or repo id you are unsure about with [?] (uncertain,
+   verify before trusting). Leave confirmed and widely agreed facts unmarked. Do not use other
+   confidence tags.
+3. If the model name refers to a family (base, turbo, edit, ... variants), cover the family in
+   one document and give per-variant values where they differ.
 4. If you can search the web, do it — this field moves fast and your training data may be
-   stale. Say explicitly if you could not search.
-5. Be dense. Use tables. Skip preamble and skip generic diffusion theory I already know.
+   stale. Say in your chat reply (not in the document) if you could not search.
+5. Be dense and short. A complete document is 4-14 KB. Prefer bullets and short tables over
+   prose paragraphs. Skip preamble, summaries and generic diffusion theory I already know.
+6. Omit any section, table row or bullet that has no meaningful content for this model. If no
+   ControlNets exist, the model cannot edit, or nothing is known about regional prompting or
+   upscaling, leave the whole section out. Never write placeholder text such as "No reliable
+   information found", "not documented" or "no data" as the content of a section; a single
+   unknown value inside a table may be "[?]".
+7. The document is reference material read on its own: no inline citations, source markers,
+   footnotes, links to search results, "§N" cross-references or remarks about your research
+   process. No title heading, introduction or closing remarks.
 
-ANSWER IN THIS ORDER
+FORMAT
+- Plain GitHub-flavored Markdown, no HTML tags (no <sub>, <br>).
+- Every section is a `##` heading, with exactly the names below, in this order.
+- Configs and recipes go in fenced ```text code blocks with aligned `key: value` lines.
+- Example prompts are given verbatim in quotes or code blocks, ready to paste.
 
-1. IDENTITY
-   Official name, developer, release date, architecture (UNet / DiT / MMDiT / other),
-   parameter count, prediction type (epsilon / v-pred / flow matching / rectified flow),
-   license and whether commercial use is allowed, HuggingFace repo id, typical checkpoint
-   filenames and whether it ships as one file or split components.
+SECTIONS, IN THIS ORDER
 
-2. COMPONENTS
-   - VAE: name, latent channel count, scaling/shift factors, whether it's baked into the
-     checkpoint or loaded separately, fp16/bf16 precision quirks, known fixed versions.
-   - Text encoder(s): which ones, how many, token limit per encoder, how their outputs are
-     combined, whether one can be dropped or swapped, quantized encoder options.
-   - Which of these components are shared with other models (i.e. what can I reuse).
+## Encoder/VAE
+   A short bullet list of what I have to download, nothing else:
+   - The first bullet is the repos, both on one line: the official HuggingFace repo id and
+     the ComfyUI repo id (the Comfy-Org repackaged repo the official ComfyUI template
+     downloads from), each as a link, e.g.
+       - Repos: HF [org/model](https://huggingface.co/org/model) · ComfyUI [Comfy-Org/model](https://huggingface.co/Comfy-Org/model)
+     Include one for every family member with separate weights (base, edit, ...) on that line.
+   - Text encoder(s): ComfyUI filename(s) in backticks, plus the CLIPLoader type if it is not
+     obvious.
+   - VAE: filename in backticks.
+   - Diffusion model filename(s), only if the model ships as split components.
+   - One line on which components are shared with or reusable from other models, only if any.
 
-3. RESOLUTION
-   Native training resolution, the exact supported aspect-ratio buckets in pixels,
-   practical min and max, what visually breaks when going off-spec (duplication, mush,
-   composition collapse), whether it needs multiples of 8/16/32/64, and how it behaves
-   under hires-fix / two-pass upscaling.
+## Recommended Defaults (<Variant>)
+   One section per variant I would actually run (at most three, the recommended one first),
+   each a ```text block with: steps, cfg/guidance (say whether it is true CFG or embedded
+   guidance, and what the KSampler cfg must be), sampler, scheduler, shift if it matters,
+   resolution, negative prompt, and any required extras (LoRA and strength, hires pass,
+   prompt prefix). Use ComfyUI sampler/scheduler names. Add a one-line recipe below a block
+   only when a multi-stage setup (refiner, hires pass) needs explaining.
 
-4. VARIANTS
-   Table: variant | what it actually is (distilled? timestep-distilled? guidance-distilled?
-   quantized? fine-tune?) | license | file size | when I'd pick it.
-   Include turbo / lightning / hyper / schnell / dev / pro / lite / refiner / distilled
-   variants and official quantizations if they exist.
+## Variants
+   Table: Variant | What it is | License | Size | Pick when. Include base / turbo / lightning /
+   hyper / schnell / distilled / edit / refiner / inpaint / official quantizations that exist.
+   "What it is" is a few words (timestep-distilled, guidance-distilled, fine-tune, quant).
+   Below the table, at most a few bullets on what "distilled" means for this model and which
+   variant needs which LoRA. State whether commercial use is allowed.
 
-5. PARAMETERS — per variant
-   Table with: steps | CFG or guidance (state clearly whether it's true CFG or an embedded
-   distilled guidance value) | sampler | scheduler | sigma shift / timestep shift |
-   negative prompt supported and useful? | clip skip | other required settings.
-   Then, for each variant, one known-good starting recipe I can copy verbatim.
-   Flag any parameter where the wrong value silently produces garbage.
+## Resolution
+   Bullets: native training resolution, the exact aspect-ratio buckets in pixels (a code block
+   or a Ratio | Pixels table), practical min and max, required multiple (8/16/32/64), what
+   visually breaks off-spec (duplication, mush, composition collapse).
 
-6. PROMPTING
-   Natural language vs. booru/danbooru tags vs. hybrid. Prompt structure that actually
-   works for this model. Effective token budget and what happens past it (truncation vs.
-   chunking). Whether attention/weighting syntax like (word:1.2) is respected. Whether
-   negative prompts do anything. Quality/trigger tokens that matter. Text-rendering
-   ability. What the model reliably ignores. Two concrete example prompts.
+## Parameters
+   Table per variant: steps | CFG/guidance | sampler | scheduler | shift | negative prompt |
+   clip skip (only for CLIP-conditioned models). With two or three variants, a table with
+   settings as rows and variants as columns is fine. Then bullets: recipes for the variants not
+   covered in Recommended Defaults, and the parameters where a wrong value silently produces
+   garbage (burn, black images, ignored negatives).
 
-7. GENERATION MODES
-   For each of txt2img, img2img, inpaint, outpaint, instruct-edit, reference/identity:
-   native / requires extra weights / community hack / not supported. Give denoise ranges
-   that work for img2img and inpaint, and name the dedicated inpainting or edit checkpoints
-   that exist. (Structural control gets its own section below.)
+## Prompting
+   Bullets: natural language vs. booru tags vs. hybrid; the prompt structure that works; token
+   budget and what happens past it (truncation vs. chunking); whether (word:1.2) weighting is
+   respected and at what strength; whether negative prompts do anything; quality/trigger tokens
+   that matter; text-rendering ability; what the model reliably ignores. Then two concrete
+   example prompts in the style the model wants.
 
-8. CONTROLNET AND STRUCTURAL CONTROL
-   State plainly whether usable ControlNets exist for this architecture at all — if the
-   answer is "barely" or "no", say so instead of listing hopeful links.
-   - Which control types are actually available and who publishes them: canny, depth, pose,
-     tile, scribble, softedge, lineart, normal, segmentation, inpaint. Give repo/author
-     names and note the quality tier of each, since coverage is usually uneven.
-   - Which control mechanism this model uses: classic ControlNet, ControlNet-Union / ProMax,
-     T2I-Adapter, ControlNeXt, LoRA-based control, or structural conditioning baked into a
-     dedicated model variant. These are not interchangeable.
-   - Recommended strength/weight and start/end step percentages per control type, and what
-     over-conditioning looks like.
-   - Preprocessor notes: which annotator versions, resolution sensitivity, whether the
-     control image must match the latent resolution.
-   - Stacking: how many controls compose cleanly, VRAM cost per loaded control model,
-     interaction with distilled variants and low step counts.
-   - Whether ControlNets from a related model or from a derivative finetune load correctly.
+## Generation Modes
+   Table: Mode | Support, for txt2img, img2img, inpaint, outpaint, instruct-edit,
+   reference/identity (and model-specific modes such as RGBA or background removal). Support is
+   a few words: native / dedicated checkpoint / extra weights / community workflow / not
+   supported. Below it, bullets with the denoise ranges that work for img2img and inpaint and
+   the names of dedicated inpaint checkpoints or adapters.
 
-9. REGIONAL AND COMPOSITIONAL PROMPTING
-   - Which regional methods work with this architecture: masked/area conditioning, attention
-     coupling, latent couple, Forge Couple, GLIGEN-style box conditioning, prompt scheduling,
-     or nothing usable. Name concrete node/extension implementations.
-   - How the text-encoder design affects this — models conditioned mainly through a large
-     T5-style encoder behave very differently from CLIP-conditioned ones when conditioning
-     is masked or split, and some methods degrade badly as a result.
-   - Interaction with CFG: which methods require true classifier-free guidance and therefore
-     break or weaken on guidance-distilled variants.
-   - Practical guidance: mask feathering/overlap, per-region strength, how many distinct
-     subjects hold before attributes bleed, and how much of the global prompt each region
-     still needs.
-   - Per-region LoRA support, and whether inpainting or a composite-then-img2img pass is the
-     more reliable route for this model.
+## Edit Modes
+   Only if the model (or an official edit variant or adapter) can edit images from references
+   or instructions; otherwise omit this section. Keep the technical details brief:
+   - Which checkpoint edits: the same one, a separate edit checkpoint, a LoRA or an adapter.
+   - Mechanism in one line (e.g. reference latents appended to the token sequence, the VLM
+     text encoder sees the images, KV-cached reference tokens, channel concatenation).
+   - Table: Edit type | Support | Refs — only the types the model does: instruction edit,
+     multi-reference composition, style reference, subject/identity reference, pose or
+     structure from a reference image, text editing, inpaint by instruction, outpaint/extend,
+     background removal, relighting, and anything model-specific.
+   - Number of references: official maximum, what ComfyUI / Forge Neo nodes accept, and the
+     time/VRAM cost of each extra reference.
+   - How the prompt addresses references (`<image1>`, "image 1", "the first image", ...).
+   - Which reference sets the output size and aspect ratio, and how references are resized
+     (target megapixels, scaling nodes).
+   - Settings that differ from txt2img (steps, CFG, denoise must stay 1.0, ...).
+   - The ComfyUI nodes involved (e.g. ReferenceLatent, TextEncode*Edit*) and whether Forge Neo
+     supports it.
+   - Typical failures: drift/zoom/shift of the unedited area, identity loss, color shift, the
+     edit being ignored, and the prompt wording that avoids them.
+   - Example edit prompts: one per supported edit type (3-6), in the wording the model was
+     trained on, e.g. "Change X to Y while keeping Z unchanged".
 
-10. UPSCALING AND HIGH-RESOLUTION WORK
-    - What the model itself does above native resolution, and the point where composition
-      collapses rather than merely softening.
-    - Hires-fix style two-pass: recommended upscale factor, latent vs pixel-space upscale,
-      denoise range for the second pass, steps and CFG for the refinement pass.
-    - Tiled approaches: which are usable (tiled diffusion / MultiDiffusion, Ultimate SD
-      Upscale, tiled VAE decode), whether a tile ControlNet exists to keep tiles coherent,
-      typical tile size and overlap, and how visible the seams are without it.
-    - Dedicated upscalers that pair well: ESRGAN-family model names, and diffusion-based
-      restorers, plus whether they run before or after the refinement pass.
-    - Whether this model is a good refiner for other models' output, or vice versa.
-    - VAE decode cost and tiling requirements at high resolution.
-    - A recommended end-to-end pipeline from base generation to final resolution.
+## ControlNet and Structural Control
+   Only if usable control exists. Open with one line on how mature it is. Then bullets:
+   mechanism (classic ControlNet, Union / ProMax, T2I-Adapter, LoRA-based, dedicated
+   checkpoint — these are not interchangeable), control types with repo/author and quality
+   tier, strength and start/end per type and what over-conditioning looks like, preprocessor
+   and resolution notes, stacking and VRAM per control model, interaction with distilled
+   variants, whether ControlNets of related models load. End with a one-line bottom line if
+   the ecosystem is thin.
 
-11. PERFORMANCE
-    VRAM at bf16/fp16, fp8, nf4, and GGUF; which quantizations exist and where they come
-    from; CPU offload / sequential offload behaviour; rough seconds-per-image on a
-    4090-class GPU at native res; speed tricks that apply (attention backends,
-    torch.compile, caching methods) and what they cost in quality.
+## Regional and Compositional Prompting
+   Only if a regional method works with this model. Bullets: working methods with concrete
+   node/extension names (area conditioning, attention couple, Forge Couple, GLIGEN, EliGen,
+   ...), how the text-encoder design affects them, which need true CFG and weaken on distilled
+   variants, mask feathering, how many subjects hold before attributes bleed, per-region LoRA,
+   and whether inpaint or composite-then-img2img is the more reliable route.
 
-12. ECOSYSTEM
-    LoRA compatibility (which base a LoRA must be trained on, whether other models' LoRAs
-    load), LoRA/finetune training notes and typical settings, notable derivative
-    checkpoints and whether their recommended parameters differ from base, refiner or
-    multi-stage pipelines, IP-Adapter / reference-transfer weights.
+## Upscaling and High-Resolution Work
+   Only with model-specific or well-established guidance. Bullets: where single-pass generation
+   collapses; hires-fix (upscale factor, latent vs. pixel, second-pass denoise, steps, CFG);
+   tiled methods (Ultimate SD Upscale, tiled diffusion, tiled VAE decode, tile ControlNet, tile
+   size and overlap); ESRGAN-family upscalers that pair well; whether the model is a good
+   refiner. End with a numbered end-to-end pipeline from base generation to final resolution.
 
-13. QUIRKS AND FAILURE MODES
-    Known bugs, characteristic artifacts, anatomy/hands/text weaknesses, aesthetic biases,
-    burn or wash-out at wrong CFG, and the specific misconfigurations that most often make
-    people think the model is broken.
-
-14. POSITIONING
-    Two or three lines: closest alternatives, what this model is genuinely better at, what
-    I should use instead for other jobs.
-
-15. CONFIDENCE REPORT
-    Bullet list of everything above you are unsure about, plus the primary sources I should
-    check (model card URL, official repo, docs).
-
-Finish with a single copy-pasteable config block of your recommended defaults for the
-variant you'd suggest I start with.
+## Quirks and Failure Modes
+   Bullets: known bugs, characteristic artifacts, anatomy/hands/text weaknesses, aesthetic
+   biases, burn or wash-out at wrong CFG, and the misconfigurations that most often make people
+   think the model is broken (wrong VAE, wrong encoder, missing download, CFG on a distilled
+   variant, off-bucket resolution).
 
 Output the result as a Markdown file in the root of the project folder with name of the <model name>.md, spaces replaced to dashes.
+In your chat reply (not in the file), list the claims you are least sure about and the primary
+sources to check (model card, official repo, docs).

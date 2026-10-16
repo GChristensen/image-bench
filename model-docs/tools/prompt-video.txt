@@ -1,173 +1,160 @@
-You are a technical reference for local image-generation models. I run models locally
+You are a technical reference for local video-generation models. I run models locally
 and need accurate, actionable specs — not marketing copy. Please, provide output in clear readable language.
 Don't put long free-text explanations inside table cells — cap table use to short, uniformly-sized values (numbers, filenames, single words). Anything needing a sentence of explanation goes in a bullet or definition list, not a table row, since one long cell blows up every row's width.
-In Markdown (GitHub-flavored) tables, pad every cell with trailing spaces so all | characters in a column line up, and make separator rows |---|---| span the full width of each column. Use # headings for sections and fenced ``` code blocks for configs. please do not make tables wider than 100 characters.
+In Markdown (GitHub-flavored) tables, pad every cell with trailing spaces so all | characters in a column line up, and make separator rows |---|---| span the full width of each column. Please do not make tables wider than 100 characters.
 
 MODEL: MiniMax H3
 MY SETUP: RTX 3090 + 32Gb RAM / ComfyUI | Forge Neo
 
 RULES
-1. Accuracy beats completeness. "Unknown" is an acceptable answer; inventing a number is not.
-2. Tag every specific number, filename, or repo id with confidence:
-   [C] confirmed by the model card / official docs
-   [W] widely-used community consensus
-   [?] uncertain, verify before trusting
+1. Accuracy beats completeness. Leaving a fact out is acceptable; inventing a number is not.
+2. Mark every specific number, filename, or repo id you are unsure about with [?] (uncertain,
+   verify before trusting). Leave confirmed and widely agreed facts unmarked. Do not use other
+   confidence tags.
 3. Video model naming is a minefield: product names, API versions, and open-weight releases
-   drift apart, and the highest version number is frequently API-only. State exactly which
-   release you are describing, and flag if a newer version exists that I cannot download.
-4. Search the web if you can — this field moves in weeks, not months. Say explicitly if you
-   could not search, and give the date of the most recent information you have.
-5. Be dense. Use tables. Skip generic diffusion theory.
+   drift apart, and the highest version number is frequently API-only. Describe the release
+   with downloadable weights, cover the family (T2V, I2V, edit, distilled, ... variants) in
+   one document, and list API-only versions in Variants as such.
+4. Search the web if you can — this field moves in weeks, not months. Say in your chat reply
+   (not in the document) if you could not search, and the date of your most recent information.
+5. Be dense and short. A complete document is 5-14 KB. Prefer bullets and short tables over
+   prose paragraphs. Skip preamble, summaries and generic diffusion theory I already know.
+6. Omit any section, table row or bullet that has no meaningful content for this model. If the
+   model has no audio, no editing, no structural control, or nothing is known about extension
+   or upscaling, leave the whole section out. Never write placeholder text such as "No reliable
+   information found", "not documented" or "no data" as the content of a section; a single
+   unknown value inside a table may be "[?]".
+7. The document is reference material read on its own: no inline citations, source markers,
+   footnotes, links to search results, "§N" cross-references or remarks about your research
+   process. No title heading, introduction or closing remarks.
 
-ANSWER IN THIS ORDER
+FORMAT
+- Plain GitHub-flavored Markdown, no HTML tags (no <sub>, <br>).
+- Every section is a `##` heading, with exactly the names below, in this order.
+- Configs and recipes go in fenced ```text code blocks with aligned `key: value` lines.
+- Example prompts are given verbatim in quotes, code blocks or > quotes, ready to paste.
 
-1. IDENTITY AND AVAILABILITY
-   Official name vs. the name people use, developer, release date, architecture (DiT, MoE,
-   single-stream omni-transformer, causal/autoregressive), parameter count, prediction type
-   (flow matching / rectified flow / other).
-   Then, critically: WHICH versions have downloadable weights and which are API-only. Give
-   the HuggingFace repo id, the exact file names, and total download size including VAE,
-   text encoder, and any audio components.
-   License: name it, state whether commercial use is permitted, whether there are revenue
-   thresholds, and whether there are TERRITORIAL restrictions on local deployment. Several
-   recent open-weight video licenses restrict specific jurisdictions — check, don't assume.
+SECTIONS, IN THIS ORDER
 
-2. COMPONENTS
-   - Video VAE: causal or not, spatial AND temporal compression ratios, latent channel
-     count, why the temporal ratio constrains legal frame counts, tiled decode requirements,
-     VRAM cost of decode at target length, known decode artifacts.
-   - Text encoder: which one, token limit, language coverage (several models are trained
-     bilingually and behave differently in English vs. Chinese prompts).
-   - Image/vision encoder used for image conditioning, if separate.
-   - Audio encoder/decoder, if the model handles audio.
-   - Which components can be quantized or swapped, and which cannot.
+## Encoder/VAE
+   A short bullet list of the components I have to download:
+   - The first bullet is the repos, both on one line: the official HuggingFace repo id and
+     the ComfyUI repo id (the Comfy-Org repackaged repo the official ComfyUI template
+     downloads from), each as a link, e.g.
+       - Repos: HF [org/model](https://huggingface.co/org/model) · ComfyUI [Comfy-Org/model](https://huggingface.co/Comfy-Org/model)
+     Include one for every family member with separate weights (T2V, I2V, ...) on that line.
+   - Video VAE: filename in backticks; causal or not, spatial and temporal compression,
+     latent channels, why the temporal ratio fixes the legal frame counts, tiled-decode needs.
+     If variants use different VAEs, say which uses which.
+   - Text encoder: filename, token limit, language coverage (English vs. Chinese adherence).
+   - Image/vision encoder, audio encoder/decoder, latent upscalers: filenames, only if the
+     model has them.
+   - Diffusion model filename(s), only if the model ships as split components or as a pair
+     of high/low-noise experts.
 
-3. DURATION, FRAME COUNT, RESOLUTION, FPS
-   - Native training clip length and fps. Max generatable length before quality collapses,
-     as distinct from max the code will accept.
-   - The frame-count rule (e.g. must be 4n+1 or 8n+1) and what happens if you violate it.
-   - Supported resolutions and aspect ratios, whether portrait is natively trained or
-     cropped from landscape, and the resolution × duration × VRAM trade-off.
-   - Whether fps is a real conditioning parameter or just export metadata.
-   - Behaviour when asking for more frames than it was trained on: looping, freezing,
-     drift, or hard failure.
+## Recommended Defaults (<Variant>)
+   One section per variant I would actually run (at most three, the recommended one first),
+   each a ```text block stated at a specific resolution, frame count and fps: resolution,
+   frames, fps, steps, CFG (true CFG or distilled, what the KSampler cfg must be), sampler,
+   scheduler, flow shift (an actual value, not a range), negative prompt, and required extras
+   (LoRAs and strengths, expert switch step, second stage). Use ComfyUI sampler/scheduler
+   names.
 
-4. VARIANTS
-   Table: variant | what it is (T2V / I2V / first-last-frame / reference / editing /
-   distilled / quantized) | size | license | when I'd pick it.
-   Note whether T2V and I2V are separate checkpoints or one model, and whether high-noise
-   and low-noise experts must be loaded as a pair.
+## Variants
+   Table: Variant | What it is | Size | License | Pick when. "What it is" is a few words
+   (T2V / I2V / TI2V / first-last-frame / reference / edit / audio-driven / distilled /
+   quantized / API only). Below the table, bullets: whether T2V and I2V are separate
+   checkpoints, whether high- and low-noise experts must be loaded as a pair, which LoRAs
+   belong to which variant, and the license terms: commercial use, revenue thresholds,
+   territorial restrictions on local deployment.
 
-5. PARAMETERS — per variant
-   Table: steps | CFG or distilled guidance | sampler | scheduler | flow/timestep shift |
-   negative prompt supported and useful? | frame count | other required settings.
-   Flow shift matters more here than in image models and often needs to scale with
-   resolution and length — give the actual recommended values, not a range.
-   Cover step-reduction LoRAs and distilled variants: what they cost in motion quality,
-   and which CFG value they require (usually 1.0).
-   Then a known-good starting recipe per variant, and which single parameter most often
-   causes the "why is my output a slideshow" failure.
+## Duration, Frame Count, Resolution, FPS
+   Bullets or a short table per variant: native fps and clip length, maximum length before
+   quality collapses (vs. what the code accepts), the frame-count rule (4n+1, 8n+1, ...) and
+   what happens when it is violated, supported resolutions and aspect ratios (whether portrait
+   is natively trained), required multiple for width/height, whether fps is a real
+   conditioning parameter or export metadata, behavior past the trained length (looping,
+   freezing, drift, hard failure).
 
-6. PROMPTING
-   - Structure that works: subject, action, camera, lighting, style — in what order, and
-     how long a prompt this model actually uses before it stops paying attention.
-   - Motion vocabulary: which verbs and camera terms (dolly, pan, orbit, rack focus,
-     handheld) are respected, and which are ignored.
-   - Whether an official prompt extender / rewriter LLM is part of the intended pipeline,
-     and how much worse raw short prompts are without it.
-   - Default or recommended negative prompt, including whether the official one is in
-     another language and whether that matters.
-   - How to describe temporal progression within one clip, and whether the model can follow
-     "then" style sequencing at all.
-   - Two concrete example prompts at the length the model actually wants.
+## Parameters
+   Table per variant: steps | CFG/guidance | sampler | scheduler | shift | negative prompt.
+   Then a table or bullets for step-reduction LoRAs and distilled variants (steps, the CFG they
+   require, what they cost in motion). Then bullets: how shift scales with resolution and
+   length, recipes for the variants not covered in Recommended Defaults, and the parameter that
+   most often causes the "slideshow / static output" failure.
 
-7. GENERATION MODES
-   For each: native / extra weights / community hack / not supported —
-   text-to-video, image-to-video (start frame), first-and-last-frame, video-to-video,
-   video extension/continuation, video inpainting and outpainting, instruction-based
-   editing, reference-driven generation (how many reference images/clips/audio files it
-   accepts), multi-shot generation within a single call.
-   Give denoise ranges for v2v and the conditioning strength parameters for i2v.
+## Prompting
+   Bullets: structure that works (subject, action, camera, lighting, style) and the length the
+   model actually uses; motion and camera vocabulary that is respected or ignored; whether an
+   official prompt extender is part of the pipeline and how much worse raw short prompts are;
+   the default negative prompt verbatim (and whether the official one is in another language);
+   how to describe temporal progression ("then" sequencing); prompt scheduling or per-shot
+   prompting if supported. Then two concrete example prompts at the length the model wants.
 
-8. STRUCTURAL AND REFERENCE CONTROL
-   The video equivalent of ControlNet — state plainly whether anything usable exists.
-   - Which mechanism this model family uses: a unified control model, in-context control
-     LoRAs, classic ControlNet ports, or reference conditioning built into the base model.
-   - Which control signals work: pose, depth, canny/edge, optical flow or motion tracks,
-     segmentation, tile.
-   - Camera control: explicit trajectory conditioning vs. prompt-only.
-   - Identity/character consistency across generations, and the recommended method.
-   - Recommended strengths and step ranges, and how control interacts with distilled
-     low-step variants.
+## Generation Modes
+   Table: Mode | Support, for text-to-video, image-to-video, first-and-last-frame,
+   video-to-video, extension/continuation, video inpaint/outpaint, instruction editing,
+   reference-driven generation, audio-to-video, multi-shot in one call. Support is a few words:
+   native / variant name / extra weights / community workflow / not supported. Below it,
+   bullets with v2v denoise ranges and i2v conditioning-strength parameters.
 
-9. COMPOSITIONAL AND TEMPORAL PROMPT CONTROL
-   Regional prompting is mostly meaningless here; tell me what replaces it.
-   - Prompt scheduling or keyframed prompts across the timeline: supported, and by what
-     implementation?
-   - Per-shot prompting for multi-shot output, and whether continuity holds across cuts.
-   - Spatial/masked conditioning if it exists at all.
-   - Multi-subject reliability and attribute bleeding, especially over time.
-   - The practical alternative if none of the above works: segment-then-stitch, or
-     first-last-frame chaining.
+## Edit Modes
+   Only if the model (or an official edit variant, IC-LoRA or adapter) can edit video or
+   generate from references or instructions; otherwise omit this section. Keep the technical
+   details brief:
+   - Which checkpoint edits: the same one, a separate edit variant, a LoRA or an adapter.
+   - Mechanism in one line (in-context reference tokens, channel concatenation, VACE-style
+     control video, masked regeneration, ...).
+   - Table: Edit type | Support | Refs — only the types the model does: instruction edit of a
+     video, restyle, subject/identity reference, multi-reference composition, character
+     replacement / motion transfer, object add/remove, regional regeneration (retake), video
+     inpaint/outpaint, lip-sync dubbing, and anything model-specific.
+   - Number of references: how many images, clips and audio files it accepts, officially and
+     in ComfyUI nodes, and the time/VRAM cost of each.
+   - How the prompt addresses references ("image 1", "the reference video", ...).
+   - What sets the output resolution, length and fps; how references are resized.
+   - Settings that differ from text-to-video (steps, CFG, denoise, masks).
+   - The ComfyUI nodes or pipelines involved.
+   - Typical failures: drift of the unedited area, identity loss, color shift, flicker in the
+     edited region, the edit being ignored, and the prompt wording that avoids them.
+   - Example edit prompts: one per supported edit type (3-6), in the wording the model was
+     trained on.
 
-10. AUDIO
-    - Does the model generate audio natively in the same pass, or is audio a separate stage?
-    - Mono or stereo, sample rate, and what it can produce: speech, effects, ambience, music.
-    - How audio is prompted, and whether it can be prompted separately from video.
-    - Lip-sync quality and whether audio can be supplied as a driving input.
-    - Whether audio can be disabled to save VRAM and time.
-    - If audio is not supported, name the standard pairing for a separate audio pass.
+## Structural and Reference Control
+   Only if usable control exists. Bullets: mechanism (unified control model, in-context control
+   LoRAs, ControlNet ports, VACE, reference conditioning in the base model), control signals
+   that work (pose, depth, canny, motion tracks / optical flow, segmentation, tile) with
+   repo/author, camera control (trajectory conditioning vs. prompt-only), identity consistency
+   across generations and the recommended method, strengths and step ranges, interaction with
+   distilled low-step variants.
 
-11. LENGTH EXTENSION AND CONTINUITY
-    - Supported ways to exceed native clip length: continuation from the last frames,
-      sliding-window context, position-embedding extrapolation, autoregressive chaining.
-    - How fast quality degrades across chained segments — colour drift, saturation creep,
-      contrast build-up, motion decay, identity loss.
-    - Mitigations that actually work, including colour matching between segments and how
-      much overlap to use.
-    - Realistic maximum coherent length in practice.
+## Audio
+   Only if the model generates or consumes audio. Bullets: same pass or separate stage, mono or
+   stereo and sample rate, what it produces (speech, effects, ambience, music), how audio is
+   prompted and whether separately from video, lip-sync quality and audio as a driving input,
+   whether audio can be disabled to save VRAM and time.
 
-12. UPSCALING, INTERPOLATION AND POST
-    - Whether a two-stage low-res-then-refine pipeline is the intended workflow.
-    - Video upscalers that preserve temporal consistency, and why per-frame image upscalers
-      fail here.
-    - Tiled and windowed upscaling, seam and flicker behaviour.
-    - Frame interpolation: recommended tools, and whether generating fewer frames and
-      interpolating beats generating natively at higher fps.
-    - Latent vs. pixel-space refinement passes and denoise values for each.
-    - A recommended end-to-end pipeline from draft to final delivery.
+## Length Extension and Continuity
+   Only with something concrete to say. Bullets: supported ways past native length
+   (last-frame continuation, sliding context, extrapolation, autoregressive chaining, multi-shot),
+   how quality degrades across segments (color drift, saturation creep, motion decay, identity
+   loss), mitigations that work (color matching, overlap amount), realistic maximum coherent
+   length.
 
-13. PERFORMANCE
-    - VRAM at bf16/fp16, fp8, int8, nf4, GGUF — stated at a specific resolution AND frame
-      count, since both dominate.
-    - Available quantizations and who publishes them.
-    - Block swapping, sequential offload, and the speed penalty each costs.
-    - Multi-GPU: supported natively, and via what framework.
-    - Rough generation time expressed per second of output video on named hardware.
-    - Speed techniques that apply (attention backends, caching/step-skipping methods,
-      torch.compile) and what each costs in temporal stability specifically.
-    - VAE decode as a separate cost line — it is often the actual OOM point.
+## Upscaling, Interpolation and Post
+   Only with model-specific or well-established guidance. Bullets: whether a two-stage
+   low-res-then-refine pipeline is intended; temporally consistent video upscalers (and why
+   per-frame image upscalers flicker); tiled/windowed upscaling and seams; frame interpolation
+   tools and whether interpolating beats native higher fps; latent vs. pixel refinement
+   denoise. End with a numbered end-to-end pipeline from draft to final delivery.
 
-14. ECOSYSTEM
-    LoRA support and training: what trains well (subject, motion, style), typical dataset
-    and settings, whether LoRAs transfer between variants or between the high/low-noise
-    experts. Notable finetunes and whether their parameters differ. Tooling and trainer
-    repos. Official ComfyUI templates or workflows worth starting from.
+## Quirks and Failure Modes
+   A table Failure | Usual cause | Fix, or bullets: flicker, morphing, limb and object
+   permanence, background instability, text and face degradation over time, unintended
+   slow-motion, static output, over-saturation, first-frame-then-freeze, physics errors, and
+   the misconfigurations that most often make people think the model is broken (wrong VAE,
+   CFG on a distilled LoRA, wrong frame count, missing expert, swapped high/low-noise LoRAs).
 
-15. TEMPORAL QUIRKS AND FAILURE MODES
-    Flicker, morphing, limb and object permanence failures, background instability, text
-    and face degradation over time, unintended slow-motion, static output, over-saturation,
-    the first-frame-then-freeze failure, physics errors. For each, the usual cause and the
-    parameter that fixes it.
-
-16. POSITIONING
-    Closest alternatives, what this model is genuinely better at, what to use instead for
-    other jobs, and whether the API version is meaningfully better than the open weights.
-
-17. CONFIDENCE REPORT
-    Everything above you are unsure about, plus primary sources to check: model card, repo,
-    official docs, license text.
-
-Finish with a copy-pasteable config block of recommended defaults for the variant you'd
-suggest I start with, stated at a specific resolution, frame count, and fps.
 Output the result as a Markdown file in the root of the project folder with name of the <model name>.md, spaces replaced to dashes.
+In your chat reply (not in the file), list the claims you are least sure about and the primary
+sources to check (model card, repo, official docs, license text).

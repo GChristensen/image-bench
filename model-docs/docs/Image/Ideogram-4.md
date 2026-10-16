@@ -1,4 +1,5 @@
 ## Encoder/VAE
+- Repos: HF [ideogram-ai/ideogram-4-fp8](https://huggingface.co/ideogram-ai/ideogram-4-fp8), [ideogram-ai/ideogram-4-nf4](https://huggingface.co/ideogram-ai/ideogram-4-nf4) · ComfyUI [Comfy-Org/Ideogram-4](https://huggingface.co/Comfy-Org/Ideogram-4)
 - Text encoder: `Qwen3-VL-8B-Instruct`
 - VAE: `flux2-vae.safetensors`
 

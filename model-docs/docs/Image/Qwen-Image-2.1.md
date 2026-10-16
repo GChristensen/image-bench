@@ -1,10 +1,8 @@
 ## Encoder/VAE
+- Repos: HF [Qwen/Qwen-Image-2.1](https://huggingface.co/Qwen/Qwen-Image-2.1) · ComfyUI [Comfy-Org/Qwen-Image-2.1](https://huggingface.co/Comfy-Org/Qwen-Image-2.1)
 - Text encoder: `qwen3vl_8b_int8_convrot.safetensors` (bf16: `qwen3vl_8b_bf16.safetensors`)
   - ComfyUI: `CLIPLoader`, type = `qwen_image`
 - VAE: `qwen_image_2.1_vae_bf16.safetensors` (64-ch, 16×, RGBA)
-- Diffusion model: `qwen_image_2.1_int8_convrot.safetensors` (bf16: `qwen_image_2.1_bf16.safetensors`)
-- Source: `Comfy-Org/Qwen-Image-2.1`
-- Nothing from Qwen-Image 1.x / 2512 / Edit-2511 is reusable (different DiT, encoder and VAE)
 
 ## Recommended Defaults (Base, ComfyUI)
 

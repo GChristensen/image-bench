@@ -1,5 +1,6 @@
 
 ## Encoder/VAE
+- Repos: HF [black-forest-labs/FLUX.2-dev](https://huggingface.co/black-forest-labs/FLUX.2-dev) · ComfyUI [Comfy-Org/flux2-dev](https://huggingface.co/Comfy-Org/flux2-dev)
 - Text encoder: `Mistral-Small-3.2-24B-Instruct`
 - VAE: `flux2-vae.safetensors`
 
