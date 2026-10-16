@@ -30,6 +30,11 @@ export const useCompareStore = defineStore('compare', () => {
     state.persist();
   }
 
+  function removeImages(predicate) {
+    state.images.value = state.images.value.filter(image => !predicate(image));
+    state.persist();
+  }
+
   // Images uploaded or sent from Photoshop are already in the compare directory
   function onSDEvent(e) {
     if (e.type === "COMPARE_IMAGE" && e.image)
@@ -41,6 +46,7 @@ export const useCompareStore = defineStore('compare', () => {
     imageCount,
     moveImage,
     removeImage,
+    removeImages,
     onSDEvent
   };
 });

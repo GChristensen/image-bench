@@ -10,6 +10,10 @@ defineProps({
     type: Number,
     default: 0
   },
+  markedCount: {
+    type: Number,
+    default: 0
+  },
   selecting: {
     type: Boolean,
     default: false
@@ -50,7 +54,7 @@ defineProps({
 });
 
 defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCrop", "zoom",
-  "cycleSeparator", "savePng", "sendToPhotoshop", "clear"]);
+  "cycleSeparator", "savePng", "sendToPhotoshop", "removeMarked", "clear"]);
 </script>
 
 <template>
@@ -99,6 +103,16 @@ defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCr
             @click="$emit('cycleSeparator')"><span class="swatch" :style="{background: separatorColor}"></span></button>
 
     <div class="toolbar-spacer"></div>
+
+    <div class="toolbar-group">
+      <span class="toolbar-group-label">Remove</span>
+      <button class="btn small" :disabled="!markedCount"
+              :title="`Remove the ${markedCount} marked images (the files stay on disk)`"
+              @click="$emit('removeMarked', true)">Marked</button>
+      <button class="btn small" :disabled="markedCount === imageCount"
+              :title="`Remove the ${imageCount - markedCount} unmarked images (the files stay on disk)`"
+              @click="$emit('removeMarked', false)">Unmarked</button>
+    </div>
 
     <button class="btn" title="Remove all images from this view (the files stay on disk)" :disabled="!imageCount"
             @click="$emit('clear')"><AppIcon name="eraser" :size="14"/>Clear</button>

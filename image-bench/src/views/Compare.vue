@@ -163,6 +163,17 @@ async function onClear() {
     store.clear();
 }
 
+const markedCount = computed(() => store.images.filter(image => image.marking).length);
+
+async function onRemoveMarked(marked) {
+  const count = marked ? markedCount.value : store.images.length - markedCount.value;
+  const which = marked ? "marked" : "unmarked";
+
+  if (count && await dialog.confirm(`Remove ${count} ${which} images from the Compare tab? The files stay on disk.`,
+      {okText: "Remove", danger: true}))
+    store.removeImages(image => !!image.marking === marked);
+}
+
 async function onFilesChosen(e) {
   for (const file of e.target.files) {
     const formData = new FormData();
@@ -525,6 +536,7 @@ onDeactivated(() => {
            @change="onFilesChosen">
 
     <CompareToolbar :image-count="store.images.length"
+                    :marked-count="markedCount"
                     :selecting="selecting"
                     :has-region="!!region"
                     :crop-view="cropView"
@@ -542,6 +554,7 @@ onDeactivated(() => {
                     @cycle-separator="cycleSeparator"
                     @save-png="onSavePng"
                     @send-to-photoshop="onSendToPhotoshop"
+                    @remove-marked="onRemoveMarked"
                     @clear="onClear"/>
 
     <div v-if="!store.images.length" class="empty-hint">
