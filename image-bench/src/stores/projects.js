@@ -133,6 +133,8 @@ export const useProjectsStore = defineStore("projects", () => {
   const busy = ref(null);
   // Changes with each change of the final image, against cached images
   const fileVersion = ref(Date.now());
+  // Set to show the Projects section of the Library (the project chip), reset by Library.vue
+  const shownRequested = ref(false);
 
   const hasCurrent = computed(() => current.value.path !== null && current.value.path !== undefined);
   const unsaved = computed(() => !!current.value.changed);
@@ -593,10 +595,21 @@ export const useProjectsStore = defineStore("projects", () => {
     await loadCurrent();
   }
 
+  /**
+   * Show the Projects section of the Library, with a project selected if given
+   * @param {string|null} path
+   */
+  async function show(path = null) {
+    shownRequested.value = true;
+
+    if (path !== null)
+      await select(path);
+  }
+
   return {
-    tree, treeLoading, treeError, current, selectedPath, project, projectError, busy, fileVersion,
+    tree, treeLoading, treeError, current, selectedPath, project, projectError, busy, fileVersion, shownRequested,
     hasCurrent, unsaved,
-    init, loadTree, loadCurrent, loadProject, select, findNode,
+    init, loadTree, loadCurrent, loadProject, select, findNode, show,
     save, saveInto, open, close,
     createProject, createFolder, rename, move, remove, reveal,
     updateProject, setFinal, addFile, deleteFile

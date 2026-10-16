@@ -1,7 +1,8 @@
 <script setup>
 /**
  * Current project in the tab bar: its name (opens it in the Library), a dot while the workspace has unsaved
- * changes, the Save button, and the close button, which starts a blank workspace (as the clean-up action)
+ * changes, the Save button, and the close button, which starts a blank workspace (as the clean-up action).
+ * Without a current project: "No project" (opens the projects in the Library) and a button creating a new project
  */
 import {computed} from "vue";
 import {useRouter} from "vue-router";
@@ -26,12 +27,22 @@ const title = computed(() => {
 
 async function show() {
   await router.push("/library");
-  await store.select(store.current.path);
+  await store.show(store.hasCurrent ? store.current.path : null);
 }
 </script>
 
 <template>
-  <div v-if="store.hasCurrent" class="project-chip" :class="{missing: store.current.exists === false}">
+  <div v-if="!store.hasCurrent" class="project-chip empty">
+    <button class="chip-name" title="No current project: the workspace is not saved anywhere.&#10;Click to show the projects in the Library"
+            @click="show">
+      <AppIcon name="box" :size="13"/>
+      <span class="name">No project</span>
+    </button>
+    <button class="chip-save" :disabled="!!store.busy"
+            :title="store.busy || 'New project, into which the workspace can be saved'" aria-label="New project"
+            @click="store.createProject()"><span v-if="store.busy" class="spinner"></span><AppIcon v-else name="plus" :size="13"/></button>
+  </div>
+  <div v-else class="project-chip" :class="{missing: store.current.exists === false}">
     <button class="chip-name" :title="title" @click="show">
       <AppIcon :name="store.current.exists === false ? 'alert' : 'box'" :size="13"/>
       <span class="name">{{ store.current.name }}</span>
@@ -59,6 +70,22 @@ async function show() {
   /* In a narrow window the name is cut, never the buttons: overflow: hidden would let the chip shrink to 0,
      and min-content would include the whole name, so the floor is the icon, the dot and both buttons */
   min-width: 97px;
+}
+
+.project-chip.empty {
+  min-width: 0;
+  border-style: dashed;
+  border-color: var(--ib-border);
+  background: none;
+}
+
+.empty .name {
+  font-weight: 400;
+  color: var(--ib-muted);
+}
+
+.empty .chip-name .app-icon {
+  color: var(--ib-muted);
 }
 
 .project-chip.missing {

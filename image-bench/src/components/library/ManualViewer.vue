@@ -614,7 +614,9 @@ onMounted(loadPluginStatus);
         <li><b>The current project</b> is shown at the right of the tab bar, with a dot while the trays have
           changed since the last save. Its <AppIcon name="save" :size="13" class="inline-icon"/> button or
           <span class="kbd">Ctrl</span>+<span class="kbd">S</span> saves the workspace into it; nothing is saved
-          automatically. Image Bench remembers the current project across restarts.</li>
+          automatically. Image Bench remembers the current project across restarts. Without a current project the
+          chip reads <i>No project</i>: a click shows the projects here, and its
+          <AppIcon name="plus" :size="13" class="inline-icon"/> button creates a new project.</li>
         <li><b>New project</b> creates the folder and, unless unchecked, saves the workspace into it and makes it
           current.</li>
         <li><b>Open</b> (or double-click) restores the trays and the parameters of a project and makes it current.

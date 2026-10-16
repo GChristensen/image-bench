@@ -113,6 +113,14 @@ watch(() => snippets.revealed, request => {
   }
 }, {immediate: true});
 
+// The projects, requested by the project chip of the tab bar
+watch(() => projects.shownRequested, request => {
+  if (request) {
+    section.value = "projects";
+    projects.shownRequested = false;
+  }
+}, {immediate: true});
+
 // The manual, requested from the tab bar
 watch(() => manual.revealed, request => {
   if (request) {
