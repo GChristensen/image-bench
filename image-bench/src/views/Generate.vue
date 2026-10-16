@@ -74,6 +74,7 @@ const GLOBAL_PARAMS = ["uiPreset", "checkpoint", "modules"];
 const NEGATIVE_HEIGHT_KEY = "imageBench_generateNegativeHeight";
 const SIDE_TAB_KEY = "imageBench_generateSideTab";
 const MODEL_SLOT_KEY = "imageBench_generateModelSlot";
+const SIZE_INPUT_KEY = "imageBench_generateSizeInput";
 const PHOTOSHOP_TARGET_KEY = "imageBench_generatePhotoshopTarget";
 const PARAMS_COLLAPSED_KEY = "imageBench_generateParamsCollapsed";
 const SNIPPETS_OPEN_KEY = "imageBench_generateSnippetsOpen";
@@ -279,6 +280,26 @@ const hasModules = computed(() => has("modules") && Array.isArray(form.modules))
 const shownModelSlot = computed(() => hasModules.value ? modelSlot.value : "checkpoint");
 
 watch(modelSlot, slot => storage.setItem(MODEL_SLOT_KEY, slot));
+
+// The size is a preset dropdown or width and height inputs, switched by the button before them and kept per mode;
+// Inpaint shows the inputs by default
+const sizeInputModes = ref(readSizeInputModes());
+const sizeInputs = computed(() => sizeInputModes.value[mode.value] ?? mode.value === "inpaint");
+
+function readSizeInputModes() {
+  try {
+    const value = JSON.parse(storage.getItem(SIZE_INPUT_KEY));
+    return value && typeof value === "object" ? value : {};
+  }
+  catch {
+    return {};
+  }
+}
+
+function toggleSizeInputs() {
+  sizeInputModes.value = {...sizeInputModes.value, [mode.value]: !sizeInputs.value};
+  storage.setItem(SIZE_INPUT_KEY, JSON.stringify(sizeInputModes.value));
+}
 
 const checkpointTitle = computed(() => hasModules.value
   ? `${checkpointValue.value}
@@ -1083,10 +1104,17 @@ const gridStyle = computed(() => ({
                 title="Open the checkpoint page on Civitai" aria-label="Civitai model info" @click="onModelInfo"
           ><span v-if="modelInfoBusy" class="spinner"></span><AppIcon v-else name="info" :size="14"/></button>
         <template v-if="has('size')">
-          <SizeSelect v-if="isTxt2Img" class="size" :width="form.width" :height="form.height"
-                      @change="(width, height) => setParams({width, height})"/>
-          <ResizeToInput v-else class="size" :width="form.width" :height="form.height"
+          <button type="button" class="ib flat slot-switch"
+                  :title="sizeInputs ? 'Width and height. Click to show the size presets'
+                    : 'Size presets. Click to show the width and height'"
+                  :aria-label="sizeInputs ? 'Show the size presets' : 'Show the width and height inputs'"
+                  @click="toggleSizeInputs"
+            ><AppIcon :name="sizeInputs ? 'ruler' : 'list'" :size="14"/></button>
+          <ResizeToInput v-if="sizeInputs" class="size" :width="form.width" :height="form.height"
+                         :label="isTxt2Img ? 'Size' : 'Resize to'"
                          @change="(width, height) => setParams({width, height})"/>
+          <SizeSelect v-else class="size" :width="form.width" :height="form.height"
+                      @change="(width, height) => setParams({width, height})"/>
         </template>
         <label v-if="has('steps')" class="inline-field">Steps
           <NumberStepper :model-value="form.steps ?? ''" :min="1" :max="150" label="Sampling steps"
@@ -1160,7 +1188,7 @@ const gridStyle = computed(() => ({
                            :result-clickable="!!resultImage && !livePreview"
                            :input-image="inputs.image" :input-mask="inputs.mask"
                            :action-image="generating || livePreview ? null : resultImage"
-                           @result-click="onResultClick" @upload="onInputUpload"
+                           @result-click="onResultClick" @upload="onInputUpload" @show-params="onShowParams"
                            @use-size="(width, height) => setParams({width, height})"/>
       </div>
 

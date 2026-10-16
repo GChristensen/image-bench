@@ -302,11 +302,16 @@ onMounted(loadPluginStatus);
           right-click, the action keys and dragging to the trays work as on the image cards.</li>
         <li v-if="isWebUI"><b>Mode switch</b> (at the right of the toolbar) — txt2img, img2img or Inpaint. It
           switches the WebUI tab and remembers the parameters of each mode separately. In img2img and Inpaint, the
-          size becomes "Resize to" (click its <b>×</b> to reset it to 1024×1024), and the Hires. fix column holds the denoising strength and the resize and mask
+          size is "Resize to", and the Hires. fix column holds the denoising strength and the resize and mask
           options instead.</li>
         <li v-else><b>Mode</b> — set by the workflow rather than by a switch: txt2img by default, img2img when a
           load node is marked <code>ib:img</code>, and inpaint when a mask loader is marked <code>ib:mask</code>
           as well.</li>
+        <li><b>Size</b> — a dropdown of preset sizes, or width and height inputs (the
+          <AppIcon name="swap" :size="13" class="inline-icon"/> between them swaps them, <b>÷16</b> rounds them to
+          multiples of 16). The
+          <AppIcon name="list" :size="13" class="inline-icon"/> / <AppIcon name="ruler" :size="13" class="inline-icon"/>
+          button before it switches between them, remembered per mode; Inpaint shows the inputs by default.</li>
         <li><b>Result, Input and Mask</b> panes. Upload, drop or paste an input image or an img2img mask onto its pane.
           The buttons of the Input pane also resize the generation to the size of the input image and show the
           mask over it. While no generation runs, hovering the Result pane shows the send buttons of an image card

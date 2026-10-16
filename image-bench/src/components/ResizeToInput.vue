@@ -1,12 +1,12 @@
 <script setup>
 /**
- * img2img "Resize to" size: width and height inputs, and a button rounding them to the nearest multiples of 16
- * (sizes taken from an input image are often not). Occupies the place of SizeSelect in the Generate tab.
+ * Size as width and height inputs ("Resize to" in img2img), and a button rounding them to the nearest multiples of 16
+ * (sizes taken from an input image are often not). Switched with SizeSelect in the Generate tab.
  */
 import {computed} from "vue";
+import AppIcon from "@/components/AppIcon.vue";
 
 const MULTIPLE = 16;
-const DEFAULT_SIZE = 1024;  // set by clicking the ×
 
 const props = defineProps({
   width: {
@@ -20,6 +20,10 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  label: {
+    type: String,
+    default: "Resize to"
   }
 });
 
@@ -44,13 +48,13 @@ function onInput(which, e) {
 </script>
 
 <template>
-  <div class="resize-to" title="Resize to">
+  <div class="resize-to" :title="label">
     <input type="number" min="1" :class="{unaligned: !aligned}" :value="width" :disabled="disabled"
-           aria-label="Resize to width" @change="e => onInput('width', e)">
-    <span class="times" :class="{disabled}" :title="`Reset to ${DEFAULT_SIZE}×${DEFAULT_SIZE}`" aria-hidden="true"
-          @click="!disabled && emit('change', DEFAULT_SIZE, DEFAULT_SIZE)">×</span>
+           :aria-label="`${label} width`" @change="e => onInput('width', e)">
+    <span class="times" :class="{disabled: disabled || width === height}" title="Swap width and height"
+          aria-hidden="true" @click="emit('change', height, width)"><AppIcon name="swap" :size="12"/></span>
     <input type="number" min="1" :class="{unaligned: !aligned}" :value="height" :disabled="disabled"
-           aria-label="Resize to height" @change="e => onInput('height', e)">
+           :aria-label="`${label} height`" @change="e => onInput('height', e)">
     <button class="ib round" :class="{on: !aligned}" :disabled="disabled || aligned"
             :title="`Round to the nearest multiples of ${MULTIPLE}`"
             :aria-label="`Round to the nearest multiples of ${MULTIPLE}`"
@@ -100,6 +104,7 @@ function onInput(which, e) {
 }
 
 .times {
+  flex-shrink: 0;
   color: var(--ib-muted);
   font-size: 12px;
   cursor: pointer;

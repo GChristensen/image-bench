@@ -229,6 +229,12 @@
       <span class="select-circle"><AppIcon name="check" :size="12"/></span>
     </label>
 
+    <!-- Visual anchor for viewing the image; it opens the overlay like a click on the image -->
+    <button type="button" class="view-eye" aria-label="View image"
+            @click="$emit('imageClick')" @mousedown.middle.prevent @auxclick="onImageAuxClick"
+            @mouseenter="hoveredText = 'View'" @mouseleave="hoveredText = null"
+      ><AppIcon name="eye" :size="20"/></button>
+
     <div v-if="image.comment" class="image-comment" :class="{selectable}" :title="image.comment"
          @click="$emit('imageClick')">{{ image.comment }}</div>
 
@@ -403,9 +409,49 @@
   cursor: pointer;
 }
 
+/* Clear of the view eye at the right */
+.image-comment {
+  max-width: calc(100% - 46px);
+}
+
 .image-comment.selectable {
   left: 40px;
-  max-width: calc(100% - 46px);
+  max-width: calc(100% - 80px);
+}
+
+/* No background: white with a shadow, like the select circle */
+.view-eye {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: normal;
+  cursor: pointer;
+  opacity: 0;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.view-eye:hover {
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.view-eye:focus-visible {
+  outline: 2px solid var(--ib-accent);
+  outline-offset: -2px;
+}
+
+.image-frame:hover .view-eye {
+  opacity: 1;
 }
 
 /* The bar itself never takes clicks, so the gaps between its items fall through to the image */

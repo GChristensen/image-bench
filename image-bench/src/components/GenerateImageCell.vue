@@ -9,7 +9,7 @@ import {computed, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import ImageActionButtons from "@/components/ImageActionButtons.vue";
 import {getImageSize, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
-import {imageActionHint, runImageAction, visibleActionGroups} from "@/imageActions.js";
+import {IMAGE_ACTIONS, imageActionHint, runImageAction, visibleActionGroups} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import {KIND_GENERATED} from "@/consts.js";
 
@@ -47,7 +47,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['result-click', 'upload', 'use-size']);
+const emit = defineEmits(['result-click', 'upload', 'use-size', 'show-params']);
 
 const hasInput = computed(() => props.mode === "img2img" || props.mode === "inpaint");
 const hasMask = computed(() => props.mode === "inpaint");
@@ -109,12 +109,22 @@ async function onPaste(e) {
   }
 }
 
-// ---------- Send actions of the result (the right side of an image card) ----------
+// ---------- Actions of the result: parameters at the top left, send actions (the right side of an image card) ----------
 
-const actionContext = {kind: KIND_GENERATED, isTray: false, upscalable: false, handlers: {}};
+const actionContext = {
+  kind: KIND_GENERATED, isTray: false, upscalable: false,
+  handlers: {showParams: image => emit('show-params', image)}
+};
 
 const actionGroups = computed(() => props.actionImage && shownView.value === "result"
   ? visibleActionGroups(props.actionImage, actionContext, "right") : []);
+
+const paramsGroups = computed(() => {
+  const action = props.actionImage && shownView.value === "result"
+    && IMAGE_ACTIONS.find(action => action.id === "params");
+
+  return action && action.visible(props.actionImage, actionContext) ? [[action]] : [];
+});
 
 const shiftDown = useShiftKey();
 const hovered = ref(false);
@@ -165,8 +175,9 @@ async function onUseSize() {
       <span v-else class="empty">No mask<br><small>Upload, drop or paste one, or send it from Photoshop</small></span>
     </div>
 
-    <template v-if="hasInput">
-      <div class="seg views" role="tablist" aria-label="Image shown">
+    <!-- The views of img2img and inpaint, below them the parameters of the result on hover -->
+    <div class="top-left">
+      <div v-if="hasInput" class="seg views" role="tablist" aria-label="Image shown">
         <button type="button" role="tab" :class="{on: shownView === 'result'}" :aria-selected="shownView === 'result'"
                 @click="show('result')">Result</button>
         <button type="button" role="tab" :class="{on: shownView === 'input'}" :aria-selected="shownView === 'input'"
@@ -174,8 +185,11 @@ async function onUseSize() {
         <button v-if="hasMask" type="button" role="tab" :class="{on: shownView === 'mask'}"
                 :aria-selected="shownView === 'mask'" @click="show('mask')">Mask</button>
       </div>
+      <ImageActionButtons v-if="paramsGroups.length" class="result-actions" :groups="paramsGroups" :show-alt="showAlt"
+                          @run="onAction" @hover="action => hoveredAction = action"/>
+    </div>
 
-
+    <template v-if="hasInput">
       <div v-if="shownView === 'input' && inputImage" class="input-actions">
         <button v-if="hasMask && inputMask" type="button" class="overlay-button" :class="{on: maskOverlay}"
                 :aria-pressed="maskOverlay" title="Show the mask over the image"
@@ -289,10 +303,22 @@ async function onUseSize() {
   transition: width 0.3s;
 }
 
-.views {
+.top-left {
   position: absolute;
   top: 8px;
   left: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.top-left > * {
+  pointer-events: auto;
+}
+
+.views {
   background: rgba(17, 19, 23, 0.85);
 }
 
