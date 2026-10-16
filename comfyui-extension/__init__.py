@@ -795,16 +795,21 @@ async def get_photoshop_image(request):
     return web.Response(body=content, content_type=media_type, headers={"Cache-Control": "no-store"})
 
 
-# Version of the supplied Photoshop plugin and of the one installed on the server computer
+def _photoshop_plugin_name(request):
+    """The plugin of a request (?plugin=, a key of photoshop_plugin.PLUGIN_DIRS)"""
+    return request.query.get("plugin", photoshop_plugin.DEFAULT_PLUGIN)
+
+
+# Version of a supplied Photoshop plugin and of the one installed on the server computer
 @PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin")
 async def get_photoshop_plugin_status(request):
-    return web.json_response(photoshop_plugin.get_status())
+    return web.json_response(photoshop_plugin.get_status(_photoshop_plugin_name(request)))
 
 
 @PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin.ccx")
 async def download_photoshop_plugin(request):
     try:
-        name, content = photoshop_plugin.build_ccx()
+        name, content = photoshop_plugin.build_ccx(_photoshop_plugin_name(request))
     except photoshop_plugin.PluginError as e:
         return web.Response(text=str(e), status=404)
 
@@ -812,11 +817,11 @@ async def download_photoshop_plugin(request):
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
-# Install the Photoshop plugin on the server computer (see photoshop_plugin.install_or_elevate)
+# Install a Photoshop plugin on the server computer (see photoshop_plugin.install_or_elevate)
 @PromptServer.instance.routes.post(BASE_PATH + "/photoshop/plugin/install")
 async def install_photoshop_plugin(request):
     try:
-        return web.json_response(photoshop_plugin.install_or_elevate())
+        return web.json_response(photoshop_plugin.install_or_elevate(_photoshop_plugin_name(request)))
     except (photoshop_plugin.PluginError, OSError) as e:
         return web.json_response({"detail": str(e)}, status=500)
 

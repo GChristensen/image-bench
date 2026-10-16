@@ -1,6 +1,7 @@
 """
-The Photoshop UXP plugin supplied with the extension: packaging it as a .ccx file and installing it
-where the Creative Cloud app installs plugins (see photoshop-extension/uxp.ps1, which does the same from a shell)
+The Photoshop UXP plugins supplied with the extension (Image Bench, Canny Edges): packaging one as a .ccx file and
+installing it where the Creative Cloud app installs plugins (see photoshop-extension/uxp.ps1, which does the same
+from a shell)
 """
 import ctypes
 import io
@@ -12,12 +13,17 @@ import zipfile
 
 _SHARED_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Where the plugin files are: copied next to this module by the deploy, or the repository folder
+_REPOSITORY_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..")
+
+# Where the files of each plugin are: copied next to this module by the deploy, or the repository folder
 # (the extension's shared directory is a symlink to common-extension/shared_backend)
-PLUGIN_DIRS = (
-    os.path.join(_SHARED_DIR, "photoshop-plugin"),
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "photoshop-extension"),
-)
+PLUGIN_DIRS = {
+    "image-bench": (os.path.join(_SHARED_DIR, "photoshop-plugin"), os.path.join(_REPOSITORY_DIR, "photoshop-extension")),
+    "canny": (os.path.join(_SHARED_DIR, "photoshop-canny"), os.path.join(_REPOSITORY_DIR, "photoshop-canny")),
+}
+DEFAULT_PLUGIN = "image-bench"
+# The plugin whose folder holds the installer script, which installs the others too
+INSTALLER_PLUGIN = "image-bench"
 
 # Development files that are not a part of the plugin
 EXCLUDED_FILES = ("dist", "README.md", "uxp.ps1")
@@ -27,16 +33,23 @@ class PluginError(Exception):
     pass
 
 
-def get_plugin_dir():
-    for path in PLUGIN_DIRS:
+def get_plugin_dir(plugin=DEFAULT_PLUGIN):
+    """
+    Args:
+        plugin: A key of PLUGIN_DIRS
+    """
+    if plugin not in PLUGIN_DIRS:
+        raise PluginError(f"Unknown Photoshop plugin: {plugin}")
+
+    for path in PLUGIN_DIRS[plugin]:
         if os.path.isfile(os.path.join(path, "manifest.json")):
             return os.path.normpath(path)
 
     raise PluginError("The Photoshop plugin files are not found in the extension")
 
 
-def read_manifest(plugin_dir=None):
-    with open(os.path.join(plugin_dir or get_plugin_dir(), "manifest.json"), encoding="utf-8") as file:
+def read_manifest(plugin_dir):
+    with open(os.path.join(plugin_dir, "manifest.json"), encoding="utf-8") as file:
         return json.load(file)
 
 
@@ -56,7 +69,7 @@ def get_plugin_files(plugin_dir):
     return result
 
 
-def build_ccx():
+def build_ccx(plugin=DEFAULT_PLUGIN):
     """
     Package the plugin as a .ccx file (a zip archive of the plugin files), installed by double-clicking it
     with the Creative Cloud app
@@ -64,7 +77,7 @@ def build_ccx():
     Returns:
         (file name, file content)
     """
-    plugin_dir = get_plugin_dir()
+    plugin_dir = get_plugin_dir(plugin)
     manifest = read_manifest(plugin_dir)
     buffer = io.BytesIO()
 
@@ -107,13 +120,13 @@ def _write_registered_plugins(info_file, plugins):
         json.dump({"plugins": plugins}, file, indent=2)
 
 
-def get_status():
+def get_status(plugin=DEFAULT_PLUGIN):
     """The version of the supplied plugin, and the version installed on this computer (None if not installed)"""
     status = {"available": None, "installed": None, "supported": get_install_locations() is not None,
               "platform": sys.platform}
 
     try:
-        manifest = read_manifest()
+        manifest = read_manifest(get_plugin_dir(plugin))
         status["available"] = manifest["version"]
     except (PluginError, OSError, ValueError):
         return status
@@ -131,7 +144,7 @@ def get_status():
     return status
 
 
-def install():
+def install(plugin=DEFAULT_PLUGIN):
     """
     Copy the plugin to the shared UXP plugin directory and register it for Photoshop, as the Creative Cloud
     app does. Photoshop loads it after a restart.
@@ -146,7 +159,7 @@ def install():
         raise PluginError(f"Installing the plugin is not supported on {sys.platform}")
 
     plugins_dir, info_file = locations
-    plugin_dir = get_plugin_dir()
+    plugin_dir = get_plugin_dir(plugin)
     manifest = read_manifest(plugin_dir)
     folder_name = f"{manifest['id']}_{manifest['version']}"
     target = os.path.join(plugins_dir, folder_name)
@@ -178,10 +191,10 @@ def install():
     return manifest["version"]
 
 
-def install_elevated():
+def install_elevated(plugin=DEFAULT_PLUGIN):
     """
-    Windows: run the plugin's installer script (uxp.ps1 deploy) with administrator rights, which shows a UAC prompt
-    on this computer. Returns without waiting for it.
+    Windows: run the installer script (uxp.ps1 deploy) for the plugin with administrator rights, which shows a UAC
+    prompt on this computer. Returns without waiting for it.
 
     Returns:
         True if the script was started
@@ -189,17 +202,18 @@ def install_elevated():
     if sys.platform != "win32":
         return False
 
-    script = os.path.join(get_plugin_dir(), "uxp.ps1")
+    plugin_dir = get_plugin_dir(plugin)
+    script = os.path.join(get_plugin_dir(INSTALLER_PLUGIN), "uxp.ps1")
 
     if not os.path.isfile(script):
         raise PluginError("The installer script uxp.ps1 is missing from the plugin files")
 
-    arguments = f'-NoProfile -ExecutionPolicy Bypass -File "{script}" deploy'
+    arguments = f'-NoProfile -ExecutionPolicy Bypass -File "{script}" deploy -PluginDir "{plugin_dir}"'
     # ShellExecute returns a value greater than 32 on success; it is 5 (access denied) if the prompt is declined
     return ctypes.windll.shell32.ShellExecuteW(None, "runas", "powershell.exe", arguments, None, 0) > 32
 
 
-def install_or_elevate():
+def install_or_elevate(plugin=DEFAULT_PLUGIN):
     """
     Install the plugin, or start the elevated installer if this process may not write the shared plugin directory
 
@@ -210,9 +224,9 @@ def install_or_elevate():
         PluginError: If the plugin could not be installed
     """
     try:
-        return {"result": "installed", "version": install()}
+        return {"result": "installed", "version": install(plugin)}
     except PermissionError:
-        if install_elevated():
+        if install_elevated(plugin):
             return {"result": "elevating"}
 
         plugins_dir, _ = get_install_locations()

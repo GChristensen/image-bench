@@ -2,9 +2,9 @@
 /**
  * Right pane of the Library manual: the text, scrolled to the chapter chosen in the contents (ManualBrowser.vue)
  */
-import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
+import {nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
-import {dialog} from "@/dialogs/useDialog.js";
+import PluginCard from "@/components/library/PluginCard.vue";
 import {HOST_NAME, isComfy, isWebUI} from "@/host.js";
 import {MANUAL_SECTIONS, useManualStore} from "@/stores/manual.js";
 
@@ -56,87 +56,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => manual.scrollTop = content.value?.scrollTop ?? 0);
 
-// Photoshop plugin supplied with the extension
-const PLUGIN_URL = "/image-bench/photoshop/plugin";
-const plugin = ref(null);
-const installing = ref(false);
-// Install copies the plugin to the computer running the host, which is not this one for a remote host
+// The plugin cards install on the computer running the host; the manual names its address
 const hostOrigin = location.origin;
-const isRemoteHost = !["localhost", "127.0.0.1", "[::1]", "::1"].includes(location.hostname);
-
-const pluginState = computed(() => {
-  const status = plugin.value;
-
-  if (!status)
-    return "";
-  if (!status.available)
-    return "The plugin files are missing from the extension.";
-  if (!status.installed)
-    return `Version ${status.available} is supplied; not installed${isRemoteHost ? " on the server computer" : ""}.`;
-  if (status.installed !== status.available)
-    return `Version ${status.installed} is installed, ${status.available} is supplied: install to update.`;
-
-  return `Version ${status.installed} is installed${isRemoteHost ? " on the server computer" : ""}.`;
-});
-
-async function loadPluginStatus() {
-  try {
-    const response = await fetch(PLUGIN_URL);
-    plugin.value = response.ok ? await response.json() : null;
-  } catch (e) {
-    plugin.value = null;
-  }
-}
-
-// The elevated installer runs on its own; the status changes once it has written the plugin registry
-async function waitForInstall(version) {
-  for (let i = 0; i < 30; i++) {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    await loadPluginStatus();
-
-    if (plugin.value?.installed === version)
-      return true;
-  }
-
-  return false;
-}
-
-async function onInstallPlugin() {
-  if (isRemoteHost && !await dialog.confirm(
-      `${HOST_NAME} runs on another computer (${location.hostname}). The plugin will be installed there, `
-      + "not on this computer. Download the .ccx file to install it here.", {okText: "Install there"}))
-    return;
-
-  installing.value = true;
-
-  try {
-    const response = await fetch(`${PLUGIN_URL}/install`, {method: "POST"});
-    const result = await response.json();
-
-    if (!response.ok)
-      throw new Error(result.detail || response.statusText);
-
-    if (result.result === "elevating") {
-      dialog.alert("Confirm the Windows administrator prompt to finish the installation.", {title: "Photoshop plugin"});
-
-      if (!await waitForInstall(plugin.value?.available)) {
-        await dialog.alert("The plugin was not installed. If the administrator prompt was declined, try again, "
-            + "or install the downloaded .ccx file with the Creative Cloud app.", {title: "Photoshop plugin"});
-        return;
-      }
-    } else
-      await loadPluginStatus();
-
-    await dialog.alert("The plugin is installed. Restart Photoshop and open Plugins › Image Bench.",
-        {title: "Photoshop plugin"});
-  } catch (e) {
-    await dialog.alert(`Unable to install the plugin: ${e.message}`, {title: "Photoshop plugin"});
-  } finally {
-    installing.value = false;
-  }
-}
-
-onMounted(loadPluginStatus);
 </script>
 
 <template>
@@ -833,33 +754,17 @@ onMounted(loadPluginStatus);
         is closed.
       </p>
 
-      <div class="plugin-card">
-        <div class="plugin-card-header">
-          <span class="ps-badge">Ps</span>
-          <div>
-            <div class="plugin-title">Image Bench plugin</div>
-            <div class="plugin-status">{{ pluginState || "Checking the plugin…" }}</div>
-          </div>
-        </div>
-        <div class="plugin-actions">
-          <button class="btn primary" :disabled="installing || !plugin?.available || !plugin?.supported"
-                  :title="plugin && !plugin.supported ? `Not supported on ${plugin.platform}` : 'Copy the plugin to the Photoshop plugin folder'"
-                  @click="onInstallPlugin"><AppIcon name="download" :size="14"/>{{ installing ? "Installing…" : "Install" }}</button>
-          <a class="btn outline" :class="{disabled: !plugin?.available}" :href="`${PLUGIN_URL}.ccx`" download
-            ><AppIcon name="save" :size="14"/>Download .ccx</a>
-        </div>
-        <ul class="plugin-notes">
-          <li><b>Install</b> copies the plugin into the folder where the Creative Cloud app keeps plugins
-            (<code>Common Files\Adobe\UXP\Plugins\External</code> on Windows) and registers it with Photoshop.
-            Windows will ask for administrator rights. The plugin is installed on the computer that runs
-            {{ HOST_NAME }}.</li>
-          <li><b>Download .ccx</b> is for any other computer: double-click the file there to install it with the
-            Creative Cloud app.</li>
-          <li>Either way, restart Photoshop afterwards.</li>
-          <li>The plugin is not signed by Adobe. If it is missing from the <b>Plugins</b> menu after the restart,
-            turn on <b>Preferences › Plugins › Enable Developer Mode</b> in Photoshop and restart it once more .</li>
-        </ul>
-      </div>
+      <PluginCard plugin="image-bench" title="Image Bench plugin" menu="Plugins › Image Bench">
+        <li><b>Install</b> copies the plugin into the folder where the Creative Cloud app keeps plugins
+          (<code>Common Files\Adobe\UXP\Plugins\External</code> on Windows) and registers it with Photoshop.
+          Windows will ask for administrator rights. The plugin is installed on the computer that runs
+          {{ HOST_NAME }}.</li>
+        <li><b>Download .ccx</b> is for any other computer: double-click the file there to install it with the
+          Creative Cloud app.</li>
+        <li>Either way, restart Photoshop afterwards.</li>
+        <li>The plugin is not signed by Adobe. If it is missing from the <b>Plugins</b> menu after the restart,
+          turn on <b>Preferences › Plugins › Enable Developer Mode</b> in Photoshop and restart it once more.</li>
+      </PluginCard>
 
       <h3>Connecting</h3>
       <ol>
@@ -906,6 +811,32 @@ onMounted(loadPluginStatus);
         before this notice existed, until the server has passed it on: reinstall the plugin above). The plugin panel
         likewise shows a blinking dot while an image is sent or received, and its buttons wait for the transfer to end.
       </p>
+
+      <h3 id="manual-photoshop-canny">Canny Edges plugin</h3>
+      <p>
+        A second, standalone plugin computes Canny edges of the document in Photoshop itself, the same edges as
+        <code>cv2.Canny</code> of ControlNet's canny preprocessor, and needs no connection to {{ HOST_NAME }}.
+        Use it to make a control image you can touch up: compute the edges, paint out or add lines on the layer,
+        then send it with <b>ControlNet: image</b> of the Image Bench plugin. Install it like the Image Bench plugin
+        (the notes above apply), then open <b>Plugins › Canny Edges</b>.
+      </p>
+
+      <PluginCard plugin="canny" title="Canny Edges plugin" menu="Plugins › Canny Edges"/>
+
+      <ul>
+        <li><b>Threshold 1</b> and <b>Threshold 2</b> — the hysteresis thresholds: lines start at edges stronger
+          than the higher one and continue down to the lower one.</li>
+        <li><b>Blur</b> — the size of a Gaussian blur applied first (1 is none); it removes fine texture.</li>
+        <li><b>Merged</b> or <b>Active layer</b> — the image the edges are computed from. The plugin reads it again
+          when another document or layer is selected, with <b>Refresh</b> after editing it, and before each
+          apply.</li>
+        <li>The preview updates live and shows the full-size result zoomed out. <b>Fast preview</b> computes it
+          from a smaller copy instead, which is quicker for large images but not exactly the edges applied.</li>
+        <li><b>Selection only</b> keeps the edges inside the selection.</li>
+        <li><b>As layer</b> puts white-on-black edges into a layer named after the parameters, as one history
+          step; applying again in the same document overwrites that layer. <b>As document</b> opens them as a new
+          document.</li>
+      </ul>
     </section>
 
     <section v-if="isComfy" id="manual-comfy-setup">
@@ -1188,60 +1119,5 @@ dd {
 .note .inline-icon {
   margin-top: 0;
   color: inherit;
-}
-
-.plugin-card {
-  padding: 14px 16px 6px;
-  margin: 12px 0 6px;
-  border: 1px solid var(--ib-border-2);
-  border-radius: 8px;
-  background: var(--ib-surface);
-}
-
-.plugin-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.ps-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 2px solid #31a8ff;
-  border-radius: 6px;
-  background: #001e36;
-  color: #31a8ff;
-  font-weight: 700;
-}
-
-.plugin-title {
-  font-weight: 600;
-}
-
-.plugin-status {
-  color: var(--ib-text-2);
-}
-
-.plugin-actions {
-  display: flex;
-  gap: 8px;
-  margin: 12px 0;
-}
-
-.plugin-actions a.btn {
-  text-decoration: none;
-}
-
-.plugin-actions a.disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.plugin-notes {
-  color: var(--ib-text-2);
-  font-size: 12.5px;
 }
 </style>

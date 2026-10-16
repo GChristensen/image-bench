@@ -24,7 +24,9 @@ export const MANUAL_SECTIONS = [
   ]},
   {id: "images", title: "Working with images", icon: "layers"},
   {id: "settings", title: "Settings & actions", icon: "settings"},
-  {id: "photoshop", title: "Photoshop", icon: "photoshop"},
+  {id: "photoshop", title: "Photoshop", icon: "photoshop", children: [
+    {id: "photoshop-canny", title: "Canny Edges plugin", icon: "controlnet"},
+  ]},
   ...(isComfy ? [{id: "comfy-setup", title: "ComfyUI setup", icon: "puzzle"}] : []),
   {id: "shortcuts", title: "Keyboard & mouse", icon: "zap"},
   {id: "troubleshooting", title: "Troubleshooting", icon: "alert"},

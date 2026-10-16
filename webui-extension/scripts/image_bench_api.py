@@ -371,14 +371,14 @@ class ImageBenchApi():
         return Response(content, media_type=media_type, headers={"Cache-Control": "no-store"})
 
     @staticmethod
-    def get_photoshop_plugin_status():
-        """Version of the supplied Photoshop plugin and of the one installed on the server computer"""
-        return JSONResponse(photoshop_plugin.get_status())
+    def get_photoshop_plugin_status(plugin: str = photoshop_plugin.DEFAULT_PLUGIN):
+        """Version of a supplied Photoshop plugin (photoshop_plugin.PLUGIN_DIRS) and of the one installed on the server computer"""
+        return JSONResponse(photoshop_plugin.get_status(plugin))
 
     @staticmethod
-    def download_photoshop_plugin():
+    def download_photoshop_plugin(plugin: str = photoshop_plugin.DEFAULT_PLUGIN):
         try:
-            name, content = photoshop_plugin.build_ccx()
+            name, content = photoshop_plugin.build_ccx(plugin)
         except photoshop_plugin.PluginError as e:
             raise HTTPException(status_code=404, detail=str(e))
 
@@ -386,10 +386,10 @@ class ImageBenchApi():
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
     @staticmethod
-    def install_photoshop_plugin():
-        """Install the Photoshop plugin on the server computer (see photoshop_plugin.install_or_elevate)"""
+    def install_photoshop_plugin(plugin: str = photoshop_plugin.DEFAULT_PLUGIN):
+        """Install a Photoshop plugin on the server computer (see photoshop_plugin.install_or_elevate)"""
         try:
-            return JSONResponse(photoshop_plugin.install_or_elevate())
+            return JSONResponse(photoshop_plugin.install_or_elevate(plugin))
         except (photoshop_plugin.PluginError, OSError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 

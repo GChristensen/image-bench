@@ -11,12 +11,16 @@ param(
     [string]$Action,
 
     # Shared UXP directory, where developer mode is set and plugins are installed
-    [string]$UxpDir = (Join-Path $env:CommonProgramFiles "Adobe\UXP")
+    [string]$UxpDir = (Join-Path $env:CommonProgramFiles "Adobe\UXP"),
+
+    # Folder of the plugin's manifest.json, this script's folder if not given (another plugin, e.g. photoshop-canny)
+    [string]$PluginDir
 )
 
 $ErrorActionPreference = "Stop"
 
-$PluginDir = $PSScriptRoot
+# $PSScriptRoot is not set yet in the parameter defaults of Windows PowerShell 5.1
+$PluginDir = if ($PluginDir) { (Resolve-Path $PluginDir).Path } else { $PSScriptRoot }
 $Manifest = Get-Content (Join-Path $PluginDir "manifest.json") -Raw | ConvertFrom-Json
 $PluginFolderName = "$($Manifest.id)_$($Manifest.version)"
 

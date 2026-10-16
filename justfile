@@ -21,8 +21,8 @@ deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension
 # (symlinked shared code included)
 deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_ps comfy_dest)
 
-# The Photoshop plugin, supplied with the extension for installing it from the manual (Library tab)
-_deploy_ps dest: (_deploy "photoshop-extension" (dest + "/shared/photoshop-plugin") "index.js index.html manifest.json uxp.ps1")
+# The Photoshop plugins, supplied with the extension for installing them from the manual (Library tab)
+_deploy_ps dest: (_deploy "photoshop-extension" (dest + "/shared/photoshop-plugin") "index.js index.html manifest.json uxp.ps1") (_deploy "photoshop-canny" (dest + "/shared/photoshop-canny") "*.js index.html manifest.json")
 
 _require name value:
     @{{ if value == "" { error(name + " is not set: copy .env.example to .env and set it") } else { "echo " + name + "=" + value } }}
@@ -54,3 +54,17 @@ ps-deploy:
 # Remove the Photoshop plugin installed by ps-deploy (elevated shell)
 ps-undeploy:
     {{ps}} undeploy
+
+canny := ps + " -PluginDir photoshop-canny"
+
+# Package the Canny Edges Photoshop plugin into photoshop-canny/dist/*.ccx
+canny-package:
+    {{canny}} package
+
+# Install the Canny Edges Photoshop plugin without the Creative Cloud app (elevated shell)
+canny-deploy:
+    {{canny}} deploy
+
+# Remove the Canny Edges Photoshop plugin installed by canny-deploy (elevated shell)
+canny-undeploy:
+    {{canny}} undeploy
