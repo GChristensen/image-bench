@@ -114,8 +114,10 @@ SECTIONS, IN THIS ORDER
 ## ControlNet and Structural Control
    Only if usable control exists. Open with one line on how mature it is. Then bullets:
    mechanism (classic ControlNet, Union / ProMax, T2I-Adapter, LoRA-based, dedicated
-   checkpoint — these are not interchangeable), control types with repo/author and quality
-   tier, strength and start/end per type and what over-conditioning looks like, preprocessor
+   checkpoint — these are not interchangeable), control types with the HuggingFace (or GitHub)
+   repo id of each control model as a link, e.g. [org/model](https://huggingface.co/org/model),
+   its author and quality tier, the ComfyUI nodes or custom node pack that load it and whether
+   Forge Neo supports it, strength and start/end per type and what over-conditioning looks like, preprocessor
    and resolution notes, stacking and VRAM per control model, interaction with distilled
    variants, whether ControlNets of related models load. End with a one-line bottom line if
    the ecosystem is thin.

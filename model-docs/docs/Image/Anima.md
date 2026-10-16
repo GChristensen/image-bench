@@ -31,7 +31,7 @@
 | Base v1.0 | foundation ckpt   | CC-Labs NC | unk\[?\] | flexibility, LoRA training |
 | Aesthetic | curated fine-tune | CC-Labs NC | unk\[?\] | default look, less prompt  |
 | Turbo     | distilled         | CC-Labs NC | unk\[?\] | speed, CFG-1, 8-12 steps   |
-| Preview3  | dev snapshot      | CC-Labs NC | unk\[?\] | ControlNet-LLLite          |
+| Preview3  | dev snapshot      | CC-Labs NC | unk\[?\] | superseded by v1.0         |
 
 ## Resolution
 
@@ -137,14 +137,41 @@ masterpiece, best quality, score_7, smile, <lora:AnimaEditV2:1>
 
 ## ControlNet and Structural Control
 
-Usable control exists, but it's thin and explicitly experimental — treat
-this as "barely," not as a mature ControlNet ecosystem.
+Young but usable: three community mechanisms, all trained on Anima-Base v1.0, none from
+CircleStone Labs.
 
-- Mechanism: ControlNet-LLLite, a lightweight LoRA-like
-  local-conditioning module, ported to Anima's DiT by kohya-ss .
-  This is **not** classic ControlNet, not ControlNet-Union, not a
-  T2I-Adapter — it's the same LLLite design kohya previously shipped for
-  SDXL, re-targeted at this architecture.
-- Publisher: kohya-ss (`kohya-ss/Anima-LLLite`, node pack
-  `kohya-ss/ComfyUI-Anima-LLLite`), plus at least one community mirror
-  (Mooshie).
+- Mechanisms, not interchangeable:
+  - ControlNet-LLLite: small LoRA-like conditioning modules (kohya-ss); ComfyUI and Forge Neo.
+  - VACE ControlNet: spaced copies of DiT blocks with zero-convs, adapter weights only;
+    ComfyUI through forks of ComfyUI-Advanced-ControlNet.
+  - Regional LLLite: color-mask regions for placing several characters.
+- LLLite, [kohya-ss/Anima-LLLite](https://huggingface.co/kohya-ss/Anima-LLLite), nodes
+  [kohya-ss/ComfyUI-Anima-LLLite](https://github.com/kohya-ss/ComfyUI-Anima-LLLite) (keep it
+  updated):
+  - `anima-lllite-any-test-like-v2`: general control from lineart, scribble (HED, PiDiNet) or
+    grayscale images; the most useful one.
+  - `anima-lllite-inpainting-v2`: masked inpaint (RGB with the masked area black, plus the
+    mask); shifts colors without a mask, so use it in img2img with a mask.
+  - Preview3 lineart, depth, pose and fake scribble (listed in `PREVIEW3.md`): not retrained,
+    they load on v1.0 with lower quality.
+- Tile & Repair LLLite (L_A_X, [Civitai](https://civitai.com/models/2708551),
+  `anima_tile_taskplus_v2`, 90 MB): upscaling detail, artifact and blurry-lineart repair while
+  keeping the composition; multiplier 0.8-1.0; a slight color shift in the ComfyUI node.
+- Regional:
+  [Sen-sou/Anima-LLLite-Regional-Controlnet](https://huggingface.co/Sen-sou/Anima-LLLite-Regional-Controlnet).
+  Solid colors on a white background mark the regions; it cannot tell which prompt belongs to
+  which color, so the prompt still places subjects (left, right, foreground). Pair it with Forge
+  Couple or Attention Couple using the same colors; end around 0.45.
+- VACE depth: [TaihoC/Anima-ControlNet-VACE-Depth](https://huggingface.co/TaihoC/Anima-ControlNet-VACE-Depth),
+  20k steps at 1024², DepthAnything V2 maps work best; nodes
+  [TaihoC/ComfyUI-Advanced-ControlNet-Anima](https://github.com/TaihoC/ComfyUI-Advanced-ControlNet-Anima/tree/feat/anima-vace-controlnet)
+  (branch `feat/anima-vace-controlnet`).
+- VACE canny: [khanghy1000/Anima-ControlNet-VACE-Canny](https://huggingface.co/khanghy1000/Anima-ControlNet-VACE-Canny),
+  4 control blocks (at DiT blocks 0, 7, 14, 21), 3k steps, `cv2.Canny` 100/200 maps; use the
+  `fix/anima-vace-hardening` branch of PineCookie/ComfyUI-Advanced-ControlNet, since the TaihoC
+  fork applies the control hook twice.
+- Strength: no card gives values; start at 1.0 and lower it when the control image's lines or
+  flat depth show through or the style stiffens.
+- Forge Neo: the built-in ControlNet loads the Anima LLLite models and the Regional model (its
+  Region mode draws the color masks); the VACE ControlNets are ComfyUI only.
+- License: all of them follow the CircleStone Labs Non-Commercial License.

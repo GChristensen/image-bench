@@ -176,21 +176,25 @@ Example edit prompts:
 
 ## ControlNet and Structural Control
 
-One ControlNet exists, and today it runs **outside** ComfyUI only.
+One Union ControlNet, recent but native in ComfyUI 0.37+.
 
-- Model: `alibaba-pai/Qwen-Image-2.1-Fun-Controlnet-Union` (~7.0 GB, control branch only).
-- Mechanism: ControlNet-Union side branch (16 control blocks on every 2nd DiT block).
-- Conditions: canny, depth, grayscale, HED, lineart, MLSD, pose (DWPose), scribble + inpaint.
-- Not available: tile, normal, segmentation.
-- Runtime: VideoX-Fun scripts; config must be `config/qwenimage21/qwenimage21_control.yaml`
-  or control weights are silently dropped.
-- ComfyUI support: requested (issue #16518), not merged.
-- Strength: `control_context_scale` 1.0 (expected); lower loosens, 0.0 disables.
-- Control map must match the output canvas, sides multiples of 16.
-- On a 3090 expect CPU offload (+7 GB on top of DiT + encoder) \[?\].
-- Stacking, step ranges, turbo interaction: undocumented \[?\].
-- Old Qwen-Image ControlNets (InstantX, DiffSynth) do not load — wrong architecture.
-
-Bottom line: inside ComfyUI today, the only structural workaround is passing a pose/depth image
-as a reference ("follow the pose in `<image1>`") \[?\]. If ControlNet is a hard requirement,
-Qwen-Image-2512, FLUX.1 or SDXL have far more mature ecosystems.
+- Model: [alibaba-pai/Qwen-Image-2.1-Fun-Controlnet-Union](https://huggingface.co/alibaba-pai/Qwen-Image-2.1-Fun-Controlnet-Union)
+  (~7.5 GB, control branch only); ComfyUI conversions (bf16, int8 convrot) in
+  [Kijai/QwenImage_experimental](https://huggingface.co/Kijai/QwenImage_experimental).
+- Mechanism: VideoX-Fun Union side branch (16 control blocks on every 2nd DiT block).
+- Conditions: canny, depth, grayscale, HED, lineart, MLSD, pose (DWPose), scribble, plus masked
+  inpaint. No tile, normal or segmentation.
+- ComfyUI: Load Model Patch (ModelPatchLoader) → Apply Qwen Image DiffSynth ControlNet
+  (QwenImageDiffsynthControlnet: `strength`, optional `mask`, `start_percent`, `end_percent`),
+  merged in PR #16519. No official template yet; workflows and a loader for older builds in
+  [T8mars/Comfyui-Qwen-Image-2.1-Fun-Controlnet-Union-T8](https://github.com/T8mars/Comfyui-Qwen-Image-2.1-Fun-Controlnet-Union-T8).
+- VideoX-Fun scripts: the config must be `config/qwenimage21/qwenimage21_control.yaml`, or the
+  control weights are silently dropped.
+- Strength: 1.0 for all published results; lower loosens, 0.0 disables.
+- The control map must match the output canvas, sides multiples of 16.
+- On a 3090, expect offloading: the branch adds ~7.5 GB on top of the DiT and the 8B encoder.
+- The same weights edit, so a pose or depth map can also go in as a reference ("follow the pose
+  in `<image1>`") without the ControlNet.
+- Old Qwen-Image ControlNets (InstantX, DiffSynth, 2512 Fun) do not load. Forge Neo: not
+  supported.
+- License: Qwen Research License, non-commercial.

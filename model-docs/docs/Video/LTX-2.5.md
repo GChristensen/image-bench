@@ -116,11 +116,33 @@ Example edit prompts:
 
 ## Structural and Reference Control
 
-Mechanism: in-context (IC) LoRAs, not a separate ControlNet-style model and not classic ControlNet ports.
+Mature and official: Lightricks ships control as IC-LoRAs on the distilled model; no classic
+ControlNet.
 
-Control signals available as named IC-LoRAs in the ComfyUI ecosystem (confirmed for 2.3's ComfyUI-LTXVideo repo, unconfirmed whether re-published for 2.5) [?]: union control, motion track, pose control, camera control, HDR, dub-it (lip-sync), detailer, colorization, day-to-night, deblur, pixel spatial upscaler (x2/x4).
-
-Camera control exists as a dedicated IC-LoRA (explicit trajectory-style control), confirmed for 2.3's ecosystem, unconfirmed for 2.5 [?]. Identity/character consistency: native multishot is positioned as the primary mechanism for holding character identity across cuts within one generation; cross-generation (separate calls) consistency is not addressed. Recommended strengths/step ranges for these LoRAs, and interaction with the distilled low-step pipeline: not published [?].
+- Mechanism: in-context LoRAs (the guide video's tokens sit next to the generated ones); they
+  need the distilled checkpoint (ICLoraPipeline) and do not replace one another.
+- Union Control (depth, canny, pose in one adapter): reused from 2.3,
+  [Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Union-Control),
+  `ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors`; the guide runs at half the output
+  resolution. Strength 1.0; 0.5-0.8 leaves more freedom.
+- Preprocessors in the official workflow: Video Depth Anything (VideoDepthAnythingProcess,
+  wired by default), CannyEdgePreprocessor (92/200) and DWPreprocessor from
+  comfyui_controlnet_aux; guide sides divisible by 64.
+- Motion tracks: [Lightricks/LTX-2.3-22b-IC-LoRA-Motion-Track-Control](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Motion-Track-Control)
+  (sparse spline trajectories drawn with LTX Draw Tracks / LTX Sparse Track Editor); the
+  camera follows the motion of the guide or the tracks, there is no separate camera-control
+  adapter for 2.5.
+- Layout to render: [Lightricks/LTX-2.5-22b-IC-LoRA-Layout-To-Render](https://huggingface.co/Lightricks/LTX-2.5-22b-IC-LoRA-Layout-To-Render)
+  turns a playblast or blockout into a finished shot (strength 1.0, with the 2× latent
+  upscaler).
+- Identity: [Lightricks/LTX-2.5-22b-IC-LoRA-Ingredients](https://huggingface.co/Lightricks/LTX-2.5-22b-IC-LoRA-Ingredients)
+  (reference sheet); within one generation, multi-shot holds characters across cuts.
+- ComfyUI: LTXICLoRALoaderModelOnly → LTXAddVideoICLoRAGuide → LTXVCropGuides, from
+  [Lightricks/ComfyUI-LTXVideo](https://github.com/Lightricks/ComfyUI-LTXVideo) plus
+  ComfyUI-VideoDepthAnything; stage 1 at 8 steps with the IC-LoRA, stage 2 upscales 2× in 4
+  steps; CFG 1.0-1.5. Output size, length and fps follow the guide video.
+- Failures: depth on flat scenes, canny on fur, foliage and heavy texture, pose without visible
+  full bodies; describing motion in the prompt fights the guide, so describe the look instead.
 
 ## Audio
 

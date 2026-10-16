@@ -122,10 +122,14 @@ SECTIONS, IN THIS ORDER
      trained on, e.g. "Change X to Y while keeping Z unchanged".
 
 ## Structural and Reference Control
-   Only if usable control exists. Bullets: mechanism (unified control model, in-context control
-   LoRAs, ControlNet ports, VACE, reference conditioning in the base model), control signals
-   that work (pose, depth, canny, motion tracks / optical flow, segmentation, tile) with
-   repo/author, camera control (trajectory conditioning vs. prompt-only), identity consistency
+   Only if usable control exists. Open with one line on how mature it is. Then bullets:
+   mechanism (unified control model, in-context control LoRAs, ControlNet ports, VACE,
+   reference conditioning in the base model — these are not interchangeable), control signals
+   that work (pose, depth, canny, motion tracks / optical flow, segmentation, tile) with the
+   HuggingFace (or GitHub) repo id of each control model as a link, e.g.
+   [org/model](https://huggingface.co/org/model), its author and quality tier, the ComfyUI
+   nodes or custom node pack that load it, preprocessor notes, VRAM per control model, camera
+   control (trajectory conditioning vs. prompt-only), identity consistency
    across generations and the recommended method, strengths and step ranges, interaction with
    distilled low-step variants.
 

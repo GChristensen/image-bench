@@ -71,9 +71,9 @@ Two example prompts at the length the official docs favor:
 | text-to-video | native (FL2VA) |
 | image-to-video (first frame) | native (FL2VA, 1 image) |
 | first-and-last-frame | native (FL2VA, 2 images) |
-| video-to-video | only via Ref2VA's reference-video input; not a dedicated v2v mode with its own strength parameter [?] |
+| video-to-video | Fun ControlNet Union (control video), or Ref2VA's reference-video input |
 | video extension/continuation | no dedicated node confirmed; Ref2VA's ref-video input may serve this role, unverified [?] |
-| video inpaint/outpaint | not found in any source — assume unsupported until confirmed [?] |
+| video inpaint/outpaint | inpaint through the Fun ControlNet Union mask input |
 | instruction-based editing | mentioned in press coverage; unclear whether it needs the API-only H3-Context-IR stage [?] |
 | reference-driven generation | native (Ref2VA) — up to 9 images, 3 video clips, 3 audio clips, 12 files max combined |
 | multi-shot in one call | native, stated capability; no data on shot-count limits [?] |
@@ -114,6 +114,31 @@ Example prompts:
 - "`<Audio 1>` plays as the background music"
 
 
+## Structural and Reference Control
+
+New but native: one Fun ControlNet Union from Alibaba PAI, in ComfyUI since 0.35.0.
+
+- Model: [alibaba-pai/MiniMax-H3-Fun-Controlnet-Union](https://huggingface.co/alibaba-pai/MiniMax-H3-Fun-Controlnet-Union)
+  (~6.8 GB, control branch only: blocks at 0, 10, 20, 30, 40 of 50); the ComfyUI patch ships in
+  [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3) (`models/model_patches/`).
+- Control signals: canny, depth, HED, MLSD and pose control videos, plus masked video inpaint.
+  No camera trajectory input; camera moves follow the control video or the prompt.
+- ComfyUI: Apply MiniMax H3 Fun ControlNet (MiniMaxH3FunControlNetApply), template "MiniMax H3
+  Fun ControlNet Union"; the example extracts the skeleton with SDPose, or a preprocessed
+  control video goes straight into `control_video`. It works with the FL2VA and Ref2VA
+  transformers. Community extras:
+  [wyzborrero/ComfyUI-H3-FunControl](https://github.com/wyzborrero/ComfyUI-H3-FunControl).
+- Strength (`control_context_scale`): 1.0 strongest, 0.0 off. Chained controls add up, so treat
+  strength as a budget: depth 0.3 + pose 0.7 works, 1.0 + 1.0 washes out and smears the figure,
+  above 1.0 degrades.
+- End around 0.6 locks motion and layout early and lets the last steps add texture.
+- Guidance stays 1.0 (guidance-distilled); the inpaint mask input stays 0 when not inpainting.
+- Timing: control video fitted to the 17n+5 frame grid at 24 fps, 5-15 s; a longer control
+  video is cut, a shorter one holds its last frame.
+- Quirks: apply BlockSparseAttention before the ControlNet node, or the control is erased; a
+  small subject in frame limits accuracy; depth alone pulls the figure toward the camera.
+- VRAM: the branch adds ~7 GB to a 33B transformer, so offload or quantized files on a 3090.
+
 ## Audio
 
 - Generation is native, same pass as video — not a separate stage.
@@ -127,4 +152,3 @@ Example prompts:
 ## Length Extension and Continuity
 
 No dedicated sliding-window, position-extrapolation, or autoregressive-chaining mechanism documented. "Extendable to ~30s" (one press piece) most likely means first-last-frame chaining of multiple 15s clips, not a native extended-context mode — inference, not a sourced fact [?]. Given Ref2VA's reference-video input, the most plausible continuity method today is: generate segment 1 → feed its final frames back in as Ref2VA reference video for segment 2 → repeat. Unverified as an official recommendation.
-

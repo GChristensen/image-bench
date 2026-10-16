@@ -130,18 +130,39 @@ Example edit prompts:
 
 ## ControlNet and Structural Control
 
-Usable ControlNets exist and are reasonably solid for the core types — not "barely supported."
+Solid for the core types: three publishers and native ComfyUI support, all for the 20B
+Qwen-Image base (original and 2512).
 
-Mechanism: transformer-block-copy conditioning (extra double-blocks copied from the pretrained DiT and trained from scratch), the Flux-ControlNet style — not classic UNet ControlNet, not T2I-Adapter.
-
-- Canny, Soft Edge, Depth, Pose bundled in one union model, `InstantX/Qwen-Image-ControlNet-Union` (trained 50K steps, 1328x1328, bf16, batch 64).
-- Inpaint/outpaint: `InstantX/Qwen-Image-ControlNet-Inpainting`, separate checkpoint, 65K steps, batch 128.
-- A second official-ish union net exists for the 2512 line, `alibaba-pai/Qwen-Image-2512-Fun-Controlnet-Union` — not deeply verified [?].
-- No tile ControlNet found — use Ultimate SD Upscale tiling instead.
-- Preprocessors: Canny via OpenCV `cv2.Canny`, Soft Edge via AnylineDetector, Depth via Depth-Anything, Pose via DWPose.
-- Strength/scale: Canny 0.8-1.0, Inpaint 0.9-0.95; other types not explicitly numbered — treat 0.8-1.0 as the working range and back off if you see rigid/artifact-y output.
-- The Union model handles multiple control types from one loaded weight file. Interaction with Lightning's low step counts is untested — expect weaker adherence at 4-8 steps since ControlNet conditioning has fewer denoising steps to act on.
-- Whether a base-model ControlNet loads correctly onto an Edit checkpoint (different dual VL+VAE conditioning path) is unconfirmed [?] — don't assume interchangeability without testing.
+- Mechanisms, not interchangeable:
+  - InstantX: copied double blocks, Flux-ControlNet style; ControlNetLoader →
+    ControlNetApplyAdvanced.
+  - DiffSynth Blockwise ControlNets: model patches; ModelPatchLoader →
+    QwenImageDiffsynthControlnet.
+  - DiffSynth in-context control LoRA: the control image goes in as a reference latent.
+  - Alibaba PAI Fun Union: a VideoX-Fun branch on 5 blocks, also a model patch.
+- InstantX Union: [InstantX/Qwen-Image-ControlNet-Union](https://huggingface.co/InstantX/Qwen-Image-ControlNet-Union)
+  (canny, soft edge, depth, pose; 1328², 50k steps). Small text needs the word "TEXT" in the
+  prompt to survive.
+- InstantX inpaint and outpaint:
+  [InstantX/Qwen-Image-ControlNet-Inpainting](https://huggingface.co/InstantX/Qwen-Image-ControlNet-Inpainting),
+  strength 0.9-0.95.
+- DiffSynth, repacked in [Comfy-Org/Qwen-Image-DiffSynth-ControlNets](https://huggingface.co/Comfy-Org/Qwen-Image-DiffSynth-ControlNets):
+  canny, depth and inpaint patches (`qwen_image_*_diffsynth_controlnet`) from
+  DiffSynth-Studio's Blockwise ControlNets, and the union LoRA
+  `qwen_image_union_diffsynth_lora`; official templates "Qwen-Image ControlNet Model Patch" and
+  "Qwen-Image Union Control".
+- Fun Union: [alibaba-pai/Qwen-Image-2512-Fun-Controlnet-Union](https://huggingface.co/alibaba-pai/Qwen-Image-2512-Fun-Controlnet-Union)
+  (canny, HED, depth, pose, MLSD, scribble, gray in the `2602` file, inpaint); scale 0.70-0.95,
+  higher for detail; Apache-2.0.
+- Preprocessors: `cv2.Canny`, AnylineDetector (soft edge), Depth-Anything, DWPose, from
+  comfyui_controlnet_aux.
+- Strength: canny 0.8-1.0; treat 0.8-1.0 as the range for the others and back off when the
+  output turns rigid or shows control artifacts.
+- No tile ControlNet; upscale with Ultimate SD Upscale.
+- Lightning LoRAs: fewer steps for the control to act on, so adherence weakens at 4-8 steps.
+- They target the base model; Edit 2509/2511 already follow pose and depth maps given as
+  references.
+- Qwen-Image-2.1 ControlNets do not load (different architecture). Forge Neo: not supported.
 
 ## Regional and Compositional Prompting
 

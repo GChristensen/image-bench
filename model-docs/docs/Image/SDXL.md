@@ -95,19 +95,42 @@ Example prompts:
 
 ## ControlNet and Structural Control
 
-Usable ControlNets exist for SDXL and coverage is good, though less exhaustive than SD1.5's ecosystem and split across a few competing formats.
+Mature: good coverage in several formats, less exhaustive than SD1.5 and split across
+publishers.
 
-Both classic single-purpose ControlNet models and a ControlNet-Union format exist. Union is the more practical choice for VRAM/stacking — `xinsir/controlnet-union-sdxl-1.0` ("ProMax" variant also exists), one model with a control-type-id selecting behavior, covering 6 fused control families: openpose, depth, thick-line (scribble/hed/softedge), thin-line (canny/mlsd/lineart), normal, segmentation.
-
-Other notable single-purpose nets: `diffusers/controlnet-canny-sdxl-1.0`, `diffusers/controlnet-depth-sdxl-1.0` (both solid). Community tile ControlNets exist (e.g. TTPlanet's) but coverage is thinner/more variable than SD1.5's tile models. T2I-Adapters also exist (TencentARC) — lighter-weight, lower VRAM, slightly less precise control.
-
-Quality tier: pose and canny/lineart are the most reliable; tile and segmentation are noticeably weaker/less consistent than their SD1.5 counterparts — verify before relying on them for production work.
-
-Recommended strength/timing: Canny/lineart weight 0.6-0.9, start 0.0, end 0.7-1.0. Depth weight 0.5-0.8, start 0.0, end 0.8. Pose weight 0.7-1.0, start 0.0, end 1.0. Over-conditioning symptom: flattened lighting, loss of prompt-driven detail, control-image artifacts baked directly into output (e.g. visible canny edge lines).
-
-Use ComfyUI's `comfyui_controlnet_aux` node pack or Forge's built-in preprocessors; keep the control image at or near your target latent resolution — mismatched preprocessor resolution vs. generation resolution is a common cause of soft or misaligned control.
-
-Stacking: 2-3 ControlNets stack reasonably on a 24GB card; each loaded SDXL ControlNet costs roughly 1.3-2.5GB VRAM depending on Union vs. single-purpose and precision. Combining ControlNet with distilled/low-step variants (Lightning/Hyper/Turbo) works but needs lower ControlNet weight and a later start-step. ControlNets trained for base SDXL work on most SDXL derivative finetunes since they share UNet architecture; NOT interchangeable with SD1.5/SD3/Flux.
+- Mechanisms, not interchangeable: classic ControlNets, Union / ProMax (one model, a control type
+  selector), T2I-Adapters (lighter, less precise) and ControlNet-LLLite (small, LoRA-like).
+- Union: [xinsir/controlnet-union-sdxl-1.0](https://huggingface.co/xinsir/controlnet-union-sdxl-1.0)
+  (openpose, depth, thick lines for scribble/HED/soft edge, thin lines for canny/MLSD/lineart,
+  normal, segmentation); its ProMax file adds tile, inpaint and outpaint. The practical default
+  for VRAM and stacking. ComfyUI: SetUnionControlNetType picks the type.
+- xinsir single-type models: [openpose](https://huggingface.co/xinsir/controlnet-openpose-sdxl-1.0),
+  [canny](https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0),
+  [scribble](https://huggingface.co/xinsir/controlnet-scribble-sdxl-1.0),
+  [tile](https://huggingface.co/xinsir/controlnet-tile-sdxl-1.0); the strongest SDXL pose and
+  lineart models.
+- Others: [diffusers/controlnet-canny-sdxl-1.0](https://huggingface.co/diffusers/controlnet-canny-sdxl-1.0),
+  [diffusers/controlnet-depth-sdxl-1.0](https://huggingface.co/diffusers/controlnet-depth-sdxl-1.0),
+  [TheMistoAI/MistoLine](https://huggingface.co/TheMistoAI/MistoLine) (any line art),
+  [TTPlanet/TTPLanet_SDXL_Controlnet_Tile_Realistic](https://huggingface.co/TTPlanet/TTPLanet_SDXL_Controlnet_Tile_Realistic).
+- T2I-Adapters: [TencentARC/t2i-adapter-canny-sdxl-1.0](https://huggingface.co/TencentARC/t2i-adapter-canny-sdxl-1.0)
+  and its depth, lineart, sketch and openpose siblings.
+- LLLite: [bdsqlsz/qinglong_controlnet-lllite](https://huggingface.co/bdsqlsz/qinglong_controlnet-lllite)
+  (anime models: canny, depth, lineart, tile, AnyTest); ComfyUI through
+  kohya-ss/ControlNet-LLLite-ComfyUI.
+- Quality: pose and canny/lineart are the most reliable; tile and segmentation are weaker than
+  their SD1.5 counterparts.
+- Strength and timing: canny/lineart 0.6-0.9, end 0.7-1.0; depth 0.5-0.8, end 0.8; pose 0.7-1.0,
+  end 1.0; start 0.0 for all. Over-conditioning: flattened lighting, lost prompt detail and
+  control artifacts (visible canny edges) baked in.
+- Preprocessors: comfyui_controlnet_aux or Forge's built-in ones; keep the control image at the
+  generation resolution, or control goes soft and misaligned.
+- ComfyUI: ControlNetLoader → ControlNetApplyAdvanced. Forge Neo: classic, Union and LLLite models
+  in the built-in ControlNet.
+- Stacking: 2-3 ControlNets fit a 24 GB card; each costs 1.3-2.5 GB depending on type and
+  precision. With Lightning, Hyper or Turbo, lower the weight and start later.
+- They work on SDXL finetunes (Pony, Illustrious, NoobAI; the anime models do better with
+  anime-trained ones); they do not load on SD1.5, SD3 or FLUX.
 
 ## Regional and Compositional Prompting
 

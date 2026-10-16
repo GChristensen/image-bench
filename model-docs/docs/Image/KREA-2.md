@@ -168,10 +168,35 @@ Example edit prompts:
 
 ## ControlNet and Structural Control
 
-Usable structural control exists but is thin and LoRA-based, not classic
-ControlNet.
+Thin and community-only: control LoRAs, each with its own node pack; no classic ControlNet.
 
-## Upscaling and High-Resolution Work
-
-No reliable information found.
-
+- Mechanisms, not interchangeable:
+  - Control LoRAs with an expanded input projection: the VAE-encoded control image is
+    concatenated to the noisy latent by channel (64 → 128), and a LoRA on all 28 blocks follows
+    it.
+  - Edit-style LoRAs: the control map enters as a reference image of the Ostris edit nodes.
+- Depth: [Patil/Krea-2-depth-controlnet](https://huggingface.co/Patil/Krea-2-depth-controlnet)
+  (Tanmay Patil, `depth-control-lora.safetensors`, 862 MB). Trained on Raw, works on Raw and
+  Turbo; Depth-Anything-V2-Large maps; scale 1.0, lower loosens the structure, higher tightens it
+  at a quality cost. Card recipes: Turbo 8 steps, CFG 0; Raw 28-52 steps, CFG 3.5. Outputs up to
+  ~1 MP.
+- ComfyUI for channel-concat LoRAs:
+  [facok/comfyui-krea2-controlnet](https://github.com/facok/comfyui-krea2-controlnet) (Krea2
+  Control LoRA Loader → Krea2 Control Image Encode → Krea2 Control Apply; sampling fails if the
+  control latent is not attached).
+- Loose composition and silhouette:
+  [tori29umai/krea2-controlnet](https://huggingface.co/tori29umai/krea2-controlnet)
+  `krea2-anythng` (Raw, rank 64), nodes comfyui-krea2-controlnetPlus (Krea2 Control Plus Image
+  Encode, LoRA Loader, Apply), start/end percent; a lineart model is announced.
+- Pose: [thedeoxen/Krea-2-pose-controlnet](https://huggingface.co/thedeoxen/Krea-2-pose-controlnet),
+  for Turbo. The DWPose/OpenPose map (black background) is image 1 of TextEncodeKrea2OstrisEdit
+  ([ostris/comfyui-krea2-ostris-edit](https://github.com/ostris/comfyui-krea2-ostris-edit));
+  weight 0.8-1.0, 0.6-0.8 if the pose is too rigid; ~10 steps, CFG 1.0, euler/simple. Trained
+  mostly on humans; subject scale in the map matters.
+- Lineart: [Cierpliwy/krea2_lineart_edit](https://huggingface.co/Cierpliwy/krea2_lineart_edit),
+  for Raw, through the Ostris edit nodes: `krea2_lineart_edit_v1` follows the sketch,
+  `krea2_lineart_coarse_edit_v1` takes freedom; Realistic Lineart preprocessor for photos.
+- Over-conditioning: rigid, mannequin poses and flattened lighting; lower the weight first.
+- Forge Neo: not supported; FLUX and Qwen-Image ControlNets do not load.
+- Bottom line: depth, pose and lineart work, but canny, tile and multi-control stacking need
+  SDXL or FLUX.1.

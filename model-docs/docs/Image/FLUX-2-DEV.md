@@ -87,9 +87,25 @@ Example edit prompts:
 
 ## ControlNet and Structural Control
 
-Thin and early — a ~3-month-old architecture whose ecosystem hasn't caught up to FLUX.1's maturity.
+Thin: one Union ControlNet from Alibaba PAI, run through custom nodes.
 
-- `alibaba-pai/FLUX.2-dev-Fun-Controlnet-Union` confirmed to exist: canny/hed/depth/pose/mlsd/scribble/gray, Union-style. Quality/reliability tier unverified — no independent benchmark or wide community consensus [?].
+- [alibaba-pai/FLUX.2-dev-Fun-Controlnet-Union](https://huggingface.co/alibaba-pai/FLUX.2-dev-Fun-Controlnet-Union):
+  VideoX-Fun Union side branch; canny, HED, depth, pose and MLSD, plus scribble and gray in the
+  `2602` file; an inpaint mode. FLUX non-commercial license.
+- Scale (`controlnet_conditioning_scale`) 0.65-0.80 per the card, a narrow window; a detailed
+  prompt keeps it stable.
+- ComfyUI core does not load it (ControlNetLoader reports an invalid file). Custom nodes:
+  - [bryanmcguire/comfyui-flux2fun-controlnet](https://github.com/bryanmcguire/comfyui-flux2fun-controlnet):
+    Load + Apply pair, strength 0-2, optional mask and inpaint image; reported to work with fp8
+    scaled and GGUF Q4_K_M dev.
+  - [Damkohler/JLC-Flux2-ControlNet](https://github.com/Damkohler/JLC-Flux2-ControlNet): several
+    ControlNets composed in one pass, loads the mixed fp8/bf16 `2602` checkpoint.
+- Forge Neo: FLUX.2 dev is not supported.
+- On a 3090 the 32B transformer already offloads; the control branch adds more.
+- Without a ControlNet: pass the pose, depth or canny map as a reference image (ReferenceLatent)
+  and say what to take from it ("use the pose of image 2").
+- It does not work on klein (different transformer).
+- Bottom line: for production structural control, FLUX.1 dev or SDXL remain more dependable.
 
 ## Upscaling and High-Resolution Work
 
@@ -97,4 +113,3 @@ FLUX.2-specific guidance is sparse; most of this is carried over from general FL
 
 - Native ceiling: editing works "up to 4MP"; behavior generating natively far past that isn't documented.
 - Two-pass hires-fix: no FLUX.2-specific values found. Starting point by analogy with FLUX.1: ~1.5x latent upscale, second-pass denoise 0.3-0.5, same steps/guidance as base pass — verify empirically.
-

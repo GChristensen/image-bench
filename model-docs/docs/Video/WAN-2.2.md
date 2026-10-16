@@ -91,9 +91,9 @@ Two example prompts at the length the model actually wants:
 | Text-to-video | native (T2V-A14B, TI2V-5B) |
 | Image-to-video (start frame) | native (I2V-A14B, TI2V-5B) |
 | First-and-last-frame | community workaround — no dedicated Wan2.2 checkpoint (unlike Wan2.1's FLF2V-14B); ComfyUI reuses I2V-A14B files with start+end frame nodes bolted on. Treat quality as best-effort, not native |
-| Video-to-video (restyle) | via community VACE port (extra weights, see Structural Control) |
+| Video-to-video (restyle) | Fun Control / VACE-Fun (extra weights, see Structural Control) |
 | Video extension/continuation | community chaining |
-| Inpainting/outpainting | via community VACE port [?] |
+| Inpainting/outpainting | VACE-Fun (extra weights) |
 | Instruction-based editing | not supported |
 | Reference-driven | native (Animate-14B) — one reference character image plus one driving video; no multi-reference support found |
 | Multi-shot in one call | not supported |
@@ -107,11 +107,11 @@ V2V denoise range and I2V conditioning-strength values are not documented for th
 - Mechanism: the latent of a reference character image plus pose (skeleton) and face-crop
   videos extracted from a driving video; replacement adds the background video and a mask.
 
-| Edit type                      | Support | Refs            |
-|--------------------------------|---------|-----------------|
-| Animate a character (Move)     | native  | 1 image + video |
-| Replace a character (Mix)      | native  | 1 image + video |
-| Restyle / control video (VACE) | ported  | 1 video         |
+| Edit type                      | Support  | Refs            |
+|--------------------------------|----------|-----------------|
+| Animate a character (Move)     | native   | 1 image + video |
+| Replace a character (Mix)      | native   | 1 image + video |
+| Restyle / control video (VACE) | VACE-Fun | 1 video         |
 
 - References: one character image and one driving video.
 - Prompt: a short description of the character and scene; motion and expressions come from the
@@ -133,9 +133,34 @@ Example prompts:
 
 ## Structural and Reference Control
 
-Wan2.2 itself ships no built-in ControlNet-equivalent. Structural control comes from VACE (Video All-in-one Creation and Editing), a framework built for Wan2.1 and community-ported/adapted to 2.2 — no official Alibaba-published "Wan2.2-VACE" checkpoint was found, only community ComfyUI workflows layering VACE-style conditioning onto the 2.2 base [?]. Verify current status before depending on it.
+Mature: Alibaba PAI's official Fun checkpoints cover control video, VACE and camera paths, and
+ComfyUI runs the 14B Fun Control natively.
 
-Control signals reported working through VACE-style workflows: pose (DWPose/OpenPose), depth. Canny/edge and optical-flow/motion-track support for the 2.2 port specifically is unconfirmed. No dedicated trajectory-conditioning (camera control) mechanism found — camera movement is prompt-only. For identity/character consistency, use Animate-14B (official, purpose-built for motion+identity transfer with a relighting LoRA for scene integration) rather than VACE reference conditioning.
+- Mechanisms, not interchangeable: Fun Control (control-video channels in a full
+  checkpoint pair), VACE (control blocks plus reference images), Fun Camera (camera trajectory
+  conditioning).
+- Fun Control 14B: [alibaba-pai/Wan2.2-Fun-A14B-Control](https://huggingface.co/alibaba-pai/Wan2.2-Fun-A14B-Control)
+  (canny, depth, pose, MLSD, trajectory; Apache-2.0). Comfy-Org repack
+  `wan2.2_fun_control_high_noise_14B_fp8_scaled` / `_low_noise_` in
+  Comfy-Org/Wan_2.2_ComfyUI_Repackaged, node Wan22FunControlToVideo (template "Wan 2.2 14B Fun
+  Control"); the I2V Lightning LoRA pair cuts it to 4 steps at some loss of motion. GGUF:
+  [QuantStack/Wan2.2-Fun-A14B-Control-GGUF](https://huggingface.co/QuantStack/Wan2.2-Fun-A14B-Control-GGUF).
+- Fun Control 5B: [alibaba-pai/Wan2.2-Fun-5B-Control](https://huggingface.co/alibaba-pai/Wan2.2-Fun-5B-Control)
+  (same signals, 121 frames at 24 fps).
+- VACE: [alibaba-pai/Wan2.2-VACE-Fun-A14B](https://huggingface.co/alibaba-pai/Wan2.2-VACE-Fun-A14B)
+  (built on T2V-A14B, high/low-noise pair, ~64 GB; canny, depth, pose, MLSD, trajectory,
+  subject reference images, masked inpaint and outpaint; 512-1024, 81 frames at 16 fps). In
+  ComfyUI through Kijai's VACE module files (`Kijai/WanVideo_comfy`, matched high/low pairs)
+  with WanVideoWrapper or WanVaceToVideo; GGUF
+  [QuantStack/Wan2.2-VACE-Fun-A14B-GGUF](https://huggingface.co/QuantStack/Wan2.2-VACE-Fun-A14B-GGUF).
+- Camera: [alibaba-pai/Wan2.2-Fun-A14B-Control-Camera](https://huggingface.co/alibaba-pai/Wan2.2-Fun-A14B-Control-Camera)
+  and [alibaba-pai/Wan2.2-Fun-5B-Control-Camera](https://huggingface.co/alibaba-pai/Wan2.2-Fun-5B-Control-Camera):
+  pan, tilt, zoom and orbit presets from an image; ComfyUI template "Wan2.2 Fun Camera Control".
+- Preprocessors: canny is built into ComfyUI; pose and depth need comfyui_controlnet_aux or
+  ComfyUI-DepthAnythingV2. A pre-rendered control video goes in directly.
+- On a 3090: fp8 or GGUF pairs; the official workflow defaults to 640×640 to stay in VRAM.
+- Identity across a driving video: Animate-14B (see Edit Modes) holds a character better than
+  VACE reference images.
 
 ## Length Extension and Continuity
 

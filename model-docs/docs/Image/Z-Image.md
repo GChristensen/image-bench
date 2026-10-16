@@ -89,14 +89,14 @@
 |--------------------|----------------------|
 | txt2img            | native          |
 | img2img            | native          |
-| inpaint            | community hack  |
+| inpaint            | ControlNet Union |
 | outpaint           | community hack  |
 | instruct-edit      | not supported \[?\]  |
 | reference/identity | not supported   |
 
 - img2img: denoise 0.4-0.7 .
-- inpaint: no dedicated inpaint checkpoint exists; use a Differential
-  Diffusion node, denoise 0.6-0.8 .
+- inpaint: no dedicated inpaint checkpoint; the Fun ControlNet Union's
+  inpaint mode, or a Differential Diffusion node, denoise 0.6-0.8 .
 - outpaint: community workflow via crop+stitch, reusing the img2img
   mechanism .
 - instruct-edit: unsupported because Z-Image-Edit is unreleased as of
@@ -112,35 +112,30 @@ a known weak point .
 
 ## ControlNet and Structural Control
 
-Usable ControlNets exist, but coverage is narrow — one union model, not
-a spread of single-purpose community nets like SDXL has.
+Usable and native in ComfyUI, but from one publisher: Alibaba PAI's Union and Tile models for
+Turbo.
 
-- Publisher: Alibaba PAI
-  (`alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union`, also a "-2.1"
-  revision) .
-- Mechanism: ControlNet-Union style — one model, multiple conditions via
-  a selector, added on 6 blocks, trained from scratch .
-- Control types: Canny, HED, Depth, Pose, MLSD . Also supports an
-  inpainting mode .
-- Quality tier: single official-adjacent source (PAI, Alibaba-internal
-  team, not Tongyi- MAI itself) — treat as the only credible option, no
-  competing implementations found .
-- Strength: controlcontext_scale 0.65-0.80 is the documented
-  sweet spot; higher values over-condition (rigid, loses the Turbo
-  model's texture quality) .
-- Training res: 1328px, bf16, batch 64, lr 2e-5, text-dropout 0.10 —
-  informative for judging why quality may dip off that resolution, not
-  settings you set at inference .
-- Preprocessor/annotator versions: not documented by PAI; assume
-  standard ControlNet-aux nodes (canny/HED/depth-anything/DWPose) work
-  but verify per node pack \[?\].
-- Stacking multiple conditions simultaneously: not documented either way
-  \[?\].
-- VRAM cost per loaded control model: not documented \[?\] — budget
-  ~2-3GB extra based on typical DiT ControlNet-union sizes, unverified
-  \[?\].
-- Loading a Flux ControlNet against Z-Image, or vice versa: will not
-  work — different backbone despite the shared VAE.
+- Model: [alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1](https://huggingface.co/alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1)
+  (Apache-2.0); 2.0 in [alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union](https://huggingface.co/alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union)
+  is superseded.
+- Mechanism: VideoX-Fun Union branch on 15 layer blocks and 2 refiner blocks; lite files use 3
+  layer blocks (~1.9 GB), control is weaker, so higher scales stay natural.
+- Files, newest first:
+  - `...-Union-2.1-2602-8steps` and `-lite-2602-8steps`: adds gray.
+  - `...-Union-2.1-2601-8steps` and lite: scribble, more mask variety, 512-1536 training.
+  - `...-Tile-2.1-2601-8steps` and lite: super-resolution, trained up to 2048².
+  - Older 8-step and non-distilled 2.1 files: replaced by 2601/2602.
+- Control types: canny, HED, depth, pose, MLSD, scribble, gray, and masked inpaint (a larger
+  scale gives better continuity at the mask edge).
+- ComfyUI: ModelPatchLoader (file in `models/model_patches/`) → ZImageFunControlnet (model,
+  model patch, VAE, image, strength); preprocessors from comfyui_controlnet_aux.
+- Scale: 0.65-1.00 per the card; 0.7-0.8 for simple poses, 1.0 for complex ones. Before 2601,
+  high scales gave bright spots and artifacts.
+- Steps: the `-8steps` files keep Turbo at 8 steps. The non-distilled 2.0/2.1 files cost Turbo
+  its speed (blur unless steps rise with the scale).
+- Over-conditioning: rigid output that loses Turbo's skin and texture detail.
+- They are built for Turbo; no ControlNet targets the Base model. Qwen-Image and FLUX
+  ControlNets do not load. Forge Neo: not supported.
 
 ## Quirks and failure modes
 

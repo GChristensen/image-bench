@@ -173,31 +173,18 @@ Example edit prompts:
 
 ## ControlNet and Structural Control
 
-Usable, but **barely** — coverage
-is thin and community-only. No official BFL ControlNet for klein.
+Thin and community-only: no ControlNet for klein; structure comes through reference images.
 
-- Mechanism: classic separate ControlNet-style side-network,
-  community-trained, not a BFL-shipped Union/ProMax model .
-- Known publishers: individual Civitai/HF community authors; a
-  depth+openpose ControlNet workflow for klein-9B surfaced ~May 2026,
-  plus a separate lineart/depth/pose 3-in-1 ComfyUI workflow .
-  Quality tier: unverified, early/experimental — do not expect
-  FLUX.1/SDXL-tier ControlNet maturity.
-- A LoRA-based reference/depth control exists (community: "refcontrol"
-  klein-9B reference-depth LoRA) — LoRA-based control, not classic
-  ControlNet .
-- For \[dev\] (32B, different transformer, NOT usable on klein) there's
-  a more mature Alibaba-PAI Union ControlNet
-  (canny/hed/depth/pose/mlsd/scribble/gray) — do not attempt to load
-  this on klein, wrong architecture .
-- Strength/step-range recommendations, preprocessor versions, stacking
-  behavior, VRAM-per-control-model: not documented anywhere found —
-  \[?\] across the board.
-- Given the 4-step distilled default, expect heavy over-conditioning at
-  typical ControlNet strengths (0.6-1.0) built for 20-50-step models —
-  no verified guidance exists, budget time to tune down
-  strength/step-range yourself.
-
-Bottom line: if structural control is a hard requirement today, FLUX.1
-or SDXL still have far more mature ControlNet ecosystems than klein does
-right now.
+- Native route: pass the depth, pose, canny or lineart map as a reference image (ReferenceLatent,
+  or ImageStitch with the edit toggle in Forge Neo) and prompt what to take from it ("follow the
+  pose of image 1"). Works on all variants, including the 4-step distilled ones.
+- RefControl LoRA:
+  [thedeoxen/refcontrol-FLUX.2-klein-9B-reference-depth-lora](https://huggingface.co/thedeoxen/refcontrol-FLUX.2-klein-9B-reference-depth-lora),
+  for 9B Base. Trigger `refcontrol`; image 1 is the depth map, image 2 the identity reference;
+  weight 0.8-1.0, ~50 steps, guidance 4.0. Trained mostly on humans; the depth map should match
+  the reference in scale and proportions. The author mentions pose, lineart and canny siblings.
+- [alibaba-pai/FLUX.2-dev-Fun-Controlnet-Union](https://huggingface.co/alibaba-pai/FLUX.2-dev-Fun-Controlnet-Union)
+  targets FLUX.2 dev; on klein users report partial effect without strength or timestep control.
+- FLUX.1 ControlNets do not load.
+- Bottom line: if structural control is a hard requirement, FLUX.1 dev or SDXL have far more
+  mature ControlNets.

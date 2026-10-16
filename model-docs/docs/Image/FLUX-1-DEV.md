@@ -159,26 +159,54 @@ Example edit prompts:
 
 ## ControlNet and Structural Control
 
-Usable ControlNets exist and are reasonably mature for FLUX.1-dev — not
-"barely," but coverage and quality are uneven across control types and
-publishers .
+Mature: the widest open control set after SDXL, from several publishers, in three formats that
+do not replace each other.
 
-Mechanism  
-Two families in active use, and they are NOT interchangeable :
+- Mechanisms:
+  - Union ControlNets: one model, several control types.
+  - Single-type ControlNets.
+  - BFL's dedicated Canny and Depth checkpoints and LoRAs: the control image is concatenated to
+    the latent (ComfyUI InstructPixToPixConditioning), no ControlNet node.
+- Union: [Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro-2.0](https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro-2.0)
+  (3.98 GB; canny, soft edge, depth, pose, gray; no tile; the best general choice), fp8
+  [ABDALLALSWAITI/FLUX.1-dev-ControlNet-Union-Pro-2.0-fp8](https://huggingface.co/ABDALLALSWAITI/FLUX.1-dev-ControlNet-Union-Pro-2.0-fp8).
+  The older [Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro](https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro)
+  (6.15 GB) adds tile, blur and low-quality modes;
+  [InstantX/FLUX.1-dev-Controlnet-Union](https://huggingface.co/InstantX/FLUX.1-dev-Controlnet-Union)
+  is the original, with weak pose.
+- Union Pro 2.0 settings from its card:
 
-1.  **ControlNet-Union** — a single unified model conditioned by a mode
-    selector, published by InstantX + Shakker Labs. `Union-Pro` (7
-    modes: canny, tile, depth, blur, pose, gray, low- quality) and the
-    improved `Union-Pro-2.0` (canny, soft edge, depth, pose, gray —
-    dropped mode-embedding for smaller size, better canny/pose)
+| Type      | Preprocessor     | Strength | End  |
+|-----------|------------------|----------|------|
+| Canny     | cv2.Canny        | 0.7      | 0.8  |
+| Soft edge | AnylineDetector  | 0.7      | 0.8  |
+| Depth     | Depth-Anything-V2 | 0.8     | 0.8  |
+| Pose      | DWPose           | 0.9      | 0.65 |
+| Gray      | grayscale        | 0.9      | 0.8  |
 
-2.  **Classic single-purpose ControlNets** — XLabs-AI's
-    `flux-controlnet-collections` (canny, depth, hed/softedge), each a
-    separate checkpoint per control type, trained at 1024x1024
-3.  Official structural control is otherwise delivered as dedicated
-    **fine-tuned checkpoints** (Canny-dev, Depth-dev / their LoRA
-    equivalents) rather than a bolt-on ControlNet — this is BFL's own
-    preferred mechanism, distinct from both of the above
+- Single-type: [jasperai/Flux.1-dev-Controlnet-Upscaler](https://huggingface.co/jasperai/Flux.1-dev-Controlnet-Upscaler)
+  (tile/upscale), [jasperai/Flux.1-dev-Controlnet-Depth](https://huggingface.co/jasperai/Flux.1-dev-Controlnet-Depth),
+  [jasperai/Flux.1-dev-Controlnet-Surface-Normals](https://huggingface.co/jasperai/Flux.1-dev-Controlnet-Surface-Normals),
+  [XLabs-AI/flux-controlnet-collections](https://huggingface.co/XLabs-AI/flux-controlnet-collections)
+  (canny, depth, HED v3; trained at 1024).
+- Inpaint: [alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Beta](https://huggingface.co/alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Beta);
+  FLUX.1 Fill is the stronger inpaint route.
+- BFL: [black-forest-labs/FLUX.1-Canny-dev](https://huggingface.co/black-forest-labs/FLUX.1-Canny-dev)
+  (guidance 30), [black-forest-labs/FLUX.1-Depth-dev](https://huggingface.co/black-forest-labs/FLUX.1-Depth-dev)
+  (guidance 10), and the LoRAs [FLUX.1-Canny-dev-lora](https://huggingface.co/black-forest-labs/FLUX.1-Canny-dev-lora)
+  and [FLUX.1-Depth-dev-lora](https://huggingface.co/black-forest-labs/FLUX.1-Depth-dev-lora) on
+  the normal dev checkpoint. Tightest adherence, but no strength or end control.
+- ComfyUI: ControlNetLoader → ControlNetApplyAdvanced (strength, start/end percent) for
+  the Union and single-type models; preprocessors from comfyui_controlnet_aux. Forge Neo lists
+  ControlNet support for the SDXL family and Anima only.
+- Control image at the output resolution; Union Pro 2.0 was trained at 512 but follows
+  1024-class maps.
+- Over-conditioning: plastic skin, flat lighting, edge lines and depth banding baked into the
+  image; an end of 0.6-0.8 fixes most of it before the strength needs lowering.
+- VRAM: each ControlNet adds about its file size (Union Pro 2.0: 4 GB bf16, 2 GB fp8); one
+  Union beside fp8 dev fits a 24 GB card.
+- They load on dev finetunes and with step-reduction LoRAs (lower the strength). FLUX.1 schnell
+  is not a target, and FLUX.2 / klein cannot load them.
 
 ## Upscaling and High-Resolution Work
 
