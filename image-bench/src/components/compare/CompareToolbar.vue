@@ -105,17 +105,17 @@ defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCr
     <div class="toolbar-spacer"></div>
 
     <div class="toolbar-group">
-      <span class="toolbar-group-label">Remove</span>
+      <span class="toolbar-group-label"><AppIcon name="eraser" :size="14"/>Clear</span>
       <button class="btn small" :disabled="!markedCount"
               :title="`Remove the ${markedCount} marked images (the files stay on disk)`"
               @click="$emit('removeMarked', true)">Marked</button>
       <button class="btn small" :disabled="markedCount === imageCount"
               :title="`Remove the ${imageCount - markedCount} unmarked images (the files stay on disk)`"
               @click="$emit('removeMarked', false)">Unmarked</button>
+      <button class="btn small" :disabled="!imageCount"
+              :title="`Remove all ${imageCount} images (the files stay on disk)`"
+              @click="$emit('clear')">All</button>
     </div>
-
-    <button class="btn" title="Remove all images from this view (the files stay on disk)" :disabled="!imageCount"
-            @click="$emit('clear')"><AppIcon name="eraser" :size="14"/>Clear</button>
   </div>
 </template>
 

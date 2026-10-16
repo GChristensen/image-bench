@@ -480,8 +480,8 @@ onMounted(loadPluginStatus);
           removes it from the tab (the file stays on disk). Middle-click or Shift+click an image to view it large
           (in Crops, click it);
           <span class="kbd">←</span> / <span class="kbd">→</span> page through the images there.</li>
-        <li><b>Remove</b> — <b>Marked</b> / <b>Unmarked</b> remove the images with or without a marking, and
-          <b>Clear</b> all of them; the files stay on disk.</li>
+        <li><b>Clear</b> — <b>Marked</b> / <b>Unmarked</b> remove the images with or without a marking, and
+          <b>All</b> all of them; the files stay on disk.</li>
       </ul>
     </section>
 
