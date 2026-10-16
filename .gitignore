@@ -6,6 +6,10 @@ CLAUDE.md
 /comfyui-extension/store/
 /comfyui-extension/js/index.html
 /comfyui-extension/js/shared/
+/webui-extension/model_docs/*
+!/webui-extension/model_docs/.gitkeep
+/comfyui-extension/model_docs/*
+!/comfyui-extension/model_docs/.gitkeep
 /photoshop-extension/dist/
 /photoshop-canny/dist/
 /.env

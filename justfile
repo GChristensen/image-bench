@@ -1,25 +1,33 @@
 # Machine-specific settings (deploy destinations) are read from .env
 set dotenv-load
 
-webui:
+webui: (_docs "webui-extension")
     cd image-bench; npm run build:webui
     cp -f image-bench/dist/index.html webui-extension/scripts
 
-comfy:
+comfy: (_docs "comfyui-extension")
     cd image-bench; npm run build:comfy
     cp -f image-bench/dist/index.html comfyui-extension/js
     cp -rf common-extension/shared_frontend/* comfyui-extension/js/shared/
+
+# The model docs of the Library tab, copied into the default docs folder of the extension (docs.py:DOCS_DIR)
+_docs ext:
+    mkdir -p {{ext}}/model_docs
+    cp -rf model-docs/docs/. {{ext}}/model_docs/
 
 # Extension directories of the remote installs, set in .env (see .env.example)
 webui_dest := env("WEBUI_DEST", "")
 comfy_dest := env("COMFY_DEST", "")
 
 # Build and copy the code files of the extension to the remote WebUI install (symlinked shared code included)
-deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html") (_deploy_ps webui_dest)
+deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html") (_deploy_docs webui_dest) (_deploy_ps webui_dest)
 
 # Build and copy the code files of the extension and its workflows to the remote ComfyUI install
 # (symlinked shared code included)
-deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_ps comfy_dest)
+deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_docs comfy_dest) (_deploy_ps comfy_dest)
+
+# The model docs, into the default docs folder of the remote install
+_deploy_docs dest: (_deploy "model-docs/docs" (dest + "/model_docs") "*")
 
 # The Photoshop plugins, supplied with the extension for installing them from the manual (Library tab)
 _deploy_ps dest: (_deploy "photoshop-extension" (dest + "/shared/photoshop-plugin") "index.js index.html manifest.json uxp.ps1") (_deploy "photoshop-canny" (dest + "/shared/photoshop-canny") "*.js index.html manifest.json")
