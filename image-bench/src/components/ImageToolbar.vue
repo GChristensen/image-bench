@@ -95,6 +95,7 @@ const emit = defineEmits([
   'generate-variations',
   'stop-generation',
   'upscale-selected',
+  'compare-selected',
   'clear',
   'remove-selected',
   'unselect-all',
@@ -156,6 +157,8 @@ defineExpose({generateImagesNumber});
       <button v-if="isTray" class="btn primary" :disabled="upscaleInProgress"
               :title="upscaleInProgress ? 'An upscale is in progress' : 'Upscale the selected images'"
               @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
+      <button class="btn outline" title="Add the selected images to the Compare tab"
+              @click="$emit('compare-selected')"><AppIcon name="compare" :size="14"/>Compare selected</button>
       <button class="btn outline remove-selected" title="Remove the selected images from this view (the files stay on disk)"
               @click="$emit('remove-selected')"><AppIcon name="trash" :size="14"/>Remove selected</button>
       <button class="ib" title="Unselect all (Ctrl+U)" aria-label="Unselect all" @click="$emit('unselect-all')"

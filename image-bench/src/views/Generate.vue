@@ -1018,11 +1018,12 @@ const gridStyle = computed(() => ({
               aria-label="PNG Info" @click="openPngInfo()"><AppIcon name="fileSearch" :size="14"/></button>
       <button class="ib danger" :disabled="!connected" title="Clear the prompts" aria-label="Clear the prompts"
               @click="clearPrompts"><AppIcon name="eraser" :size="14"/></button>
-      <button v-if="has('promptLock')" class="btn outline lock-button" :class="{on: sdWebUI.promptsLocked}" :aria-pressed="sdWebUI.promptsLocked"
+      <button v-if="has('promptLock')" class="ib" :class="{on: sdWebUI.promptsLocked}" :aria-pressed="sdWebUI.promptsLocked"
               :disabled="!connected"
-              :title="sdWebUI.promptsLocked ? 'Allow editing the prompts in WebUI' : 'Cover the prompts in WebUI, so that they are edited only here'"
-              @click="toggleLock"
-        ><AppIcon :name="sdWebUI.promptsLocked ? 'lock' : 'unlock'" :size="14"/>{{ sdWebUI.promptsLocked ? "WebUI prompts locked" : "Lock WebUI prompts" }}</button>
+              :title="sdWebUI.promptsLocked ? 'WebUI prompts locked: click to allow editing them in WebUI'
+                : 'Lock WebUI prompts: cover them in WebUI, so that they are edited only here'"
+              aria-label="Lock WebUI prompts" @click="toggleLock"
+        ><AppIcon :name="sdWebUI.promptsLocked ? 'lock' : 'unlock'" :size="14"/></button>
       <template v-if="has('workflowSelect')">
         <span class="toolbar-divider"></span>
         <WorkflowSelect class="workflow-select" :workflows="sdWebUI.workflows" :active="sdWebUI.workflow"
@@ -1682,9 +1683,4 @@ const gridStyle = computed(() => ({
   padding: 0 10px;
 }
 
-.lock-button.on {
-  background: var(--ib-accent-soft);
-  border-color: var(--ib-accent-border);
-  color: var(--ib-accent);
-}
 </style>

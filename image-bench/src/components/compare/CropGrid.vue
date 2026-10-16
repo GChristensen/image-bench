@@ -86,16 +86,6 @@ function onCellLeave(e) {
   clearHoveredImageTarget(e.currentTarget);
 }
 
-// Middle click or Shift+click opens the image in the overlay
-function onCellClick(e, index) {
-  if (e.shiftKey && !e.target.closest(".compare-chrome"))
-    emit("open", index);
-}
-
-function onCellAuxClick(e, index) {
-  if (e.button === 1 && !e.target.closest(".compare-chrome"))
-    emit("open", index);
-}
 
 defineExpose({grid});
 </script>
@@ -105,7 +95,7 @@ defineExpose({grid});
     <div class="crop-grid" :style="gridStyle">
       <div v-for="(image, index) in images" :key="image.imageUrl" class="crop-cell"
            @mouseenter="onCellEnter($event, image, index)" @mouseleave="onCellLeave"
-           @click="onCellClick($event, index)" @mousedown.middle.prevent @auxclick="onCellAuxClick($event, index)"
+           @click="emit('open', index)" @mousedown.middle.prevent
            @contextmenu="openImageMenu($event, image, ctx)">
         <img :src="image.imageUrl" :style="imageStyle" draggable="false" alt="">
         <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index"
@@ -131,9 +121,11 @@ defineExpose({grid});
   display: grid;
 }
 
+/* A click opens the image in the overlay */
 .crop-cell {
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .crop-cell img {

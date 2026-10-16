@@ -8,7 +8,9 @@ import MarkingPicker from "@/components/MarkingPicker.vue";
 
 /**
  * Index badge, image actions, remove button and marking shown over an image of the Compare tab (strip item or crop
- * cell). The root takes no pointer events, so that drags on the image reach the view; its controls do.
+ * cell). The root takes no pointer events, so that drags on the image reach the view; its controls do. Their clicks
+ * stop here: a control may re-render away before the click bubbles on (the marking and its picker replace each
+ * other), so the image could no longer tell it came from the chrome.
  */
 const props = defineProps({
   image: {
@@ -65,7 +67,7 @@ function onMarkingAuxClick(e) {
 </script>
 
 <template>
-  <div class="compare-chrome" :class="{hovered}">
+  <div class="compare-chrome" :class="{hovered}" @click.stop @auxclick.stop>
     <div class="chrome-top">
       <span class="index-badge"><slot name="lead"/>{{ index + 1 }}</span>
       <ImageActionButtons class="chrome-actions left" :groups="leftGroups" :show-alt="showAlt"

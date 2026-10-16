@@ -1,6 +1,6 @@
 <script setup>
 
-import {computed, onBeforeMount, ref, watch} from "vue";
+import {computed, onBeforeMount, ref, toRaw, watch} from "vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ImageStream from "@/components/ImageStream.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
@@ -13,6 +13,8 @@ import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
+import {useCompareStore} from "@/stores/compare.js";
+import {flashTrayTab} from "@/components/utils.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
@@ -82,6 +84,16 @@ function onClearClick() {
 
 function onRemoveSelectedClick() {
   imageStream.value.removeSelected();
+}
+
+// All checked images of the view, including those hidden by the marking filter, as dragging them does
+async function onCompareSelectedClick() {
+  const compareStore = useCompareStore();
+
+  for (const image of imageStore.images.filter(i => i.selected && !i.separator))
+    await compareStore.addImage(toRaw(image));
+
+  flashTrayTab("compare-tab");
 }
 
 async function onUpscaleSelectedClick() {
@@ -395,6 +407,7 @@ function isComponentTray(kind) {
       @upscale-selected="onUpscaleSelectedClick"
       @clear="onClearClick"
       @remove-selected="onRemoveSelectedClick"
+      @compare-selected="onCompareSelectedClick"
       @unselect-all="imageStream.unselectAll()"
       @update:autoClear="value => config.automaticallyClearGeneratedImages = value"
       @preset-change="onConfigPresetChange"

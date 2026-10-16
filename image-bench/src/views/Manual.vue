@@ -477,7 +477,8 @@ onMounted(loadPluginStatus);
           Photoshop as a new document.</li>
         <li><b>Image actions</b> — hovering over an image shows its buttons (reuse seed, parameters, ControlNet,
           Photoshop, the trays, a comment shown below the buttons), a marking badge and <AppIcon name="close" :size="13" class="inline-icon"/>, which
-          removes it from the tab (the file stays on disk). Middle-click or Shift+click an image to view it large;
+          removes it from the tab (the file stays on disk). Middle-click or Shift+click an image to view it large
+          (in Crops, click it);
           <span class="kbd">←</span> / <span class="kbd">→</span> page through the images there.</li>
       </ul>
     </section>
@@ -513,6 +514,7 @@ onMounted(loadPluginStatus);
         <li><b>Removing images</b> — check them and use <b>Remove selected</b>, which appears in the toolbar
           while images are checked, or the <AppIcon name="trash" :size="13" class="inline-icon"/> button of the large image
           view. <b>Clear</b> removes all images of the tray. The files stay on disk either way.</li>
+        <li><b>Compare selected</b> — adds the checked images to the Compare tab (also in the Upscaled tab).</li>
         <li><b>Generate with steps</b> <AppIcon name="steps" :size="13" class="inline-icon"/> — asks for a list of
           step counts and generates the image again with each of them, in the Generated tab.</li>
         <li v-if="isWebUI"><b>Generate with text encoders</b> <AppIcon name="puzzle" :size="13" class="inline-icon"/>
