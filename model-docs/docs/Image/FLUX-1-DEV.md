@@ -113,6 +113,49 @@ Example prompts
 | instruct-edit      | flux-kontext              |
 | reference/identity | redux-dev/flux ip-adapter |
 
+## Edit Modes
+
+- Checkpoint: the separate FLUX.1 Kontext [dev] (`flux1-kontext-dev.safetensors`, same 12B
+  architecture and text encoders, FLUX non-commercial license).
+- Mechanism: the VAE latent of the input image is appended to the image token sequence with
+  offset positions; the text encoders do not see the image.
+
+| Edit type             | Support  | Refs |
+|-----------------------|----------|------|
+| Instruction edit      | native   | 1    |
+| Style transfer        | native   | 1    |
+| Character consistency | native   | 1    |
+| Text editing          | native   | 1    |
+| Background change     | native   | 1    |
+| Object removal        | native   | 1    |
+| Multi-reference       | stitched | 2-3  |
+
+- References: trained on one image. More go in as one stitched image (ImageStitch) or as
+  chained ReferenceLatent nodes; each adds its tokens, so time grows with every reference.
+- Prompt: no image syntax. Name the subject explicitly ("the woman with short black hair", not
+  "she"); stitched inputs are "the left / right image".
+- Output size: FluxKontextImageScale resizes the input to the nearest Kontext training
+  resolution (~1 MP); the latent comes from that image.
+- Settings: FluxGuidance 2.5 (instead of 3.5), 20 steps, euler / simple, KSampler cfg 1.0,
+  denoise 1.0.
+- ComfyUI: LoadImage → FluxKontextImageScale → VAEEncode → ReferenceLatent → FluxGuidance.
+  Forge Neo: supported when the checkpoint path contains `kontext`; several images through
+  ImageStitch Integrated.
+- Typical failures: "transform" rewrites the whole image, identity drifts over chained edits,
+  slight zoom or shift, a short prompt is ignored by [dev]. State what changes and what stays
+  ("while keeping ... unchanged"), and edit in several small steps.
+
+Example edit prompts:
+
+- "Change the car color to red while keeping everything else unchanged"
+- "Change to Bauhaus style while maintaining the original composition"
+- "Replace 'OPEN' with 'CLOSED' on the sign"
+- "Change the background to a beach while keeping the person in the exact same position, scale
+  and pose"
+- "The woman with short black hair is now sitting in a café, while maintaining the same facial
+  features, hairstyle and expression"
+- "Remove the person in the background"
+
 
 ## ControlNet and Structural Control
 

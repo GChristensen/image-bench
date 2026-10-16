@@ -100,6 +100,37 @@ Two example prompts at the length the model actually wants:
 
 V2V denoise range and I2V conditioning-strength values are not documented for this model [?] — no separate "strength" slider confirmed beyond standard latent-concat conditioning.
 
+## Edit Modes
+
+- Checkpoint: the separate Wan2.2-Animate-14B (`Wan2_2-Animate-14B` fp8 in ComfyUI), with an
+  optional relight LoRA and the Lightning LoRA.
+- Mechanism: the latent of a reference character image plus pose (skeleton) and face-crop
+  videos extracted from a driving video; replacement adds the background video and a mask.
+
+| Edit type                      | Support | Refs            |
+|--------------------------------|---------|-----------------|
+| Animate a character (Move)     | native  | 1 image + video |
+| Replace a character (Mix)      | native  | 1 image + video |
+| Restyle / control video (VACE) | ported  | 1 video         |
+
+- References: one character image and one driving video.
+- Prompt: a short description of the character and scene; motion and expressions come from the
+  driving video.
+- Output size: width and height multiples of 16; the length follows the driving video,
+  generated in chunks that continue from the previous motion.
+- Settings: as Wan 14B (Lightning LoRA: 4 steps, CFG 1.0); the schedule is set through
+  ModelSamplingSD3.
+- ComfyUI: WanAnimateToVideo with pose and face preprocessing; Mix also needs the character
+  mask. Forge Neo: not supported (Wan 14B T2V/I2V only).
+- Typical failures: lighting mismatch in Mix (use the relight LoRA), halos at the mask edge,
+  face drift on fast motion or profiles, broken hands in quick gestures.
+
+Example prompts:
+
+- "A woman in a red dress dancing in a sunlit studio"
+- "A cartoon fox character performing the same moves, plain background"
+- "The man walking down the street, natural evening light"
+
 ## Structural and Reference Control
 
 Wan2.2 itself ships no built-in ControlNet-equivalent. Structural control comes from VACE (Video All-in-one Creation and Editing), a framework built for Wan2.1 and community-ported/adapted to 2.2 — no official Alibaba-published "Wan2.2-VACE" checkpoint was found, only community ComfyUI workflows layering VACE-style conditioning onto the 2.2 base [?]. Verify current status before depending on it.

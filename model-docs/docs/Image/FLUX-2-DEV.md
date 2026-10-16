@@ -47,6 +47,44 @@ Two example prompts:
 | instruct-edit | yes — this is the model's edit mode: natural-language instruction + reference image(s) in one forward pass |
 | reference/identity | native multi-reference conditioning |
 
+## Edit Modes
+
+- Checkpoint: the same FLUX.2 [dev] checkpoint does generation, editing and multi-reference.
+- Mechanism: the VAE latents of the references are appended to the image token sequence
+  (ReferenceLatent); the Mistral text encoder does not see them.
+
+| Edit type               | Support | Refs |
+|-------------------------|---------|------|
+| Instruction edit        | native  | 1    |
+| Multi-reference compose | native  | 2-10 |
+| Subject / identity ref  | native  | 1+   |
+| Product consistency     | native  | 1+   |
+| Style reference         | native  | 1+   |
+| Text editing            | native  | 1    |
+
+- References: up to 10; ComfyUI chains one ReferenceLatent per image. Each reference adds its
+  tokens, so time and VRAM grow with every one; 4-6 is the practical range on 24 GB.
+- Prompt: refer by position with a noun ("the subject from the first image", "the jacket from
+  the second image"). Do not redescribe what a reference already shows; describe the scene,
+  lighting and camera.
+- Output size: set by the empty latent; the template scales references to ~1 MP. Editing is
+  supported up to 4 MP.
+- Settings: as txt2img (28-50 steps, guidance 2.5-4), denoise 1.0.
+- ComfyUI: LoadImage → ImageScaleToTotalPixels → VAEEncode → ReferenceLatent (one per image)
+  → FluxGuidance. Forge Neo does not support FLUX.2 [dev] (only klein).
+- Typical failures: identity drift on faces, too many references dilute each other, the prompt
+  contradicting a reference wins over it.
+
+Example edit prompts:
+
+- "Turn this cat into a dog"
+- "Change the jacket to dark green leather, keep the person, pose and background unchanged"
+- "The subject from the first image wearing the jacket from the second image, standing in the
+  street from the third image"
+- "Place the product from the first image on a marble counter in soft morning light"
+- "Repaint the scene in the style of the second image, keep the composition of the first"
+- "Change the text on the mug to 'ATELIER'"
+
 ## ControlNet and Structural Control
 
 Thin and early — a ~3-month-old architecture whose ecosystem hasn't caught up to FLUX.1's maturity.

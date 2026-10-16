@@ -131,6 +131,49 @@ Two example prompts:
   For "change X" tasks use instruct-edit instead.
 - Background removal prompt: "Remove the background, and output a PNG image".
 
+## Edit Modes
+
+- Checkpoint: the same Qwen-Image-2.1 checkpoint (and the viggle-turbo LoRA) generates and
+  edits.
+- Mechanism: the Qwen3-VL encoder sees the references and their latents join the sequence; the
+  prefix KV cache reuses the reference context across steps.
+
+| Edit type                  | Support | Refs |
+|----------------------------|---------|------|
+| Instruction edit           | native  | 1    |
+| Multi-reference compose    | native  | 2-10 |
+| Identity / product ref     | native  | 1+   |
+| Outfit transfer            | native  | 2    |
+| Local edit by painted mark | native  | 1    |
+| Sketch to photo            | native  | 1    |
+| Background removal (RGBA)  | native  | 1    |
+
+- References: 10 officially; the ComfyUI Text Encode Qwen Image 2.1 node has 16 slots (the
+  templates wire 10); turbo LoRA up to 3. The canvas size sets the cost.
+- Prompt: address slots by index as `<image1>`, `<image2>`, ...
+- Output size: the canvas follows `image_1`. `resolution` 0 keeps its pixel size (rounded to 32),
+  a value N scales its aspect ratio to N x N pixels. A custom size (Resolution Selector) must
+  stay close to the resized `image_1`, or the edit shifts. Far above 2K adherence drops.
+- Settings: base 25 steps, CFG 1, euler / simple; turbo 8 steps on its ManualSigmas schedule.
+  Local edits work at 4-8 steps, whole-frame rewrites need ~25, hands ~30. CFG 2 follows dense
+  prompts but oversharpens; CFG 5 degrades badly, 0.5 breaks the image.
+- ComfyUI: Text Encode Qwen Image 2.1, the Image Edit subgraph (`resolution`, `custom_size`),
+  Resolution Selector, Qwen Image 2.1 Cache (`int8` halves the cache). Forge Neo: toggle
+  img2img / reference (edit) in Settings › Stable Diffusion.
+- Region targeting: paint a red mark over the area in the Mask Editor and name it in the prompt.
+- Typical failures: drift when the canvas differs from `image_1`, lost likeness when the prompt
+  does not say what to keep. Start with "Keep ... in `<image1>` unchanged".
+
+Example edit prompts:
+
+- "make the sky sunset"
+- "Keep the character and pose in `<image1>` unchanged, put this light blue denim shirt from
+  `<image2>` on the character"
+- "These three characters are sitting around a campfire in a forest"
+- "change the jacket in the red area"
+- "Create a photorealistic photograph of the motor yacht from the input sketch"
+- "Remove the background, and output a PNG image"
+
 ## ControlNet and Structural Control
 
 One ControlNet exists, and today it runs **outside** ComfyUI only.

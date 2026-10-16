@@ -99,26 +99,27 @@ SECTIONS, IN THIS ORDER
    bullets with v2v denoise ranges and i2v conditioning-strength parameters.
 
 ## Edit Modes
-   Only if the model (or an official edit variant, IC-LoRA or adapter) can edit video or
-   generate from references or instructions; otherwise omit this section. Keep the technical
-   details brief:
-   - Which checkpoint edits: the same one, a separate edit variant, a LoRA or an adapter.
-   - Mechanism in one line (in-context reference tokens, channel concatenation, VACE-style
-     control video, masked regeneration, ...).
-   - Table: Edit type | Support | Refs — only the types the model does: instruction edit of a
-     video, restyle, subject/identity reference, multi-reference composition, character
-     replacement / motion transfer, object add/remove, regional regeneration (retake), video
-     inpaint/outpaint, lip-sync dubbing, and anything model-specific.
-   - Number of references: how many images, clips and audio files it accepts, officially and
-     in ComfyUI nodes, and the time/VRAM cost of each.
-   - How the prompt addresses references ("image 1", "the reference video", ...).
-   - What sets the output resolution, length and fps; how references are resized.
-   - Settings that differ from text-to-video (steps, CFG, denoise, masks).
-   - The ComfyUI nodes or pipelines involved.
-   - Typical failures: drift of the unedited area, identity loss, color shift, flicker in the
-     edited region, the edit being ignored, and the prompt wording that avoids them.
+   Only if the model (or an official edit variant or adapter) can edit images or video from
+   references or instructions; otherwise omit this section. Keep the technical details brief:
+   - Which checkpoint edits: the same one, a separate edit checkpoint, a LoRA or an adapter.
+   - Mechanism in one line (e.g. reference latents appended to the token sequence, the VLM
+     text encoder sees the images, KV-cached reference tokens, channel concatenation).
+   - Table: Edit type | Support | Refs — only the types the model does: instruction edit,
+     multi-reference composition, style reference, subject/identity reference, pose or
+     structure from a reference image, text editing, inpaint by instruction, outpaint/extend,
+     background removal, relighting, and anything model-specific.
+   - Number of references: official maximum, what ComfyUI / Forge Neo nodes accept, and the
+     time/VRAM cost of each extra reference.
+   - How the prompt addresses references (`<image1>`, "image 1", "the first image", ...).
+   - Which reference sets the output size and aspect ratio, and how references are resized
+     (target megapixels, scaling nodes).
+   - Settings that differ from txt2img (steps, CFG, denoise must stay 1.0, ...).
+   - The ComfyUI nodes involved (e.g. ReferenceLatent, TextEncode*Edit*) and whether Forge Neo
+     supports it.
+   - Typical failures: drift/zoom/shift of the unedited area, identity loss, color shift, the
+     edit being ignored, and the prompt wording that avoids them.
    - Example edit prompts: one per supported edit type (3-6), in the wording the model was
-     trained on.
+     trained on, e.g. "Change X to Y while keeping Z unchanged".
 
 ## Structural and Reference Control
    Only if usable control exists. Bullets: mechanism (unified control model, in-context control

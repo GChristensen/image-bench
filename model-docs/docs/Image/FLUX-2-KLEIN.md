@@ -131,6 +131,46 @@ ranges for img2img/edit: not published by BFL; community reports
 0.7–0.85 for reference-guided edits on one third-party doc \[?\] —
 verify, that source also had the CFG-range inconsistency noted.
 
+## Edit Modes
+
+- Checkpoint: the same checkpoints edit (4B, 9B, base and distilled); klein-9b-kv caches the
+  reference tokens for faster multi-reference edits. The base variants handle complex edits
+  better.
+- Mechanism: the VAE latents of the references are appended to the image token sequence
+  (ReferenceLatent); the Qwen3 text encoder does not see them.
+
+| Edit type                | Support | Refs |
+|--------------------------|---------|------|
+| Instruction edit         | native  | 1    |
+| Multi-reference compose  | native  | 2-10 |
+| Subject / identity ref   | native  | 1+   |
+| Background swap          | native  | 1    |
+| Outfit / object transfer | native  | 2    |
+| Style reference          | native  | 2    |
+
+- References: up to ~10; ComfyUI chains ReferenceLatent nodes (the default templates use up
+  to 5). Each reference adds tokens and time; 9b-kv pays for them once.
+- Prompt: no special token. Refer by position with a noun ("the man in image 1", "the jacket
+  from the second image"); a bare index has nothing to attach to.
+- Output size: set by the empty latent; keep it at the first image's aspect ratio (~1 MP) to
+  avoid shifts.
+- Settings: distilled 4 steps, CFG 1.0; base 20-30 steps, CFG 4. Denoise 1.0.
+- Forge Neo: toggle img2img / reference (edit) in Settings › Stable Diffusion; several images
+  through ImageStitch Integrated.
+- Typical failures: the unedited area shifts or recolors, faces drift, the distilled model
+  ignores complex multi-step instructions. State what stays unchanged; use base for detailed
+  edits.
+
+Example edit prompts:
+
+- "Change the background to a snowy mountain pass, keep the person and the lighting on the face
+  unchanged"
+- "Make her hair short and red, keep everything else the same"
+- "The subject from the first image wearing the jacket from the second image, in the
+  environment from the third image"
+- "The man in image 1 sitting on the sofa from image 2"
+- "Redraw the photo in the watercolor style of the second image"
+
 ## ControlNet and Structural Control
 
 Usable, but **barely** — coverage

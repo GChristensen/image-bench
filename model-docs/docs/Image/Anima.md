@@ -96,6 +96,45 @@
 | instruct-edit      | community LoRA/IC  |
 | reference/identity | not documented |
 
+## Edit Modes
+
+- Checkpoint: the base model (Anima Base v1.0) plus a community Edit LoRA trained on before/after
+  pairs, e.g. Anima Edit v2.0 (Civitai). Edit quality depends mostly on the LoRA.
+- Mechanism: Cosmos-Predict2 reference latent — the VAE latent of the input image conditions the
+  generation; the Qwen3 text encoder does not see the image.
+
+| Edit type              | Support    | Refs |
+|------------------------|------------|------|
+| Instruction edit       | Edit LoRA  | 1    |
+| Attribute / color      | Edit LoRA  | 1    |
+| Object removal         | Edit LoRA  | 1    |
+| Outfit change          | Edit LoRA  | 1    |
+| Expression change      | Edit LoRA  | 1    |
+| Restyle (split screen) | workaround | 1    |
+
+- References: one image.
+- Prompt: quality tags, then the edits as short tag-like phrases, then the LoRA tag. No image
+  index syntax.
+- Output size: the size of the input image (e.g. 1024x1024), denoise 1.0.
+- Settings: 30 steps, CFG 4, er_sde, simple, shift 3, Edit LoRA strength 1.0 (check the LoRA's
+  card). Masks are not needed, but help when an edit is ignored.
+- Forge Neo (2.27+): Settings › Stable Diffusion › [Anima] Enable Reference
+  (`anima_do_reference`, worth adding to the Quicksettings), then generate from the img2img tab
+  with the image as input; normal img2img is off while it is enabled. UI preset `anima`.
+- Restyle workaround: join a solid-color canvas to the right of the image, mask it and add
+  `(split screen, multiple views:1.2)`; it doubles the pixel count.
+- Typical failures: large or structural changes do not happen, fingers and small prints break as
+  in normal generation, photorealistic inputs edit poorly; reroll the seed before rewording.
+
+Example edit prompts (append the edit LoRA, e.g. `<lora:AnimaEditV2:1>`):
+
+```text
+masterpiece, best quality, score_7, black hair, black eyes, <lora:AnimaEditV2:1>
+masterpiece, best quality, score_7, delete her cat ears, <lora:AnimaEditV2:1>
+masterpiece, best quality, score_7, t-shirt with a cat logo, <lora:AnimaEditV2:1>
+masterpiece, best quality, score_7, smile, <lora:AnimaEditV2:1>
+```
+
 ## ControlNet and Structural Control
 
 Usable control exists, but it's thin and explicitly experimental — treat

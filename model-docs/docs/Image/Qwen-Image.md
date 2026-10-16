@@ -86,6 +86,48 @@ Two example prompts:
 | instruct-edit | native — the Edit / -2509 / -2511 checkpoints take an instruction plus reference image(s) directly, no extra weights needed |
 | reference/identity | multi-image blending (1-3 refs) native to Edit-2509/2511 for person/product/scene composition. No dedicated standalone IP-Adapter-style weight file confirmed [?] |
 
+## Edit Modes
+
+- Checkpoint: the separate Qwen-Image-Edit-2509 / -2511 checkpoints (same 20B MMDiT, own
+  Lightning LoRAs). 2511 reduces drift and improves identity; prefer it.
+- Mechanism: the Qwen2.5-VL encoder sees the references (semantics) and their VAE latents join
+  the sequence (appearance).
+
+| Edit type                  | Support | Refs |
+|----------------------------|---------|------|
+| Instruction edit           | native  | 1    |
+| Multi-person / group shot  | native  | 2-3  |
+| Identity-consistent scene  | native  | 1    |
+| Material replacement       | native  | 2    |
+| Text editing               | native  | 1    |
+| Relighting / new viewpoint | 2511    | 1    |
+| Construction lines         | 2511    | 1    |
+
+- References: 1-3; TextEncodeQwenImageEditPlus has `image1`-`image3`. Each reference adds
+  tokens and time. Forge Neo: ImageStitch Integrated (the checkpoint path must contain `qwen`
+  and `edit`).
+- Prompt: references are numbered internally as "Picture 1", "Picture 2"; refer to them by
+  position ("the woman in image 1") or by what they show.
+- Output size: the latent; the template scales `image1` to ~1 MP and uses its size, which
+  minimizes drift.
+- Settings: 40 steps, true CFG 4.0 with a negative prompt (`" "` works); Lightning 4/8-step
+  LoRA, CFG 1.0. Denoise 1.0.
+- ComfyUI: LoadImage → TextEncodeQwenImageEditPlus (positive and negative, with the VAE) →
+  KSampler on the VAE-encoded `image1`.
+- Typical failures: zoom and shift of the unedited area (mostly 2509), faces taking on the Qwen
+  look, Q2-Q4 GGUF artifacts, a GGUF text encoder without its mmproj ignoring the images.
+  Keep the output at `image1`'s size and say what must stay unchanged.
+
+Example edit prompts:
+
+- "Turn this cat into a dog"
+- "The magician bear is on the left, the alchemist bear is on the right, facing each other in
+  the central park square."
+- "Replace the leather of the sofa in image 1 with the fur texture from image 2"
+- "Change the sign text to 'OPEN DAILY', keep the font and color"
+- "Relight the scene with warm sunset light from the left"
+- "Rotate the camera 45 degrees to the right"
+
 ## ControlNet and Structural Control
 
 Usable ControlNets exist and are reasonably solid for the core types — not "barely supported."

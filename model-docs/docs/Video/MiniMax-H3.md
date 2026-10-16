@@ -80,6 +80,39 @@ Two example prompts at the length the official docs favor:
 
 No denoise-range or i2v-conditioning-strength numbers found — H3's conditioning appears to go through the omni-context encoder rather than a simple strength scalar.
 
+## Edit Modes
+
+- Checkpoint: the separate H3-Base-Ref2VA (`minimax_h3_ref2va_*`), not the FL2VA model.
+- Mechanism: images, videos and audio enter as in-context reference tokens, addressed by tags
+  in the prompt; the output is video with audio.
+
+| Edit type                      | Support | Refs    |
+|--------------------------------|---------|---------|
+| Subject / identity reference   | native  | ≤ 9 img |
+| Video edit (re-animate, redub) | native  | ≤ 3 vid |
+| Voice timbre reference         | native  | ≤ 3 aud |
+| Music reuse                    | native  | ≤ 3 aud |
+| Mixed references               | native  | ≤ 12    |
+
+- References: up to 9 images, 3 videos and 3 audio clips (each clip 2-15 s, at most 15 s per
+  kind), 12 files in total. The order of the chained reference nodes sets the numbering.
+- Prompt: tags `<Subject 1>`, `<Video 1>`, `<Audio 1>`; dialogue as `<d>[English] ...</d>`. The
+  official structured prompt comes from H3-Context-IR (API only), so locally write it by hand.
+- Output: 4-15 s, 24 fps, short side 768, adaptive aspect ratio, 32 kHz stereo.
+- Settings: 20 steps (25 for better motion); turbo LoRA 8 steps. Load both the video and the
+  audio VAE, or the output is silent.
+- ComfyUI: the official `video_minimax_h3_r2v` template with the MiniMax H3 node.
+- Typical failures: reordered references swap roles, many references at once fail without a
+  clear cause; start with one character image and one simple action, then add references.
+
+Example prompts:
+
+- "`<Subject 1>` walks along the beach at sunset, the camera tracks beside her"
+- "In `<Video 1>`, `<Subject 1>` turns to the camera and says
+  `<d>[English] Follow the wind, live free.</d>`, framing and setting unchanged"
+- "`<Audio 2>` is the voice timbre reference for `<Subject 1>`'s voice"
+- "`<Audio 1>` plays as the background music"
+
 
 ## Audio
 

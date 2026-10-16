@@ -118,6 +118,54 @@ prose guidance above):
 | instruct-edit      | community "Krea 2 Identity Edit" LoRA |
 | reference/identity | native — up to 4 style reference images or a moodboard <br/>each with an independent  strength slider   |
 
+## Edit Modes
+
+- Checkpoint: Krea 2 has no official edit model. Editing is done with community LoRAs:
+  - Krea 2 Identity Edit (`conradlocke/krea2-identity-edit`, v1.2 recommended, trained on Raw,
+    run on Turbo), node pack ComfyUI-Krea2Edit.
+  - Turbo Style Reference (`ostris/krea2_turbo_style_reference`, 1-2 references, no trigger
+    word), node pack ComfyUI-Krea2-Ostris-Edit.
+- Mechanism: the references enter twice, as in-context VAE tokens and through the Qwen3-VL
+  encoder, which sees the image; stock nodes provide neither, hence the node packs.
+
+| Edit type                     | Support        | Refs |
+|-------------------------------|----------------|------|
+| Re-stage person (likeness)    | Identity Edit  | 1    |
+| Local edit (recolor/add/swap) | Identity Edit  | 1    |
+| Outfit change                 | Identity Edit  | 1    |
+| Restyle                       | Identity Edit  | 1    |
+| Person into scene             | Identity Edit  | 2    |
+| Head / face swap              | Identity Edit  | 2    |
+| Virtual try-on                | Identity Edit  | 2    |
+| Inpaint / outpaint            | Identity Edit  | 1    |
+| Removal                       | Identity Edit  | 1    |
+| Style reference               | Style Ref LoRA | 1-2  |
+
+- References: two at most. In two-input edits the scene is image 1 (`image`) and the person
+  image 2 (`image_b`); swapping them degrades the result badly.
+- Prompt: plain-language instructions with "this person", "the woman"; no index syntax.
+- Output size: 2 MP or less; ~1-1.5 MP for two-person edits, then upscale. v1.2 `fit` geometry
+  handles a different aspect ratio; with older weights match the source.
+- Settings: Turbo, 8-12 steps (10 balanced: 8 favors composition, 12 face detail), CFG 1.0,
+  LoRA 1.0, denoise 1.0. Removals: Raw, 20 steps, CFG 3.0. `ref_boost` ~4 for strong likeness
+  (above 10 breaks removals); `grounding_px` 384-768: lower follows the edit, higher keeps the
+  likeness.
+- Forge Neo: toggle img2img / reference (edit) in Settings › Stable Diffusion; needs the
+  Identity Edit LoRA.
+- Typical failures: distinctive faces regress toward average proportions, two faces in one edit
+  blend (chain single-reference inserts instead), removals re-render instead of deleting,
+  outfit swaps sometimes ignored, local edits shift the color grade, duplicated "double
+  pictures" with `grounding_px` far above the trained range.
+
+Example edit prompts:
+
+- "create a photo of this person at a night market"
+- "create a photo of this man next to the tractor"
+- "replace the woman with a big orangutan"
+- "change her coat to a yellow raincoat"
+- "turn the photo into a flat gouache illustration"
+- "remove the bicycle from the street"
+
 ## ControlNet and Structural Control
 
 Usable structural control exists but is thin and LoRA-based, not classic

@@ -76,6 +76,44 @@ Recommending the distilled checkpoint to start — it's the only variant with a 
 
 Named pipelines on the official card: DistilledPipeline, DFRPipeline, TI2VidTwoStagesPipeline, ICLoraPipeline, DubItPipeline (lip-sync dubbing), A2VidPipelineTwoStage, RetakePipeline (regional regen), plus additional unnamed specialized pipelines. Denoise ranges for v2v and exact i2v conditioning-strength parameters not published.
 
+## Edit Modes
+
+- Checkpoint: the distilled model with IC-LoRAs (in-context LoRAs); most LTX-2.3 IC-LoRAs load on
+  2.5 but need testing.
+- Mechanism: the frames of the source or guide video enter as in-context tokens next to the
+  generated ones; the IC-LoRA defines what is taken from them.
+
+| Edit type                        | Support             | Refs         |
+|----------------------------------|---------------------|--------------|
+| V2V transform (source as guide)  | IC-LoRA             | 1 video      |
+| Depth / canny / pose control     | Union IC-LoRA       | 1 video      |
+| Video inpaint                    | In/outpaint IC-LoRA | video + mask |
+| Video outpaint                   | In/outpaint IC-LoRA | 1 video      |
+| Reference sheet (Ingredients)    | IC-LoRA             | 1 image      |
+| Motion tracks                    | IC-LoRA             | 1 image      |
+| SDR to HDR                       | HDR IC-LoRA         | 1 video      |
+| Instruction edit (Edit Anything) | community IC-LoRA   | 1 video      |
+
+- References: one guide video (or reference sheet) per IC-LoRA; the source audio can be kept
+  frozen.
+- Prompt: describe the result; Edit Anything v2 takes Replace / Remove / Add / Restyle
+  instructions, several in one prompt, without a reference image.
+- Output size: follows the source clip; frames 8n+1, sides divisible by 32.
+- Settings: distilled, 8 steps, CFG 1.0; inpaint and outpaint run two stages.
+- ComfyUI: the 2.5 example workflows of Lightricks/ComfyUI-LTXVideo (`V2V_ICLoRA_Single_Stage`,
+  `ICLoRA_Union_Control`, `ICLoRA_Inpaint_Two_Stage`, `ICLoRA_Outpaint_Two_Stage`,
+  `ICLoRA_Ingredients`, `ICLoRA_Motion_Track`). Forge Neo: not supported.
+- Typical failures: an over-strong guide copies the source too literally, flicker at mask
+  edges, identity loss across a long clip.
+
+Example edit prompts:
+
+- "Replace the red car with a blue vintage bicycle"
+- "Remove the man in the background"
+- "Add falling snow"
+- "Restyle the clip as a hand-painted watercolor animation"
+- "Replace the jacket with a black leather jacket and add sunglasses"
+
 ## Structural and Reference Control
 
 Mechanism: in-context (IC) LoRAs, not a separate ControlNet-style model and not classic ControlNet ports.
