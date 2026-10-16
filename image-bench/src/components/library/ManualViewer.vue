@@ -1,49 +1,60 @@
 <script setup>
-import {computed, onMounted, ref} from "vue";
+/**
+ * Right pane of the Library manual: the text, scrolled to the chapter chosen in the contents (ManualBrowser.vue)
+ */
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import {dialog} from "@/dialogs/useDialog.js";
 import {HOST_NAME, isComfy, isWebUI} from "@/host.js";
+import {MANUAL_SECTIONS, useManualStore} from "@/stores/manual.js";
 
-const SECTIONS = [
-  {id: "overview", title: "What it is for"},
-  {id: "window", title: "The window"},
-  {id: "generate", title: "Generate"},
-  {id: "controlnet", title: "ControlNet"},
-  {id: "explore", title: "Explore"},
-  {id: "generated", title: "Generated"},
-  {id: "compare", title: "Compare"},
-  {id: "trays", title: "Concept & image trays"},
-  {id: "upscaled", title: "Upscaled"},
-  {id: "library", title: "Library"},
-  {id: "images", title: "Working with images"},
-  {id: "settings", title: "Settings & actions"},
-  {id: "photoshop", title: "Photoshop"},
-  ...(isComfy ? [{id: "comfy-setup", title: "ComfyUI setup"}] : []),
-  {id: "shortcuts", title: "Keyboard & mouse"},
-  {id: "troubleshooting", title: "Troubleshooting"},
-];
+// Chapters and their subchapters in the order of the text
+const CHAPTERS = MANUAL_SECTIONS.flatMap(section => [section, ...section.children ?? []]);
 
+const manual = useManualStore();
 const content = ref(null);
-const activeSection = ref(SECTIONS[0].id);
 
 function scrollTo(id) {
   content.value?.querySelector(`#manual-${id}`)?.scrollIntoView({behavior: "smooth", block: "start"});
 }
 
-// Highlights the last section whose heading has scrolled to the top of the content
+watch(() => manual.target, target => {
+  if (target) {
+    scrollTo(target.id);
+    manual.target = null;
+  }
+});
+
+// Marks the last chapter whose heading has scrolled to the top of the text
 function onScroll() {
   const top = content.value.getBoundingClientRect().top + 40;
-  let current = SECTIONS[0].id;
+  let current = CHAPTERS[0].id;
 
-  for (const section of SECTIONS) {
-    const element = content.value.querySelector(`#manual-${section.id}`);
+  for (const chapter of CHAPTERS) {
+    const element = content.value.querySelector(`#manual-${chapter.id}`);
 
     if (element && element.getBoundingClientRect().top <= top)
-      current = section.id;
+      current = chapter.id;
   }
 
-  activeSection.value = current;
+  manual.active = current;
+  manual.scrollTop = content.value.scrollTop;
 }
+
+// The pane is created again when the manual section is shown; it continues where it was left
+onMounted(async () => {
+  manual.opened = true;
+  await nextTick();
+
+  if (manual.target)
+    content.value.querySelector(`#manual-${manual.target.id}`)?.scrollIntoView({block: "start"});
+  else
+    content.value.scrollTop = manual.scrollTop;
+
+  manual.target = null;
+});
+
+onBeforeUnmount(() => manual.scrollTop = content.value?.scrollTop ?? 0);
 
 // Photoshop plugin supplied with the extension
 const PLUGIN_URL = "/image-bench/photoshop/plugin";
@@ -130,13 +141,7 @@ onMounted(loadPluginStatus);
 
 <template>
 <div class="manual">
-  <nav class="manual-toc" aria-label="Manual contents">
-    <h2>Manual</h2>
-    <button v-for="section in SECTIONS" :key="section.id" class="toc-item"
-            :class="{on: activeSection === section.id}" @click="scrollTo(section.id)">{{ section.title }}</button>
-  </nav>
-
-  <article class="manual-content scrollable" ref="content" @scroll.passive="onScroll">
+  <article class="manual-content" ref="content" @scroll.passive="onScroll">
 
     <section id="manual-overview">
       <h1>Image Bench for {{ HOST_NAME }}</h1>
@@ -148,9 +153,7 @@ onMounted(loadPluginStatus);
       </p>
       <p>
         For example, to upscale an image, you usually locate it in the filesystem, extract its id and prompt, enable
-        hires fix, after upscale disable it, and randomize the seed. In Image Bench you press a couple of buttons
-        to synchronize the parameters and upscale an image saved in a tray. All UI corresponding manipulations happen
-         automatically.
+        hires fix, after upscale disable it, and randomize the seed. In Image Bench you press just one button to do the same.
       </p>
       <p>
         Image Bench does not generate anything itself; it drives {{ HOST_NAME }}. The two stay in sync in both
@@ -179,11 +182,10 @@ onMounted(loadPluginStatus);
           best of several variants.</li>
         <li><b>Concept tray</b> and <b>Image tray</b> — permanent collections of the images worth keeping.</li>
         <li><b>Upscaled</b> — upscaled (Hires. fix) versions of the images you choose.</li>
-        <li><b>Library</b> — docs, your Markdown notes; snippets, prompt text inserted from the Generate tab; and
-          projects, which keep the trays and the generation parameters of a piece of work.</li>
-        <li><AppIcon name="settings" :size="13" class="inline-icon"/> <b>Settings</b> and
-          <AppIcon name="book" :size="13" class="inline-icon"/> <b>Manual</b> (at the right end of the tab bar) —
-          the options of the window, and this manual.</li>
+        <li><b>Library</b> — docs, your Markdown notes; snippets, prompt text inserted from the Generate tab;
+          projects, which keep the trays and the generation parameters of a piece of work; and this manual.</li>
+        <li><AppIcon name="settings" :size="13" class="inline-icon"/> <b>Settings</b> (at the right end of the tab
+          bar) — the options of the window.</li>
       </ul>
       <p>
         A Photoshop plugin comes with the extension. It sends images from Photoshop to {{ HOST_NAME }} and opens
@@ -567,10 +569,14 @@ onMounted(loadPluginStatus);
     <section id="manual-library">
       <h2><AppIcon name="library" :size="17"/>Library</h2>
       <p>
-        The Library tab has three parts, switched at the top of its left column: <b>Docs</b>, <b>Snippets</b> and
-        <b>Projects</b>.
+        The Library tab has four parts, switched at the top of its left column: <b>Docs</b>
+        <AppIcon name="book" :size="13" class="inline-icon"/>, <b>Snippets</b>
+        <AppIcon name="snippet" :size="13" class="inline-icon"/>, <b>Projects</b>
+        <AppIcon name="box" :size="13" class="inline-icon"/> and <b>Manual</b>
+        <AppIcon name="help" :size="13" class="inline-icon"/>. The switch names only the part shown; the others are
+        their icons, the same as those of their items in the tree.
       </p>
-      <h3>Docs</h3>
+      <h3 id="manual-library-docs">Docs</h3>
       <p>
         Docs shows the Markdown files (<code>.md</code>) under the docs root (Settings › Library; by default the
         <code>model_docs</code> folder of the extension) in a tree; folders without documents are left out. Click a
@@ -584,7 +590,7 @@ onMounted(loadPluginStatus);
         (spaces and underscores are the same) to find it; exact and leading matches come first, then the more used
         tags. Click a tag to copy it with spaces for underscores, as it is written in prompts.
       </p>
-      <h3>Projects</h3>
+      <h3 id="manual-library-projects">Projects</h3>
       <p>
         A project keeps a piece of work: the image tray, the concept tray and the Compare tab (the
         <i>workspace</i>), the parameters of the Generate and ControlNet tabs with the ControlNet images, and in
@@ -634,7 +640,7 @@ onMounted(loadPluginStatus);
           (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click to open it in
           a new tab, right-click for the menu (final image, Compare, Photoshop, and deleting a file of the project folder).</li>
       </ul>
-      <h3>Snippets</h3>
+      <h3 id="manual-library-snippets">Snippets</h3>
       <p>
         Snippets are pieces of prompt text, organised in folders, with an optional negative part, inserted from
         the Snippets panel of the Generate tab. <code>{}</code> in a snippet stands for the selected prompt
@@ -643,6 +649,11 @@ onMounted(loadPluginStatus);
         <AppIcon name="download" :size="13" class="inline-icon"/> button imports the styles of a WebUI
         <code>styles.csv</code> file<template v-if="isWebUI"> or of this WebUI</template> as snippets
         (<code>{prompt}</code> becomes <code>{}</code>).
+      </p>
+      <h3 id="manual-library-manual">Manual</h3>
+      <p>
+        This manual. The contents at the left follow the chapter you read and scroll to the one you click; the
+        manual keeps its place while another part of the Library is shown.
       </p>
     </section>
 
@@ -970,47 +981,6 @@ onMounted(loadPluginStatus);
   display: flex;
   height: 100%;
   min-height: 0;
-}
-
-.manual-toc {
-  width: 190px;
-  flex-shrink: 0;
-  padding: 14px 8px;
-  border-right: 1px solid var(--ib-border);
-  background: var(--ib-surface);
-  overflow-y: auto;
-}
-
-.manual-toc h2 {
-  margin: 0 8px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ib-muted);
-}
-
-.toc-item {
-  display: block;
-  width: 100%;
-  padding: 5px 8px;
-  border: none;
-  border-left: 2px solid transparent;
-  background: none;
-  color: var(--ib-text-2);
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-}
-
-.toc-item:hover {
-  color: var(--ib-text);
-  background: var(--ib-hover);
-}
-
-.toc-item.on {
-  color: var(--ib-text);
-  border-left-color: var(--ib-accent);
 }
 
 .manual-content {

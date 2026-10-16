@@ -3,7 +3,7 @@
  * Library tab: docs, snippets and projects, each as a tree at the left and the selected item at the right.
  * Docs are the Markdown files under the docs root (set in the settings), shown read-only; snippets are prompt text
  * inserted from the Snippets panel of the Generate tab; projects are folders under the project root (set in the
- * settings) that keep the trays and the parameters of the workspace.
+ * settings) that keep the trays and the parameters of the workspace; the manual is the help of Image Bench.
  */
 import {computed, onActivated, reactive, ref, watch} from "vue";
 import ProjectsBrowser from "@/components/library/ProjectsBrowser.vue";
@@ -12,16 +12,26 @@ import SnippetsBrowser from "@/components/library/SnippetsBrowser.vue";
 import SnippetEditor from "@/components/library/SnippetEditor.vue";
 import DocsBrowser from "@/components/library/DocsBrowser.vue";
 import DocViewer from "@/components/library/DocViewer.vue";
+import ManualBrowser from "@/components/library/ManualBrowser.vue";
+import ManualViewer from "@/components/library/ManualViewer.vue";
+import AppIcon from "@/components/AppIcon.vue";
 import {useProjectsStore} from "@/stores/projects.js";
 import {useSnippetsStore} from "@/stores/snippets.js";
 import {useDocsStore} from "@/stores/docs.js";
+import {useManualStore} from "@/stores/manual.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {dialog} from "@/dialogs/useDialog.js";
 
 const SECTION_KEY = "imageBench_librarySection";
 const SNIPPET_KEY = "imageBench_librarySelectedSnippet";
-const SECTIONS = ["docs", "snippets", "projects"];
+// The switch names the shown section; the others are their icons, those of their items in the tree
+const SECTIONS = [
+  {id: "docs", label: "Docs", icon: "book"},
+  {id: "snippets", label: "Snippets", icon: "snippet"},
+  {id: "projects", label: "Projects", icon: "box"},
+  {id: "manual", label: "Manual", icon: "help"},
+];
 const SIDE_WIDTH_KEY = "imageBench_librarySideWidth";
 // The detail pane keeps at least this width
 const SIDE_WIDTH = {min: 220, default: 290, contentMin: 480};
@@ -29,10 +39,11 @@ const SIDE_WIDTH = {min: 220, default: 290, contentMin: 480};
 const projects = useProjectsStore();
 const snippets = useSnippetsStore();
 const docs = useDocsStore();
+const manual = useManualStore();
 const storage = useLocalStorage();
 
 const storedSection = storage.getItem(SECTION_KEY);
-const section = ref(SECTIONS.includes(storedSection) ? storedSection : "projects");
+const section = ref(SECTIONS.some(s => s.id === storedSection) ? storedSection : "projects");
 const query = ref("");
 const selectedSnippet = ref(storage.getItem(SNIPPET_KEY) || null);
 
@@ -101,21 +112,28 @@ watch(() => snippets.revealed, request => {
     snippets.revealed = null;
   }
 }, {immediate: true});
+
+// The manual, requested from the tab bar
+watch(() => manual.revealed, request => {
+  if (request) {
+    section.value = "manual";
+    manual.revealed = false;
+  }
+}, {immediate: true});
 </script>
 
 <template>
   <div class="view-container library">
     <aside class="side" :style="{width: `${sideWidth.size}px`}">
       <div class="seg sections" role="tablist" aria-label="Library section">
-        <button role="tab" :class="{on: section === 'docs'}" :aria-selected="section === 'docs'"
-                @click="section = 'docs'">Docs</button>
-        <button role="tab" :class="{on: section === 'snippets'}" :aria-selected="section === 'snippets'"
-                @click="section = 'snippets'">Snippets</button>
-        <button role="tab" :class="{on: section === 'projects'}" :aria-selected="section === 'projects'"
-                @click="section = 'projects'">Projects</button>
+        <button v-for="item in SECTIONS" :key="item.id" role="tab" :class="{on: section === item.id}"
+                :aria-selected="section === item.id" :aria-label="item.label" :title="item.label"
+                @click="section = item.id"
+          ><AppIcon :name="item.icon" :size="14"/><span v-if="section === item.id">{{ item.label }}</span></button>
       </div>
       <ProjectsBrowser v-if="section === 'projects'" v-model:query="query"/>
       <SnippetsBrowser v-else-if="section === 'snippets'" v-model:selected="selectedSnippet"/>
+      <ManualBrowser v-else-if="section === 'manual'"/>
       <DocsBrowser v-else/>
     </aside>
     <div class="column-grip" :class="{active: sideWidth.resizing}" role="separator" aria-orientation="vertical"
@@ -127,6 +145,7 @@ watch(() => snippets.revealed, request => {
       <ProjectDetail v-if="section === 'projects'" :all-tags="allTags" @filter-tag="filterTag"/>
       <SnippetEditor v-else-if="section === 'snippets'" :id="selectedSnippet" @delete="deleteSnippet"
                      @duplicate="duplicateSnippet"/>
+      <ManualViewer v-else-if="section === 'manual'"/>
       <DocViewer v-else/>
     </main>
   </div>
@@ -183,6 +202,15 @@ watch(() => snippets.revealed, request => {
 
 .sections {
   flex: none;
+}
+
+/* Only the shown section takes the free width, for its label */
+.sections button {
+  flex: none;
+}
+
+.sections button.on {
+  flex: 1;
 }
 
 .content {

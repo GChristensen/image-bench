@@ -21,7 +21,7 @@ deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension
 # (symlinked shared code included)
 deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_ps comfy_dest)
 
-# The Photoshop plugin, supplied with the extension for installing it from the Manual tab
+# The Photoshop plugin, supplied with the extension for installing it from the manual (Library tab)
 _deploy_ps dest: (_deploy "photoshop-extension" (dest + "/shared/photoshop-plugin") "index.js index.html manifest.json uxp.ps1")
 
 _require name value:

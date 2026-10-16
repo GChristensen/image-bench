@@ -27,6 +27,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas} from "@/host.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useProjectsStore} from "@/stores/projects.js";
+import {useManualStore} from "@/stores/manual.js";
 import {handleHostResponse} from "@/hostRequest.js";
 
 // Messages too frequent to log
@@ -49,6 +50,7 @@ const configPresetsStore = useConfigPresetsStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
 const controlNetStore = useControlNetStore();
 const projectsStore = useProjectsStore();
+const manualStore = useManualStore();
 const hasOpener = computed(() => !!window.opener);
 
 // Composables
@@ -75,14 +77,13 @@ function hideManualHint() {
   showManualHint.value = false;
 }
 
-watch(() => route.path, path => {
-  if (path === "/manual")
-    hideManualHint();
-});
+watch(() => manualStore.opened, opened => opened && hideManualHint());
 
+// The manual is a section of the Library
 function openManual() {
   hideManualHint();
-  router.push("/manual");
+  manualStore.reveal();
+  router.push("/library");
 }
 
 const viewStores = {
@@ -261,13 +262,12 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <RouterLink to="/library" class="tab" id="library-tab"><AppIcon name="library" :size="14"/>Library</RouterLink>
       <div class="tab-spacer"></div>
       <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
-        ><AppIcon name="book" :size="13"/>New to Image Bench? Read the manual</a>
+        ><AppIcon name="help" :size="13"/>New to Image Bench? Read the manual</a>
       <span v-if="!hasOpener" class="chip window-warning" title="The opener SD WebUI window is closed or was reloaded"
         ><AppIcon name="alert" :size="13"/>Disconnected from WebUI</span>
       <ProjectChip/>
       <RouterLink to="/settings" class="tab icon-tab" ref="settingsTab" title="Settings" aria-label="Settings"
         ><AppIcon name="settings" :size="15"/></RouterLink>
-      <RouterLink to="/manual" class="tab icon-tab" title="Manual" aria-label="Manual"><AppIcon name="book" :size="15"/></RouterLink>
       <button class="ib flat actions-button" @click="showActionsModal = true"
               title="Clean up (clear images, delete outputs, reset parameters)" aria-label="Clean up"
         ><AppIcon name="broom" :size="16"/></button>
@@ -320,7 +320,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
     cursor: pointer;
   }
 
-  /* Settings and Manual: icons only, the tab bar is full at 1200 px */
+  /* Settings: icon only, the tab bar is full at 1200 px */
   .tab.icon-tab {
     padding: 0 8px;
   }
