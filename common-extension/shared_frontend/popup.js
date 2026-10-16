@@ -10,6 +10,23 @@ import {createWebSocket, isConnectionOpen} from "./websocket.js";
 import {loadAppConfig} from "./utils.js";
 
 /**
+ * The Image Bench window that loads this host page in its iframe (embedded mode), which sets imageBenchEmbedded
+ * @returns {Window|null}
+ */
+export function getEmbeddingWindow() {
+  if (window.parent === window) {
+    return null;
+  }
+
+  try {
+    return window.parent.imageBenchEmbedded ? window.parent : null;
+  } catch {
+    // A parent of another origin
+    return null;
+  }
+}
+
+/**
  * Create a popup manager with the specified configuration
  * @param {Object} config - Configuration object
  * @param {string} config.endpoint - Popup window endpoint (default: '/image-bench/window')
@@ -28,6 +45,8 @@ export function createPopupManager(config = {}) {
 
   // Internal state
   let popupWindow = null;
+  // Whether popupWindow is the Image Bench window embedding this page in its iframe, not a window opened here
+  let attached = false;
   let websocket = null;
   let messageQueue = [];
   // The "openInTab" setting, read ahead so that window.open() stays within the user gesture of the click.
@@ -85,6 +104,13 @@ export function createPopupManager(config = {}) {
    * @returns {boolean} True if window was created, false if already open
    */
   function openPopup() {
+    // The Image Bench button of a page in the iframe of Image Bench shows its own tabs
+    if (attached) {
+      popupWindow.imageBenchShowApp?.();
+      popupWindow.focus();
+      return false;
+    }
+
     if (popupWindow && !popupWindow.closed) {
       popupWindow.focus();
       return false;
@@ -117,6 +143,33 @@ export function createPopupManager(config = {}) {
     if (integrateWebSocket) {
       connectWebSocket();
     }
+
+    return true;
+  }
+
+  /**
+   * Use the Image Bench window that embeds this page in its iframe (getEmbeddingWindow()) in place of a popup
+   * @param {Window} targetWindow
+   * @returns {boolean} True if attached, false if already attached to it
+   */
+  function attach(targetWindow) {
+    if (attached && popupWindow === targetWindow) {
+      return false;
+    }
+
+    popupWindow = targetWindow;
+    attached = true;
+
+    setGenerationState("BATCH_GENERATION");
+    popupWindow.getGenerationState = getGenerationState;
+
+    if (integrateWebSocket) {
+      connectWebSocket();
+    }
+
+    // Image Bench outlives this page: it sends its state again to the next page loaded in the iframe
+    window.addEventListener("pagehide", () => sendMessage({type: "HOST_DETACHED"}));
+    sendMessage({type: "HOST_READY"});
 
     return true;
   }
@@ -159,7 +212,8 @@ export function createPopupManager(config = {}) {
    * Close the popup window
    */
   function close() {
-    if (popupWindow && !popupWindow.closed) {
+    // The embedding window closes itself
+    if (!attached && popupWindow && !popupWindow.closed) {
       popupWindow.close();
     }
   }
@@ -169,6 +223,7 @@ export function createPopupManager(config = {}) {
    */
   function dispose() {
     popupWindow = null;
+    attached = false;
 
     if (websocket) {
       websocket.close();
@@ -189,9 +244,18 @@ export function createPopupManager(config = {}) {
     }
   }
 
+  /**
+   * @returns {boolean} True if attached to an embedding window
+   */
+  function isAttached() {
+    return attached;
+  }
+
   // Return public API
   return {
     open: openPopup,
+    attach,
+    isAttached,
     close,
     dispose,
     sendMessage,

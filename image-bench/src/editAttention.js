@@ -5,6 +5,8 @@
  * The precision and delimiters are the WebUI settings when the WebUI window is reachable
  */
 
+import {getHostWindow} from "@/hostWindow.js";
+
 const DEFAULT_OPTIONS = {
   keyedit_precision_attention: 0.1,
   keyedit_precision_extra: 0.05,
@@ -18,9 +20,9 @@ function getOptions() {
   let opts = null;
 
   try {
-    opts = window.opener?.opts;
+    opts = getHostWindow()?.opts;
   } catch {
-    // The opener is gone or from another origin
+    // The host window is gone or from another origin
   }
 
   return {...DEFAULT_OPTIONS, ...Object.fromEntries(Object.keys(DEFAULT_OPTIONS)

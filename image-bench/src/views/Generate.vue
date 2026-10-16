@@ -47,6 +47,7 @@ import {fetchModelInfo} from "@/civitai.js";
 import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {requestHost} from "@/hostRequest.js";
+import {onHostReady} from "@/hostWindow.js";
 import {toast} from "@/toast.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
 import {imageFilesFromDataTransfer} from "@/imageFiles.js";
@@ -201,7 +202,20 @@ function flushParams() {
   pending = {};
 }
 
-onActivated(() => webUI.subscribeMirror(true));
+let activated = false;
+
+onActivated(() => {
+  activated = true;
+  webUI.subscribeMirror(true);
+});
+
+// A host page loaded again in the iframe of the embedded mode knows nothing of the popup
+onHostReady(() => {
+  webUI.setPhotoshopTarget(photoshopTarget.value);
+
+  if (activated)
+    webUI.subscribeMirror(true);
+});
 
 // ---------- Workflows (ComfyUI) ----------
 
@@ -240,6 +254,7 @@ async function saveWorkflow() {
 
 
 onDeactivated(() => {
+  activated = false;
   flushParams();
   webUI.subscribeMirror(false);
 });

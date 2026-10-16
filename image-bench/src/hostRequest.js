@@ -1,4 +1,5 @@
 import {sendWebUIMessage} from "@/sdwebui.js";
+import {getHostWindow} from "@/hostWindow.js";
 
 /**
  * Requests to the host page answered with HOST_RESPONSE {requestId, result | error}, for operations whose result
@@ -15,7 +16,7 @@ const pending = new Map();
  * @returns {Promise<any>} The result; rejects with the error of the host page or on timeout
  */
 export function requestHost(message, timeout = 60000) {
-  if (!window.opener || window.opener.closed)
+  if (!getHostWindow())
     return Promise.reject(new Error("The host page is closed. Reopen Image Bench from it."));
 
   const requestId = nextRequestId++;

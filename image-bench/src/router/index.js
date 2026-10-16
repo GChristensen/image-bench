@@ -7,6 +7,7 @@ import Generate from "@/views/Generate.vue";
 import ControlNet from "@/views/ControlNet.vue";
 import Compare from "@/views/Compare.vue";
 import Library from "@/views/Library.vue";
+import {EMBEDDED} from "@/hostWindow.js";
 
 const scrollBehavior = (to, from) => {
   if (to.name === from.name) {
@@ -118,6 +119,13 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: Settings
+    },
+    {
+      // The host page of the embedded mode, App.vue shows its iframe (HostFrame.vue) over the empty view
+      path: '/host',
+      name: 'host',
+      component: {render: () => null},
+      beforeEnter: () => EMBEDDED || '/generate'
     }
   ]
 })

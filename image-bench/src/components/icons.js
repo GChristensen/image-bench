@@ -70,4 +70,5 @@ export const ICON_PATHS = {
   library: '<path d="m16 6 4 14M12 6v14M8 8v12M4 4v16"/>',
   snippet: '<path d="m8 6-6 6 6 6M16 6l6 6-6 6"/>',
   star: '<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>',
+  appWindow: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20M6 4v4M10 4v4"/>',
 };

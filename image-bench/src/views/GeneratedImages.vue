@@ -10,7 +10,7 @@ import {useImageTrayStore} from "@/stores/imageTray.js";
 import {generationStateToKind, KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
-import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
+import {createImageLink, ensureGenerationIdle, getGenerationState} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useCompareStore} from "@/stores/compare.js";
@@ -226,7 +226,7 @@ function onBeforeSDEvent(e) {
 
 function onAfterSDEvent(e) {
   if (e.type === "SAVED_IMAGE") {
-    const currentKind = generationStateToKind(window.getGenerationState());
+    const currentKind = generationStateToKind(getGenerationState());
 
     if (currentKind === props.kind)
       imageStream.value.afterAddImage();

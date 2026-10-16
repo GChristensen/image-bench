@@ -217,6 +217,37 @@ onMounted(loadPluginStatus);
           row; a smaller one still works, though some toolbars wrap onto two lines.
         </div>
       </div>
+      <h3>Opening Image Bench without the {{ HOST_NAME }} page</h3>
+      <p>
+        <a :href="`${hostOrigin}/image-bench/app`" target="_blank">{{ hostOrigin }}/image-bench/app</a> (bookmark
+        it) opens Image Bench in a popup window that loads {{ HOST_NAME }} itself: the
+        <AppIcon name="appWindow" :size="13" class="inline-icon"/> tab after Settings shows the {{ HOST_NAME }}
+        page, which keeps working while another tab is shown, so no {{ HOST_NAME }} tab has to be opened. If the
+        page is reloaded in that tab, or {{ HOST_NAME }} restarts, Image Bench shows <span class="kbd warn">Connecting
+        to {{ HOST_NAME }}</span> until the page is back and then carries on. The 🔬 button of that page brings back
+        the other tabs. Dragging an image card onto the <AppIcon name="appWindow" :size="13" class="inline-icon"/>
+        tab and holding it there shows the page, so the image can be dropped into an image input of
+        {{ HOST_NAME }}.
+      </p>
+      <p>
+        The link opens a small page that opens the popup and closes itself (when the link was opened in a new
+        tab). If the browser blocks the popup, that page shows a button that opens it; allow popups for the
+        {{ HOST_NAME }} address to skip it. A second visit to the link brings the open window to the front instead
+        of opening another one, and the window opens at the size and place it had when it was last closed. With the
+        setting <b>Open Image Bench in a browser tab instead of a popup window</b> the link opens Image Bench in
+        the same tab.
+      </p>
+      <div class="note">
+        <AppIcon name="info" :size="15"/>
+        <div>
+          Browsers always show an address bar in popup windows. In Firefox, it can be hidden in popup windows only:
+          set <code>toolkit.legacyUserProfileCustomizations.stylesheets</code> to <code>true</code> in
+          <code>about:config</code>, then add
+          <code>#main-window[chromehidden~="toolbar"] #nav-bar { visibility: collapse; }</code> to
+          <code>chrome/userChrome.css</code> in the profile folder (<b>about:support › Profile Folder</b>; create
+          the folder and the file if they are missing) and restart Firefox. Normal windows keep their toolbars.
+        </div>
+      </div>
       <p>
         Generated images reach Image Bench over a WebSocket connection to the address the page was opened on.
         Open {{ HOST_NAME }} at its usual address and port: behind a proxy that does not pass WebSockets
@@ -728,8 +759,9 @@ onMounted(loadPluginStatus);
       <ul>
         <li><b>Accent color</b> — the highlight color of the window: buttons, active tabs, selections.</li>
         <li><b>Open Image Bench in a browser tab instead of a popup window</b> — the 🔬 button opens a regular
-          browser tab (with an address bar, bookmarks and extensions) instead of a popup window. Takes effect the
-          next time Image Bench is opened.</li>
+          browser tab (with an address bar, bookmarks and extensions) instead of a popup window, and the
+          <code>/image-bench/app</code> link opens Image Bench in its own tab. Takes effect the next time Image
+          Bench is opened.</li>
         <li><b>Flash the Generated tab when an image arrives while another tab is shown</b> — generations started
           from the Generate tab or in {{ HOST_NAME }} itself leave Image Bench on the tab it shows, and the tab that
           receives each image flashes; Image Bench never switches to the Generated tab by itself (only upscaling
@@ -949,7 +981,13 @@ onMounted(loadPluginStatus);
       <p>Common problems and how to fix them:</p>
       <dl>
         <dt>"Disconnected from {{ HOST_NAME }}"</dt>
-        <dd>The page that opened the window was closed or reloaded. Open Image Bench again from that page.</dd>
+        <dd>The page that opened the window was closed or reloaded. Open Image Bench again from that page, or use
+          the <code>/image-bench/app</code> link, which does not depend on another page (see <a href="#"
+          @click.prevent="scrollTo('window')">The window</a>).</dd>
+        <dt>"Connecting to {{ HOST_NAME }}" does not go away</dt>
+        <dd>The {{ HOST_NAME }} page in the <AppIcon name="appWindow" :size="13" class="inline-icon"/> tab has not
+          loaded, or it loaded without the extension. Open the tab to see it; reload it there, or restart
+          {{ HOST_NAME }}.</dd>
         <dt>Images do not appear</dt>
         <dd>Check the address and port {{ HOST_NAME }} is opened on (see <a href="#"
           @click.prevent="scrollTo('window')">The window</a>)<template v-if="isComfy">, and make sure the

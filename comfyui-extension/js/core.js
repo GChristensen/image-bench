@@ -19,7 +19,7 @@ import {createProjects} from "./projects.js";
 import {createWorkflows} from "./workflows.js";
 import {messageBus} from "./shared/messaging/messageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
-import {createPopupManager} from "./shared/popup.js";
+import {createPopupManager, getEmbeddingWindow} from "./shared/popup.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
 
 // Create popup manager instance with WebSocket integration for ComfyUI
@@ -76,6 +76,12 @@ app.registerExtension({
 
         // Listen for postMessage from popup window
         window.addEventListener("message", handlePostMessage);
+
+        // Embedded mode: this page is loaded in the iframe of the Image Bench window, which takes the place of the popup
+        const embeddingWindow = getEmbeddingWindow();
+
+        if (embeddingWindow)
+            popupManager.attach(embeddingWindow);
 
         console.log('[Image Bench] Extension initialized successfully');
     },

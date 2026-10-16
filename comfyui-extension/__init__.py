@@ -16,7 +16,7 @@ from server import PromptServer
 import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, explore_export, loras, persist, photoshop, photoshop_plugin, pnginfo, projects
+from shared import civitai, explore_export, launcher, loras, persist, photoshop, photoshop_plugin, pnginfo, projects
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
 from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
@@ -80,6 +80,17 @@ async def serve_window(request):
         )
 
     return web.FileResponse(html_path, headers={"Cache-Control": "no-cache"})
+
+
+# Image Bench with ComfyUI in its own iframe tab, opened as a popup by the launcher page
+@PromptServer.instance.routes.get(BASE_PATH + "/app")
+async def serve_app(request):
+    url = launcher.redirect_url(get_config_path())
+
+    if url:
+        raise web.HTTPFound(url, headers={"Cache-Control": "no-cache"})
+
+    return web.FileResponse(launcher.LAUNCHER_PATH, headers={"Cache-Control": "no-cache"})
 
 
 # Serve config.json

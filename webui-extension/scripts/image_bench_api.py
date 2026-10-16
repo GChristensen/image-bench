@@ -9,7 +9,7 @@ import zipfile
 
 from fastapi import FastAPI, Body, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 
 import gradio as gr
 import modules.images as webui_images
@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import persist
 from shared import civitai
 from shared import explore_export
+from shared import launcher
 from shared import loras
 from shared import photoshop
 from shared import photoshop_plugin
@@ -78,6 +79,7 @@ class ImageBenchApi():
     def start(self, _: gr.Blocks, app: FastAPI):
         self.app = app
         self.add_api_route("/window", self.get_window, methods=["GET"])
+        self.add_api_route("/app", self.get_app, methods=["GET"])
         self.add_api_route("/js/{path:path}", self.get_extension_js, methods=["GET"])
         self.add_api_route("/config.json", self.get_config, methods=["GET"])
         self.add_api_route("/config.json", self.write_config, methods=["POST"])
@@ -151,6 +153,14 @@ class ImageBenchApi():
     def get_window(self):
         index_html_path = self.get_file_path("index.html")
         return FileResponse(index_html_path, headers={"Cache-Control": "no-cache"})
+
+    def get_app(self):
+        url = launcher.redirect_url(self.get_file_path(EXTENSION_CONFIG_FILE, upper=True))
+
+        if url:
+            return RedirectResponse(url, headers={"Cache-Control": "no-cache"})
+
+        return FileResponse(launcher.LAUNCHER_PATH, headers={"Cache-Control": "no-cache"})
 
     def get_extension_js(self, path: str):
         # Serves the extension's ES module graph with revalidation, since Gradio's file= route

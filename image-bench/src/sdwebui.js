@@ -1,4 +1,5 @@
 import {dialog} from "@/dialogs/useDialog.js";
+import {getHostWindow} from "@/hostWindow.js";
 
 export function createImageData(data) {
     return {...data};
@@ -53,8 +54,12 @@ export function isImg2Img(imageData) {
     return imagePath.includes("img2img-images");
 }
 
+/**
+ * The generation state of the host page, which injects getGenerationState() into this window
+ * @returns {string|null} Null before the host page has attached (embedded mode)
+ */
 export function getGenerationState() {
-    return window.getGenerationState()
+    return window.getGenerationState?.() ?? null;
 }
 
 /**
@@ -64,7 +69,7 @@ export function getGenerationState() {
  */
 export function isGenerationActive() {
     try {
-        return !!window.opener?.imageBenchIsGenerationActive?.();
+        return !!getHostWindow()?.imageBenchIsGenerationActive?.();
     } catch {
         return false;
     }
@@ -84,5 +89,12 @@ export async function ensureGenerationIdle() {
 
 export function sendWebUIMessage(msg) {
     console.log("sendWebUIMessage: ", msg)
-    return window.opener.postMessage(msg);
+    const host = getHostWindow();
+
+    if (!host) {
+        console.warn("sendWebUIMessage: the host page is not connected");
+        return;
+    }
+
+    host.postMessage(msg, window.location.origin);
 }

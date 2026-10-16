@@ -22,6 +22,7 @@ import {sendUrlToPhotoshop} from "@/photoshop.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {ensureOpenposeEditor} from "@/openposeEditor.js";
+import {onHostReady} from "@/hostWindow.js";
 
 // A value edited here is not overwritten by the polled WebUI value for this long,
 // which covers the send delay and the next poll
@@ -87,9 +88,18 @@ watch(() => cn.tab, value => {
   }
 });
 
-onActivated(() => webUI.subscribeControlNet(true, unit.value));
+let activated = false;
+
+onActivated(() => {
+  activated = true;
+  webUI.subscribeControlNet(true, unit.value);
+});
+
+// A host page loaded again in the iframe of the embedded mode knows nothing of the popup
+onHostReady(() => activated && webUI.subscribeControlNet(true, unit.value));
 
 onDeactivated(() => {
+  activated = false;
   flushParams();
   webUI.subscribeControlNet(false, unit.value);
 });

@@ -29,6 +29,10 @@ import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useProjectsStore} from "@/stores/projects.js";
 import {useManualStore} from "@/stores/manual.js";
 import {handleHostResponse} from "@/hostRequest.js";
+import {EMBEDDED, handleHostAttachment, hostConnected} from "@/hostWindow.js";
+import {getGenerationState} from "@/sdwebui.js";
+import HostFrame from "@/components/HostFrame.vue";
+import {HOST_NAME} from "@/host.js";
 
 // Messages too frequent to log
 const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS", "INPUT_IMAGES", "CONTROLNET_STATE", "CONTROLNET_IMAGES"];
@@ -51,7 +55,6 @@ const sdWebUIStateStore = useSDWebUIStateStore();
 const controlNetStore = useControlNetStore();
 const projectsStore = useProjectsStore();
 const manualStore = useManualStore();
-const hasOpener = computed(() => !!window.opener);
 
 // Composables
 const webUI = useWebUIBridge();
@@ -102,17 +105,63 @@ onBeforeMount(async () => {
   await configPresetsStore.init();
   await projectsStore.init();
 
+  // The host page of the embedded mode is initialized when it attaches (HOST_READY)
+  if (!EMBEDDED)
+    initHostPage();
+});
+
+// Tell a host page the state of the popup it does not know
+function initHostPage() {
   webUI.initializePrompts();
 
   // The WebUI prompts are unlocked when the popup closes; lock them again if the user left them locked
   if (hostHas("generate", "promptLock") && sdWebUIStateStore.isPromptsLockRemembered())
     webUI.lockWebUIPrompts(true);
+}
+
+// ---------- Host tab (embedded mode) ----------
+
+const HOST_ROUTE = "/host";
+const hostTabActive = computed(() => route.path === HOST_ROUTE);
+// The tab to return to from the host tab
+let lastAppRoute = "/generate";
+
+watch(() => route.fullPath, path => {
+  if (route.path !== HOST_ROUTE)
+    lastAppRoute = path;
 });
+
+// The Image Bench button of the host page in the iframe shows the popup's own tabs (shared_frontend/popup.js)
+function showAppTabs() {
+  if (hostTabActive.value)
+    router.push(lastAppRoute);
+}
+
+// Dragging an image card over the host tab shows the host page, to drop it into an image input there
+const HOST_TAB_DRAG_DELAY = 500;
+let hostTabDragTimer = null;
+
+function onHostTabDragEnter() {
+  clearTimeout(hostTabDragTimer);
+  hostTabDragTimer = setTimeout(() => router.push(HOST_ROUTE), HOST_TAB_DRAG_DELAY);
+}
+
+function onHostTabDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget))
+    clearTimeout(hostTabDragTimer);
+}
 
 async function onSDEvent(e) {
   // Answers to requests of the popup (hostRequest.js)
   if (handleHostResponse(e))
     return;
+
+  // The host page in the iframe attached or left (embedded mode)
+  if (handleHostAttachment(e)) {
+    if (e.type === "HOST_READY")
+      initHostPage();
+    return;
+  }
 
   // Messages from the host page, which must not open dialogs in its own window
   if (e.type === "SHOW_ALERT") {
@@ -120,7 +169,7 @@ async function onSDEvent(e) {
     return;
   }
 
-  const state = window.getGenerationState();
+  const state = getGenerationState();
   await switchTabAccordingToGenerationMode(e, state);
 
   // The Generate tab receives the WebUI state several times per second
@@ -164,6 +213,8 @@ function onSaveKey(e) {
 
 onMounted(() => {
   window.onSDEvent = onSDEvent;
+  if (EMBEDDED)
+    window.imageBenchShowApp = showAppTabs;
   initManualHint();
   installImageActionKeys();
   window.addEventListener("keydown", onSaveKey);
@@ -172,6 +223,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", onSaveKey);
   clearTimeout(manualHintTimer);
+  clearTimeout(hostTabDragTimer);
   // Clean up window event handler
   if (window.onSDEvent === onSDEvent) {
     window.onSDEvent = null;
@@ -263,11 +315,18 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <div class="tab-spacer"></div>
       <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
         ><AppIcon name="help" :size="13"/>New to Image Bench? Read the manual</a>
-      <span v-if="!hasOpener" class="chip window-warning" title="The opener SD WebUI window is closed or was reloaded"
-        ><AppIcon name="alert" :size="13"/>Disconnected from WebUI</span>
+      <RouterLink v-if="!hostConnected && EMBEDDED" :to="HOST_ROUTE" class="chip window-warning"
+                  :title="`${HOST_NAME} is loading in the ${HOST_NAME} tab`"
+        ><AppIcon name="alert" :size="13"/>Connecting to {{ HOST_NAME }}</RouterLink>
+      <span v-else-if="!hostConnected" class="chip window-warning"
+            :title="`The opener ${HOST_NAME} window is closed or was reloaded`"
+        ><AppIcon name="alert" :size="13"/>Disconnected from {{ HOST_NAME }}</span>
       <ProjectChip/>
       <RouterLink to="/settings" class="tab icon-tab" ref="settingsTab" title="Settings" aria-label="Settings"
         ><AppIcon name="settings" :size="15"/></RouterLink>
+      <RouterLink v-if="EMBEDDED" :to="HOST_ROUTE" class="tab icon-tab" id="host-tab" :title="HOST_NAME"
+                  :aria-label="HOST_NAME" @dragenter="onHostTabDragEnter" @dragleave="onHostTabDragLeave"
+        ><AppIcon name="appWindow" :size="15"/></RouterLink>
       <button class="ib flat actions-button" @click="showActionsModal = true"
               title="Clean up (clear images, delete outputs, reset parameters)" aria-label="Clean up"
         ><AppIcon name="broom" :size="16"/></button>
@@ -278,6 +337,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
           <component ref="routerView" :is="Component"  :key="$route.fullPath"/>
         </KeepAlive>
       </RouterView>
+      <HostFrame v-if="EMBEDDED" :active="hostTabActive"/>
     </div>
   <ActionsModal :show="showActionsModal" @close="showActionsModal = false" />
   <ImageContextMenu />
@@ -346,6 +406,8 @@ async function switchTabAccordingToGenerationMode(e, state) {
   }
 
   #tab-content {
+    position: relative;
+    isolation: isolate;
     flex-grow: 1;
     min-height: 0;
   }
@@ -373,5 +435,10 @@ async function switchTabAccordingToGenerationMode(e, state) {
     background: #3a2a12;
     color: var(--ib-warn);
     cursor: default;
+  }
+
+  a.window-warning {
+    text-decoration: none;
+    cursor: pointer;
   }
 </style>

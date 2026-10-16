@@ -1,7 +1,7 @@
 import {loadAppConfig} from "./shared/utils.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
 import {createStrategies} from "./shared/strategy-factory.js";
-import {createPopupManager} from "./shared/popup.js";
+import {createPopupManager, getEmbeddingWindow} from "./shared/popup.js";
 import {createWebSocket, isConnectionClosed} from "./shared/websocket.js";
 import {
     fetchCurrentModelInfo,
@@ -82,6 +82,12 @@ export async function init() {
     // Only user clicks fire mousedown, strategies click the buttons programmatically
     for (const id of [SELECTORS.TXT2IMG_GENERATE, SELECTORS.IMG2IMG_GENERATE])
         document.getElementById(id)?.addEventListener("mousedown", onGenerateStarted);
+
+    // Embedded mode: this page is loaded in the iframe of the Image Bench window, which takes the place of the popup
+    const embeddingWindow = getEmbeddingWindow();
+
+    if (embeddingWindow && popupManager.attach(embeddingWindow))
+        connectPopup();
 }
 
 /**
@@ -216,10 +222,16 @@ async function onShowModelInfo() {
 }
 
 async function onShowWindow() {
-    if (popupManager.open()) {
-        createWebSocketConnection();
-        hookIntoSDWebUI(sendPopupMessage, checkWebSocketConnection);
-    }
+    if (popupManager.open())
+        connectPopup();
+}
+
+/**
+ * Forward the images of the backend to the popup, opened or attached
+ */
+function connectPopup() {
+    createWebSocketConnection();
+    hookIntoSDWebUI(sendPopupMessage, checkWebSocketConnection);
 }
 
 function createWebSocketConnection() {
