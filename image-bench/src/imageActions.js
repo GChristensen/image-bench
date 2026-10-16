@@ -197,10 +197,10 @@ export const IMAGE_ACTIONS = [
     run: image => sendToControlNet(image)
   },
   {
-    id: "photoshop", side: "right", group: 2, icon: "external", label: "Send to Photoshop", key: "P",
-    alt: {icon: "filePlus", label: "Send to Photoshop as a new document"},
+    id: "photoshop", side: "right", group: 2, icon: "external", label: "Send to Photoshop as a new document", key: "P",
+    alt: {icon: "layers", label: "Send to Photoshop as a new layer"},
     visible: () => true,
-    run: (image, ctx, alt) => sendToPhotoshop(image, alt)
+    run: (image, ctx, alt) => sendToPhotoshop(image, !alt)
   },
   {
     id: "compare", side: "right", group: 3, icon: "compare", label: "Add to compare", key: "A",

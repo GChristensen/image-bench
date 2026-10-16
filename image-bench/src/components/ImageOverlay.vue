@@ -210,7 +210,7 @@
 
   function onPhotoshopAuxClick(e) {
     if (e.button === 1)
-      onSendToPhotoshop(e, true);
+      onSendToPhotoshop(e, false);
   }
 
   // Clicking the current marking removes it
@@ -317,8 +317,8 @@
           </template>
           <button v-if="canSendToControlNet" class="ib" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
                   @click="onSendToControlNet"><AppIcon name="controlnet" :size="20"/></button>
-          <button class="ib" title="Left: send to Photoshop, Middle: send to Photoshop as a new image" aria-label="Send to Photoshop"
-                  @click="onSendToPhotoshop($event, false)" @mousedown.middle.prevent @auxclick="onPhotoshopAuxClick"><AppIcon name="external" :size="20"/></button>
+          <button class="ib" title="Left: send to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer" aria-label="Send to Photoshop"
+                  @click="onSendToPhotoshop($event, !$event.shiftKey)" @mousedown.middle.prevent @auxclick="onPhotoshopAuxClick"><AppIcon name="external" :size="20"/></button>
           <span class="actions-separator"></span>
           <button v-if="kind !== KIND_COMPARE" class="ib" title="Add to compare" aria-label="Add to compare"
                   @click="onAddToCompare"><AppIcon name="compare" :size="20"/></button>

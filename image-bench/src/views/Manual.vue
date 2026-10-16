@@ -186,8 +186,8 @@ onMounted(loadPluginStatus);
           the options of the window, and this manual.</li>
       </ul>
       <p>
-        A Photoshop plugin comes with the extension. It sends images from Photoshop to {{ HOST_NAME }} and places
-        any image from Image Bench back into Photoshop as a layer (see
+        A Photoshop plugin comes with the extension. It sends images from Photoshop to {{ HOST_NAME }} and opens
+        any image from Image Bench in Photoshop as a new document or a layer (see
         <a href="#" @click.prevent="scrollTo('photoshop')">Photoshop</a>).
       </p>
     </section>
@@ -353,7 +353,7 @@ onMounted(loadPluginStatus);
           the lists to send it to the unit selected here. <b>To Photoshop</b> sends the shown control image or mask
           to Photoshop.</li>
         <li><b>Preprocessor</b> and <b>Run preprocessor</b> — the result appears in the <b>Preview</b> pane,
-          from where <b>To Photoshop</b> passes it on (middle-click: as a new document); its other buttons copy,
+          from where <b>To Photoshop</b> passes it on (middle-click or Shift+click: as a new layer); its other buttons copy,
           save and clear the preview. <b>Pixel Perfect</b> derives the preprocessor resolution
           from the image and the generation size.
           <span v-if="isWebUI">Pixel Perfect and <b>Allow Preview</b> are checked for you the first time a unit is
@@ -679,8 +679,8 @@ onMounted(loadPluginStatus);
         <tr><td><AppIcon name="controlnet" :size="14"/></td><td><span class="kbd">N</span> Sends the image to the
           control image of the ControlNet tab.</td></tr>
         <tr><td><AppIcon name="external" :size="14"/></td><td><span class="kbd">P</span> Sends the image to
-          Photoshop as a layer of the active document; middle click or
-          <span class="kbd">Shift</span>+<span class="kbd">P</span> opens it as a new document.</td></tr>
+          Photoshop as a new document; middle click or
+          <span class="kbd">Shift</span>+<span class="kbd">P</span> places it as a layer of the active document.</td></tr>
         <tr><td><AppIcon name="compare" :size="14"/></td><td><span class="kbd">A</span> Adds the image to the
           Compare tab.</td></tr>
         <tr><td><AppIcon name="concept" :size="14"/> <AppIcon name="palette" :size="14"/></td><td>
@@ -844,8 +844,8 @@ onMounted(loadPluginStatus);
       <h3>{{ HOST_NAME }} → Photoshop</h3>
       <p>
         The <AppIcon name="external" :size="13" class="inline-icon"/> <b>Send to Photoshop</b> button of any image,
-        like <b>To Photoshop</b> in the ControlNet panes, places the image as a new layer of the active document.
-        Middle-click it to open the image as a new document instead. The layer is rasterized, so its pixels can be
+        like <b>To Photoshop</b> in the ControlNet panes, opens the image as a new document.
+        Middle-click or Shift+click it to place the image as a new layer of the active document instead. The layer is rasterized, so its pixels can be
         edited directly; check <b>Place as smart objects</b> in the plugin panel to keep it a smart object instead.
       </p>
     </section>
@@ -911,7 +911,7 @@ onMounted(loadPluginStatus);
           current project</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+click</td><td>Switch between full size and fit to screen in the image view</td></tr>
         <tr><td>Middle click</td><td>On an image, open it in a new tab. On a button, perform its alternative action
-          (reuse all parameters, open as a new Photoshop document); on a marking, remove it</td></tr>
+          (reuse all parameters, place as a new Photoshop layer); on a marking, remove it</td></tr>
         <tr><td><span class="kbd">Shift</span>+click</td><td>On a button of an image, perform its alternative
           action</td></tr>
         <tr><td>Right click</td><td>The menu of an image</td></tr>

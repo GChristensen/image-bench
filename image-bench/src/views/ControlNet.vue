@@ -325,11 +325,15 @@ const previewName = computed(() => `ControlNet ${unit.value + 1} ${form.preproce
 const sourceImage = computed(() => shownSourceView.value === "mask" ? images.value.mask : images.value.image);
 const sourceName = computed(() => `ControlNet ${unit.value + 1} ${shownSourceView.value === "mask" ? "mask" : "image"}`);
 
-// Left click places the image as a layer of the active document, middle click opens it as a new document
-async function onToPhotoshop(e, url, name, newDocument) {
+// Left click opens the image as a new document, middle click or Shift+click places it as a layer of the active document
+async function onToPhotoshop(e, url, name) {
+  if (e.button !== 0 && e.button !== 1)
+    return;
+
   e.preventDefault();
 
-  const error = await sendUrlToPhotoshop(url, name, newDocument);
+  const newLayer = e.button === 1 || e.shiftKey;
+  const error = await sendUrlToPhotoshop(url, name, !newLayer);
 
   if (error)
     await dialog.alert(error, {title: "Send to Photoshop"});
@@ -448,9 +452,10 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
           </template>
           <template #actions>
             <button class="btn outline photoshop" :disabled="!sourceImage"
-                    :title="`Left: send the ${shownSourceView === 'mask' ? 'mask' : 'control image'} to Photoshop, Middle: send to Photoshop as a new image`"
-                    @mousedown.left="onToPhotoshop($event, sourceImage, sourceName, false)"
-                    @mousedown.middle="onToPhotoshop($event, sourceImage, sourceName, true)"
+                    :title="`Left: send the ${shownSourceView === 'mask' ? 'mask' : 'control image'} to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer`"
+                    @click="onToPhotoshop($event, sourceImage, sourceName)"
+                    @mousedown.middle.prevent
+                    @auxclick="onToPhotoshop($event, sourceImage, sourceName)"
               ><AppIcon name="external" :size="13"/>To Photoshop</button>
             <button class="ib flat" :disabled="!connected"
                     :title="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
@@ -481,9 +486,10 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
                     :title="images.pose ? 'Edit the pose in the OpenPose editor' : 'Run the preprocessor to get the pose'"
                     @click="onEditPose"><AppIcon name="pencil" :size="13"/>Edit pose</button>
             <button class="btn outline photoshop" :disabled="!images.preview"
-                    title="Left: send the preview to Photoshop, Middle: send to Photoshop as a new image"
-                    @mousedown.left="onToPhotoshop($event, images.preview, previewName, false)"
-                    @mousedown.middle="onToPhotoshop($event, images.preview, previewName, true)"
+                    title="Left: send the preview to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer"
+                    @click="onToPhotoshop($event, images.preview, previewName)"
+                    @mousedown.middle.prevent
+                    @auxclick="onToPhotoshop($event, images.preview, previewName)"
               ><AppIcon name="external" :size="13"/>To Photoshop</button>
             <button class="ib flat" :disabled="!images.preview" title="Copy the preview (Ctrl+C)"
                     aria-label="Copy the preview" @click="onCopyPreview"><AppIcon name="copy" :size="14"/></button>

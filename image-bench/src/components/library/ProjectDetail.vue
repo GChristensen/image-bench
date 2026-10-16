@@ -350,8 +350,13 @@ async function addToCompare(url, name) {
   }
 }
 
-async function sendToPhotoshop(url, name) {
-  const error = await sendUrlToPhotoshop(url, baseName(name));
+// A new document, or a layer of the active document on a middle click or Shift+click
+async function sendToPhotoshop(url, name, e) {
+  if (e && e.button !== 0 && e.button !== 1)
+    return;
+
+  const newLayer = !!e && (e.button === 1 || e.shiftKey);
+  const error = await sendUrlToPhotoshop(url, baseName(name), !newLayer);
 
   if (error)
     await dialog.alert(error, {title: "Photoshop"});
@@ -361,7 +366,8 @@ function onItemMenu(e, item) {
   const items = [
     {icon: "star", label: "Set as the final image", run: () => store.setFinal(project.value.path, item.final)},
     {icon: "compare", label: "Add to compare", run: () => addToCompare(item.url, item.name)},
-    {icon: "external", label: "Send to Photoshop", run: () => sendToPhotoshop(item.url, item.name)},
+    {icon: "external", label: "Send to Photoshop as a new document", run: () => sendToPhotoshop(item.url, item.name)},
+    {icon: "layers", label: "Send to Photoshop as a new layer", run: () => sendToPhotoshop(item.url, item.name, {button: 1})},
     {separator: true},
     {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")}
   ];
@@ -475,8 +481,10 @@ const unitDetails = unit => [
         <div class="final-bar">
           <span class="final-source" :title="finalSourceLabel">{{ finalSourceLabel }}</span>
           <button class="btn outline small" @click="changeFinal">Choose…</button>
-          <button v-if="finalUrl" class="ib sm" title="Send to Photoshop" aria-label="Send the final image to Photoshop"
-                  @click="sendToPhotoshop(finalUrl, data.final)"><AppIcon name="external" :size="13"/></button>
+          <button v-if="finalUrl" class="ib sm" title="Left: send to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer"
+                  aria-label="Send the final image to Photoshop"
+                  @click="sendToPhotoshop(finalUrl, data.final, $event)" @mousedown.middle.prevent
+                  @auxclick="sendToPhotoshop(finalUrl, data.final, $event)"><AppIcon name="external" :size="13"/></button>
           <button v-if="finalUrl" class="ib sm danger" title="Remove the final image" aria-label="Remove the final image"
                   @click="store.setFinal(project.path)"><AppIcon name="close" :size="13"/></button>
         </div>
