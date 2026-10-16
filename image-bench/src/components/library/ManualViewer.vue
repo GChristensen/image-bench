@@ -255,8 +255,7 @@ const hostOrigin = location.origin;
           <b>Apply</b> sets the checked groups in the shown mode: prompt, negative prompt, model<template
           v-if="isWebUI"> (checkpoint with its UI preset, VAE / Text Encoder)</template>, sampling, size, seed and
           Hires. fix (denoising in img2img). Values {{ HOST_NAME }} does not have, such as a missing checkpoint,
-          are listed and left out. Dropping an image or an image card on the prompt opens it too.<template
-          v-if="isComfy"> Only images with WebUI parameters are read; ComfyUI workflow images are not.</template></li>
+          are listed and left out. Dropping an image or an image card on the prompt opens it too.</li>
         <li v-if="isWebUI"><b>VAE / Text Encoder</b> — the small button before the checkpoint list switches it
           with the VAE / Text Encoder list of Forge Neo, which has the same size. The icon shows what is shown:
           <AppIcon name="box" :size="13" class="inline-icon"/> the checkpoint,
@@ -869,7 +868,8 @@ const hostOrigin = location.origin;
         <li>The <b>Image Bench Prompt</b> node (category Image Bench) applies the
           <code>&lt;lora:name:weight&gt;</code> tags in its text to the model and CLIP, and passes on the text
           without them. Place it between the checkpoint loader and the text encoder and title it
-          <code>ib:pp</code>, and the LoRA list works just as it does in WebUI.</li>
+          <code>ib:pp</code>, and the LoRA list works just as it does in WebUI (see
+          <a href="#" @click.prevent="scrollTo('comfy-prompt')">Image Bench Prompt node</a>).</li>
         <li><b>Example workflows</b>, with every node already marked, are listed under Image Bench in the ComfyUI
           template browser, and are copied into the <i>Image Bench</i> folder of your saved workflows (only the
           missing ones, so your saved edits are kept).</li>
@@ -881,12 +881,188 @@ const hostOrigin = location.origin;
           (as Ctrl+S in ComfyUI); a workflow not saved yet asks for its name, folders separated by /.</li>
         <li>Two node packs are optional: <b>comfyui_controlnet_aux</b> for ControlNet preprocessors, and
           <b>ComfyUI-Advanced-ControlNet</b> for ControlNet masks.</li>
-        <li>A marker can also go on a subgraph node; promote the widgets that Image Bench should change.</li>
+        <li>A marker can also go on a subgraph node; promote the widgets that Image Bench should change (see
+          <a href="#" @click.prevent="scrollTo('comfy-subgraphs')">Subgraphs</a>).</li>
         <li>Custom loader or sampler nodes can be supported by adding them to <code>node_config.json</code> in the
-          extension folder and reloading the page. The extension's README describes the format.</li>
+          extension folder and reloading the page. <code>NODE_CONFIG.md</code> next to it describes the
+          format.</li>
         <li>The workflow needs an output node (Save Image or Preview Image), or no images will reach Image
           Bench.</li>
       </ul>
+
+      <h3 id="manual-comfy-markers">Markers in detail</h3>
+      <ul>
+        <li>The marker is case-insensitive and may stand anywhere in the title, but as a word of its own:
+          <code>Main model ib:cp</code> and <code>IB:CP - base</code> work, <code>xib:cp</code> does not.</li>
+        <li>One title may carry several markers, e.g. <code>Text to Image ib:pp ib:smp ib:cp</code>.</li>
+        <li>The index after the marker is 0 when left out (<code>ib:smp</code> is <code>ib:smp:0</code>). It
+          matters for <code>ib:smp</code> (0 the main sampler, 1 the Hires. fix sampler), <code>ib:ref</code> and
+          <code>ib:cn</code>. For the other markers the first marked node of the graph is used, so mark only one
+          node of each.</li>
+        <li>Mark the node that holds the prompt text: if the text of an encoder comes from a String Literal node,
+          mark the String Literal. A node holding both prompts (Text Encode Qwen Image 2.1) may carry both
+          <code>ib:pp</code> and <code>ib:np</code>; otherwise <code>ib:np</code> skips the node of
+          <code>ib:pp</code>, and <code>ib:mask</code> the node of <code>ib:img</code>.</li>
+      </ul>
+      <table class="markers">
+        <tr><th>Marker</th><th>Accepted nodes</th><th>Without it</th></tr>
+        <tr><td><code>ib:cp</code></td><td>Load Checkpoint (also the older and unCLIP loaders), Load Diffusion
+          Model (UNETLoader), Unet Loader (GGUF), GGUF Loader KJ</td><td>No checkpoint list; model exploration
+          fails</td></tr>
+        <tr><td><code>ib:smp</code></td><td>KSampler, KSampler (Advanced), SamplerCustom,
+          SamplerCustomAdvanced</td><td>The first KSampler of the graph</td></tr>
+        <tr><td><code>ib:smp:1</code></td><td>The same</td><td>No Hires. fix group; Upscale is refused</td></tr>
+        <tr><td><code>ib:hr</code></td><td>If/Else Switch, Soft Switch, Boolean primitive (all marked nodes are
+          set together)</td><td>No Hires. fix checkbox; the Hires. fix pass always runs</td></tr>
+        <tr><td><code>ib:pp</code> / <code>ib:np</code></td><td>Image Bench Prompt, String Literal,
+          CLIPTextEncode (also the SDXL, Flux and SD3 variants), Text Encode Qwen Image 2.1</td><td>The first /
+          second CLIPTextEncode of the graph, which depends on the order the nodes were created in, so mark them.
+          Without either, the negative prompt is hidden.</td></tr>
+        <tr><td><code>ib:lora</code></td><td>Load LoRA, LoraLoaderModelOnly</td><td>Exploring LoRAs is
+          refused</td></tr>
+        <tr><td><code>ib:img</code> / <code>ib:mask</code></td><td>Load Image / Load Image (as Mask) or Load
+          Image</td><td>txt2img mode; images from Photoshop are saved, and a message says that no node is
+          marked</td></tr>
+        <tr><td><code>ib:ref:N</code></td><td>Load Image</td><td>No References panel</td></tr>
+        <tr><td><code>ib:cn:N</code></td><td>Apply ControlNet (also the SD3 and old ones), the Advanced-ControlNet
+          apply nodes</td><td>The ControlNet tab says that no node is marked</td></tr>
+      </table>
+      <p>
+        During LoRA exploration the <code>ib:lora</code> loader gets each explored LoRA with its weight as both
+        strengths; the LoRA-free images set the strengths to 0. A bypassed or muted loader is enabled for the run,
+        and its LoRA, strengths and mode are restored afterwards.
+      </p>
+
+      <h3 id="manual-comfy-prompt">Image Bench Prompt node</h3>
+      <p>
+        Wire it as <b>Load Checkpoint</b> → <code>model</code> / <code>clip</code> → <b>Image Bench Prompt</b>
+        (titled <code>ib:pp</code>) → <code>model</code> to the sampler, <code>clip</code> and <code>text</code> to
+        a CLIPTextEncode whose <code>text</code> is converted to an input. Take the <code>clip</code> of the
+        negative prompt encoder from the prompt node too, so that both use the same CLIP. Leave the
+        <code>clip</code> input unconnected for model-only LoRAs.
+      </p>
+      <ul>
+        <li><code>&lt;lora:name&gt;</code> — weight 1; <code>&lt;lora:name:0.8&gt;</code> — 0.8 for the model and
+          the text encoder; <code>&lt;lora:name:0.5:1&gt;</code> — text encoder 0.5, model 1.</li>
+        <li><code>name</code> is the path in the <code>loras</code> folder, with or without the extension, or just
+          the file name: <code>styles/ink.safetensors</code>, <code>styles/ink</code> and <code>ink</code> all
+          match.</li>
+        <li>Unknown names are reported in the ComfyUI console ("LoRA ... is not found") and skipped; LoRAs with
+          both weights 0 are not loaded.</li>
+      </ul>
+
+      <h3 id="manual-comfy-params">Generation parameters</h3>
+      <p>
+        The sampling fields of the Generate tab are found from the sampler marked <code>ib:smp</code>, so both
+        sampler styles work without further markers. Links are followed through Reroutes and out of subgraphs.
+        A field whose node is not found is hidden.
+      </p>
+      <table>
+        <tr><th>Field</th><th>KSampler</th><th>SamplerCustomAdvanced</th></tr>
+        <tr><td>Seed</td><td><code>seed</code></td><td>RandomNoise</td></tr>
+        <tr><td>Steps, schedule type, denoising</td><td>The sampler</td><td>BasicScheduler (or
+          Flux2Scheduler)</td></tr>
+        <tr><td>CFG scale</td><td><code>cfg</code></td><td>CFGGuider</td></tr>
+        <tr><td>Sampling method</td><td><code>sampler_name</code></td><td>KSamplerSelect</td></tr>
+        <tr><td>Distilled CFG</td><td colspan="2">FluxGuidance on the positive conditioning or in front of the
+          guider</td></tr>
+        <tr><td>Shift</td><td colspan="2">ModelSamplingSD3 / ModelSamplingAuraFlow along the model (when there is
+          no FluxGuidance)</td></tr>
+        <tr><td>Width × height</td><td colspan="2">The empty latent, or the integer primitives feeding it</td></tr>
+      </table>
+      <ul>
+        <li><b>Hires. fix</b> (<code>ib:smp:1</code>) edits the steps and denoising of the second sampler (or of
+          its scheduler and Split Sigmas Denoise), the <i>Upscale by</i> of the Upscale Latent By / Upscale Image
+          By in front of it, and the upscaler: the Load Upscale Model, else the method of the scale node. For the
+          checkbox, put an <b>If/Else Switch</b> titled <code>ib:hr</code> before the save node, with the
+          first-pass image on <code>on_false</code> and the Hires. fix image on <code>on_true</code>. Its inputs
+          are lazy, so the Hires. fix nodes do not run while it is off.</li>
+        <li><b>Lists</b> — the checkpoint, sampler, scheduler and upscaler lists are the choices of the workflow's
+          widgets, so a UNETLoader lists the diffusion models and a GGUF loader the <code>.gguf</code> files.
+          <b>Model exploration lists only the <code>checkpoints</code> folder</b>, so with a UNETLoader or GGUF
+          loader marked <code>ib:cp</code> it has no usable models; switch them in the Generate tab instead.</li>
+        <li><b>Seed −1</b> sets the seed widget's <i>control after generate</i> to <i>randomize</i>, any other
+          seed to <i>fixed</i>. A batch sets −1.</li>
+      </ul>
+
+      <h3 id="manual-comfy-images">Input images and inpainting</h3>
+      <p>
+        Image Bench only selects the file in the marked loader; what the workflow does with the image and the
+        mask is up to it (Set Latent Noise Mask, VAE Encode (for Inpainting), InpaintModelConditioning, ...). Mask
+        files hold the mask in their color channels and its inverse in alpha, so Load Image (as Mask) with any
+        channel and the <code>MASK</code> output of Load Image both read it.
+      </p>
+      <table>
+        <tr><th><code>ib:img</code></th><th><code>ib:mask</code></th><th></th></tr>
+        <tr><td>Load Image</td><td>Load Image (as Mask)</td><td>The usual setup.</td></tr>
+        <tr><td>Load Image</td><td>Another Load Image</td><td>Use the <code>MASK</code> output of the mask
+          node.</td></tr>
+        <tr><td>Load Image</td><td>—</td><td>img2img; a mask sent from Photoshop is reported.</td></tr>
+        <tr><td>—</td><td>Either</td><td>Mask only; the image comes from elsewhere in the workflow (the Generate
+          tab stays in txt2img mode).</td></tr>
+      </table>
+      <ul>
+        <li>The mask never goes to the <code>ib:img</code> node, so a single Load Image marked
+          <code>ib:img ib:mask</code> receives only the image.</li>
+        <li>A bypassed or muted marked node gets the file but stays bypassed.</li>
+        <li>Other loaders that pick a file of the <code>input</code> folder by name can be added to
+          <code>node_config.json</code>.</li>
+      </ul>
+
+      <h3 id="manual-comfy-references">References</h3>
+      <p>
+        Title the Load Image nodes of the reference images <code>ib:ref:0</code>, <code>ib:ref:1</code>, ... in
+        the order the prompt refers to them (Image 1, Image 2, ...). An added image goes into the first unused
+        slot, or replaces the last one when all are used. Removing an image bypasses its Load Image together with
+        the nodes that cannot run without it (a VAE Encode, for example), up to a node that passes its other input
+        through (Reference Latent) or takes the image as an optional input. Check the bypassed nodes once on a new
+        workflow. Slots inside a subgraph cannot be bypassed and are always in use.
+      </p>
+
+      <h3 id="manual-comfy-controlnet">ControlNet units</h3>
+      <p>
+        From the apply node titled <code>ib:cn:N</code>, the unit's other nodes are found through its inputs: the
+        ControlNet loader on <code>control_net</code> (the Model), the Load Image on <code>image</code>, directly or
+        through an AIO Aux Preprocessor (the control image), and, for the Advanced-ControlNet apply nodes, the mask
+        loader on <code>mask_optional</code>. Weight and the starting and ending steps are the apply node's
+        <code>strength</code>, <code>start_percent</code> and <code>end_percent</code>; Enable and Use Mask bypass
+        the apply node and the mask loader.
+      </p>
+      <ul>
+        <li>With an AIO Aux Preprocessor in the unit, the Preprocessor field is its widget, and the workflow
+          preprocesses the image at each generation. Without one, the field only chooses the preprocessor of
+          <b>Run preprocessor</b>, and the control image is used as it is.</li>
+        <li><b>Run preprocessor</b> runs a small prompt of its own at the front of the queue (your workflow does
+          not run); its images do not appear in the Generated tab.</li>
+        <li>Without Pixel Perfect the preprocessor resolution is 512. ComfyUI has no control types, so all
+          preprocessors and models are listed.</li>
+      </ul>
+
+      <h3 id="manual-comfy-subgraphs">Subgraphs</h3>
+      <p>
+        A marker on a <b>subgraph node</b> works through the widgets promoted to it: for each marker Image Bench
+        looks for a promoted widget of an accepted inner node (e.g. the <code>text</code> of a CLIPTextEncode) and
+        writes it. Nested subgraphs are followed; markers on nodes <i>inside</i> a subgraph are not searched.
+      </p>
+      <ul>
+        <li>Promote every widget Image Bench should change. A widget that is not promoted (e.g. <i>control after
+          generate</i>) is written on the inner node, which changes the subgraph for all its instances.</li>
+        <li>Nodes linked to the marked node (the RandomNoise of a sampler, the loader of a ControlNet) are found
+          inside the subgraph, and links from its inputs are followed out to the parent graph.</li>
+        <li>On a subgraph node marked both <code>ib:pp</code> and <code>ib:np</code>, the first promoted text
+          widget is the positive prompt. Marked <code>ib:img ib:mask</code>, the image goes to the first promoted
+          Load Image and the mask to the next promoted loader.</li>
+        <li>Reference slots and ControlNet units inside a subgraph cannot be bypassed.</li>
+      </ul>
+
+      <h3 id="manual-comfy-files">Files written</h3>
+      <p>
+        Images for the marked nodes are saved in the ComfyUI <code>input</code> folder under fixed names and
+        overwritten by the next image of the same kind: <code>image_bench_input_*.png</code> (Input and Mask
+        panes), <code>image_bench_reference_N.png</code> (references), <code>image_bench_cn_N_*.png</code>
+        (ControlNet units) and <code>image_bench_photoshop_*.png</code> (Photoshop). The trays, presets, model
+        hashes and Civitai lookups are kept in <code>store/</code> of the extension folder.
+      </p>
     </section>
 
     <section id="manual-shortcuts">

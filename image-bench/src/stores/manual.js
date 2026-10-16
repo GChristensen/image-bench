@@ -27,7 +27,16 @@ export const MANUAL_SECTIONS = [
   {id: "photoshop", title: "Photoshop", icon: "photoshop", children: [
     {id: "photoshop-canny", title: "Canny Edges plugin", icon: "controlnet"},
   ]},
-  ...(isComfy ? [{id: "comfy-setup", title: "ComfyUI setup", icon: "puzzle"}] : []),
+  ...(isComfy ? [{id: "comfy-setup", title: "ComfyUI setup", icon: "puzzle", children: [
+    {id: "comfy-markers", title: "Markers in detail", icon: "tag"},
+    {id: "comfy-prompt", title: "Image Bench Prompt node", icon: "pencil"},
+    {id: "comfy-params", title: "Generation parameters", icon: "sliders"},
+    {id: "comfy-images", title: "Input images & inpainting", icon: "brush"},
+    {id: "comfy-references", title: "References", icon: "images"},
+    {id: "comfy-controlnet", title: "ControlNet units", icon: "controlnet"},
+    {id: "comfy-subgraphs", title: "Subgraphs", icon: "box"},
+    {id: "comfy-files", title: "Files written", icon: "folder"},
+  ]}] : []),
   {id: "shortcuts", title: "Keyboard & mouse", icon: "zap"},
   {id: "troubleshooting", title: "Troubleshooting", icon: "alert"},
 ];
