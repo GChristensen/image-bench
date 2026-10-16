@@ -56,6 +56,9 @@ async function show() {
   border-radius: 13px;
   background: color-mix(in srgb, var(--ib-accent) 7%, transparent);
   overflow: hidden;
+  /* In a narrow window the name is cut, never the buttons: overflow: hidden would let the chip shrink to 0,
+     and min-content would include the whole name, so the floor is the icon, the dot and both buttons */
+  min-width: 97px;
 }
 
 .project-chip.missing {
@@ -77,11 +80,14 @@ async function show() {
 
 .chip-name {
   gap: 6px;
+  min-width: 0;
+  flex-shrink: 1;
   max-width: 190px;
   padding: 0 4px 0 9px;
 }
 
 .chip-name .app-icon {
+  flex-shrink: 0;
   color: var(--ib-accent);
 }
 
@@ -103,6 +109,11 @@ async function show() {
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--ib-warn);
+}
+
+.chip-save,
+.chip-close {
+  flex-shrink: 0;
 }
 
 .chip-save {
