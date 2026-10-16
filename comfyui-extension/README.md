@@ -539,7 +539,7 @@ Anima:
 - `image_anima_full.json`: Anima base v1.0 with every feature: LoRA list, Shift (`ModelSamplingAuraFlow`), two
   ControlNet units with the community VACE models for Anima, depth (`ib:cn:0`, Depth Anything V2 preprocessor) and
   canny (`ib:cn:1`, Canny preprocessor), each with an effect mask; one reference (`ib:ref:0`, scaled to the generation
-  size and concatenated to the latent by ComfyUI-Cosmos-Reference, first pass only); Hires. fix (`ib:smp:1`, upscaler
+  size and concatenated to the latent by ComfyUI-Cosmos-Reference, first pass only); Hires.  fix (`ib:smp:1`, upscaler
   model, `ib:hr` switch). The VACE models load only with the
   [PineCookie fork of ComfyUI-Advanced-ControlNet](https://github.com/PineCookie/ComfyUI-Advanced-ControlNet/tree/fix/anima-vace-hardening)
   (branch `fix/anima-vace-hardening`, in place of the original package); the preprocessors need comfyui_controlnet_aux.

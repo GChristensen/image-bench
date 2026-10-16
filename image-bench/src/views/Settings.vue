@@ -128,7 +128,7 @@ function setGenerateUiPreset(index, value) {
     >Open Image Bench in a browser tab instead of a popup window</label>
     <h3>Generation</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.flashGeneratedTab"
-    >Flash the Generated tab when an image generated from the Generate tab arrives</label>
+    >Flash the Generated tab when an image arrives while another tab is shown</label>
     <h3>Generate Tab</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.keepSessionStrip"
     >Keep the session filmstrip shown when a batch ends</label>

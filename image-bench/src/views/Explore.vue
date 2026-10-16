@@ -471,7 +471,7 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
     @confirm="onLoraParamsConfirm"
     @cancel="showLoraParamsModal = false"
   />
-  <ImageOverlay v-if="showImageOverlay" :image="overlayImage" kind="explore" @show-params="onShowParams"
+  <ImageOverlay v-if="showImageOverlay" :image="overlayImage" kind="explore" markable @show-params="onShowParams"
                 @hide-overlay="closeImageOverlay"/>
   <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage" :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>

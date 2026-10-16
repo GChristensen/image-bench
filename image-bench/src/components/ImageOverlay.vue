@@ -3,6 +3,7 @@
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
   import {useCompareStore} from "@/stores/compare.js";
+  import {syncTrayMarkings} from "@/stores/trayMarkings.js";
   import {flashTrayTab} from "@/components/utils.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE, MARKINGS} from "@/consts.js";
@@ -219,7 +220,12 @@
     else
       props.image.marking = marking;
 
-    emit("setMarking", props.image);
+    markingChanged(props.image);
+  }
+
+  function markingChanged(image) {
+    syncTrayMarkings(image, props.kind, props.isTray);
+    emit("setMarking", image);
   }
 
   // The marking bar opens on hover, or on a click on the current marking
@@ -238,7 +244,7 @@
       filterMarking: marking => emit("filterMarking", marking),
       removeMarking: image => {
         delete image.marking;
-        emit("setMarking", image);
+        markingChanged(image);
       },
       activeMarkingFilter: () => props.markingFilter
     }
@@ -261,7 +267,7 @@
       onMarkingClick(marking);
     else if (props.image.marking) {
       delete props.image.marking;
-      emit("setMarking", props.image);
+      markingChanged(props.image);
     }
   }
 

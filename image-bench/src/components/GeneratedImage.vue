@@ -1,6 +1,7 @@
 <script setup>
   import {computed, nextTick, ref, watch} from "vue";
   import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
+  import {syncTrayMarkings} from "@/stores/trayMarkings.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {useShiftKey} from "@/composables/useShiftKey.js";
   import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
@@ -101,7 +102,8 @@
     ? imageActionHint(hoveredAction.value, showAlt.value)
     : typeof hoveredText.value === "function" ? hoveredText.value() : hoveredText.value);
 
-  const markingHint = () => props.markingFilter === props.image.marking
+  const markingHint = () => props.kind === "explore" ? "Middle: remove marking"
+    : props.markingFilter === props.image.marking
     ? "Click: show all images · Middle: remove marking"
     : "Click: show only this marking · Middle: remove marking";
 
@@ -148,12 +150,17 @@
   function setMarking(marking) {
     hoveredText.value = null;
     props.image.marking = marking;
-    emit("setMarking");
+    markingChanged();
   }
 
   function removeMarking() {
     hoveredText.value = null;
     delete props.image.marking;
+    markingChanged();
+  }
+
+  function markingChanged() {
+    syncTrayMarkings(props.image, props.kind, props.isTray);
     emit("setMarking");
   }
 
@@ -206,7 +213,7 @@
 
     <!-- One row, so that the hint never covers the badges; it wraps upwards if narrow -->
     <div class="image-bottom-bar">
-      <!-- Explore images compare models, so they show no badges or markings -->
+      <!-- Explore images compare models, so they show no badges (markings set in the overlay are shown) -->
       <div v-if="kind !== 'explore'" class="image-badges">
         <span v-if="image.parameters['hires upscale']" class="badge hr"
               @mouseenter="hoveredText = 'Upscaled'" @mouseleave="hoveredText = null">HR</span>
@@ -223,7 +230,7 @@
 
       <span v-if="hint" class="action-hint">{{ hint }}</span>
 
-      <span v-if="image.marking && kind !== 'explore'" class="image-marking" :class="{active: markingFilter === image.marking}"
+      <span v-if="image.marking" class="image-marking" :class="{active: markingFilter === image.marking}"
             @mouseenter="hoveredText = markingHint"
             @mouseleave="hoveredText = null"
             @click="$emit('filterMarking', image.marking)"

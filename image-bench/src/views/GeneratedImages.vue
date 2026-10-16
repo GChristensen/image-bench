@@ -324,7 +324,10 @@ async function onOpenFileInputChange(e) {
   }
 }
 
-function onSaveClick() {
+// A pending tray change is saved first, so that the archive has it
+async function onSaveClick() {
+  await imageStore.flush?.();
+
   const link = document.createElement('a');
   link.href = "/image-bench/download_image_tray?kind=" + props.kind;
   link.download = props.kind + ".zip";
@@ -346,13 +349,14 @@ function isComponentTray(kind) {
                 :kind="kind"
                 :upscalable="isComponentTray(kind) || kind === KIND_GENERATED"
                 :marking-filter="markingFilter"
+                :markable="kind === KIND_GENERATED || kind === KIND_UPSCALED"
                 @show-params="onShowParams"
                 @upscale-image="onUpscaleImage"
                 @add-comment="image => imageStream.addComment(image)"
                 @filter-marking="onMarkingFilterOverlay"
                 @hide-overlay="closeImageOverlay"
                 @image-select="onImageSelectOverlay"
-                @set-marking="imageStore.persist()"
+                @set-marking="imageStore.persist?.()"
                 @delete-image="onDeleteImageOverlay"/>
   <ParametersOverlay v-if="showParamsOverlay"
                      :image="paramsOverlayImage"

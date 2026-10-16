@@ -206,29 +206,34 @@ const RESULT_TAB_IDS = {
   [KIND_UPSCALED]: "upscaled-images-tab"
 };
 
-async function switchTabAccordingToGenerationMode(e, state) {
-  // Generations started from the Generate tab stay there, the tab receiving their images flashes
-  if (route.path === "/generate") {
-    const tabId = RESULT_TAB_IDS[generationStateToKind(state)];
+// Route of each tab receiving images
+const RESULT_TAB_ROUTES = {
+  [KIND_GENERATED]: "/generated-images",
+  [KIND_UPSCALED]: "/upscaled-images"
+};
 
+/**
+ * The popup never switches to the Generated tab: the tab flashes when an image arrives while another one is shown
+ * (as the setting allows). Upscaling started from the popup (not from the Generate tab or the host page) shows the
+ * Upscaled tab
+ */
+async function switchTabAccordingToGenerationMode(e, state) {
+  if (e.type === "SAVED_IMAGE") {
+    const kind = generationStateToKind(state);
+    const tabId = RESULT_TAB_IDS[kind];
     const disabled = tabId === RESULT_TAB_IDS[KIND_GENERATED] && !appConfigStore.flashGeneratedTab;
 
-    if (e.type === "SAVED_IMAGE" && tabId && !disabled)
+    if (tabId && !disabled && route.path !== RESULT_TAB_ROUTES[kind])
       flashTrayTab(tabId);
     return;
   }
 
-  if (e.type === "BEGIN_PROCESSING" && !e.single) {
-    if (state === "BATCH_GENERATION" || state === "SEQUENTIAL_GENERATION") {
-      if (route.fullPath !== "/generated-images") {
-        await router.push("/generated-images");
-      }
-    } else if (state === "HIRES_FIX") {
-      if (route.fullPath !== "/upscaled-images") {
-        await router.push("/upscaled-images");
-      }
-    }
-  }
+  if (route.path === "/generate")
+    return;
+
+  if (e.type === "BEGIN_PROCESSING" && !e.single && !e.host && state === "HIRES_FIX"
+      && route.fullPath !== "/upscaled-images")
+    await router.push("/upscaled-images");
 }
 
 </script>

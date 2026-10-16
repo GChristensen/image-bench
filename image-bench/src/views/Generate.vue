@@ -46,6 +46,8 @@ import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModelInfo} from "@/civitai.js";
 import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
+import {requestHost} from "@/hostRequest.js";
+import {toast} from "@/toast.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
 import {imageFilesFromDataTransfer} from "@/imageFiles.js";
 import {appendToPrompt, insertIntoTextarea, useSnippetsStore} from "@/stores/snippets.js";
@@ -208,6 +210,33 @@ onActivated(() => {
   if (has("workflowSelect"))
     webUI.syncWorkflows();
 });
+
+const savingWorkflow = ref(false);
+const workflowSaved = computed(() => sdWebUI.workflows.some(item => item.path === sdWebUI.workflow?.path));
+
+// ComfyUI would ask the name of an unsaved workflow in its own window, which the popup hides: it is asked here
+async function saveWorkflow() {
+  let name = null;
+
+  if (!workflowSaved.value) {
+    name = await dialog.prompt("Name of the workflow (folders separated by /):",
+      {title: "Save the workflow", defaultValue: sdWebUI.workflow?.name || ""});
+
+    if (!name)
+      return;
+  }
+
+  savingWorkflow.value = true;
+
+  try {
+    const {path} = await requestHost({type: "SAVE_WORKFLOW", name});
+    toast(`Workflow saved: ${path.replace(/^workflows\//, "").replace(/\.json$/i, "")}`);
+  } catch (error) {
+    await dialog.alert(error.message, {title: "Save the workflow"});
+  } finally {
+    savingWorkflow.value = false;
+  }
+}
 
 
 onDeactivated(() => {
@@ -643,6 +672,19 @@ function openImageOverlay(image) {
   showImageOverlay.value = true;
 }
 
+// The overlay shows images of the session or of the Generated tab: the marking goes to both copies of the image
+function onSetMarking(image) {
+  const url = createImageLink(image);
+
+  for (const other of [...generatedImagesStore.images, ...sessionImagesStore.images])
+    if (other !== image && !other.separator && createImageLink(other) === url) {
+      if (image.marking)
+        other.marking = image.marking;
+      else
+        delete other.marking;
+    }
+}
+
 const showParamsOverlay = ref(false);
 const paramsOverlayImage = ref(null);
 const paramsOverlayText = ref("");
@@ -930,8 +972,8 @@ const gridStyle = computed(() => ({
 </script>
 
 <template>
-  <ImageOverlay v-if="showImageOverlay" :image="overlayImage" @show-params="onShowParams"
-                @hide-overlay="showImageOverlay = false"/>
+  <ImageOverlay v-if="showImageOverlay" :image="overlayImage" markable @show-params="onShowParams"
+                @set-marking="onSetMarking" @hide-overlay="showImageOverlay = false"/>
   <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage" :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
   <PngInfoDialog v-if="pngInfo" :context="pngInfoContext" :file="pngInfo.file"
@@ -985,6 +1027,9 @@ const gridStyle = computed(() => ({
         <span class="toolbar-divider"></span>
         <WorkflowSelect class="workflow-select" :workflows="sdWebUI.workflows" :active="sdWebUI.workflow"
                         :disabled="!connected || generating" @select="path => webUI.loadWorkflow(path)"/>
+        <button class="ib" :class="{busy: savingWorkflow}" :disabled="!connected || !sdWebUI.workflow || savingWorkflow"
+                :title="workflowSaved ? 'Save the workflow' : 'Save the workflow as…'" aria-label="Save the workflow"
+                @click="saveWorkflow"><AppIcon name="save" :size="14"/></button>
       </template>
       <span v-if="has('modeSwitch')" class="toolbar-divider"></span>
       <div v-if="has('modeSwitch')" class="seg modes" role="radiogroup" aria-label="Generation mode">

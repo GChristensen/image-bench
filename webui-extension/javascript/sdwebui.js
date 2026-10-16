@@ -72,7 +72,8 @@ export function initializePopupPrompts(sendPopupFn) {
 function onGenerateMousedown(e) {
     checkWebSocketConnection();
     setGenerationState("BATCH_GENERATION");
-    sendPopupMessage({type: "BEGIN_PROCESSING"});
+    // Started in WebUI: the popup flashes the Generated tab instead of switching to it
+    sendPopupMessage({type: "BEGIN_PROCESSING", host: true});
 }
 
 async function onInterruptMousedown(e) {

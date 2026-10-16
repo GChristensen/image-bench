@@ -349,12 +349,17 @@ function handleExecutionStart(event) {
     if (controlNet?.ownsPrompt(prompt_id))
         return;
 
+    const isBatchGeneration = !!currentStrategy?.isProcessing();
+    // Queued from the Generate tab, where the image is shown
+    const single = !!generation?.takeSingle();
+
     sendPopupMessage({
         type: "BEGIN_PROCESSING",
         prompt_id: prompt_id,
-        isBatchGeneration: currentStrategy && currentStrategy.isProcessing(),
-        // Queued from the Generate tab, where the image is shown
-        single: !!generation?.takeSingle()
+        isBatchGeneration,
+        single,
+        // Queued in ComfyUI: the popup flashes the Generated tab instead of switching to it
+        host: !single && !isBatchGeneration
     });
 }
 

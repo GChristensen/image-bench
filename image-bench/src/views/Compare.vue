@@ -1,6 +1,7 @@
 <script setup>
 import {computed, nextTick, onActivated, onDeactivated, reactive, ref, watch} from "vue";
 import {useCompareStore} from "@/stores/compare.js";
+import {syncTrayMarkings} from "@/stores/trayMarkings.js";
 import {KIND_COMPARE} from "@/consts.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
@@ -146,6 +147,7 @@ function setMarking(image, marking) {
   else
     delete image.marking;
 
+  syncTrayMarkings(image, KIND_COMPARE);
   store.persist();
 }
 

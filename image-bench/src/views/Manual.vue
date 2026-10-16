@@ -504,7 +504,10 @@ onMounted(loadPluginStatus);
           <span class="kbd">0</span> removes it. On a thumbnail, click the marking to show only the
           images that carry it, and click it again to show all; middle-click it to remove it. The
           <AppIcon name="filter" :size="13" class="inline-icon"/> button shows only marked images, or the marking
-          being shown.</li>
+          being shown. The large image views of the Generate, Explore, Generated and Upscaled tabs set markings
+          too; those of Generated, Explore and the Generate tab last until the window is closed (add the image to a
+          tray to keep it). A marking set or removed there also changes the copies of the image already in the
+          trays and the Compare tab.</li>
         <li><b>Comments</b> <AppIcon name="comment" :size="13" class="inline-icon"/> on images, shown below the
           buttons of the image.</li>
         <li><b>Removing images</b> — check them and use <b>Remove selected</b>, which appears in the toolbar
@@ -522,6 +525,8 @@ onMounted(loadPluginStatus);
           selected</b>, shown in the toolbar next to it, upscales each of them.<template v-if="isComfy"> Upscaling
           needs a workflow with a Hires. fix sampler (<code>ib:smp:1</code>); its <code>ib:hr</code> switch is
           turned on for the run and restored afterwards.</template></li>
+        <li><b>Download</b> <AppIcon name="download" :size="13" class="inline-icon"/> saves the tray as a .zip
+          archive (images with their parameters), which can be imported into any tray.</li>
         <li><b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (parameters
           included) or a tray archive (.zip), such as the files in <code>ib_project/trays</code> of a project. The
           trays themselves are saved into the projects of the
@@ -703,9 +708,11 @@ onMounted(loadPluginStatus);
         <li><b>Open Image Bench in a browser tab instead of a popup window</b> — the 🔬 button opens a regular
           browser tab (with an address bar, bookmarks and extensions) instead of a popup window. Takes effect the
           next time Image Bench is opened.</li>
-        <li><b>Flash the Generated tab when an image generated from the Generate tab arrives</b> — generations
-          started from the Generate tab stay on it, and the tab that receives each image flashes. Turn it off to
-          stop the Generated tab from flashing; the Upscaled tab still flashes.</li>
+        <li><b>Flash the Generated tab when an image arrives while another tab is shown</b> — generations started
+          from the Generate tab or in {{ HOST_NAME }} itself leave Image Bench on the tab it shows, and the tab that
+          receives each image flashes; Image Bench never switches to the Generated tab by itself (only upscaling
+          started here shows the Upscaled tab). Turn it
+          off to stop the Generated tab from flashing; the Upscaled tab still flashes.</li>
         <template v-if="isWebUI">
           <li><b>UI preset buttons</b> — which Forge UI presets the buttons of the Generate tab switch to. The
             other presets remain available in the menu next to them.</li>
@@ -875,7 +882,8 @@ onMounted(loadPluginStatus);
           Workflows sidebar as a folder tree with a filter (Enter takes the first match). Choosing one opens it as the
           sidebar does: it switches to its tab if
           it is open (keeping its changes), else opens it. The dropdown follows the active ComfyUI tab; • marks
-          unsaved changes.</li>
+          unsaved changes. <AppIcon name="save" :size="13" class="inline-icon"/> after it saves the active workflow
+          (as Ctrl+S in ComfyUI); a workflow not saved yet asks for its name, folders separated by /.</li>
         <li>Two node packs are optional: <b>comfyui_controlnet_aux</b> for ControlNet preprocessors, and
           <b>ComfyUI-Advanced-ControlNet</b> for ControlNet masks.</li>
         <li>A marker can also go on a subgraph node; promote the widgets that Image Bench should change.</li>

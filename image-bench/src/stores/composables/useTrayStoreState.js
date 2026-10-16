@@ -82,21 +82,46 @@ export function useTrayStoreState(kind) {
   }
 
   // Images keep their original path in sourcePath after being copied to the tray directory
-  function isInTray(imageData) {
-    return baseStore.images.value.some(i =>
-      (i.sourcePath || i.imagePath) === imageData.imagePath || i.imagePath === imageData.imagePath);
+  // (a copy in another tray or the Compare tab has the same one)
+  function findInTray(imageData) {
+    const source = imageData.sourcePath || imageData.imagePath;
+
+    return baseStore.images.value.find(i =>
+      (i.sourcePath || i.imagePath) === source || i.imagePath === imageData.imagePath);
   }
 
   async function addImage(imageData) {
+    const existing = findInTray(imageData);
+
+    // An image added again brings its marking to the copy in the tray
+    if (existing) {
+      if (imageData.marking)
+        syncMarking(imageData);
+      return;
+    }
+
     imageData = { ...imageData };
     // A selected image (e.g. dragged with others) does not arrive selected
     delete imageData.selected;
 
-    if (!isInTray(imageData)) {
-      imageData.tagColor = pickTagColor(baseStore.images.value, imageData);
-      baseStore.images.value.push(imageData);
-      await persist();
-    }
+    imageData.tagColor = pickTagColor(baseStore.images.value, imageData);
+    baseStore.images.value.push(imageData);
+    await persist();
+  }
+
+  // A marking set or removed outside the trays goes to the copy of the image in the tray, if any
+  function syncMarking(imageData) {
+    const image = findInTray(imageData);
+
+    if (!image || image.marking === imageData.marking)
+      return;
+
+    if (imageData.marking)
+      image.marking = imageData.marking;
+    else
+      delete image.marking;
+
+    persist();
   }
 
   // Color-tag and save an image already added to the images (e.g. by onSDEvent)
@@ -117,6 +142,7 @@ export function useTrayStoreState(kind) {
     // Tray-specific actions
     init,
     addImage,
+    syncMarking,
     colorAndPersist,
     persist,
     flush,
