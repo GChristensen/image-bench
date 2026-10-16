@@ -21,6 +21,7 @@ import {messageBus} from "./shared/messaging/messageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager, getEmbeddingWindow} from "./shared/popup.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
+import {createControlNetCapture} from "./shared/controlnetCapture.js";
 
 // Create popup manager instance with WebSocket integration for ComfyUI
 const popupManager = createPopupManager({
@@ -46,6 +47,10 @@ let mirror = null;
 let controlNet = null;
 let messageHandlers = {};
 
+// ControlNet units of each queued prompt by its id; its images carry the capture id
+const MAX_PROMPT_CAPTURES = 500;
+const promptCaptures = new Map();
+
 /**
  * Register the extension with ComfyUI
  */
@@ -67,6 +72,8 @@ app.registerExtension({
 
         // Add toolbar button
         addToolbarButton();
+
+        captureControlNetOfPrompts();
 
         // Register event listeners
         api.addEventListener("executed", handleExecuted);
@@ -172,6 +179,33 @@ function initializeTabModules() {
 
     messageHandlers = {...mirror.handlers, ...controlNet.handlers, ...generation.handlers, ...projects.handlers,
                        ...workflows.handlers};
+}
+
+/**
+ * Capture the ControlNet units of every prompt queued from the page (the popup, strategies, ComfyUI's Queue button);
+ * the preprocessor prompts of the ControlNet tab are posted to /prompt directly and are not captured
+ */
+function captureControlNetOfPrompts() {
+    const capture = createControlNetCapture({
+        hasEnabledUnits: () => !!controlNet?.hasEnabledUnits(),
+        captureUnits: () => controlNet.captureUnits()
+    });
+    const queuePrompt = api.queuePrompt.bind(api);
+
+    api.queuePrompt = async (...args) => {
+        // Read before the prompt is queued, while the graph is that of the prompt
+        const id = capture.capture();
+        const result = await queuePrompt(...args);
+
+        if (id && result?.prompt_id) {
+            promptCaptures.set(result.prompt_id, id);
+
+            if (promptCaptures.size > MAX_PROMPT_CAPTURES)
+                promptCaptures.delete(promptCaptures.keys().next().value);
+        }
+
+        return result;
+    };
 }
 
 /**
@@ -325,6 +359,9 @@ async function handleExecuted(event) {
                 batchId: prompt_id,
                 parameters: parameters
             };
+
+            if (promptCaptures.has(prompt_id))
+                message.controlnetId = promptCaptures.get(prompt_id);
 
             // Add strategy-specific parameters if a strategy is active
             if (currentStrategy && currentStrategy.isProcessing()) {

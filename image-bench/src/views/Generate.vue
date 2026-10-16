@@ -40,7 +40,6 @@ import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {useFeatures} from "@/composables/useFeatures.js";
-import {useImageOperations} from "@/composables/useImageOperations.js";
 import {HOST_NAME} from "@/host.js";
 import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModelInfo} from "@/civitai.js";
@@ -101,7 +100,6 @@ const IMAGE_HEIGHT = {min: 120, sideReserve: 200};
 const sdWebUI = useSDWebUIStateStore();
 const generatedImagesStore = useGeneratedImagesStore();
 const sessionImagesStore = useSessionImagesStore();
-const imageOps = useImageOperations();
 const config = useAppConfigStore();
 const webUI = useWebUIBridge();
 const storage = useLocalStorage();
@@ -723,10 +721,8 @@ function onSetMarking(image) {
 
 const showParamsOverlay = ref(false);
 const paramsOverlayImage = ref(null);
-const paramsOverlayText = ref("");
 
 function onShowParams(image) {
-  paramsOverlayText.value = imageOps.getImageParams(image);
   paramsOverlayImage.value = image;
   showParamsOverlay.value = true;
 }
@@ -1010,7 +1006,7 @@ const gridStyle = computed(() => ({
 <template>
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage" markable @show-params="onShowParams"
                 @set-marking="onSetMarking" @hide-overlay="showImageOverlay = false"/>
-  <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage" :text="paramsOverlayText"
+  <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage"
                      @hide-overlay="showParamsOverlay = false"/>
   <PngInfoDialog v-if="pngInfo" :context="pngInfoContext" :file="pngInfo.file"
                  @close="pngInfo = null" @apply="onPngInfoApply"/>

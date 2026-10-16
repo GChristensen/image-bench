@@ -3,7 +3,7 @@
 import {computed, nextTick, onBeforeMount, onBeforeUnmount, onMounted, reactive, ref, shallowRef, toRaw, watch} from "vue";
 import {useDragSize} from "@/composables/useDragSize.js";
 import GeneratedImage from "@/components/GeneratedImage.vue";
-import {createImageGenerationParams, createImageLink, ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
+import {createImageLink, ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {fetchModelInfo, showModelInfo} from "@/civitai.js";
@@ -167,7 +167,6 @@ const showImageOverlay = ref(false);
 const overlayImage = ref(null);
 const highlightedImage = shallowRef(null);
 const showParamsOverlay = ref(false);
-const paramsOverlayText = ref("");
 const paramsOverlayImage = ref(null);
 
 let scrolledToBottom = true;
@@ -389,7 +388,6 @@ function onSaveResults() {
 }
 
 function onShowParams(image) {
-  paramsOverlayText.value = createImageGenerationParams(image);
   paramsOverlayImage.value = image;
   showParamsOverlay.value = true;
 }
@@ -473,7 +471,7 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
   />
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage" kind="explore" markable @show-params="onShowParams"
                 @hide-overlay="closeImageOverlay"/>
-  <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage" :text="paramsOverlayText"
+  <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage"
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="wrapper">
     <div class="toolbar">

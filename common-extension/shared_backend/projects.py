@@ -39,6 +39,7 @@ from urllib.parse import quote
 
 from PIL import Image
 
+from .controlnet_capture import capture_dirs
 from .persist import read_json_file
 from .tray import TRAY_FILES, unique_file_path
 
@@ -894,7 +895,7 @@ def read_archive_tray(archive: zipfile.ZipFile) -> Dict[str, Any]:
 def get_tray(root: str, path: str, kind: str) -> Dict[str, Any]:
     """
     Images of a saved tray of a project, in the tray order:
-    {member, name, marking, comment, prompt, parameters, img2img, generationId}
+    {member, name, marking, comment, prompt, parameters, img2img, generationId, controlnetId}
     (images whose files were missing when the tray was saved are left out)
     """
     _, data_dir = project_paths(root, path)
@@ -919,7 +920,8 @@ def get_tray(root: str, path: str, kind: str) -> Dict[str, Any]:
                     "prompt": (image.get("parameters") or {}).get("prompt") or "",
                     "parameters": image.get("parameters") or {},
                     "img2img": image.get("img2img"),
-                    "generationId": image.get("generationId")
+                    "generationId": image.get("generationId"),
+                    "controlnetId": image.get("controlnetId")
                 })
 
     version = os.stat(os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")).st_mtime_ns
@@ -1011,11 +1013,7 @@ def write_tray_archive(store_content: bytes, archive_path: str, image_bench_dir:
             archive.write(image_path, archive_name)
             images.append({**image, "imagePath": archive_name})
 
-            generation_id = image.get("generationId")
-            controlnet_dir = generation_id and os.path.join(image_bench_dir, "controlnet", generation_id)
-
-            if controlnet_dir and os.path.isdir(controlnet_dir):
-                controlnet_dirs[generation_id] = controlnet_dir
+            controlnet_dirs.update(capture_dirs(image_bench_dir, image))
 
         archive.writestr(ARCHIVE_TRAY_FILE, json.dumps({**tray_data, "images": images}))
 
@@ -1074,7 +1072,7 @@ def extract_tray_archive(archive_path: str, image_bench_dir: str, kind: str, pla
             image["_tray_processed"] = True
             images.append(image)
 
-        # ControlNet inputs of the batch images
+        # ControlNet inputs of the images
         for member in names:
             parts = member.split("/")
 

@@ -10,7 +10,6 @@ import FileViewer from "@/components/library/FileViewer.vue";
 import ImageActionButtons from "@/components/ImageActionButtons.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {canReuseParameters, reuseParameters, runImageAction, visibleActionGroups} from "@/imageActions.js";
-import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import {baseName, fetchTray, PROJECT_TRAYS, projectFileUrl, trayImageUrl, useProjectsStore} from "@/stores/projects.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
@@ -243,7 +242,7 @@ const gridItems = computed(() => {
       title: [image.name, image.comment, image.prompt].filter(Boolean).join("\n\n"),
       final: {kind, member: image.member},
       image: {imageUrl: url, imagePath: image.name, parameters: image.parameters, img2img: image.img2img,
-              generationId: image.generationId}
+              generationId: image.generationId, controlnetId: image.controlnetId}
     };
   });
 });
@@ -254,7 +253,6 @@ const gridItems = computed(() => {
 // the image file in the workspace, so the cards add to Compare by uploading
 const CARD_ACTIONS = ["params", "inpaint", "controlnet", "photoshop"];
 
-const imageOps = useImageOperations();
 const shiftKey = useShiftKey();
 const paramsImage = ref(null);
 
@@ -638,7 +636,7 @@ const unitDetails = unit => [
         </template>
       </template>
     </FileViewer>
-    <ParametersOverlay v-if="paramsImage" :image="paramsImage" :text="imageOps.getImageParams(paramsImage)"
+    <ParametersOverlay v-if="paramsImage" :image="paramsImage"
                        @hide-overlay="paramsImage = null"/>
   </div>
   <div v-else-if="store.projectError" class="placeholder">{{ store.projectError }}</div>

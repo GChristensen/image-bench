@@ -139,7 +139,6 @@ export class ImageProcessingStrategy extends QueueProcessor {
 
         // Taken before awaiting, so that a finish request arriving meanwhile does not restore twice
         const paramsBackup = this.paramsBackup;
-        const tempGenId = this.generationId;
         this.generationId = null;
         this.paramsBackup = null;
         this.setDenoising = false;
@@ -151,9 +150,6 @@ export class ImageProcessingStrategy extends QueueProcessor {
         await this.uiOperations.restoreImageParams(paramsBackup);
 
         this.messageBus.publish('GENERATION_FINISHED', {});
-
-        await this.uiOperations.sleep(1000);
-        await this.saveControlnetImages(tempGenId);
     }
 
     /**

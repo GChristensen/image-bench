@@ -1,7 +1,7 @@
 import {getGenerationState, setGenerationState} from "./shared/state.js";
 import {messageBus} from "./shared/messaging/MessageBus.js";
 import {sleep} from "./shared/utils.js";
-import {SELECTORS, getElementById, querySelector, querySelectorAll} from "./adapters/selectors.js";
+import {SELECTORS, getElementById, querySelector} from "./adapters/selectors.js";
 import {adapter} from "./adapters/adapter.js";
 import {getImageModules} from "./facade/UIOperations.js";
 
@@ -246,30 +246,5 @@ export async function setImageParams(options) {
     if ("hires upscale" in params) {
         adapter.setInputValue('HIRES_SCALE', params["hires upscale"]);
         adapter.toggleHiresFix(true);
-    }
-}
-
-export async function saveControlnetImages(generationId) {
-    let controlNetThumbs = querySelectorAll(SELECTORS.TXT2IMG_GALLERY);
-    controlNetThumbs = Array.from(controlNetThumbs);
-
-    if (controlNetThumbs.length) {
-        let controlNetImages = new Set(controlNetThumbs.map(t => t.src));
-        controlNetImages = Array.from(controlNetImages);
-
-        const body = {
-            generation_id: generationId,
-            images: []
-        };
-
-        for (const image of controlNetImages) {
-            if (image.includes("file=")) {
-                let imagePath = image.split("file=").at(-1);
-                imagePath = decodeURIComponent(imagePath.replace(/\?.*$/, ""));
-                body.images.push(imagePath);
-            }
-        }
-
-        await fetch("/image-bench/save_controlnet_images", {method: "post", body: JSON.stringify(body)});
     }
 }

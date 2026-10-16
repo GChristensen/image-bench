@@ -8,11 +8,14 @@
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE, MARKINGS} from "@/consts.js";
   import {dialog} from "@/dialogs/useDialog.js";
-  import {hostHas} from "@/host.js";
+  import {HOST_NAME, hostHas} from "@/host.js";
   import {openImageMenu} from "@/contextMenu.js";
-  import {INPAINT_LABEL, sendToInpaint} from "@/imageActions.js";
+  import {INPAINT_LABEL, canReuseParameters, reuseParameters, sendToInpaint} from "@/imageActions.js";
   import {setOverlayImageTarget, clearOverlayImageTarget} from "@/composables/useImageActionKeys.js";
+  import {toast} from "@/toast.js";
   import AppIcon from "@/components/AppIcon.vue";
+  import GenerationParameters from "@/components/GenerationParameters.vue";
+  import GenerationParametersHeader from "@/components/GenerationParametersHeader.vue";
 
   const props = defineProps({
     image: {
@@ -235,36 +238,15 @@
   // The parameters panel is shown over the image, and stays shown while navigating between images
   const showParamsPanel = ref(false);
 
-  const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const hasParameters = computed(() => Object.keys(props.image.parameters || {}).length > 0);
 
-  const parameterPrompts = computed(() => {
-    const params = props.image.parameters || {};
-    return [["Prompt", params["prompt"]], ["Negative prompt", params["negative prompt"]]]
-      .filter(([, text]) => text);
-  });
+  const canReuse = computed(() => canReuseParameters(props.image));
 
-  // The other parameters as rows; objects (e.g. lora hashes) as indented sub-rows
-  const parameterRows = computed(() => {
-    const rows = [];
-
-    for (const [key, value] of Object.entries(props.image.parameters || {})) {
-      if (key === "prompt" || key === "negative prompt")
-        continue;
-
-      if (value && typeof value === "object") {
-        rows.push({key: capitalize(key), value: ""});
-
-        for (const [subKey, subValue] of Object.entries(value))
-          rows.push({key: subKey, value: String(subValue), sub: true});
-      }
-      else
-        rows.push({key: capitalize(key), value: String(value)});
-    }
-
-    return rows;
-  });
-
-  const hasParameters = computed(() => parameterPrompts.value.length > 0 || parameterRows.value.length > 0);
+  // Unlike the parameters overlay, the image overlay stays open
+  async function onReuse(all) {
+    await reuseParameters(props.image, all);
+    toast(all ? `Parameters set in ${HOST_NAME}` : `Seed set in ${HOST_NAME}`);
+  }
 
   // Only the views that listen to filterMarking filter by markings
   const filters = !!getCurrentInstance()?.vnode.props?.onFilterMarking;
@@ -343,19 +325,10 @@
                 @click="showParamsPanel = !showParamsPanel"><AppIcon name="params" :size="20"/></button>
         <Transition name="fade">
           <div v-if="showParamsPanel && hasParameters" class="params-panel">
-            <button class="ib flat params-close" title="Hide generation parameters" aria-label="Hide generation parameters"
-                    @click="showParamsPanel = false"><AppIcon name="close" :size="14"/></button>
+            <GenerationParametersHeader :reusable="canReuse" close-title="Hide generation parameters"
+                                        @reuse="onReuse" @close="showParamsPanel = false"/>
             <div class="params-body">
-              <section v-for="[label, text] in parameterPrompts" :key="label" class="params-section">
-                <div class="params-label">{{ label }}</div>
-                <div class="params-prompt">{{ text }}</div>
-              </section>
-              <dl v-if="parameterRows.length" class="params-grid">
-                <template v-for="(row, index) in parameterRows" :key="index">
-                  <dt :class="{sub: row.sub}">{{ row.key }}</dt>
-                  <dd>{{ row.value }}</dd>
-                </template>
-              </dl>
+              <GenerationParameters :parameters="image.parameters"/>
             </div>
           </div>
         </Transition>
@@ -522,73 +495,12 @@
   cursor: auto;
 }
 
-/* The body scrolls, so the close button stays in the corner */
 .params-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 14px 40px 14px 16px;
-}
-
-.params-panel .params-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  border-color: transparent;
-  background: none;
-}
-
-.params-section + .params-section,
-.params-section + .params-grid {
-  margin-top: 12px;
-}
-
-.params-label {
-  margin-bottom: 3px;
-  color: var(--ib-muted);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.params-prompt {
-  padding: 6px 8px;
-  border: 1px solid var(--ib-border);
-  border-radius: 5px;
-  background: var(--ib-elev);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.params-grid {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 3px 14px;
-  margin: 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--ib-border);
-}
-
-.params-grid dt {
-  color: var(--ib-text-2);
-}
-
-.params-grid dt.sub {
-  padding-left: 12px;
-  color: var(--ib-muted);
-}
-
-.params-grid dd {
-  margin: 0;
-  font-family: var(--ib-mono);
-  font-size: 12px;
-  overflow-wrap: anywhere;
+  padding: 4px 16px 14px;
 }
 
 .overlay-actions {

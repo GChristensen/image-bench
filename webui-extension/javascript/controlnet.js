@@ -618,15 +618,33 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
 
     // ---------- Projects ----------
 
+    function getUnitCount(tab) {
+        return adapter.getTabCountIn(document.getElementById(SELECTORS.CONTROLNET_TABS(tab)));
+    }
+
+    /**
+     * @param {'txt2img'|'img2img'} tab
+     * @returns {boolean} Whether a unit of the generation tab is enabled
+     */
+    function hasEnabledUnits(tab) {
+        for (let index = 0; index < getUnitCount(tab); index++)
+            if (adapter.isCheckedIn(element(tab, index, 'enabled')))
+                return true;
+
+        return false;
+    }
+
     /**
      * The enabled units of a generation tab for a project: their parameters, images and edited poses
      * @param {'txt2img'|'img2img'} tab
-     * @returns {Promise<{index: number, params: Object, image: Blob|null, mask: Blob|null, pose: string|null}[]>}
+     * @param {{preview?: boolean}} options - preview: also the preprocessor preview (for the capture of a generation)
+     * @returns {Promise<{index: number, params: Object, image: Blob|null, mask: Blob|null, pose: string|null,
+     *     preview?: Blob|null}[]>}
      */
-    async function captureUnits(tab) {
+    async function captureUnits(tab, options = {}) {
         await applying;
 
-        const count = adapter.getTabCountIn(document.getElementById(SELECTORS.CONTROLNET_TABS(tab)));
+        const count = getUnitCount(tab);
         const units = [];
 
         for (let index = 0; index < count; index++) {
@@ -635,14 +653,18 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
 
             const params = readUnit(tab, index).params;
             const preview = getCanvasImage(tab, index, 'preview');
-
-            units.push({
+            const unit = {
                 index,
                 params,
                 image: await toBlob(getCanvasImage(tab, index, 'image')),
                 mask: params.useMask ? await toBlob(getCanvasImage(tab, index, 'mask')) : null,
                 pose: preview ? getPose(tab, index) : null
-            });
+            };
+
+            if (options.preview)
+                unit.preview = await toBlob(preview);
+
+            units.push(unit);
         }
 
         return units;
@@ -758,5 +780,5 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
     }
 
     return {subscribe, applyParams, runAction, setUnitImage, setPose, setTab, onPhotoshopImage,
-            captureUnits, restoreUnits};
+            hasEnabledUnits, captureUnits, restoreUnits};
 }

@@ -535,26 +535,33 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
     // ---------- Projects ----------
 
     /**
-     * The enabled units for a project: their parameters and images (the files of their LoadImage nodes)
+     * @returns {{index: number, resolved: Object}[]} The enabled units
+     */
+    function getEnabledUnits() {
+        return getUnitTargets().map((_, index) => ({index, resolved: resolveUnit(index)}))
+            .filter(({resolved}) => resolved && isEnabled(resolved.target));
+    }
+
+    function hasEnabledUnits() {
+        return getEnabledUnits().length > 0;
+    }
+
+    /**
+     * The enabled units for a project or a queued prompt: their parameters and images (the files of their LoadImage
+     * nodes). The graph is read before the first await, so that the capture of a queued prompt reads its graph
      * @returns {Promise<{index: number, params: Object, image: Blob|null, mask: Blob|null, pose: null}[]>}
      */
     async function captureUnits() {
-        const units = [];
-
-        for (let index = 0; index < getUnitTargets().length; index++) {
-            const resolved = resolveUnit(index);
-
-            if (!resolved || !isEnabled(resolved.target))
-                continue;
-
+        const units = getEnabledUnits().map(({index, resolved}) => {
             const {params} = readUnit(resolved, index);
             const image = resolved.image && getTargetImageUrl(resolved.image.target, resolved.image.widgetName);
             const mask = params.useMask && getTargetImageUrl(resolved.mask.target, resolved.mask.widgetName);
 
-            units.push({index, params, image: await toBlob(image), mask: await toBlob(mask), pose: null});
-        }
+            return {index, params, image, mask};
+        });
 
-        return units;
+        return Promise.all(units.map(async ({index, params, image, mask}) =>
+            ({index, params, image: await toBlob(image), mask: await toBlob(mask), pose: null})));
     }
 
     async function toBlob(url) {
@@ -614,5 +621,5 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         SET_CONTROLNET_TAB: () => {}
     };
 
-    return {handlers, ownsPrompt, onPhotoshopImage, captureUnits, restoreUnits};
+    return {handlers, ownsPrompt, onPhotoshopImage, hasEnabledUnits, captureUnits, restoreUnits};
 }

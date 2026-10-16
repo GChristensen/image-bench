@@ -173,16 +173,10 @@ export class BatchGenerationStrategy extends QueueProcessor {
             await this.uiOperations.disableVariations();
         }
 
-        const tempGenId = this.generationId;
         this.generationId = null;
         this.isImg2Img = false;
 
         await this.uiOperations.sleep(1000);
-
-        // Save controlnet images if any (WebUI only)
-        if (platform === 'webui') {
-            await this.saveControlnetImages(tempGenId);
-        }
 
         // Publish GENERATION_FINISHED event
         if (platform === 'comfyui')

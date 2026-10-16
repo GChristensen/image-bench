@@ -257,16 +257,16 @@ function onCenterAuxClick(e) {
     emit("filterMarking", props.marking);
 }
 
-// The ring is faint while the pointer is in the hole away from the center button, or near the card edge
+// The ring is faint while the pointer is outside it, near the card edge
 function onPointerMove(e) {
   const rect = root.value?.getBoundingClientRect();
 
   if (!rect)
     return;
 
-  const {outer, inner} = geometry.value;
+  const {outer} = geometry.value;
   const distance = Math.hypot(e.clientX - (rect.left + rect.width / 2), e.clientY - (rect.top + rect.height / 2));
-  far.value = !(distance <= 22 || distance >= inner - 18 && distance <= outer + 22);
+  far.value = distance > outer + 22;
 }
 
 let pointerSource = null;

@@ -48,7 +48,6 @@ const overlayImage = ref(null);
 const isAllSelected = computed(() => imageStream.value?.isAllSelected);
 const selectedCount = computed(() => imageStream.value?.selectedCount || 0);
 const showParamsOverlay = ref(false);
-const paramsOverlayText = ref("");
 const paramsOverlayImage = ref(null);
 const lastConfigPreset = ref("");
 const isShowingMarked = ref(false);
@@ -181,7 +180,6 @@ function onImageOpen(image) {
 }
 
 function onShowParams(image) {
-  paramsOverlayText.value = imageOps.getImageParams(image);
   paramsOverlayImage.value = image;
   showParamsOverlay.value = true;
 }
@@ -372,7 +370,6 @@ function isComponentTray(kind) {
                 @delete-image="onDeleteImageOverlay"/>
   <ParametersOverlay v-if="showParamsOverlay"
                      :image="paramsOverlayImage"
-                     :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="view-container">
     <!-- Hidden file input for tray open functionality -->

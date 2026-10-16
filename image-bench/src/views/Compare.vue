@@ -111,11 +111,9 @@ function cycleSeparator() {
 // ---------- Actions on the images ----------
 
 const showParamsOverlay = ref(false);
-const paramsOverlayText = ref("");
 const paramsOverlayImage = ref(null);
 
 function onShowParams(image) {
-  paramsOverlayText.value = imageOps.getImageParams(image);
   paramsOverlayImage.value = image;
   showParamsOverlay.value = true;
 }
@@ -542,7 +540,6 @@ onDeactivated(() => {
                 @set-marking="store.persist()"/>
   <ParametersOverlay v-if="showParamsOverlay"
                      :image="paramsOverlayImage"
-                     :text="paramsOverlayText"
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="view-container">
     <input type="file" class="file-input" ref="fileInput" accept=".png, .jpg, .jpeg, .webp" multiple

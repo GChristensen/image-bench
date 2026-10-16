@@ -176,9 +176,6 @@ export const SELECTORS = {
     NUMBER_INPUT: 'input[type="number"]',
     DROPDOWN_INPUT: 'input',
 
-    // Gallery & ControlNet (generated images are filtered out by the backend)
-    TXT2IMG_GALLERY: '#txt2img_gallery_container .thumbnail-item img[src*="file="]',
-
     // Progress
     PROGRESS_BAR: '.progressDiv .progress',
 

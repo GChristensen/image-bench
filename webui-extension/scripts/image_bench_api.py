@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import re
-import shutil
 import sys
 import time
 import zipfile
@@ -20,12 +19,12 @@ import requests
 
 import websockets
 from starlette.responses import JSONResponse
-from PIL import Image
 from starlette.status import HTTP_204_NO_CONTENT
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import persist
 from shared import civitai
+from shared import controlnet_capture
 from shared import explore_export
 from shared import launcher
 from shared import loras
@@ -97,8 +96,6 @@ class ImageBenchApi():
         self.add_api_route("/png_info", self.png_info, methods=["POST"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
-        self.add_api_route("/save_controlnet_images", self.save_controlnet_images, methods=["POST"])
-        self.add_api_route("/get_controlnet_images", self.get_controlnet_images, methods=["GET"])
         self.add_api_route("/download_image_tray", self.download_image_tray, methods=["GET"])
         self.add_api_route("/explore_export", self.explore_export, methods=["POST"])
         self.add_api_route("/image_tray_upload", self.image_tray_upload, methods=["POST"])
@@ -111,6 +108,9 @@ class ImageBenchApi():
         self.add_api_route("/webui_options", self.get_webui_options, methods=["GET"])
         self.add_api_route("/webui_options", self.write_webui_options, methods=["POST"])
         self.add_api_route("/controlnet/choices", self.get_controlnet_choices, methods=["GET"])
+        self.add_api_route("/controlnet/capture", self.save_controlnet_capture, methods=["POST"])
+        self.add_api_route("/controlnet/capture", self.get_controlnet_capture, methods=["GET"])
+        self.add_api_route("/controlnet/capture_file", self.get_controlnet_capture_file, methods=["GET"])
         self.add_api_route("/civitai/model_info", self.get_civitai_model_info, methods=["GET"])
         self.add_api_route("/snippets", self.get_snippets, methods=["GET"])
         self.add_api_route("/snippets", self.write_snippets, methods=["POST"])
@@ -709,61 +709,25 @@ class ImageBenchApi():
     def clear_outputs_dir(self):
         persist.clear_directory(self.outputs_dir)
 
-    async def save_controlnet_images(self, request: Request):
-        content = await request.body()
-        options = json.loads(content)
-        output_folder = os.path.join(self.image_bench_dir, "controlnet", options["generation_id"])
-
-        # The gallery also contains the generated images and grids; they carry generation parameters
-        # (or are saved to a grids directory), while ControlNet detected maps do not
-        images = [image for image in options.get("images", [])
-                  if os.path.isfile(image) and not self.is_grid_image(image)
-                  and not self.has_generation_parameters(image)]
-
-        if images:
-            os.makedirs(output_folder, exist_ok=True)
-            for image in images:
-                shutil.copy(image, output_folder)
-
-    @staticmethod
-    def has_generation_parameters(image_path):
-        # read_info_from_image also finds parameters stored in EXIF (JPEG/WebP grids and images)
+    async def save_controlnet_capture(self, request: Request):
         try:
-            with Image.open(image_path) as image:
-                geninfo, _ = webui_images.read_info_from_image(image)
-                return bool(geninfo)
-        except Exception:
-            return True
+            controlnet_capture.save_capture(self.image_bench_dir, json.loads(await request.body()))
+        except controlnet_capture.CaptureError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
-    def is_grid_image(self, image_path):
-        root_dir = self.get_webui_root_dir()
-        grid_dirs = [os.path.join(root_dir, "outputs", "txt2img-grids"), os.path.join(root_dir, "outputs", "img2img-grids")]
+        return Response(status_code=HTTP_204_NO_CONTENT)
 
-        for name in ["outdir_grids", "outdir_txt2img_grids", "outdir_img2img_grids"]:
-            value = getattr(shared.opts, name, None)
-            if value:
-                grid_dirs.append(value if os.path.isabs(value) else os.path.join(root_dir, value))
+    async def get_controlnet_capture(self, id: str):
+        try:
+            return JSONResponse(controlnet_capture.read_capture(self.image_bench_dir, id))
+        except controlnet_capture.CaptureError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
-        image_path = os.path.normcase(os.path.abspath(image_path))
-
-        for grid_dir in grid_dirs:
-            grid_dir = os.path.normcase(os.path.abspath(grid_dir))
-            if image_path.startswith(grid_dir + os.sep):
-                return True
-
-        return False
-
-    async def get_controlnet_images(self, id: str):
-        image_folder = os.path.join(self.image_bench_dir, "controlnet", id)
-
-        result = []
-        if os.path.exists(image_folder):
-            for image in os.listdir(image_folder):
-                image_path = os.path.join(image_folder, image)
-                result.append(f"/file={image_path}")
-
-        response = jsonable_encoder(result)
-        return JSONResponse(response)
+    async def get_controlnet_capture_file(self, path: str):
+        try:
+            return FileResponse(controlnet_capture.capture_file_path(self.image_bench_dir, path))
+        except controlnet_capture.CaptureError:
+            raise HTTPException(status_code=404)
 
     async def image_tray_upload(self, file: UploadFile):
         file_data = await file.read()

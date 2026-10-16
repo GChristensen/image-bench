@@ -16,7 +16,7 @@ from server import PromptServer
 import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, explore_export, launcher, loras, persist, photoshop, photoshop_plugin, pnginfo, projects
+from shared import civitai, controlnet_capture, explore_export, launcher, loras, persist, photoshop, photoshop_plugin, pnginfo, projects
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
 from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
@@ -781,6 +781,33 @@ async def get_controlnet_choices(request):
         "models": folder_paths.get_filename_list("controlnet"),
         "aux": aio is not None
     })
+
+
+@PromptServer.instance.routes.post(BASE_PATH + "/controlnet/capture")
+async def save_controlnet_capture(request):
+    """ControlNet units captured by the page when a prompt is queued (see shared_backend/controlnet_capture.py)"""
+    try:
+        controlnet_capture.save_capture(get_image_bench_dir(), json.loads(await persist.read_request_body(request)))
+    except controlnet_capture.CaptureError as e:
+        return web.Response(text=str(e), status=400)
+
+    return web.Response(status=204)
+
+
+@PromptServer.instance.routes.get(BASE_PATH + "/controlnet/capture")
+async def get_controlnet_capture(request):
+    try:
+        return web.json_response(controlnet_capture.read_capture(get_image_bench_dir(), request.query.get("id")))
+    except controlnet_capture.CaptureError as e:
+        return web.Response(text=str(e), status=400)
+
+
+@PromptServer.instance.routes.get(BASE_PATH + "/controlnet/capture_file")
+async def get_controlnet_capture_file(request):
+    try:
+        return web.FileResponse(controlnet_capture.capture_file_path(get_image_bench_dir(), request.query.get("path")))
+    except controlnet_capture.CaptureError:
+        return web.Response(status=404)
 
 
 # Image downloaded by the Photoshop plugin
