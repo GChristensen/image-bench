@@ -1,0 +1,212 @@
+## Encoder/VAE
+
+- VAE: `ae.safetensors`
+- Text encoders: CLIP-L, T5-XXL
+
+## Recommended Defaults
+
+``` text
+sampler:                      euler
+scheduler:                    simple
+steps:                        20        # 28-30 for final renders
+guidance (FluxGuidance node): 3.5
+cfg (KSampler):               1.0       # do NOT raise this
+max_sequence_length:          512
+
+width x height: 1024 x 1024   # or any 1mp bucket, multiples of 16
+
+# Hires (optional second pass)
+upscale: 1.5x latent
+denoise (pass 2): 0.4
+steps (pass 2): 12
+```
+
+## Variants
+
+| Variant | What it is | License | Size |
+|----|----|----|----|
+| dev | guidance-distilled base | Non-commercial | ~23.8GB |
+| schnell | timestep-distilled (4-step), from pro | Apache-2.0 | ~23.8GB |
+| pro | full model, API-only, not open weight | closed/API | n/a |
+| pro (Ultra/Raw) | API-only, higher res / less "AI look" | closed/API | n/a |
+| Fill-dev | dev fine-tune for inpaint/outpaint | Non-commercial | ~23.8GB |
+| Canny-dev | dev fine-tune, canny structural control | Non-commercial | ~23.8GB |
+| Depth-dev | dev fine-tune, depth structural control | Non-commercial | ~23.8GB |
+| Canny-dev-lora | LoRA version of Canny control | Non-commercial | ~1.5GB |
+| Depth-dev-lora | LoRA version of Depth control | Non-commercial | ~1.5GB |
+| Redux-dev | image-prompt adapter (not a checkpoint) | Non-commercial | ~130MB |
+| Kontext-dev | instruction-based image editing model | Non-commercial | ~23.8GB |
+| fp8 (Comfy-Org) | official-ish fp8 weight-only quant | Non-commercial | ~11.9GB |
+| GGUF (city96) | community llama.cpp-style quant, Q2-Q8 | Non-commercial | 4-13GB |
+| NF4 | bitsandbytes 4-bit quant, Forge/A1111 | Non-commercial | ~6.7GB |
+
+
+## Resolution
+
+Native training resolution 1024×1024, with multi-aspect-ratio bucket training so it
+generalizes across ratios better than SD1.5/SDXL did without explicit
+bucket conditioning.
+
+Practical range: claimed working range `256² to 2048²`, but **optimal** quality is
+at `1024² total pixels`; both much smaller and much larger resolutions
+measurably degrade quality \[?\]
+
+- Common aspect buckets in use (all ≈1024² pixel budget) :
+
+  | Ratio | Pixels    |
+    |-------|-----------|
+  | 1:1   | 1024x1024 |
+  | 4:3   | 1152x896  |
+  | 3:2   | 1216x832  |
+  | 16:9  | 1344x768  |
+  | 21:9  | 1536x640  |
+  | 3:4   | 896x1152  |
+  | 2:3   | 832x1216  |
+  | 9:16  | 768x1344  |
+
+Parameters that silently produce garbage if wrong: real CFG left above
+1.0 while also using a guidance-embedding value (double-application of
+guidance → burnt/oversaturated images) ; resolution not a multiple
+of 16 on some older nodes \[?\]; T5 max<sub>sequence</sub>\_length below
+what your prompt needs → silent truncation, not an error.
+
+## Prompting
+
+Style  
+Natural language prompting is what FLUX was trained for — T5-XXL gives
+it real sentence-level comprehension, closer to a captioning model than
+a booru-tag soup. Danbooru/booru tag strings still work
+(CLIP-L parses them) but under-use the T5 pathway and tend to produce
+flatter results than a well-formed sentence.
+
+Structure that works  
+Front-load subject and composition, follow with style/lighting/camera
+detail, keep it as coherent prose rather than a comma-stack of
+disconnected tags.
+
+Attention/weighting syntax  
+`(word:1.2)`-style weighting is NOT natively understood by the T5/CLIP
+encoders the way SD's CLIP weighting hacks work; ComfyUI's `(word:1.2)`
+node syntax still function mechanically (it reweights the embedding) but
+effectiveness is weaker/less predictable than on SD1.5/SDXL, and many
+users report inconsistent results.
+
+What it reliably ignores  
+Very long negative-style instructions embedded in the positive prompt
+("no X", "avoid Y") are inconsistently honored since there's no true
+negative channel — better handled by inpainting the unwanted region than
+by prompting around it.
+
+Example prompts
+1.  `A weathered fisherman in an oilskin coat standing on a fog-covered dock at dawn, holding   a lantern, cinematic lighting, shallow depth of field, shot on 35mm film`
+2.  `Overhead flat-lay of a minimalist desk setup: matte black keyboard, ceramic coffee cup   with steam, small potted succulent, soft morning window light, muted color palette`
+
+## Generation Modes
+
+| Mode               | Support                   |
+|--------------------|---------------------------|
+| txt2img            | native                    |
+| img2img            | native                    |
+| inpaint            | flux-fill checkpoint      |
+| outpaint           | same as inpaint           |
+| instruct-edit      | flux-kontext              |
+| reference/identity | redux-dev/flux ip-adapter |
+
+
+## ControlNet and Structural Control
+
+Usable ControlNets exist and are reasonably mature for FLUX.1-dev — not
+"barely," but coverage and quality are uneven across control types and
+publishers .
+
+Mechanism  
+Two families in active use, and they are NOT interchangeable :
+
+1.  **ControlNet-Union** — a single unified model conditioned by a mode
+    selector, published by InstantX + Shakker Labs. `Union-Pro` (7
+    modes: canny, tile, depth, blur, pose, gray, low- quality) and the
+    improved `Union-Pro-2.0` (canny, soft edge, depth, pose, gray —
+    dropped mode-embedding for smaller size, better canny/pose)
+
+2.  **Classic single-purpose ControlNets** — XLabs-AI's
+    `flux-controlnet-collections` (canny, depth, hed/softedge), each a
+    separate checkpoint per control type, trained at 1024x1024
+3.  Official structural control is otherwise delivered as dedicated
+    **fine-tuned checkpoints** (Canny-dev, Depth-dev / their LoRA
+    equivalents) rather than a bolt-on ControlNet — this is BFL's own
+    preferred mechanism, distinct from both of the above
+
+## Upscaling and High-Resolution Work
+
+Native above-resolution behavior  
+Pushing base generation resolution past ~1.5-2x training res (roughly
+\>1536-1600px side) starts producing duplication/tiling artifacts and
+composition collapse rather than just softness  (§3)
+
+Hires-fix two-pass  
+Generate at a training-bucket resolution, then img2img the upscaled
+latent/pixel image. Typical: upscale 1.5-2x, denoise 0.3-0.5 for the
+second pass (lower = closer fidelity, higher = more re-generation/detail
+add but more drift), same sampler/ scheduler as base pass, steps 10-20
+for the refine pass \[?\]
+
+Tiled approaches  
+**Ultimate SD Upscale** is the dominant tool in the community for FLUX,
+tiling the image and re-diffusing each tile with a low-medium denoise
+. Tiled Diffusion/ MultiDiffusion also used. No dedicated "tile
+ControlNet" specifically validated for FLUX was confirmed in this pass
+\[?\] — Union-Pro's "tile" mode (§8) is the closest official-ish option
+and can help tile coherence at the seams. Typical tile size 768-1024px
+with 64-128px overlap; without any tile-coherence aid, seams are visible
+at high denoise (\>0.4) on tiles \[?\]
+
+Dedicated upscalers  
+Standard ESRGAN-family models (4x-UltraSharp, 4x<sub>NMKD</sub>-Siax,
+RealESRGAN) are commonly paired as a pre-upscale pass before the
+diffusion refine pass, not standalone final output \[?\]. No
+FLUX-specific diffusion-based restorer confirmed as a standard choice in
+this pass — flag as unverified \[?\]
+
+Recommended end-to-end pipeline
+1.  Base txt2img at a 1024²-budget bucket (§3), 20-30 steps
+2.  Latent upscale 1.5x (or pixel upscale + VAE re-encode), img2img pass
+    at denoise 0.35-0.45, 10-15 steps
+3.  Optional: Ultimate SD Upscale tiled pass for final detail at denoise
+    0.2-0.35
+4.  ESRGAN-family pre-sharpen/upscale before step 2 if starting
+    resolution is low \[?\]
+
+## Quirks and Failure Modes
+
+"Flux chin" / plastic-waxy skin  
+A widely-reported aesthetic bias — skin often renders overly smooth,
+plastic/waxy, lacking pore-level detail, and a recognizable chin/jaw
+shape recurs across generations; attributed by the community to the
+breadth/mix of the training data (heavy 2D/3D-render content) rather
+than a bug . LoRAs targeting "skin realism" are the common
+community fix, though several reports note the fix degrades again once
+you upscale past ~1024px \[?\]
+
+Oversaturation/burn  
+Setting real sampler CFG above 1.0 on top of the guidance-embedding
+value (§5) is the most common cause of washed-out, over-contrasted,
+"fried" output — often mistaken by users for the model being broken
+
+Negative prompts appearing to "do nothing"  
+Expected behavior on dev's distilled pipeline, not a bug (§6) —
+frequently reported as confusion in community threads
+
+Weak native inpainting  
+Using base dev (rather than Fill-dev) for inpainting produces visible
+seams/context mismatch; commonly misread as a general model flaw rather
+than "wrong checkpoint for the task" (§7)
+
+Hands/anatomy  
+Meaningfully better than SD1.5-era models but still not solved — extra/
+fused fingers and anatomical errors persist, especially at unusual poses
+or with multiple subjects \[?\]
+
+Off-bucket resolution collapse  
+Rendering far outside trained aspect buckets or resolution causes
+duplication/tiling rather than graceful degradation (§3) — often
+misdiagnosed as a sampler/seed problem 
