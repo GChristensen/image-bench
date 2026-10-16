@@ -70,6 +70,9 @@ async function onPaste(e) {
         <NumberStepper :model-value="references.maxSize ?? ''" :min="0" :max="2048" :step="256" label="Maximum side length"
                        @update:model-value="v => emit('max-size', v)"/>
       </label>
+      <button v-if="has('referenceMaxSize')" class="ib sm" :disabled="references.maxSize === 0"
+              title="Any side (no size limit)" aria-label="Reset the maximum side to no limit"
+              @click="emit('max-size', 0)"><AppIcon name="infinity" :size="13"/></button>
       <button class="ib sm" :disabled="!references.images.length" title="Remove all references"
               aria-label="Remove all references" @click="emit('clear')"><AppIcon name="trash" :size="13"/></button>
     </div>

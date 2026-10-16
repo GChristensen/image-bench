@@ -336,14 +336,16 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
     }
 
     /**
-     * Put an image chosen in the popup into the input of the shown mode (img2img canvas or inpaint upload)
+     * Put an image chosen in the popup into the input of a mode (img2img canvas or inpaint upload),
+     * by default the shown one
      * @param {'image'|'mask'} kind
      * @param {File} file
+     * @param {'img2img'|'inpaint'} [mode]
      */
-    function setInputImage(kind, file) {
+    function setInputImage(kind, file, mode) {
         return enqueue(async () => {
-            const mode = uiOperations.getGenerationMode();
-            await uiOperations.setInputImage(mode === 'img2img' ? 'img2img' : 'inpaint', kind, file);
+            mode ??= uiOperations.getGenerationMode() === 'img2img' ? 'img2img' : 'inpaint';
+            await uiOperations.setInputImage(mode, kind, file);
             setTimeout(pollIfActive, APPLY_SETTLE_DELAY);
         });
     }

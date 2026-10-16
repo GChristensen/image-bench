@@ -19,6 +19,25 @@ export function toast(message, {kind = "success", duration = DURATION} = {}) {
   setTimeout(() => dismissToast(id), duration);
 }
 
+/**
+ * Show a notice with a spinner until the operation ends
+ * @param {string} message
+ * @returns {{done: (message: string, options?: {kind?: "success"|"error", duration?: number}) => void,
+ *   dismiss: () => void}} done() turns the notice into a result shown for a few seconds
+ */
+export function toastPending(message) {
+  const id = nextId++;
+  toasts.value = [...toasts.value, {id, message, kind: "pending"}];
+
+  return {
+    done(message, {kind = "success", duration = DURATION} = {}) {
+      toasts.value = toasts.value.map(item => item.id === id ? {id, message, kind} : item);
+      setTimeout(() => dismissToast(id), duration);
+    },
+    dismiss: () => dismissToast(id)
+  };
+}
+
 export function dismissToast(id) {
   toasts.value = toasts.value.filter(item => item.id !== id);
 }

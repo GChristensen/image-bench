@@ -39,6 +39,17 @@ async function sendToControlNet(image) {
     flashTrayTab("controlnet-tab");
 }
 
+export const INPAINT_LABEL = isWebUI ? "Send to the inpaint upload image" : "Send to the input image (ib:img)";
+
+export async function sendToInpaint(image) {
+  const error = await useImageOperations().sendToInpaint(image);
+
+  if (error)
+    await dialog.alert(error, {title: INPAINT_LABEL});
+  else
+    flashTrayTab("generate-tab");
+}
+
 async function sendToPhotoshop(image, newDocument) {
   const error = await useImageOperations().sendToPhotoshop(image, newDocument);
 
@@ -134,7 +145,10 @@ async function upscaleVaryingDenoising(image) {
   }
 }
 
-async function reuseParameters(image, all) {
+/**
+ * Set the seed of an image, or all its parameters, in the host (from the parameters overlay)
+ */
+export async function reuseParameters(image, all) {
   if (!await ensureGenerationIdle())
     return;
 
@@ -151,16 +165,14 @@ function hasParameters(image) {
   return !!image.parameters && Object.keys(image.parameters).length > 0;
 }
 
+export function canReuseParameters(image) {
+  return !image.img2img && hasParameters(image);
+}
+
 /**
  * The card shows the groups of a side separated by a separator, in this order
  */
 export const IMAGE_ACTIONS = [
-  {
-    id: "seed", side: "left", group: 0, icon: "seed", label: "Reuse seed", key: "S",
-    alt: {icon: "sliders", label: "Reuse all parameters"},
-    visible: image => !image.img2img && hasParameters(image),
-    run: (image, ctx, alt) => reuseParameters(image, alt)
-  },
   {
     id: "params", side: "left", group: 0, icon: "params", label: "Generation parameters", key: "I",
     visible: image => hasParameters(image),
@@ -192,12 +204,17 @@ export const IMAGE_ACTIONS = [
     run: image => upscaleVaryingDenoising(image)
   },
   {
+    id: "inpaint", side: "right", group: 2, icon: "brush", label: INPAINT_LABEL, key: "B",
+    visible: () => true,
+    run: image => sendToInpaint(image)
+  },
+  {
     id: "controlnet", side: "right", group: 2, icon: "controlnet", label: "Send to ControlNet", key: "N",
     visible: () => hostHas("images", "sendToControlNet"),
     run: image => sendToControlNet(image)
   },
   {
-    id: "photoshop", side: "right", group: 2, icon: "external", label: "Send to Photoshop as a new document", key: "P",
+    id: "photoshop", side: "right", group: 2, icon: "photoshop", label: "Send to Photoshop as a new document", key: "P",
     alt: {icon: "layers", label: "Send to Photoshop as a new layer"},
     visible: () => true,
     run: (image, ctx, alt) => sendToPhotoshop(image, !alt)
@@ -250,6 +267,23 @@ export function visibleActionGroups(image, ctx, side = null) {
   }
 
   return groups.filter(group => group?.length);
+}
+
+// Clockwise order of the groups on the action rim of the image card, from the top: parameters, send, trays, generate
+// (the card puts Delete between the trays and generate, at the bottom)
+const RIM_GROUP_ORDER = [0, 2, 3, 1];
+
+/**
+ * The visible actions of the image card's action rim, as {index, actions} per group in rim order (groups may be empty)
+ */
+export function rimActionGroups(image, ctx) {
+  const groups = [];
+
+  for (const action of IMAGE_ACTIONS)
+    if (action.visible(image, ctx))
+      (groups[action.group] ??= []).push(action);
+
+  return RIM_GROUP_ORDER.map(index => ({index, actions: groups[index] ?? []}));
 }
 
 /**

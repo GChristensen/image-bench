@@ -5,6 +5,7 @@ import {useImageOperations} from "@/composables/useImageOperations.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useProjectsStore} from "@/stores/projects.js";
 import {toast} from "@/toast.js";
+import {MARKINGS} from "@/consts.js";
 
 // Browsers put images on the clipboard only for secure pages (https or localhost), which the hosts seldom are:
 // the item is kept, but not shown
@@ -14,7 +15,8 @@ const SHOW_COPY_IMAGE = false;
  * Context menu of an image (card or overlay) or of another item (openContextMenu), rendered by ImageContextMenu.vue,
  * which is mounted once in App.vue.
  * The state is module-level, so that one menu is open at a time.
- * {x, y, items}: items are {icon, label, hint, danger, run}, {separator: true} or {label, submenu: [items]}
+ * {x, y, items}: items are {icon, label, hint, danger, run}, {separator: true} or {icon, label, submenu: [items]}
+ * (submenu items are {icon, label, hint, run} or {separator: true})
  */
 export const contextMenu = shallowRef(null);
 
@@ -81,22 +83,24 @@ function imageMenuItems(image, ctx) {
     others.push({icon: "save", label: "Copy to project folder",
       run: () => copyToProject(image)});
 
-  if (image.marking && ctx.isTray && ctx.handlers.filterMarking) {
-    const filtered = ctx.handlers.activeMarkingFilter?.() === image.marking;
+  const markingMenu = markingSubmenu(image, ctx);
 
-    others.push({label: "Marking " + image.marking, submenu: [
-      {icon: "filter", label: filtered ? "Show all images" : `Show only ${image.marking}`,
-        run: () => ctx.handlers.filterMarking(image.marking)},
-      {icon: "eraser", label: "Remove marking", hint: "Middle-click",
-        run: () => ctx.handlers.removeMarking(image)}
-    ]});
-  }
+  if (markingMenu)
+    others.push(markingMenu);
 
   if (others.length) {
     if (items.length)
       items.push({separator: true});
 
     items.push(...others);
+  }
+
+  // Removes the image from a view that only references it (Compare): not a deletion
+  if (ctx.handlers.removeImage) {
+    if (items.length)
+      items.push({separator: true});
+
+    items.push({icon: "close", label: ctx.removeLabel ?? "Remove", run: () => ctx.handlers.removeImage(image)});
   }
 
   if (ctx.handlers.deleteImage) {
@@ -107,6 +111,40 @@ function imageMenuItems(image, ctx) {
   }
 
   return items;
+}
+
+/**
+ * Submenu of the markings where the view sets them (handlers.setMarking(image, marking|null)): the markings with
+ * their keys, the current one checked, then showing only the marking and removing it
+ */
+function markingSubmenu(image, ctx) {
+  const {setMarking, filterMarking} = ctx.handlers;
+  const marking = image.marking;
+
+  if (!setMarking && !(marking && filterMarking))
+    return null;
+
+  const submenu = [];
+
+  if (setMarking)
+    submenu.push(...MARKINGS.map((option, index) => ({icon: option === marking ? "check" : null, label: option,
+      hint: String(index + 1), run: () => setMarking(image, option)})));
+
+  if (marking) {
+    if (submenu.length)
+      submenu.push({separator: true});
+
+    if (filterMarking) {
+      const filtered = ctx.handlers.activeMarkingFilter?.() === marking;
+      submenu.push({icon: "filter", label: filtered ? "Show all images" : `Show only ${marking}`,
+        run: () => filterMarking(marking)});
+    }
+
+    submenu.push({icon: "eraser", label: "Remove marking", hint: setMarking ? "0" : null,
+      run: () => setMarking ? setMarking(image, null) : ctx.handlers.removeMarking?.(image)});
+  }
+
+  return {icon: "tag", label: marking ? "Marking " + marking : "Marking", submenu};
 }
 
 /**

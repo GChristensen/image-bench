@@ -62,6 +62,8 @@ class ImageBenchApi():
         self.photoshop_websockets = set()
         # Photoshop plugins listening for images sent from the Image Bench window
         self.photoshop_plugin_websockets = set()
+        # The plugins among them that report when a sent image is in Photoshop
+        self.photoshop_plugin_ack_websockets = set()
         # Last image of each kind as (content, media type)
         self.photoshop_images = {}
         self.config_presets_dropdown = None
@@ -232,8 +234,22 @@ class ImageBenchApi():
         await self.keep_websocket(websocket, self.photoshop_websockets)
 
     async def handle_photoshop_plugin_websocket(self, websocket, *args):
-        """Keep the Photoshop plugin connected to receive images sent from the Image Bench window"""
-        await self.keep_websocket(websocket, self.photoshop_plugin_websockets)
+        """
+        Keep the Photoshop plugin connected to receive images sent from the Image Bench window,
+        and to report when they are in Photoshop
+        """
+        await websocket.accept()
+        self.photoshop_plugin_websockets.add(websocket)
+
+        try:
+            while True:
+                if photoshop.handle_plugin_message(await websocket.receive_text()) == "hello":
+                    self.photoshop_plugin_ack_websockets.add(websocket)
+        except Exception:
+            pass
+        finally:
+            self.photoshop_plugin_websockets.discard(websocket)
+            self.photoshop_plugin_ack_websockets.discard(websocket)
 
     @staticmethod
     async def keep_websocket(websocket, clients):
@@ -308,7 +324,10 @@ class ImageBenchApi():
         return JSONResponse({"clients": clients})
 
     async def photoshop_send(self, request: Request, name: str = "image.png", new_document: bool = False):
-        """Receive an image file from the Image Bench window and notify the Photoshop plugin to open it"""
+        """
+        Receive an image file from the Image Bench window and notify the Photoshop plugin to open it,
+        answering when the plugin reports the image is in Photoshop
+        """
         media_type = request.headers.get("content-type", "").split(";")[0].strip()
 
         if media_type not in photoshop.SENDABLE_MEDIA_TYPES:
@@ -317,14 +336,20 @@ class ImageBenchApi():
         kind = photoshop.OUTGOING_IMAGE_KIND
         self.photoshop_images[kind] = (await request.body(), media_type)
 
+        request_id = photoshop.create_send_request()
         clients = await self.broadcast(self.photoshop_plugin_websockets, {
             "type": "OPEN_IMAGE",
+            "requestId": request_id,
             "name": photoshop.get_image_file_name(name, media_type),
             "imageUrl": self.get_photoshop_image_url(kind),
             "newDocument": new_document
         })
 
-        return JSONResponse({"clients": clients})
+        # broadcast() drops the plugins it could not reach
+        self.photoshop_plugin_ack_websockets &= self.photoshop_plugin_websockets
+        result = await photoshop.wait_for_plugin(request_id, bool(self.photoshop_plugin_ack_websockets))
+
+        return JSONResponse({"clients": clients, **result})
 
     def get_photoshop_image(self, kind: str):
         image = self.photoshop_images.get(kind)

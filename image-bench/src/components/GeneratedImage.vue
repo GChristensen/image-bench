@@ -1,17 +1,14 @@
 <script setup>
-  import {computed, nextTick, ref, watch} from "vue";
-  import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
+  import {computed, nextTick, onBeforeUnmount, ref, watch} from "vue";
   import {syncTrayMarkings} from "@/stores/trayMarkings.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {useShiftKey} from "@/composables/useShiftKey.js";
   import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
-  import {visibleActionGroups, runImageAction, imageActionHint} from "@/imageActions.js";
+  import {rimActionGroups, runImageAction} from "@/imageActions.js";
   import {openImageMenu} from "@/contextMenu.js";
   import {startImageDrag, endImageDrag} from "@/imageDrag.js";
-  import {isWebUI} from "@/host.js";
   import AppIcon from "@/components/AppIcon.vue";
-  import ImageActionButtons from "@/components/ImageActionButtons.vue";
-  import MarkingPicker from "@/components/MarkingPicker.vue";
+  import ActionRim from "@/components/ActionRim.vue";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams',
     'select', 'upscaleImage', 'addComment', 'deleteImage']);
@@ -54,6 +51,11 @@
     markingFilter: {
       type: String,
       default: null
+    },
+    // The view removes the image on deleteImage (the rim shows Delete)
+    deletable: {
+      type: Boolean,
+      default: false
     }
   });
 
@@ -67,7 +69,6 @@
     }
   });
 
-  const sdWebUIStore = useSDWebUIStateStore();
   const imageOps = useImageOperations();
   const shiftDown = useShiftKey();
 
@@ -81,41 +82,68 @@
       upscale: image => emit("upscaleImage", image),
       addComment: image => emit("addComment", image),
       openImage: () => emit("imageOpen"),
-      filterMarking: marking => emit("filterMarking", marking),
+      // Explore has no marking filter
+      get filterMarking() { return props.kind === "explore" ? null : marking => emit("filterMarking", marking); },
+      setMarking: (image, marking) => setMarking(marking),
       removeMarking: () => removeMarking(),
       deleteImage: () => emit("deleteImage"),
       activeMarkingFilter: () => props.markingFilter
     }
   };
 
-  const leftGroups = computed(() => visibleActionGroups(props.image, actionContext, "left"));
-  const rightGroups = computed(() => visibleActionGroups(props.image, actionContext, "right"));
+  const rimGroups = computed(() => rimActionGroups(props.image, actionContext));
+  // Explore shows no marking filter
+  const filterable = computed(() => props.kind !== "explore");
 
-  // Shift over the card shows the alternative actions of the buttons that have one
+  // Shift over the card shows the alternative actions of the sectors that have one
   const hovered = ref(false);
-  const hoveredAction = ref(null);
   const showAlt = computed(() => hovered.value && shiftDown.value);
   // Badges and markings show their description in the same place instead of a tooltip;
   // a function keeps it current while the pointer stays (e.g. after toggling the marking filter)
   const hoveredText = ref(null);
-  const hint = computed(() => hoveredAction.value
-    ? imageActionHint(hoveredAction.value, showAlt.value)
-    : typeof hoveredText.value === "function" ? hoveredText.value() : hoveredText.value);
+  const hint = computed(() => typeof hoveredText.value === "function" ? hoveredText.value() : hoveredText.value);
 
-  const markingHint = () => props.kind === "explore" ? "Middle: remove marking"
+  const markingHint = () => !filterable.value ? "Middle: remove marking"
     : props.markingFilter === props.image.marking
     ? "Click: show all images · Middle: remove marking"
     : "Click: show only this marking · Middle: remove marking";
 
+  // The action rim opens after a short delay, so that it does not flash on the cards the pointer crosses
+  const RIM_DELAY = 100;
+  const frameElement = ref(null);
+  const rimOpen = ref(false);
+  const rimSize = ref(0);
+  let rimTimer = 0;
+
+  function openRim() {
+    const frame = frameElement.value;
+
+    if (!frame || dragging.value)
+      return;
+
+    rimSize.value = Math.min(frame.clientWidth, frame.clientHeight);
+    rimOpen.value = true;
+  }
+
+  function closeRim() {
+    clearTimeout(rimTimer);
+    rimOpen.value = false;
+  }
+
+  onBeforeUnmount(() => clearTimeout(rimTimer));
+
   function onFrameEnter() {
     hovered.value = true;
-    setHoveredImageTarget({getImage: () => props.image, ctx: actionContext, element: rootElement.value});
+    setHoveredImageTarget({getImage: () => props.image, ctx: actionContext, element: rootElement.value,
+      setMarking, view: () => emit("imageClick")});
+    clearTimeout(rimTimer);
+    rimTimer = setTimeout(openRim, RIM_DELAY);
   }
 
   function onFrameLeave() {
     hovered.value = false;
-    hoveredAction.value = null;
     hoveredText.value = null;
+    closeRim();
     clearHoveredImageTarget(rootElement.value);
   }
 
@@ -123,10 +151,11 @@
     runImageAction(action, props.image, actionContext, alt);
   }
 
-  // The card is dragged by its image, so that the buttons and markings do not start drags
+  // The card is dragged by its image, so that the rim and the markings do not start drags
   const dragging = ref(false);
 
   function onDragStart(e) {
+    closeRim();
     startImageDrag(e, props.image, props.kind);
     dragging.value = true;
   }
@@ -146,8 +175,11 @@
       removeMarking();
   }
 
-  // The marking and the picker replace each other under the pointer without a mouseleave
+  // null removes the marking (the rim's Remove marking, the 0 key)
   function setMarking(marking) {
+    if (!marking)
+      return removeMarking();
+
     hoveredText.value = null;
     props.image.marking = marking;
     markingChanged();
@@ -163,25 +195,12 @@
     syncTrayMarkings(props.image, props.kind, props.isTray);
     emit("setMarking");
   }
-
-  // An image without a negative prompt has no "negative prompt" parameter, as WebUI omits it from the infotext
-  function samePrompt(imagePrompt, prompt) {
-    return (imagePrompt ?? "").trim() === (prompt ?? "").trim();
-  }
-
-  // The txt2img prompts are reported by WebUI only
-  function needShowPromptWarning(image) {
-    return isWebUI && !image.img2img
-        && (!samePrompt(image.parameters["prompt"], sdWebUIStore.prompt)
-        || !samePrompt(image.parameters["negative prompt"], sdWebUIStore.negativePrompt));
-  }
-
 </script>
 
 <template>
 <div v-if="displayed" ref="rootElement" class="selectable-image" :class="{selected, highlighted, dragging}">
   <div class="image-separator" v-if="image.separator">◇</div>
-  <div v-else class="image-frame" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
+  <div v-else ref="frameElement" class="image-frame" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
        @contextmenu="openImageMenu($event, image, actionContext)">
     <img class="selectable-image-preview"
          :src="imageOps.getImageLink(image)"
@@ -194,6 +213,15 @@
 
     <span v-if="image.tagColor" class="tag-bar" :style="{background: image.tagColor}"></span>
 
+    <!-- Before the other controls, which stay above it where a small card overlaps them -->
+    <Transition name="rim">
+      <ActionRim v-if="rimOpen" :groups="rimGroups" :size="rimSize" :marking="image.marking ?? null"
+                 :show-alt="showAlt" :deletable="deletable" :filterable="filterable"
+                 :filter-active="!!image.marking && markingFilter === image.marking"
+                 @run="onAction" @delete="$emit('deleteImage')" @set-marking="setMarking" @view="$emit('imageClick')"
+                 @filter-marking="marking => $emit('filterMarking', marking)"/>
+    </Transition>
+
     <label v-if="selectable" class="select-box"
            @mouseenter="hoveredText = () => selected ? 'Unselect' : 'Select'" @mouseleave="hoveredText = null">
       <input type="checkbox" aria-label="Select image" :checked="selected"
@@ -203,13 +231,6 @@
 
     <div v-if="image.comment" class="image-comment" :class="{selectable}" :title="image.comment"
          @click="$emit('imageClick')">{{ image.comment }}</div>
-
-    <!-- One shared row, so the left group wraps only when the whole width runs out -->
-    <div class="image-actions-bar" :class="{selectable}">
-      <ImageActionButtons v-for="(side, sideIndex) in [leftGroups, rightGroups]" :key="sideIndex"
-                          :class="sideIndex ? 'right' : 'left'" :groups="side" :show-alt="showAlt"
-                          @run="onAction" @hover="action => hoveredAction = action"/>
-    </div>
 
     <!-- One row, so that the hint never covers the badges; it wraps upwards if narrow -->
     <div class="image-bottom-bar">
@@ -222,10 +243,6 @@
         <span v-if="image.setSteps" class="badge steps"
               @mouseenter="hoveredText = `Upscaled with ${image.parameters['steps']} sampling steps`"
               @mouseleave="hoveredText = null">{{ image.parameters['steps'] }} st</span>
-        <span v-if="needShowPromptWarning(image)" class="badge warn"
-              @mouseenter="hoveredText = 'Image prompt and Txt2Img prompt do not match'"
-              @mouseleave="hoveredText = null"
-          ><AppIcon name="alert" :size="11"/></span>
       </div>
 
       <span v-if="hint" class="action-hint">{{ hint }}</span>
@@ -236,10 +253,6 @@
             @click="$emit('filterMarking', image.marking)"
             @mousedown.middle.prevent
             @auxclick="onMarkingAuxClick">{{ image.marking }}</span>
-
-      <!-- Without a marking, the badge opens the markings upwards on hover -->
-      <MarkingPicker v-else-if="isTray" class="card-marking-picker" @set="setMarking"
-                     @mouseenter="hoveredText = 'Set a marking'" @mouseleave="hoveredText = null"/>
     </div>
   </div>
 </div>
@@ -259,7 +272,17 @@
   vertical-align: top;
   line-height: 0;
   border-radius: 4px;
-  overflow: hidden;
+}
+
+/* The action rim of a small card reaches over its neighbors */
+.image-frame:hover {
+  z-index: 2;
+}
+
+.rim-enter-from,
+.rim-leave-to {
+  opacity: 0;
+  transform: scale(0.92);
 }
 
 .selectable-image.selected .image-frame {
@@ -287,6 +310,7 @@
   height: auto;
   max-width: 100%;
   max-height: 70vh;
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -296,6 +320,7 @@
   bottom: 0;
   left: 0;
   width: 4px;
+  border-radius: 4px 0 0 4px;
 }
 
 /* Circular outline check: deliberately unlike the square filled action buttons */
@@ -357,49 +382,10 @@
   opacity: 1;
 }
 
-/* The bar itself never takes clicks, so gaps between the groups fall through to the image */
-.image-actions-bar {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  right: 6px;
-  display: flex;
-  align-items: flex-start;
-  gap: 3px;
-  line-height: normal;
-  opacity: 0;
-  transition: opacity 0.15s;
-  pointer-events: none;
-}
-
-/* Leave room for the select checkbox */
-.image-actions-bar.selectable {
-  left: 40px;
-}
-
-.image-actions.left {
-  flex: 0 1 auto;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.image-actions.right {
-  flex: none;
-  margin-left: auto;
-}
-
-.image-frame:hover .image-actions-bar {
-  opacity: 1;
-}
-
-.image-frame:hover .image-actions {
-  pointer-events: auto;
-}
-
-/* Below the button row, always shown */
+/* Always shown */
 .image-comment {
   position: absolute;
-  top: 31px;
+  top: 6px;
   left: 6px;
   right: 6px;
   width: fit-content;
@@ -476,16 +462,6 @@
 
 .image-marking.active {
   box-shadow: inset 0 0 0 1px var(--ib-accent);
-}
-
-.card-marking-picker {
-  margin-left: auto;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.image-frame:hover .card-marking-picker {
-  opacity: 1;
 }
 
 .image-separator {

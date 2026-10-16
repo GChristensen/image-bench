@@ -30,6 +30,11 @@ const props = defineProps({
   hovered: {
     type: Boolean,
     default: false
+  },
+  // Small crop cells show only the index and the marking; the actions are in the context menu and the keys
+  compact: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -70,9 +75,9 @@ function onMarkingAuxClick(e) {
   <div class="compare-chrome" :class="{hovered}" @click.stop @auxclick.stop>
     <div class="chrome-top">
       <span class="index-badge"><slot name="lead"/>{{ index + 1 }}</span>
-      <ImageActionButtons class="chrome-actions left" :groups="leftGroups" :show-alt="showAlt"
+      <ImageActionButtons v-if="!compact" class="chrome-actions left" :groups="leftGroups" :show-alt="showAlt"
                           @run="onAction" @hover="action => hoveredAction = action"/>
-      <div class="chrome-actions right">
+      <div v-if="!compact" class="chrome-actions right">
         <ImageActionButtons :groups="rightGroups" :show-alt="showAlt"
                             @run="onAction" @hover="action => hoveredAction = action"/>
         <button class="ib sm remove-button" aria-label="Remove from compare"
@@ -90,7 +95,7 @@ function onMarkingAuxClick(e) {
       <span v-if="image.marking" class="image-marking"
             @mouseenter="hoveredText = 'Middle: remove marking'" @mouseleave="hoveredText = null"
             @mousedown.middle.prevent @auxclick="onMarkingAuxClick">{{ image.marking }}</span>
-      <MarkingPicker v-else class="chrome-picker" @set="setMarking"
+      <MarkingPicker v-else-if="!compact" class="chrome-picker" @set="setMarking"
                      @mouseenter="hoveredText = 'Set a marking'" @mouseleave="hoveredText = null"/>
     </div>
   </div>

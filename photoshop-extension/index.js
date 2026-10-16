@@ -13,6 +13,8 @@ const fs = storage.localFileSystem;
 
 const DEFAULT_WEBUI_URL = "http://127.0.0.1:7860";
 const WEBUI_URL_KEY = "webuiUrl";
+const RECENT_URLS_KEY = "recentWebuiUrls";
+const MAX_RECENT_URLS = 5;
 const SMART_OBJECTS_KEY = "placeSmartObjects";
 const PLUGIN_WEBSOCKET_PATH = "/image-bench/photoshop/plugin-websocket";
 const RECONNECT_DELAY = 5000;
@@ -129,13 +131,13 @@ async function upload(kind, pixels, target = "input") {
 async function sendImage() {
     const doc = getActiveDocument();
     await upload("image", await readDocumentImage(doc));
-    return "Image sent";
+    return "Image sent to Inpaint upload";
 }
 
 async function sendMask() {
     const doc = getActiveDocument();
     await upload("mask", await readSelectionMask(doc));
-    return "Mask sent";
+    return "Mask sent to Inpaint upload";
 }
 
 async function sendImageAndMask() {
@@ -144,7 +146,7 @@ async function sendImageAndMask() {
     const mask = await readSelectionMask(doc);
     await upload("image", await readDocumentImage(doc));
     await upload("mask", mask);
-    return "Image and mask sent";
+    return "Image and mask sent to Inpaint upload";
 }
 
 async function sendControlNetPreprocess() {
@@ -194,8 +196,12 @@ function connect() {
     setConnectionState("connecting");
 
     websocket.onopen = () => {
-        if (socket === websocket)
+        if (socket === websocket) {
             setConnectionState("connected");
+            rememberUrl(getWebuiUrl());
+            // The server then waits for OPEN_IMAGE_DONE, so that Image Bench shows the transfer until it ends
+            websocket.send(JSON.stringify({type: "HELLO", acks: true}));
+        }
     };
     websocket.onmessage = onWebuiMessage;
     websocket.onclose = () => {
@@ -220,15 +226,36 @@ async function onWebuiMessage(e) {
     if (msg.type !== "OPEN_IMAGE")
         return;
 
+    const websocket = e.target;
+    setBusy(true, `Receiving ${msg.name}`);
+
     try {
         await openImage(msg);
+        reportOpened(websocket, msg);
+        setBusy(false);
         setStatus(`Received ${msg.name}`);
     } catch (error) {
         console.error(error);
+        reportOpened(websocket, msg, error.message);
+        setBusy(false);
         setStatus(error.message, true);
 
         if (!panelVisible)
             await app.showAlert(`Image Bench: ${error.message}`);
+    }
+}
+
+/**
+ * Tell the server that a received image is in Photoshop or could not be opened
+ */
+function reportOpened(websocket, {requestId}, error) {
+    if (!requestId)
+        return;
+
+    try {
+        websocket.send(JSON.stringify({type: "OPEN_IMAGE_DONE", requestId, ...(error ? {error} : {})}));
+    } catch (e) {
+        console.error(e);
     }
 }
 
@@ -297,6 +324,41 @@ function setStatus(text, isError = false) {
     status.classList.toggle("error", isError);
 }
 
+// Transfers under way (sending and receiving may overlap) and the timer blinking the busy indicator
+let busyCount = 0;
+let busyTimer = null;
+
+/**
+ * Show a transfer under way: a blinking indicator with the text, and the send buttons disabled
+ * (CSS animations are not available in UXP panels)
+ * @param {boolean} busy - Start (with the text) or end a transfer
+ * @param {string} [text]
+ */
+function setBusy(busy, text) {
+    busyCount = Math.max(0, busyCount + (busy ? 1 : -1));
+    const active = busyCount > 0;
+
+    if (busy)
+        setStatus(`${text}...`);
+
+    const indicator = document.getElementById("busy-dot");
+    indicator.classList.toggle("active", active);
+    document.querySelectorAll(".buttons sp-button").forEach(button => {
+        if (active)
+            button.setAttribute("disabled", "");
+        else
+            button.removeAttribute("disabled");
+    });
+
+    if (active && !busyTimer)
+        busyTimer = setInterval(() => indicator.classList.toggle("dim"), 400);
+    else if (!active && busyTimer) {
+        clearInterval(busyTimer);
+        busyTimer = null;
+        indicator.classList.remove("dim");
+    }
+}
+
 const CONNECTION_STATES = {
     connected: {label: "Connected", title: "Connected to the server: click to reconnect"},
     connecting: {label: "Connecting...", title: "Connecting to the server: click to retry"},
@@ -330,28 +392,110 @@ function applyUrl(force) {
         reconnect();
 }
 
+// ==================== RECENT URLS ====================
+
+function getRecentUrls() {
+    try {
+        const urls = JSON.parse(localStorage.getItem(RECENT_URLS_KEY) || "[]");
+        return Array.isArray(urls) ? urls : [];
+    } catch {
+        return [];
+    }
+}
+
+function setRecentUrls(urls) {
+    localStorage.setItem(RECENT_URLS_KEY, JSON.stringify(urls));
+    renderRecentUrls();
+}
+
 /**
- * Run an action, reporting the result in the panel, or errors in an alert when invoked as a menu command
+ * Put a URL the plugin connected to at the top of the recent ones
+ */
+function rememberUrl(url) {
+    const urls = getRecentUrls();
+    if (urls[0] !== url)
+        setRecentUrls([url, ...urls.filter(u => u !== url)].slice(0, MAX_RECENT_URLS));
+}
+
+function showRecentUrls(open) {
+    const list = document.getElementById("recent-urls");
+    list.classList.toggle("open", open && getRecentUrls().length > 0);
+}
+
+function renderRecentUrls() {
+    const urls = getRecentUrls();
+    const list = document.getElementById("recent-urls");
+    list.innerHTML = "";
+
+    for (const url of urls) {
+        const item = document.createElement("div");
+        item.className = "recent-item";
+        item.title = `Connect to ${url}`;
+
+        const label = document.createElement("span");
+        label.className = "recent-url";
+        label.textContent = url;
+
+        const remove = document.createElement("span");
+        remove.className = "recent-remove";
+        remove.textContent = "✕";
+        remove.title = "Remove from the recent URLs";
+
+        item.append(label, remove);
+        item.addEventListener("click", e => {
+            if (e.target === remove) {
+                setRecentUrls(getRecentUrls().filter(u => u !== url));
+                showRecentUrls(true);
+                return;
+            }
+            document.getElementById("webui-url").value = url;
+            showRecentUrls(false);
+            applyUrl(true);
+        });
+        list.appendChild(item);
+    }
+
+    const toggle = document.getElementById("recent-toggle");
+    if (urls.length)
+        toggle.removeAttribute("disabled");
+    else {
+        toggle.setAttribute("disabled", "");
+        list.classList.remove("open");
+    }
+}
+
+let sending = false;
+
+/**
+ * Run an action, showing it under way and reporting the result in the panel, or errors in an alert when invoked as a menu command
  * @param {Function} action - Action returning a status message
  * @param {boolean} fromPanel - Whether the action is invoked from the panel
  */
 async function run(action, fromPanel = false) {
+    // One send at a time: double clicks would send twice
+    if (sending)
+        return;
+
+    sending = true;
+    setBusy(true, "Sending");
+
+    let result, failure;
     try {
-        if (fromPanel)
-            setStatus("Sending...");
-
-        const result = await action();
-
-        if (fromPanel)
-            setStatus(result);
+        result = await action();
     } catch (error) {
         console.error(error);
-
-        if (fromPanel)
-            setStatus(error.message, true);
-        else
-            await app.showAlert(`Image Bench: ${error.message}`);
+        failure = error;
+    } finally {
+        sending = false;
+        setBusy(false);
     }
+
+    if (!failure)
+        setStatus(result);
+    else if (fromPanel)
+        setStatus(failure.message, true);
+    else
+        await app.showAlert(`Image Bench: ${failure.message}`);
 }
 
 function initPanel() {
@@ -362,11 +506,20 @@ function initPanel() {
     urlField.value = getWebuiUrl();
     // Enter also fires "change", which then finds the URL already saved
     urlField.addEventListener("keydown", e => {
-        if (e.key === "Enter")
+        if (e.key === "Enter") {
+            showRecentUrls(false);
             applyUrl(true);
+        } else if (e.key === "ArrowDown")
+            showRecentUrls(true);
+        else if (e.key === "Escape" || e.key === "ArrowUp")
+            showRecentUrls(false);
     });
     urlField.addEventListener("change", () => applyUrl(false));
     document.getElementById("connection").addEventListener("click", () => applyUrl(true));
+
+    renderRecentUrls();
+    document.getElementById("recent-toggle").addEventListener("click", () =>
+        showRecentUrls(!document.getElementById("recent-urls").classList.contains("open")));
 
     const smartObjects = document.getElementById("smart-objects");
     smartObjects.checked = localStorage.getItem(SMART_OBJECTS_KEY) === "true";

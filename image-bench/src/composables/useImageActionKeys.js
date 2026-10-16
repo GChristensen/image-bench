@@ -5,8 +5,8 @@ import {MARKINGS} from "@/consts.js";
 
 /**
  * Keys of the image actions (imageActions.js), acting on the shown overlay image or else on the hovered card.
- * Targets are {getImage(), ctx, element, setMarking?(marking|null)}; setMarking enables the digit keys
- * (1-9 set a marking, 0 removes it).
+ * Targets are {getImage(), ctx, element, setMarking?(marking|null), view?()}; setMarking enables the digit keys
+ * (1-9 set a marking, 0 removes it), view the V key on a hovered card (shows the image overlay).
  */
 let hoveredTarget = null;
 let overlayTarget = null;
@@ -63,6 +63,13 @@ function onKeydown(e) {
       target.setMarking(index ? MARKINGS[index - 1] : null);
     }
 
+    return;
+  }
+
+  // V views the hovered card large, as a click on it does
+  if (e.code === "KeyV" && !e.shiftKey && target === hoveredTarget && target.view) {
+    e.preventDefault();
+    target.view();
     return;
   }
 

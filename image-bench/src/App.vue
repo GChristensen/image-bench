@@ -241,7 +241,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
 <template>
   <div class="tab-container">
     <nav class="tabs">
-      <RouterLink to="/generate" class="tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
+      <RouterLink to="/generate" class="tab" id="generate-tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
       <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>

@@ -203,7 +203,8 @@ function onCellEnter(e, image, index) {
     getImage: () => image,
     ctx: props.ctx,
     element: e.currentTarget,
-    setMarking: marking => emit("setMarking", image, marking)
+    setMarking: marking => emit("setMarking", image, marking),
+    view: () => emit("open", index)
   });
 }
 
@@ -235,7 +236,7 @@ defineExpose({grid, nativeZoom, setZoom});
            @click="onCellClick(index)" @auxclick="onCellAuxClick($event, index)"
            @contextmenu="openImageMenu($event, image, ctx)">
         <img :src="image.imageUrl" :style="imageStyle" draggable="false" alt="">
-        <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
+        <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning" compact
                        @remove="emit('remove', image)" @set-marking="marking => emit('setMarking', image, marking)"
                        @open="emit('open', index)"/>
       </div>

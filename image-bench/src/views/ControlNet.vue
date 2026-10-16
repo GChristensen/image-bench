@@ -456,7 +456,7 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
                     @click="onToPhotoshop($event, sourceImage, sourceName)"
                     @mousedown.middle.prevent
                     @auxclick="onToPhotoshop($event, sourceImage, sourceName)"
-              ><AppIcon name="external" :size="13"/>To Photoshop</button>
+              ><AppIcon name="photoshop" :size="13"/>To Photoshop</button>
             <button class="ib flat" :disabled="!connected"
                     :title="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
                     :aria-label="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
@@ -490,7 +490,7 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
                     @click="onToPhotoshop($event, images.preview, previewName)"
                     @mousedown.middle.prevent
                     @auxclick="onToPhotoshop($event, images.preview, previewName)"
-              ><AppIcon name="external" :size="13"/>To Photoshop</button>
+              ><AppIcon name="photoshop" :size="13"/>To Photoshop</button>
             <button class="ib flat" :disabled="!images.preview" title="Copy the preview (Ctrl+C)"
                     aria-label="Copy the preview" @click="onCopyPreview"><AppIcon name="copy" :size="14"/></button>
             <button class="ib flat" :disabled="!images.preview" title="Save the preview" aria-label="Save the preview"

@@ -88,10 +88,10 @@ export function useImageOperations() {
     sendUrlToPhotoshop(createImageLink(image), image.imagePath || createImageLink(image), newDocument);
 
   /**
-   * Put an image into the control image of the unit chosen in the ControlNet tab
+   * Send the image file to the host page in a message made by createMessage(file)
    * @returns {Promise<string|null>} Error message, or null on success
    */
-  const sendToControlNet = async (image) => {
+  const sendImageFile = async (image, createMessage) => {
     try {
       const response = await fetch(createImageLink(image));
 
@@ -100,14 +100,28 @@ export function useImageOperations() {
 
       const blob = await response.blob();
       const name = (image.imagePath || 'image.png').split(/[\\/]/).pop();
-      const file = new File([blob], name, {type: blob.type});
 
-      sendWebUIMessage({type: 'SET_CONTROLNET_IMAGE', unit: useControlNetStore().selectedUnit, kind: 'image', file});
+      sendWebUIMessage(createMessage(new File([blob], name, {type: blob.type})));
       return null;
     } catch (error) {
       return `Unable to read the image: ${error.message}`;
     }
   };
+
+  /**
+   * Put an image into the control image of the unit chosen in the ControlNet tab
+   * @returns {Promise<string|null>} Error message, or null on success
+   */
+  const sendToControlNet = (image) => sendImageFile(image, file =>
+    ({type: 'SET_CONTROLNET_IMAGE', unit: useControlNetStore().selectedUnit, kind: 'image', file}));
+
+  /**
+   * Put an image into the inpaint upload image (WebUI, switching to img2img › Inpaint upload)
+   * or the node marked ib:img (ComfyUI)
+   * @returns {Promise<string|null>} Error message, or null on success
+   */
+  const sendToInpaint = (image) => sendImageFile(image, file =>
+    ({type: 'SET_INPUT_IMAGE', mode: 'inpaint', kind: 'image', file}));
 
   /**
    * Whether images can be put on the clipboard (needs a secure context, e.g. localhost)
@@ -154,6 +168,7 @@ export function useImageOperations() {
     openImageInNewWindow,
     sendToPhotoshop,
     sendToControlNet,
+    sendToInpaint,
     canCopyImage,
     copyImage
   };

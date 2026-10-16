@@ -58,6 +58,21 @@ function onKeydown(e) {
     closeContextMenu();
 }
 
+// A submenu opens beside its item; near the bottom of the window it moves up so that it stays within it
+function fitSubmenu(e) {
+  const submenu = e.currentTarget.querySelector(".submenu");
+
+  if (!submenu)
+    return;
+
+  submenu.style.top = "";
+  const rect = submenu.getBoundingClientRect();
+  const overflow = rect.bottom - (window.innerHeight - EDGE);
+
+  if (overflow > 0)
+    submenu.style.top = `${parseFloat(getComputedStyle(submenu).top) - Math.min(overflow, rect.top - EDGE)}px`;
+}
+
 function onItemClick(item) {
   closeContextMenu();
   item.run();
@@ -70,19 +85,23 @@ function onItemClick(item) {
          :style="{left: position.left + 'px', top: position.top + 'px'}" @contextmenu.prevent>
       <template v-for="(item, index) in contextMenu.items" :key="index">
         <hr v-if="item.separator">
-        <div v-else-if="item.submenu" class="submenu-item">
+        <div v-else-if="item.submenu" class="submenu-item" @mouseenter="fitSubmenu">
           <button role="menuitem" aria-haspopup="menu">
-            <span class="item-icon"></span>
+            <AppIcon v-if="item.icon" :name="item.icon" :size="14" class="item-icon"/>
+            <span v-else class="item-icon"></span>
             <span class="item-label">{{ item.label }}</span>
             <AppIcon name="chevron" :size="12" class="submenu-arrow"/>
           </button>
           <div class="menu submenu" role="menu">
-            <button v-for="subitem in item.submenu" :key="subitem.label" role="menuitem" @click="onItemClick(subitem)">
-              <AppIcon v-if="subitem.icon" :name="subitem.icon" :size="14" class="item-icon"/>
-              <span v-else class="item-icon"></span>
-              <span class="item-label">{{ subitem.label }}</span>
-              <span v-if="subitem.hint" class="item-hint">{{ subitem.hint }}</span>
-            </button>
+            <template v-for="(subitem, subindex) in item.submenu" :key="subindex">
+              <hr v-if="subitem.separator">
+              <button v-else role="menuitem" @click="onItemClick(subitem)">
+                <AppIcon v-if="subitem.icon" :name="subitem.icon" :size="14" class="item-icon"/>
+                <span v-else class="item-icon"></span>
+                <span class="item-label">{{ subitem.label }}</span>
+                <span v-if="subitem.hint" class="item-hint">{{ subitem.hint }}</span>
+              </button>
+            </template>
           </div>
         </div>
         <button v-else role="menuitem" :class="{danger: item.danger}" @click="onItemClick(item)">

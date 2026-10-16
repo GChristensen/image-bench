@@ -82,7 +82,8 @@ function onMouseEnter() {
     getImage: () => props.image,
     ctx: props.ctx,
     element: rootElement.value,
-    setMarking: marking => emit("setMarking", marking)
+    setMarking: marking => emit("setMarking", marking),
+    view: () => emit("open")
   });
 }
 

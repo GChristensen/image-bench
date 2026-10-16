@@ -1,5 +1,5 @@
 <script setup>
-  import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
+  import {computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
   import {useImageTrayStore} from "@/stores/imageTray.js";
   import {useConceptTrayStore} from "@/stores/conceptTray.js";
   import {useCompareStore} from "@/stores/compare.js";
@@ -10,6 +10,7 @@
   import {dialog} from "@/dialogs/useDialog.js";
   import {hostHas} from "@/host.js";
   import {openImageMenu} from "@/contextMenu.js";
+  import {INPAINT_LABEL, sendToInpaint} from "@/imageActions.js";
   import {setOverlayImageTarget, clearOverlayImageTarget} from "@/composables/useImageActionKeys.js";
   import AppIcon from "@/components/AppIcon.vue";
 
@@ -231,6 +232,9 @@
   // The marking bar opens on hover, or on a click on the current marking
   const markingBarOpen = ref(false);
 
+  // Only the views that listen to filterMarking filter by markings
+  const filters = !!getCurrentInstance()?.vnode.props?.onFilterMarking;
+
   // Context of the image actions (imageActions.js) for the context menu and the keys
   const actionContext = {
     get kind() { return props.kind; },
@@ -241,10 +245,14 @@
       upscale: image => emit("upscaleImage", image),
       addComment: image => emit("addComment", image),
       openImage: image => imageOps.openImageInNewWindow(image),
-      filterMarking: marking => emit("filterMarking", marking),
+      filterMarking: filters ? marking => emit("filterMarking", marking) : null,
       removeMarking: image => {
         delete image.marking;
         markingChanged(image);
+      },
+      // Where the overlay sets markings (its marking bar, the digit keys)
+      get setMarking() {
+        return props.isTray || props.markable ? (image, marking) => setMarkingByKey(marking) : null;
       },
       activeMarkingFilter: () => props.markingFilter
     }
@@ -315,10 +323,12 @@
                     @click="$emit('deleteImage', image)"><AppIcon name="trash" :size="20"/></button>
             <span class="actions-separator"></span>
           </template>
+          <button class="ib" :title="INPAINT_LABEL" :aria-label="INPAINT_LABEL"
+                  @click="sendToInpaint(image)"><AppIcon name="brush" :size="20"/></button>
           <button v-if="canSendToControlNet" class="ib" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
                   @click="onSendToControlNet"><AppIcon name="controlnet" :size="20"/></button>
           <button class="ib" title="Left: send to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer" aria-label="Send to Photoshop"
-                  @click="onSendToPhotoshop($event, !$event.shiftKey)" @mousedown.middle.prevent @auxclick="onPhotoshopAuxClick"><AppIcon name="external" :size="20"/></button>
+                  @click="onSendToPhotoshop($event, !$event.shiftKey)" @mousedown.middle.prevent @auxclick="onPhotoshopAuxClick"><AppIcon name="photoshop" :size="20"/></button>
           <span class="actions-separator"></span>
           <button v-if="kind !== KIND_COMPARE" class="ib" title="Add to compare" aria-label="Add to compare"
                   @click="onAddToCompare"><AppIcon name="compare" :size="20"/></button>

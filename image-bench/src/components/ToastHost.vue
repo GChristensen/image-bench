@@ -10,8 +10,9 @@ import {dismissToast, toasts} from "@/toast.js";
   <Teleport to="body">
     <TransitionGroup name="toast" tag="div" class="toast-host" aria-live="polite">
       <div v-for="item in toasts" :key="item.id" class="toast" :class="item.kind" role="status"
-           @click="dismissToast(item.id)">
-        <AppIcon :name="item.kind === 'error' ? 'alert' : 'check'" :size="14"/>
+           @click="item.kind !== 'pending' && dismissToast(item.id)">
+        <span v-if="item.kind === 'pending'" class="spinner" aria-hidden="true"></span>
+        <AppIcon v-else :name="item.kind === 'error' ? 'alert' : 'check'" :size="14"/>
         <span>{{ item.message }}</span>
       </div>
     </TransitionGroup>
@@ -51,6 +52,26 @@ import {dismissToast, toasts} from "@/toast.js";
 
 .toast.success :deep(.app-icon) {
   color: var(--ib-accent);
+}
+
+.toast.pending {
+  cursor: default;
+}
+
+.spinner {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ib-border-2);
+  border-top-color: var(--ib-accent);
+  border-radius: 50%;
+  animation: toast-spin 0.8s linear infinite;
+}
+
+@keyframes toast-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .toast.error {

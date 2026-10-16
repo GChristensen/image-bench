@@ -474,12 +474,13 @@ onMounted(loadPluginStatus);
         <li><b>Crops</b> (key <span class="kbd">X</span>) — shows only the region of every image, packed as large
           as the window allows. The wheel scales them around the pointer (the zoom buttons too: 100% is the
           native resolution of the largest crop), and dragging pans them. <AppIcon name="save" :size="13" class="inline-icon"/> saves the crops as one PNG at
-          their native resolution, and <AppIcon name="external" :size="13" class="inline-icon"/> opens that image in
+          their native resolution, and <AppIcon name="photoshop" :size="13" class="inline-icon"/> opens that image in
           Photoshop as a new document.</li>
-        <li><b>Image actions</b> — hovering over an image shows its buttons (reuse seed, parameters, ControlNet,
+        <li><b>Image actions</b> — hovering over an image shows its buttons (parameters, ControlNet,
           Photoshop, the trays, a comment shown below the buttons), a marking badge and <AppIcon name="close" :size="13" class="inline-icon"/>, which
-          removes it from the tab (the file stays on disk). Middle-click or Shift+click an image to view it large
-          (in Crops, click or middle-click it);
+          removes it from the tab (the file stays on disk). Crops show only their number and marking: right-click
+          one for its actions, markings and Remove from compare, or use the keys. Middle-click or Shift+click an
+          image to view it large (in Crops, click or middle-click it);
           <span class="kbd">←</span> / <span class="kbd">→</span> page through the images there.</li>
         <li><b>Clear</b> — <b>Marked</b> / <b>Unmarked</b> remove the images with or without a marking, and
           <b>All</b> all of them; the files stay on disk.</li>
@@ -537,21 +538,14 @@ onMounted(loadPluginStatus);
           trays themselves are saved into the projects of the
           <a href="#" @click.prevent="scrollTo('library')">Library</a>.</li>
       </ul>
-      <div class="note warn">
+      <div v-if="isComfy" class="note warn">
         <AppIcon name="alert" :size="15"/>
         <div>
-          <b>Re-generating an image uses the current {{ isWebUI ? "parameters" : "workflow" }}.</b> Buttons that
-          make an image again — upscale, upscale with denoising, generate with steps —
-          <template v-if="isComfy">set the image's prompt (with its LoRA tags), model, seed, steps, CFG, sampler,
-          size and Distilled CFG / Shift in the marked nodes, and run the workflow that is open: its other nodes,
-          references and Hires. fix settings are used as they are. Generate the drafts and upscale them with the
-          same workflow, or one with the same structure.</template><template v-else>take only
-          the seed from the image (along with its variation seed, and the steps or denoising strength being
-          varied). The prompt, checkpoint, LoRAs, sampler, size and everything else come from what is currently
-          set in {{ HOST_NAME }}. Before using these buttons, bring {{ HOST_NAME }} in line with the image:
-          middle-click (or Shift+click) its <AppIcon name="seed" :size="13" class="inline-icon"/> button to reuse
-          all of its parameters. An image whose prompt differs from the current txt2img prompt
-          carries the <AppIcon name="alert" :size="13" class="inline-icon"/> badge as a reminder.</template>
+          <b>Re-generating an image uses the open workflow.</b> Buttons that make an image again — upscale,
+          upscale with denoising, generate with steps — set the image's prompt (with its LoRA tags), model, seed,
+          steps, CFG, sampler, size and Distilled CFG / Shift in the marked nodes, and run the workflow that is
+          open: its other nodes, references and Hires. fix settings are used as they are. Generate the drafts and
+          upscale them with the same workflow, or one with the same structure.
         </div>
       </div>
     </section>
@@ -635,8 +629,7 @@ onMounted(loadPluginStatus);
         <li><b>Tags</b> and <b>notes</b> are saved at once. Click a tag to search by it.</li>
         <li><b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b> and <b>Files</b> (tabs under the parameters) — the
           images of the trays as the project was last saved, and the image files of the project folder, also PSD and
-          TIFF. Hovering over a tray image shows its buttons: reuse seed (middle-click: all parameters), generation
-          parameters, reuse the prompts and all parameters <AppIcon name="sliders" :size="13" class="inline-icon"/>,
+          TIFF. Hovering over a tray image shows its buttons: generation parameters, reuse the prompts and all parameters <AppIcon name="sliders" :size="13" class="inline-icon"/>,
           set as final, add to compare, send to ControlNet and to Photoshop. Click one to view it
           (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click to open it in
           a new tab, right-click for the menu (final image, Compare, Photoshop, and deleting a file of the project folder).</li>
@@ -656,18 +649,27 @@ onMounted(loadPluginStatus);
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        Hovering over an image reveals its buttons; the bottom of the image names the button under the pointer
-        and its key. While the pointer is over an image, the keys in the table act on it. Buttons with an
-        alternative action perform it on a middle click or Shift+click; holding Shift shows their alternative
-        icons.
+        Hovering over an image of the Generated, Upscaled and Explore tabs and the trays opens its action rim: a
+        ring of colored sectors around the middle of the image, one per action: the parameters at the top, then
+        clockwise the send actions, the trays, Delete at the bottom, and generating and upscaling. The middle of the
+        ring names the sector under the pointer and its key. Sectors with an alternative action perform it on a
+        middle click or Shift+click; holding Shift shows their alternative icons. The ring is faint while the pointer
+        is away from it. Clicking the image inside or outside it opens the image as before, and so does
+        <span class="kbd">Ctrl</span>+click anywhere on the ring.
+      </p>
+      <p>
+        The button in the middle, ringed with the marking colors, shows the marking of the image. Click it to switch
+        the ring to the markings (Remove marking at the bottom) and back; middle-click it to show only the images
+        with that marking. While the pointer is over an image, the keys in the table act on it, and
+        <span class="kbd">1</span>–<span class="kbd">9</span> set its marking (<span class="kbd">0</span> removes it) and
+        <span class="kbd">V</span> views it large.
       </p>
       <table>
-        <tr><td><AppIcon name="seed" :size="14"/></td><td><span class="kbd">S</span> Reuses the seed; middle click
-          or <span class="kbd">Shift</span>+<span class="kbd">S</span> reuses all the parameters (prompt, sampler,
-          size, ...) in {{ HOST_NAME }}.</td></tr>
         <tr><td><AppIcon name="params" :size="14"/></td><td><span class="kbd">I</span> Shows the generation
           parameters, with buttons that show the Civitai information of the checkpoint and LoRAs of the image,
-          and the ControlNet images it was made with.</td></tr>
+          and the ControlNet images it was made with. The <AppIcon name="seed" :size="13" class="inline-icon"/>
+          button next to the title reuses the seed of the image, and <AppIcon name="sliders" :size="13"
+          class="inline-icon"/> all its parameters (prompt, sampler, size, ...) in {{ HOST_NAME }}.</td></tr>
         <tr><td><AppIcon name="comment" :size="14"/></td><td><span class="kbd">C</span> Comments the image
           (trays, Compare).</td></tr>
         <tr><td><AppIcon name="steps" :size="14"/></td><td><span class="kbd">G</span> Generates the image with a
@@ -676,9 +678,12 @@ onMounted(loadPluginStatus);
           image.</td></tr>
         <tr><td><AppIcon name="denoise" :size="14"/></td><td><span class="kbd">D</span> Upscales the
           image with a list of denoising strengths (trays).</td></tr>
+        <tr><td><AppIcon name="brush" :size="14"/></td><td><span class="kbd">B</span> <template v-if="isWebUI">Sends
+          the image to the inpaint upload image (img2img › Inpaint upload, which is shown).</template><template
+          v-else>Sends the image to the load node marked <code>ib:img</code>.</template></td></tr>
         <tr><td><AppIcon name="controlnet" :size="14"/></td><td><span class="kbd">N</span> Sends the image to the
           control image of the ControlNet tab.</td></tr>
-        <tr><td><AppIcon name="external" :size="14"/></td><td><span class="kbd">P</span> Sends the image to
+        <tr><td><AppIcon name="photoshop" :size="14"/></td><td><span class="kbd">P</span> Sends the image to
           Photoshop as a new document; middle click or
           <span class="kbd">Shift</span>+<span class="kbd">P</span> places it as a layer of the active document.</td></tr>
         <tr><td><AppIcon name="compare" :size="14"/></td><td><span class="kbd">A</span> Adds the image to the
@@ -690,7 +695,8 @@ onMounted(loadPluginStatus);
       <p>
         Right-click an image (or the large image) for a menu with all of its actions, as well as opening it in a
         new window, copying it into the folder of the current project (at once, under another name if the name is
-        taken) and, for a marked image, showing only its marking or removing it. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
+        taken) and a Marking submenu: setting any marking (with its digit key), showing only the images with the
+        current marking and removing it. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
       </p>
       <p>
         Click an image to view it large. In that view, <span class="kbd">←</span> and
@@ -699,9 +705,7 @@ onMounted(loadPluginStatus);
         in a new browser tab.
       </p>
       <p>
-        Images can be dragged into the input, reference and ControlNet panes.<template v-if="isWebUI"> A txt2img
-          image marked with <AppIcon name="alert" :size="13" class="inline-icon"/> was made with a prompt or
-          negative prompt that differs from the current txt2img one.</template>
+        Images can be dragged into the input, reference and ControlNet panes.
       </p>
     </section>
 
@@ -820,15 +824,15 @@ onMounted(loadPluginStatus);
       <h3>Photoshop → {{ HOST_NAME }}</h3>
       <p>The plugin panel offers these commands:</p>
       <ul>
-        <li><b>Send image</b> — the composite image of the document becomes the input image:
+        <li><b>Inpaint upload: Image</b> — the composite image of the document becomes the input image:
           <template v-if="isWebUI">it goes into the img2img canvas when img2img is shown, and into img2img ›
             Inpaint upload otherwise,</template>
           <template v-else>it goes into the load node marked <code>ib:img</code>,</template>
           unless the Generate tab's <span class="kbd">Ps</span> sends to option makes it a new reference.</li>
-        <li><b>Send selection as mask</b> — the selection, as a black-and-white mask, goes to
+        <li><b>Inpaint upload: Mask</b> — the selection, as a black-and-white mask, goes to
           {{ isWebUI ? "the inpaint upload mask" : "the node marked ib:mask" }}. Feathered selections give soft
           edges.</li>
-        <li><b>Send image and mask</b> — both at once; the usual way to inpaint part of a document.</li>
+        <li><b>Inpaint upload: Both</b> — both at once; the usual way to inpaint part of a document.</li>
         <li><b>ControlNet: preprocess</b> — loads the image into the unit shown in the ControlNet tab, runs its
           preprocessor, and places the result back in Photoshop as a layer. <b>ControlNet: image</b> uses the image
           as the control image as it is, without a preprocessor, and <b>ControlNet: mask</b> sends the selection as
@@ -843,10 +847,13 @@ onMounted(loadPluginStatus);
 
       <h3>{{ HOST_NAME }} → Photoshop</h3>
       <p>
-        The <AppIcon name="external" :size="13" class="inline-icon"/> <b>Send to Photoshop</b> button of any image,
+        The <AppIcon name="photoshop" :size="13" class="inline-icon"/> <b>Send to Photoshop</b> button of any image,
         like <b>To Photoshop</b> in the ControlNet panes, opens the image as a new document.
         Middle-click or Shift+click it to place the image as a new layer of the active document instead. The layer is rasterized, so its pixels can be
         edited directly; check <b>Place as smart objects</b> in the plugin panel to keep it a smart object instead.
+        A notice at the bottom of the window shows the transfer until the image is in Photoshop (with a plugin installed
+        before this notice existed, until the server has passed it on: reinstall the plugin above). The plugin panel
+        likewise shows a blinking dot while an image is sent or received, and its buttons wait for the transfer to end.
       </p>
     </section>
 
@@ -911,7 +918,7 @@ onMounted(loadPluginStatus);
           current project</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+click</td><td>Switch between full size and fit to screen in the image view</td></tr>
         <tr><td>Middle click</td><td>On an image, open it in a new tab. On a button, perform its alternative action
-          (reuse all parameters, place as a new Photoshop layer); on a marking, remove it</td></tr>
+          (place as a new Photoshop layer); on a marking, remove it</td></tr>
         <tr><td><span class="kbd">Shift</span>+click</td><td>On a button of an image, perform its alternative
           action</td></tr>
         <tr><td>Right click</td><td>The menu of an image</td></tr>

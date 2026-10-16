@@ -29,6 +29,8 @@ websocket_clients = set()
 
 # Photoshop plugins listening for images sent from the Image Bench window
 photoshop_plugin_websockets = set()
+# The plugins among them that report when a sent image is in Photoshop
+photoshop_plugin_ack_websockets = set()
 # Images exchanged with the Photoshop plugin: kind -> (content, media type)
 photoshop_images = {}
 
@@ -613,7 +615,10 @@ async def websocket_handler(request):
 # Photoshop plugin WebSocket: receives notifications about images sent from the Image Bench window
 @PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin-websocket")
 async def photoshop_plugin_websocket_handler(request):
-    """Keep the Photoshop plugin connected to receive images sent from the Image Bench window"""
+    """
+    Keep the Photoshop plugin connected to receive images sent from the Image Bench window,
+    and to report when they are in Photoshop
+    """
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
@@ -621,9 +626,11 @@ async def photoshop_plugin_websocket_handler(request):
 
     try:
         async for msg in ws:
-            pass
+            if msg.type == web.WSMsgType.TEXT and photoshop.handle_plugin_message(msg.data) == "hello":
+                photoshop_plugin_ack_websockets.add(ws)
     finally:
         photoshop_plugin_websockets.discard(ws)
+        photoshop_plugin_ack_websockets.discard(ws)
 
     return ws
 
@@ -635,7 +642,10 @@ def get_photoshop_image_url(kind):
 # Send an image to Photoshop
 @PromptServer.instance.routes.post(BASE_PATH + "/photoshop/send")
 async def photoshop_send(request):
-    """Receive an image file from the Image Bench window and notify the Photoshop plugin to open it"""
+    """
+    Receive an image file from the Image Bench window and notify the Photoshop plugin to open it,
+    answering when the plugin reports the image is in Photoshop
+    """
     media_type = request.content_type
 
     if media_type not in photoshop.SENDABLE_MEDIA_TYPES:
@@ -644,8 +654,10 @@ async def photoshop_send(request):
     kind = photoshop.OUTGOING_IMAGE_KIND
     photoshop_images[kind] = (await request.read(), media_type)
 
+    request_id = photoshop.create_send_request()
     message = {
         "type": "OPEN_IMAGE",
+        "requestId": request_id,
         "name": photoshop.get_image_file_name(request.query.get("name", "image.png"), media_type),
         "imageUrl": get_photoshop_image_url(kind),
         "newDocument": request.query.get("new_document") == "true"
@@ -659,7 +671,10 @@ async def photoshop_send(request):
         except Exception:
             photoshop_plugin_websockets.discard(ws)
 
-    return web.json_response({"clients": clients})
+    photoshop_plugin_ack_websockets.intersection_update(photoshop_plugin_websockets)
+    result = await photoshop.wait_for_plugin(request_id, bool(photoshop_plugin_ack_websockets))
+
+    return web.json_response({"clients": clients, **result})
 
 
 # Receive an image or a mask from Photoshop

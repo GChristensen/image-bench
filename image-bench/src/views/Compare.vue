@@ -125,10 +125,13 @@ const actionContext = {
   kind: KIND_COMPARE,
   isTray: false,
   upscalable: false,
+  removeLabel: "Remove from compare",
   handlers: {
     showParams: onShowParams,
     addComment: image => addComment(image),
-    openImage: image => imageOps.openImageInNewWindow(image)
+    openImage: image => imageOps.openImageInNewWindow(image),
+    setMarking: (image, marking) => setMarking(image, marking),
+    removeImage: image => store.removeImage(image)
   }
 };
 

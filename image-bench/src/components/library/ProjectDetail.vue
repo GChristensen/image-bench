@@ -9,7 +9,7 @@ import AppIcon from "@/components/AppIcon.vue";
 import FileViewer from "@/components/library/FileViewer.vue";
 import ImageActionButtons from "@/components/ImageActionButtons.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
-import {IMAGE_ACTIONS, runImageAction, visibleActionGroups} from "@/imageActions.js";
+import {canReuseParameters, reuseParameters, runImageAction, visibleActionGroups} from "@/imageActions.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import {baseName, fetchTray, PROJECT_TRAYS, projectFileUrl, trayImageUrl, useProjectsStore} from "@/stores/projects.js";
@@ -22,6 +22,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {sendUrlToPhotoshop} from "@/photoshop.js";
 import {flashTrayTab} from "@/components/utils.js";
+import {startBlankWorkspace} from "@/workspace.js";
 
 const props = defineProps({
   // All tags of the projects, offered when tagging
@@ -86,7 +87,9 @@ function onMoreMenu(e) {
   ];
 
   if (isCurrent.value)
-    items.unshift({icon: "close", label: "Close project (keep the workspace)", run: () => store.close()}, {separator: true});
+    items.unshift({icon: "close", label: "Close project (keep the workspace)", run: () => store.close()},
+                  {icon: "broom", label: "Close project and clear the workspace…", run: () => startBlankWorkspace()},
+                  {separator: true});
 
   openContextMenu(position, items);
 }
@@ -247,9 +250,9 @@ const gridItems = computed(() => {
 
 // ---------- Image actions ----------
 
-// Reuse seed and parameters, generation parameters, send to ControlNet and Photoshop; the tray actions
-// (Compare, trays) need the image file in the workspace, so the cards add to Compare by uploading
-const CARD_ACTIONS = ["seed", "params", "controlnet", "photoshop"];
+// Generation parameters, send to inpaint, ControlNet and Photoshop; the tray actions (Compare, trays) need
+// the image file in the workspace, so the cards add to Compare by uploading
+const CARD_ACTIONS = ["params", "inpaint", "controlnet", "photoshop"];
 
 const imageOps = useImageOperations();
 const shiftKey = useShiftKey();
@@ -270,12 +273,11 @@ function onImageAction(item, action, alt) {
   runImageAction(action, item.image, actionContext, alt);
 }
 
-// The alternative of the seed action: prompts and all the parameters the host can set
-const reuseAllAction = IMAGE_ACTIONS.find(action => action.id === "seed");
-const canReuseAll = item => reuseAllAction.visible(item.image, actionContext);
+// Prompts and all the parameters the host can set
+const canReuseAll = item => canReuseParameters(item.image);
 
 function reuseAll(item) {
-  runImageAction(reuseAllAction, item.image, actionContext, true);
+  reuseParameters(item.image, true);
 }
 
 function onParamsKeydown(e) {
@@ -314,6 +316,19 @@ const files = computed(() => {
 });
 
 watch(() => project.value?.path, () => fileFilter.value = "all");
+
+// Read the project again for the files added, changed or removed outside Image Bench
+const refreshingFiles = ref(false);
+
+async function refreshFiles() {
+  refreshingFiles.value = true;
+
+  try {
+    await store.loadProject(project.value.path);
+  } finally {
+    refreshingFiles.value = false;
+  }
+}
 
 const viewerIndex = ref(null);
 const viewerFiles = ref([]);
@@ -366,7 +381,7 @@ function onItemMenu(e, item) {
   const items = [
     {icon: "star", label: "Set as the final image", run: () => store.setFinal(project.value.path, item.final)},
     {icon: "compare", label: "Add to compare", run: () => addToCompare(item.url, item.name)},
-    {icon: "external", label: "Send to Photoshop as a new document", run: () => sendToPhotoshop(item.url, item.name)},
+    {icon: "photoshop", label: "Send to Photoshop as a new document", run: () => sendToPhotoshop(item.url, item.name)},
     {icon: "layers", label: "Send to Photoshop as a new layer", run: () => sendToPhotoshop(item.url, item.name, {button: 1})},
     {separator: true},
     {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")}
@@ -484,7 +499,7 @@ const unitDetails = unit => [
           <button v-if="finalUrl" class="ib sm" title="Left: send to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer"
                   aria-label="Send the final image to Photoshop"
                   @click="sendToPhotoshop(finalUrl, data.final, $event)" @mousedown.middle.prevent
-                  @auxclick="sendToPhotoshop(finalUrl, data.final, $event)"><AppIcon name="external" :size="13"/></button>
+                  @auxclick="sendToPhotoshop(finalUrl, data.final, $event)"><AppIcon name="photoshop" :size="13"/></button>
           <button v-if="finalUrl" class="ib sm danger" title="Remove the final image" aria-label="Remove the final image"
                   @click="store.setFinal(project.path)"><AppIcon name="close" :size="13"/></button>
         </div>
@@ -567,6 +582,9 @@ const unitDetails = unit => [
           </select>
           <AppIcon name="chevron" :size="14"/>
         </div>
+        <button v-if="imageTab === 'files'" class="ib sm" title="Refresh the files of the project folder"
+                aria-label="Refresh the files" :disabled="refreshingFiles" @click="refreshFiles"
+          ><AppIcon name="refresh" :size="13"/></button>
       </div>
       <div v-if="gridItems.length" class="file-grid">
         <div v-for="(item, index) in gridItems" :key="item.key" class="file" :title="item.title"

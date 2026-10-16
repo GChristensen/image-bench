@@ -224,6 +224,7 @@
                        :highlighted="isHighlighted(image)"
                        :is-tray="isTray"
                        :marking-filter="markingFilter"
+                       deletable
                        @image-click="$emit('imageClick', image)"
                        @image-open="$emit('imageOpen', image)"
                        @show-params="$emit('showParams', image)"

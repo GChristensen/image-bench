@@ -1,6 +1,9 @@
+import asyncio
 import io
+import json
 import os
 import re
+import uuid
 
 from PIL import Image
 
@@ -28,6 +31,12 @@ OUTGOING_IMAGE_KIND = "outgoing"
 # Image types that Photoshop is able to place, by their file extensions
 SENDABLE_MEDIA_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}
 
+# Seconds to wait for the plugin to report that an image sent to it is opened or placed
+PLUGIN_RESULT_TIMEOUT = 60
+
+# Images sent to the plugin that wait for its result: {request id: future}
+_pending_sends = {}
+
 # PIL modes by the number of 8-bit components per pixel (as returned by the UXP imaging API)
 COMPONENT_MODES = {1: "L", 2: "LA", 3: "RGB", 4: "RGBA"}
 
@@ -38,6 +47,56 @@ COMFYUI_INPUT_FILES = {
     "cn_image": {"image": "image_bench_photoshop_cn_image.png"},
     "cn_mask": {"mask": "image_bench_photoshop_cn_mask.png"}
 }
+
+
+def create_send_request():
+    """Register an image sent to the plugin, returning the id to put into the OPEN_IMAGE message"""
+    request_id = uuid.uuid4().hex
+    _pending_sends[request_id] = asyncio.get_running_loop().create_future()
+    return request_id
+
+
+def handle_plugin_message(text: str):
+    """
+    Handle a message of the plugin: OPEN_IMAGE_DONE ({requestId, error?}) resolves a pending send; HELLO announces
+    a plugin that reports these results
+    :return: "hello" for a HELLO with acks, else None
+    """
+    try:
+        msg = json.loads(text)
+    except ValueError:
+        return None
+
+    if msg.get("type") == "HELLO" and msg.get("acks"):
+        return "hello"
+
+    if msg.get("type") == "OPEN_IMAGE_DONE":
+        future = _pending_sends.get(msg.get("requestId"))
+
+        if future and not future.done():
+            future.set_result(msg.get("error"))
+
+    return None
+
+
+async def wait_for_plugin(request_id: str, wait: bool = True) -> dict:
+    """
+    Wait for the plugin to report the result of an image sent to it
+    :param wait: False drops the request at once (no receiver reports results)
+    :return: {"done": True}, {"error": message} or {"timeout": True}
+    """
+    future = _pending_sends.get(request_id)
+
+    try:
+        if not wait or future is None:
+            return {"timeout": True}
+
+        error = await asyncio.wait_for(future, PLUGIN_RESULT_TIMEOUT)
+        return {"error": error} if error else {"done": True}
+    except asyncio.TimeoutError:
+        return {"timeout": True}
+    finally:
+        _pending_sends.pop(request_id, None)
 
 
 def raw_pixels_to_image(data: bytes, width: int, height: int, components: int) -> Image.Image:

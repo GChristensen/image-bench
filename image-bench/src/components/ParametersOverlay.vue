@@ -2,6 +2,9 @@
 import {computed, onBeforeMount, ref} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import {fetchModelInfo, showModelInfo} from "@/civitai.js";
+import {canReuseParameters, reuseParameters} from "@/imageActions.js";
+import {HOST_NAME} from "@/host.js";
+import {toast} from "@/toast.js";
 
   const props = defineProps({
     image: {
@@ -52,6 +55,14 @@ import {fetchModelInfo, showModelInfo} from "@/civitai.js";
     await showModelInfo(model, {info});
   }
 
+  const canReuse = computed(() => canReuseParameters(props.image));
+
+  async function onReuse(all) {
+    await reuseParameters(props.image, all);
+    toast(all ? `Parameters set in ${HOST_NAME}` : `Seed set in ${HOST_NAME}`);
+    emit("hideOverlay");
+  }
+
   onBeforeMount(async () => {
     const response = await fetch(`/image-bench/get_controlnet_images?id=${props.image.generationId}`);
 
@@ -77,7 +88,16 @@ import {fetchModelInfo, showModelInfo} from "@/civitai.js";
         <div class="close-button" @click="$emit('hideOverlay')">✖</div>
         <Transition name="slide-down">
           <div class="overlay-text-container">
-            <h3 class="parameters-title">Generation parameters</h3>
+            <div class="parameters-header">
+              <h3 class="parameters-title">Generation parameters</h3>
+              <template v-if="canReuse">
+                <button class="ib sm" title="Reuse seed" aria-label="Reuse seed" @click="onReuse(false)"
+                  ><AppIcon name="seed" :size="13"/></button>
+                <button class="ib sm" title="Reuse all parameters (prompts, sampler, size, ...)"
+                        aria-label="Reuse all parameters" @click="onReuse(true)"
+                  ><AppIcon name="sliders" :size="13"/></button>
+              </template>
+            </div>
             <div v-if="models.length" class="models">
               <button v-for="model in models" :key="`${model.kind}:${model.name}`" class="chip model-chip"
                       :title="`Show the ${model.kind === 'lora' ? 'LoRA' : 'checkpoint'} on Civitai`"
@@ -142,6 +162,16 @@ import {fetchModelInfo, showModelInfo} from "@/civitai.js";
   z-index: 1002;
   display: flex;
   flex-direction: column;
+}
+
+.parameters-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.parameters-title {
+  margin-right: 6px;
 }
 
 .parameters-title, .controlnet-title {

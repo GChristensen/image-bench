@@ -89,7 +89,7 @@ defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCr
       <button class="ib" title="Save the crops as one PNG image" aria-label="Save the crops as PNG"
               :disabled="exporting" @click="$emit('savePng')"><AppIcon name="save" :size="14"/></button>
       <button class="ib" title="Send the crops to Photoshop as a new document" aria-label="Send the crops to Photoshop"
-              :disabled="exporting" @click="$emit('sendToPhotoshop')"><AppIcon name="external" :size="14"/></button>
+              :disabled="exporting" @click="$emit('sendToPhotoshop')"><AppIcon name="photoshop" :size="14"/></button>
     </template>
 
     <div class="vsep"></div>

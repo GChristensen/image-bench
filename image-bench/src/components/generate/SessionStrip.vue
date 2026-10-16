@@ -132,7 +132,7 @@ function onContextMenu(e, image) {
 }
 
 function onMouseEnter(e, image) {
-  setHoveredImageTarget({getImage: () => image, ctx, element: e.currentTarget});
+  setHoveredImageTarget({getImage: () => image, ctx, element: e.currentTarget, view: () => emit("open", image)});
 }
 
 function onMouseLeave(e) {
