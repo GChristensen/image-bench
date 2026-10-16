@@ -750,8 +750,9 @@ onMounted(loadPluginStatus);
       <p>
         Click an image to view it large. In that view, <span class="kbd">←</span> and
         <span class="kbd">→</span> page through the images, <span class="kbd">Ctrl</span>+click switches between
-        full size and fit to screen, and <span class="kbd">Esc</span> closes it. Middle-click an image to open it
-        in a new browser tab.
+        full size and fit to screen, the button at the top left shows the generation parameters over the image
+        (a second click hides them; they stay shown while paging), and <span class="kbd">Esc</span> closes it.
+        Middle-click an image to open it in a new browser tab.
       </p>
       <p>
         Images can be dragged into the input, reference and ControlNet panes.

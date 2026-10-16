@@ -232,6 +232,40 @@
   // The marking bar opens on hover, or on a click on the current marking
   const markingBarOpen = ref(false);
 
+  // The parameters panel is shown over the image, and stays shown while navigating between images
+  const showParamsPanel = ref(false);
+
+  const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const parameterPrompts = computed(() => {
+    const params = props.image.parameters || {};
+    return [["Prompt", params["prompt"]], ["Negative prompt", params["negative prompt"]]]
+      .filter(([, text]) => text);
+  });
+
+  // The other parameters as rows; objects (e.g. lora hashes) as indented sub-rows
+  const parameterRows = computed(() => {
+    const rows = [];
+
+    for (const [key, value] of Object.entries(props.image.parameters || {})) {
+      if (key === "prompt" || key === "negative prompt")
+        continue;
+
+      if (value && typeof value === "object") {
+        rows.push({key: capitalize(key), value: ""});
+
+        for (const [subKey, subValue] of Object.entries(value))
+          rows.push({key: subKey, value: String(subValue), sub: true});
+      }
+      else
+        rows.push({key: capitalize(key), value: String(value)});
+    }
+
+    return rows;
+  });
+
+  const hasParameters = computed(() => parameterPrompts.value.length > 0 || parameterRows.value.length > 0);
+
   // Only the views that listen to filterMarking filter by markings
   const filters = !!getCurrentInstance()?.vnode.props?.onFilterMarking;
 
@@ -301,6 +335,28 @@
                  :title="isFullSize ? 'Click to fit to screen, drag to pan' : 'Click to view in full size'"
                  @mousedown="onImageMouseDown" @auxclick="onImageAuxClick" @load="onImageLoad"
                  @contextmenu="openImageMenu($event, image, actionContext)">
+          </div>
+        </Transition>
+        <button v-if="hasParameters" class="ib params-button" :class="{on: showParamsPanel}"
+                :title="showParamsPanel ? 'Hide generation parameters' : 'Show generation parameters'"
+                aria-label="Generation parameters" :aria-pressed="showParamsPanel"
+                @click="showParamsPanel = !showParamsPanel"><AppIcon name="params" :size="20"/></button>
+        <Transition name="fade">
+          <div v-if="showParamsPanel && hasParameters" class="params-panel">
+            <button class="ib flat params-close" title="Hide generation parameters" aria-label="Hide generation parameters"
+                    @click="showParamsPanel = false"><AppIcon name="close" :size="14"/></button>
+            <div class="params-body">
+              <section v-for="[label, text] in parameterPrompts" :key="label" class="params-section">
+                <div class="params-label">{{ label }}</div>
+                <div class="params-prompt">{{ text }}</div>
+              </section>
+              <dl v-if="parameterRows.length" class="params-grid">
+                <template v-for="(row, index) in parameterRows" :key="index">
+                  <dt :class="{sub: row.sub}">{{ row.key }}</dt>
+                  <dd>{{ row.value }}</dd>
+                </template>
+              </dl>
+            </div>
           </div>
         </Transition>
         <div v-if="isTray || markable" class="overlay-markings" :class="{open: markingBarOpen}"
@@ -430,6 +486,109 @@
 
 .full-size .overlay-image:active {
   cursor: grabbing;
+}
+
+.params-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1004;
+}
+
+.image-overlay-container .ib.on {
+  border-color: var(--ib-accent-border);
+  color: var(--ib-accent);
+}
+
+/* Over the image, between the top buttons and the bottom bars */
+.params-panel {
+  position: fixed;
+  top: 68px;
+  bottom: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(820px, calc(100vw - 40px));
+  box-sizing: border-box;
+  z-index: 1003;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ib-border-2);
+  border-radius: 8px;
+  background: rgba(22, 25, 29, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  color: var(--ib-text);
+  font-size: 13px;
+  line-height: 1.45;
+  cursor: auto;
+}
+
+/* The body scrolls, so the close button stays in the corner */
+.params-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 40px 14px 16px;
+}
+
+.params-panel .params-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border-color: transparent;
+  background: none;
+}
+
+.params-section + .params-section,
+.params-section + .params-grid {
+  margin-top: 12px;
+}
+
+.params-label {
+  margin-bottom: 3px;
+  color: var(--ib-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.params-prompt {
+  padding: 6px 8px;
+  border: 1px solid var(--ib-border);
+  border-radius: 5px;
+  background: var(--ib-elev);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.params-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 3px 14px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--ib-border);
+}
+
+.params-grid dt {
+  color: var(--ib-text-2);
+}
+
+.params-grid dt.sub {
+  padding-left: 12px;
+  color: var(--ib-muted);
+}
+
+.params-grid dd {
+  margin: 0;
+  font-family: var(--ib-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .overlay-actions {
