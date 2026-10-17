@@ -1,7 +1,7 @@
 <script setup>
 /**
  * Install card of an editor plugin supplied with the extension (manual, Editors chapter): its install state,
- * Install (on the computer running the host) and Download (.ccx for Photoshop, .zip for Krita).
+ * Install (on the computer running the host) and Download (.ccx for Photoshop, .zip for Krita and GIMP).
  * The notes are the default slot (list items)
  */
 import {computed, onMounted, ref} from "vue";

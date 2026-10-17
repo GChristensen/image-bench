@@ -1,5 +1,5 @@
 /**
- * Images sent from the popup to the connected editor plugin (Photoshop, Krita; editor-extensions/). One editor is
+ * Images sent from the popup to the connected editor plugin (Photoshop, Krita, GIMP; editor-extensions/). One editor is
  * connected at a time; its name, reported by the backend (/image-bench/editor/status), labels the send actions
  */
 import {ref} from "vue";
@@ -12,7 +12,8 @@ const DEFAULT_NAME = "Photoshop";
 // The known editors: icon (components/icons.js) and short name
 const EDITORS = {
   Photoshop: {icon: "photoshop", short: "Ps"},
-  Krita: {icon: "krita", short: "Kr"}
+  Krita: {icon: "krita", short: "Kr"},
+  GIMP: {icon: "gimp", short: "Gi"}
 };
 
 function readStoredName() {
@@ -114,7 +115,7 @@ async function sendImage(url, name, newDocument) {
     const {clients, editor, done, error} = await response.json();
 
     if (!clients)
-      return {error: 'No editor is connected. Please open the Image Bench panel in Photoshop or the Image Bench docker in Krita.'};
+      return {error: 'No editor is connected. Please open the Image Bench panel in Photoshop or GIMP, or the Image Bench docker in Krita.'};
 
     setEditorName(editor);
     return error ? {error: `${editor}: ${error}`} : {timeout: !done};

@@ -28,6 +28,7 @@ export const MANUAL_SECTIONS = [
     {id: "editor-photoshop", title: "Photoshop", icon: "photoshop"},
     {id: "photoshop-canny", title: "Canny Edges plugin", icon: "controlnet"},
     {id: "editor-krita", title: "Krita", icon: "krita"},
+    {id: "editor-gimp", title: "GIMP", icon: "gimp"},
   ]},
   ...(isComfy ? [{id: "comfy-setup", title: "ComfyUI setup", icon: "puzzle", children: [
     {id: "comfy-markers", title: "Markers in detail", icon: "tag"},

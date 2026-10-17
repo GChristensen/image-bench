@@ -30,7 +30,7 @@ deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extensi
 _deploy_docs dest: (_deploy "model-docs/docs" (dest + "/model_docs") "*")
 
 # The editor plugins, supplied with the extension for installing them from the manual (Library tab)
-_deploy_editors dest: (_deploy "editor-extensions/photoshop" (dest + "/shared/editor-extensions/photoshop") "index.js index.html manifest.json uxp.ps1") (_deploy "editor-extensions/photoshop-canny" (dest + "/shared/editor-extensions/photoshop-canny") "*.js index.html manifest.json") (_deploy "editor-extensions/krita" (dest + "/shared/editor-extensions/krita") "*.py *.desktop manifest.json")
+_deploy_editors dest: (_deploy "editor-extensions/photoshop" (dest + "/shared/editor-extensions/photoshop") "index.js index.html manifest.json uxp.ps1") (_deploy "editor-extensions/photoshop-canny" (dest + "/shared/editor-extensions/photoshop-canny") "*.js index.html manifest.json") (_deploy "editor-extensions/krita" (dest + "/shared/editor-extensions/krita") "*.py *.desktop manifest.json") (_deploy "editor-extensions/gimp" (dest + "/shared/editor-extensions/gimp") "*.py manifest.json")
 
 _require name value:
     @{{ if value == "" { error(name + " is not set: copy .env.example to .env and set it") } else { "echo " + name + "=" + value } }}
@@ -90,3 +90,18 @@ krita-deploy:
 # Remove the Krita plugin installed by krita-deploy
 krita-undeploy:
     {{krita}} undeploy
+
+gimp := "python editor-extensions/gimp/gimp.py"
+
+# Package the GIMP plugin into editor-extensions/gimp/dist/*.zip
+gimp-package:
+    {{gimp}} package
+
+# Install the GIMP plugin into the plug-ins folder of GIMP3_DIRECTORY (.env) or the newest GIMP 3 profile
+# (restart GIMP afterwards)
+gimp-deploy:
+    {{gimp}} deploy
+
+# Remove the GIMP plugin installed by gimp-deploy
+gimp-undeploy:
+    {{gimp}} undeploy

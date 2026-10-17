@@ -69,7 +69,7 @@ const hostOrigin = location.origin;
       <p class="lead">
         Image Bench automates the repetitive micro-tasks of working with
         {{ isWebUI ? "SD WebUI (Forge / Forge Neo)" : "ComfyUI" }}: generating batches, comparing models,
-        collecting the best images, moving images to and from Photoshop or Krita, etc. Everything is done from one window,
+        collecting the best images, moving images to and from Photoshop, Krita or GIMP, etc. Everything is done from one window,
         without hunting for controls in the {{ HOST_NAME }} page.
       </p>
       <p>
@@ -112,7 +112,7 @@ const hostOrigin = location.origin;
           bar) — the options of the window.</li>
       </ul>
       <p>
-        Plugins for Photoshop and Krita come with the extension. They send images from the editor to {{ HOST_NAME }}
+        Plugins for Photoshop, Krita and GIMP come with the extension. They send images from the editor to {{ HOST_NAME }}
         and open any image from Image Bench in the editor as a new document or a layer (see
         <a href="#" @click.prevent="scrollTo('editors')">Editors</a>).
       </p>
@@ -222,7 +222,7 @@ const hostOrigin = location.origin;
             the current model (it is the WebUI setting of that model family); <b>Use</b> passes the images to the
             model, and <b>Max side</b> limits their size (0 for no limit).</span>
           <AppIcon name="trash" :size="13" class="inline-icon"/> removes all references. The
-          <span class="kbd">Ps</span> <b>sends to</b> option (<span class="kbd">Kr</span> for Krita) decides whether
+          <span class="kbd">Ps</span> <b>sends to</b> option (<span class="kbd">Kr</span> for Krita, <span class="kbd">Gi</span> for GIMP) decides whether
           an image arriving from the editor
           becomes the input image or a new reference.</li>
         <li><b>Sampling, Seed and Hires. fix</b> groups. A seed of −1 means a random seed; the reuse button takes
@@ -323,10 +323,10 @@ const hostOrigin = location.origin;
           to the apply node, and <b>Enable</b> bypasses the unit's nodes.</li>
         <li><b>Source</b> pane — the control image. Drop, paste or browse for it, or click
           <AppIcon name="controlnet" :size="13" class="inline-icon"/> <b>Send to ControlNet</b> on any image in
-          the lists to send it to the unit selected here. <b>To Photoshop</b> (or <b>To Krita</b>) sends the shown control
+          the lists to send it to the unit selected here. <b>To Photoshop</b> (or <b>To Krita</b>, <b>To GIMP</b>) sends the shown control
           image or mask to the editor.</li>
         <li><b>Preprocessor</b> and <b>Run preprocessor</b> — the result appears in the <b>Preview</b> pane,
-          from where <b>To Photoshop</b> / <b>To Krita</b> passes it on (middle-click or Shift+click: as a new layer); its other buttons copy,
+          from where <b>To Photoshop</b> / <b>To Krita</b> / <b>To GIMP</b> passes it on (middle-click or Shift+click: as a new layer); its other buttons copy,
           save and clear the preview. <b>Pixel Perfect</b> derives the preprocessor resolution
           from the image and the generation size.
           <span v-if="isWebUI">Pixel Perfect and <b>Allow Preview</b> are checked for you the first time a unit is
@@ -590,7 +590,7 @@ const hostOrigin = location.origin;
         folder of the {{ HOST_NAME }} server computer, also a network (UNC) path such as
         <code>\\server\share\projects</code>, since {{ HOST_NAME }} may run on another computer. A folder
         containing an <code>ib_project</code> folder is a project; Image Bench keeps its data there, and the
-        other image files of the project folder (your edits, Photoshop or Krita files, references) are listed in the
+        other image files of the project folder (your edits, Photoshop, Krita or GIMP files, references) are listed in the
         project.
       </p>
       <ul>
@@ -679,7 +679,7 @@ const hostOrigin = location.origin;
         <tr><td><AppIcon name="controlnet" :size="14"/></td><td><span class="kbd">N</span> Sends the image to the
           control image of the ControlNet tab.</td></tr>
         <tr><td><AppIcon name="photoshop" :size="14"/></td><td><span class="kbd">P</span> Sends the image to
-          the editor (Photoshop or Krita) as a new document; middle click or
+          the editor (Photoshop, Krita or GIMP) as a new document; middle click or
           <span class="kbd">Shift</span>+<span class="kbd">P</span> places it as a layer of the active document.</td></tr>
         <tr><td><AppIcon name="compare" :size="14"/></td><td><span class="kbd">A</span> Adds the image to the
           Compare tab.</td></tr>
@@ -773,15 +773,15 @@ const hostOrigin = location.origin;
     <section id="manual-editors">
       <h2>Editors</h2>
       <p>
-        Plugins for <b>Photoshop</b> and <b>Krita</b> come with this extension and link the editor to
+        Plugins for <b>Photoshop</b>, <b>Krita</b> and <b>GIMP</b> come with this extension and link the editor to
         {{ HOST_NAME }}: they send the document and its selection to the Generate, ControlNet and Compare tabs, and
         receive any image from Image Bench as a new document or layer. Sending from the editor works even while the
         Image Bench window is closed.
       </p>
       <p>
         One editor is connected at a time. The send buttons of Image Bench name it and show its icon
-        (<AppIcon name="photoshop" :size="13" class="inline-icon"/> or <AppIcon name="krita" :size="13"
-        class="inline-icon"/>); the last one connected is kept while none is. When an editor connects, the one
+        (<AppIcon name="photoshop" :size="13" class="inline-icon"/>, <AppIcon name="krita" :size="13"
+        class="inline-icon"/> or <AppIcon name="gimp" :size="13" class="inline-icon"/>); the last one connected is kept while none is. When an editor connects, the one
         connected before shows <b>Reconnect</b> with a grey dot and stays disconnected until you click it, so that
         two running editors do not take the connection from each other.
       </p>
@@ -912,6 +912,52 @@ const hostOrigin = location.origin;
       <p>
         <b>Send to Krita</b> opens the image as a new document; middle-click or Shift+click places it as a new paint
         layer above the active one, centered on the canvas and converted to the color space of the document.
+      </p>
+
+      <h3 id="manual-editor-gimp">GIMP</h3>
+      <p>
+        The <b>Image Bench</b> plugin for GIMP (3.0 or newer) does what the Photoshop plugin does. GIMP plugins
+        cannot add docked panels, so its panel is a separate window.
+      </p>
+
+      <PluginCard plugin="gimp" title="Image Bench plugin for GIMP" editor="GIMP" badge="Gi"
+                  menu="Tools › Image Bench › Panel">
+        <li><b>Install</b> copies the plugin into the <code>plug-ins</code> folder of the newest GIMP 3 settings
+          folder (<code>%APPDATA%\GIMP\3.x\plug-ins</code> on Windows). GIMP must have run once, so that this
+          folder exists. The plugin is installed on the computer that runs {{ HOST_NAME }}.</li>
+        <li><b>Download .zip</b> is for any other computer: unpack it into the <code>plug-ins</code> folder shown
+          in GIMP under <b>Edit › Preferences › Folders › Plug-ins</b>, so that it holds an
+          <code>image_bench</code> folder. Use it also for GIMP Portable, which keeps its settings in its own
+          <code>Data\GimpAppData</code> folder, unless {{ HOST_NAME }} was started with <code>GIMP3_DIRECTORY</code>
+          set to that folder.</li>
+        <li>Either way, restart GIMP afterwards: the <b>Tools › Image Bench</b> menu appears in the image window.</li>
+      </PluginCard>
+
+      <h4>Connecting</h4>
+      <p>
+        Open <b>Tools › Image Bench › Panel</b>, enter the address of {{ HOST_NAME }} (<code>{{ hostOrigin }}</code>) and
+        press Enter; the recent addresses are in its dropdown. The button next to it shows and restores the
+        connection, as in the Photoshop panel. The connection lasts as long as the panel runs: closing its window
+        only hides it (<b>Tools › Image Bench › Panel</b> shows it again), <b>Quit</b> closes the panel and the
+        connection.
+      </p>
+
+      <h4>GIMP → {{ HOST_NAME }}</h4>
+      <p>
+        The panel has the commands of the Photoshop panel: <b>Input / Inpaint</b> (Image, Mask, Image + Mask),
+        <b>ControlNet</b> (Preprocess, Image, Mask) and <b>Compare</b>. They send the image chosen in the
+        panel's <b>Image</b> list (GIMP does not tell plugins which image window is active; opening the panel
+        from an image window chooses that image). The image is the visible layers merged, converted to 8-bit
+        sRGB whatever the mode and precision of the image; the mask is the selection. The same commands are in
+        the <b>Tools › Image Bench</b> menu, where they send the image of the window they are chosen in, also while the
+        panel is closed, and can get shortcuts in <b>Edit › Keyboard Shortcuts</b>.
+      </p>
+
+      <h4>{{ HOST_NAME }} → GIMP</h4>
+      <p>
+        <b>Send to GIMP</b> opens the image as a new image; middle-click or Shift+click places it as a new layer
+        of the image chosen in the panel, above its selected layer and centered on the canvas. Images are
+        received only while the panel runs.
       </p>
     </section>
 
@@ -1192,14 +1238,20 @@ const hostOrigin = location.origin;
           Preferences › Plugins and restart Photoshop again (see
           <a href="#" @click.prevent="scrollTo('editor-photoshop')">Photoshop</a>).</dd>
         <dt>The editor panel shows "Reconnect" with a red dot</dt>
-        <dd>Check the address in the Photoshop panel or the Krita docker, and that {{ HOST_NAME }} is running. The
+        <dd>Check the address in the Photoshop or GIMP panel or the Krita docker, and that {{ HOST_NAME }} is running. The
           plugin retries every 5 seconds on its own; click <b>Reconnect</b> to retry at once.</dd>
         <dt>The editor panel shows "Reconnect" with a grey dot</dt>
-        <dd>Another editor (or another Photoshop or Krita) has connected since. Click <b>Reconnect</b> to take the
+        <dd>Another editor (or another Photoshop, Krita or GIMP) has connected since. Click <b>Reconnect</b> to take the
           connection back.</dd>
         <dt>The Krita docker is not in Settings › Dockers</dt>
         <dd>Enable <b>Image Bench</b> in Settings › Configure Krita › Python Plugin Manager and restart Krita. Install
           only while Krita is closed (see <a href="#" @click.prevent="scrollTo('editor-krita')">Krita</a>).</dd>
+        <dt>Tools › Image Bench is missing in GIMP</dt>
+        <dd>GIMP finds new plug-ins when it starts: restart it after installing. The plugin needs GIMP 3.0 or newer and
+          is installed into the newest GIMP 3 settings folder (see <a href="#" @click.prevent="scrollTo('editor-gimp')">GIMP</a>).</dd>
+        <dt>GIMP receives no images</dt>
+        <dd>Images from Image Bench reach GIMP only while its panel runs: open <b>Tools › Image Bench › Panel</b>. Closing
+          the panel window only hides it; <b>Quit</b> ends the connection.</dd>
         <dt>The Civitai information of a model is outdated</dt>
         <dd>Found models are stored in the <code>store/civitai</code> folder of the extension, one file per model
           hash. Delete the file of the model (or the whole folder) to look it up again.</dd>

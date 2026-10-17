@@ -572,7 +572,7 @@ onDeactivated(() => {
 
     <div v-if="!store.images.length" class="empty-hint">
       Add images with the <b>Add to compare</b> button of an image (key A), by dragging images onto the Compare tab,
-      from files with the upload button, or from the editor (Photoshop, Krita).
+      from files with the upload button, or from the editor (Photoshop, Krita, GIMP).
     </div>
 
     <CropGrid v-if="cropView && region"

@@ -25,6 +25,7 @@ PLUGINS = {
     "image-bench": {"dir": "photoshop", "installer": "uxp_install"},
     "canny": {"dir": "photoshop-canny", "installer": "uxp_install"},
     "krita": {"dir": "krita", "installer": "krita_install"},
+    "gimp": {"dir": "gimp", "installer": "gimp_install"},
 }
 DEFAULT_PLUGIN = "image-bench"
 
