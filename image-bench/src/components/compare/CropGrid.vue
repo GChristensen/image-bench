@@ -43,7 +43,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["remove", "setMarking", "open", "update:zoom"]);
+const emit = defineEmits(["setMarking", "open", "update:zoom"]);
 
 const ZOOM_STEP = 1.25;
 // Up to this many times the native pixels of the largest crop
@@ -236,8 +236,8 @@ defineExpose({grid, nativeZoom, setZoom});
            @click="onCellClick(index)" @auxclick="onCellAuxClick($event, index)"
            @contextmenu="openImageMenu($event, image, ctx)">
         <img :src="image.imageUrl" :style="imageStyle" draggable="false" alt="">
-        <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning" compact
-                       @remove="emit('remove', image)" @set-marking="marking => emit('setMarking', image, marking)"
+        <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
+                       @set-marking="marking => emit('setMarking', image, marking)"
                        @open="emit('open', index)"/>
       </div>
       <div v-for="filler in fillers" :key="'filler' + filler" class="crop-filler"></div>

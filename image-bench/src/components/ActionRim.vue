@@ -43,8 +43,7 @@ const props = defineProps({
   }
 });
 
-// Ctrl+click anywhere on the rim emits view, as a click on the image does
-const emit = defineEmits(["run", "delete", "setMarking", "filterMarking", "view"]);
+const emit = defineEmits(["run", "delete", "setMarking", "filterMarking"]);
 
 // By the group index of the action registry
 const GROUP_COLORS = ["#7aa2ff", "#ffb547", "#c084fc", "#34d399"];
@@ -221,9 +220,7 @@ const centerNote = computed(() => mode.value !== "actions" || !props.marking || 
   : props.filterActive ? "Middle: show all images" : "Middle: show only " + props.marking);
 
 function onSectorClick(item, e) {
-  if (e.ctrlKey)
-    emit("view");
-  else if (item.id === "delete")
+  if (item.id === "delete")
     emit("delete");
   else if (mode.value === "markings") {
     emit("setMarking", item.marking);
@@ -244,10 +241,7 @@ function onSectorLeave(item) {
     hoveredId.value = null;
 }
 
-function onCenterClick(e) {
-  if (e.ctrlKey)
-    return emit("view");
-
+function onCenterClick() {
   mode.value = mode.value === "actions" ? "markings" : "actions";
   hoveredId.value = null;
 }

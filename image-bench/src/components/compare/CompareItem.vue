@@ -52,7 +52,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["remove", "setMarking", "move", "open"]);
+const emit = defineEmits(["setMarking", "move", "open"]);
 
 const REORDER_TYPE = "application/x-image-bench-compare";
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
@@ -148,7 +148,7 @@ function onDrop(e) {
     </div>
 
     <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hovered"
-                   @remove="emit('remove')" @set-marking="marking => emit('setMarking', marking)"
+                   @set-marking="marking => emit('setMarking', marking)"
                    @open="emit('open')">
       <template #lead>
         <span class="grip" draggable="true" title="Drag to reorder (or ←/→ over the image)"

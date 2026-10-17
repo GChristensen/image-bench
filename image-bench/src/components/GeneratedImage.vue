@@ -3,6 +3,7 @@
   import {syncTrayMarkings} from "@/stores/trayMarkings.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {useShiftKey} from "@/composables/useShiftKey.js";
+  import {useCtrlKey} from "@/composables/useCtrlKey.js";
   import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
   import {rimActionGroups, runImageAction} from "@/imageActions.js";
   import {openImageMenu} from "@/contextMenu.js";
@@ -98,6 +99,9 @@
   // Shift over the card shows the alternative actions of the sectors that have one
   const hovered = ref(false);
   const showAlt = computed(() => hovered.value && shiftDown.value);
+  // Ctrl over the card hides all its chrome, so that a click on the bare image opens the overlay
+  const ctrlDown = useCtrlKey();
+  const bare = computed(() => hovered.value && ctrlDown.value);
   // Badges and markings show their description in the same place instead of a tooltip;
   // a function keeps it current while the pointer stays (e.g. after toggling the marking filter)
   const hoveredText = ref(null);
@@ -200,7 +204,7 @@
 <template>
 <div v-if="displayed" ref="rootElement" class="selectable-image" :class="{selected, highlighted, dragging}">
   <div class="image-separator" v-if="image.separator">◇</div>
-  <div v-else ref="frameElement" class="image-frame" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
+  <div v-else ref="frameElement" class="image-frame" :class="{bare}" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
        @contextmenu="openImageMenu($event, image, actionContext)">
     <img class="selectable-image-preview"
          :src="imageOps.getImageLink(image)"
@@ -215,10 +219,10 @@
 
     <!-- Before the other controls, which stay above it where a small card overlaps them -->
     <Transition name="rim">
-      <ActionRim v-if="rimOpen" :groups="rimGroups" :size="rimSize" :marking="image.marking ?? null"
+      <ActionRim v-if="rimOpen && !bare" :groups="rimGroups" :size="rimSize" :marking="image.marking ?? null"
                  :show-alt="showAlt" :deletable="deletable" :filterable="filterable"
                  :filter-active="!!image.marking && markingFilter === image.marking"
-                 @run="onAction" @delete="$emit('deleteImage')" @set-marking="setMarking" @view="$emit('imageClick')"
+                 @run="onAction" @delete="$emit('deleteImage')" @set-marking="setMarking"
                  @filter-marking="marking => $emit('filterMarking', marking)"/>
     </Transition>
 
@@ -289,6 +293,18 @@
 .rim-leave-to {
   opacity: 0;
   transform: scale(0.92);
+}
+
+/* Ctrl held: the bare image (but the batch color bar), a click opens the overlay */
+.image-frame.bare .select-box,
+.image-frame.bare .view-eye,
+.image-frame.bare .image-comment,
+.image-frame.bare .image-bottom-bar {
+  display: none;
+}
+
+.image-frame.bare .selectable-image-preview {
+  cursor: zoom-in;
 }
 
 .selectable-image.selected .image-frame {

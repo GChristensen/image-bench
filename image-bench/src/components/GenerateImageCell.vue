@@ -11,6 +11,7 @@ import ActionRim from "@/components/ActionRim.vue";
 import {getImageSize, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {rimActionGroups, runImageAction} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
+import {useCtrlKey} from "@/composables/useCtrlKey.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
 import {KIND_GENERATED} from "@/consts.js";
 
@@ -127,6 +128,9 @@ const rimGroups = computed(() => rimImage.value ? rimActionGroups(rimImage.value
 const shiftDown = useShiftKey();
 const hovered = ref(false);
 const showAlt = computed(() => hovered.value && shiftDown.value);
+// Ctrl over the result hides all chrome, so that a click on the bare image opens the overlay
+const ctrlDown = useCtrlKey();
+const bare = computed(() => hovered.value && ctrlDown.value && shownView.value === "result" && props.resultClickable);
 
 // The rim opens after a short delay, like on an image card
 const RIM_DELAY = 100;
@@ -197,7 +201,7 @@ async function onUseSize() {
 </script>
 
 <template>
-  <div ref="cellElement" class="cell" :class="{dragover: dragOver}" :tabindex="hasInput ? 0 : undefined"
+  <div ref="cellElement" class="cell" :class="{dragover: dragOver, bare}" :tabindex="hasInput ? 0 : undefined"
        @dragover.prevent="dragOver = hasInput" @dragleave="dragOver = false" @drop.prevent="onDrop" @paste="onPaste"
        @mouseenter="onCellEnter" @mouseleave="onCellLeave">
 
@@ -264,9 +268,9 @@ async function onUseSize() {
 
     <!-- Last, so that it stays above the input thumbnail and the controls -->
     <Transition name="rim">
-      <ActionRim v-if="rimOpen && rimGroups.length" class="result-rim" :groups="rimGroups" :size="rimSize"
+      <ActionRim v-if="rimOpen && !bare && rimGroups.length" class="result-rim" :groups="rimGroups" :size="rimSize"
                  :marking="rimMarking" :show-alt="showAlt"
-                 @run="onAction" @set-marking="setMarking" @view="emit('result-click')"/>
+                 @run="onAction" @set-marking="setMarking"/>
     </Transition>
   </div>
 </template>
@@ -303,6 +307,13 @@ async function onUseSize() {
 
 .view.clickable {
   cursor: zoom-in;
+}
+
+/* Ctrl held over the result: the bare image, a click opens the overlay */
+.cell.bare .top-left,
+.cell.bare .top-right,
+.cell.bare .pip {
+  display: none;
 }
 
 .view.mask {

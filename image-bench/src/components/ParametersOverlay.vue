@@ -55,7 +55,9 @@ import {toast} from "@/toast.js";
   const canReuse = computed(() => canReuseParameters(props.image));
 
   async function onReuse(all) {
-    await reuseParameters(props.image, all);
+    if (!await reuseParameters(props.image, all))
+      return;
+
     toast(all ? `Parameters set in ${HOST_NAME}` : `Seed set in ${HOST_NAME}`);
     emit("hideOverlay");
   }

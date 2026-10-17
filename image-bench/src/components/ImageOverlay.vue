@@ -255,8 +255,8 @@
 
   // Unlike the parameters overlay, the image overlay stays open
   async function onReuse(all) {
-    await reuseParameters(props.image, all);
-    toast(all ? `Parameters set in ${HOST_NAME}` : `Seed set in ${HOST_NAME}`);
+    if (await reuseParameters(props.image, all))
+      toast(all ? `Parameters set in ${HOST_NAME}` : `Seed set in ${HOST_NAME}`);
   }
 
   // Only the views that listen to filterMarking filter by markings

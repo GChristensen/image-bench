@@ -205,7 +205,7 @@ const hostOrigin = location.origin;
           floating panel with the snippets of the <a href="#" @click.prevent="scrollTo('library')">Library</a>.
           Click a snippet to insert it at the caret of the prompt you last clicked into (the panel shows which one)
           and add its negative part to the negative prompt; middle-click inserts only the part of that prompt, and
-          Shift+click wraps the selected text where the snippet has <code>{}</code>. <span class="kbd">Ctrl</span>+<span
+          Shift+click wraps the selected text where the snippet has <code>{}</code> or <code>{prompt}</code>. <span class="kbd">Ctrl</span>+<span
           class="kbd">Z</span> undoes an insertion. <b>From selection</b> makes a snippet of the selected prompt text.
           Drag the panel by its header and resize it by its corner.</li>
         <li><b>Checkpoint.</b> The <AppIcon name="info" :size="13" class="inline-icon"/> button next to it opens
@@ -449,10 +449,10 @@ const hostOrigin = location.origin;
           native resolution of the largest crop), and dragging pans them. <AppIcon name="save" :size="13" class="inline-icon"/> saves the crops as one PNG at
           their native resolution, and <AppIcon name="photoshop" :size="13" class="inline-icon"/> opens that image in
           the editor as a new document.</li>
-        <li><b>Image actions</b> — hovering over an image shows its buttons (parameters, ControlNet,
-          editor, the trays, a comment shown below the buttons), a marking badge and <AppIcon name="close" :size="13" class="inline-icon"/>, which
-          removes it from the tab (the file stays on disk). Crops show only their number and marking: right-click
-          one for its actions, markings and Remove from compare, or use the keys. Middle-click or Shift+click an
+        <li><b>Image actions</b> — images and crops show only their number, comment and marking. Hold
+          <span class="kbd">Ctrl</span> over one to show its action rim (parameters, ControlNet, editor, the trays,
+          a comment, the markings in the middle), right-click it for its actions, markings and Remove from compare
+          (the file stays on disk), or use the keys. Middle-click or Shift+click an
           image to view it large (in Crops, click or middle-click it);
           <span class="kbd">←</span> / <span class="kbd">→</span> page through the images there.</li>
         <li><b>Clear</b> — <b>Marked</b> / <b>Unmarked</b> remove the images with or without a marking, and
@@ -564,12 +564,11 @@ const hostOrigin = location.origin;
       <h3 id="manual-library-snippets">Snippets</h3>
       <p>
         Snippets are pieces of prompt text, organised in folders, with an optional negative part, inserted from
-        the Snippets panel of the Generate tab. <code>{}</code> in a snippet stands for the selected prompt
-        text, which Shift+click wraps, e.g. <code>(({}:1.2))</code>. Edit a snippet in the right pane; the changes
+        the Snippets panel of the Generate tab. <code>{}</code> or <code>{prompt}</code> (as in WebUI styles) in a
+        snippet stands for the selected prompt text, which Shift+click wraps, e.g. <code>(({}:1.2))</code>. Edit a snippet in the right pane; the changes
         are saved as you type. Drag snippets to reorder them or onto a folder. The
         <AppIcon name="download" :size="13" class="inline-icon"/> button imports the styles of a WebUI
-        <code>styles.csv</code> file<template v-if="isWebUI"> or of this WebUI</template> as snippets
-        (<code>{prompt}</code> becomes <code>{}</code>).
+        <code>styles.csv</code> file<template v-if="isWebUI"> or of this WebUI</template> as snippets.
       </p>
       <h3 id="manual-library-manual">Manual</h3>
       <p>
@@ -647,8 +646,9 @@ const hostOrigin = location.origin;
         clockwise the send actions, the trays, Delete at the bottom, and generating and upscaling. The middle of the
         ring names the sector under the pointer and its key. Sectors with an alternative action perform it on a
         middle click or Shift+click; holding Shift shows their alternative icons. The ring is faint while the pointer
-        is away from it. Clicking the image inside or outside it opens the image as before, and so does
-        <span class="kbd">Ctrl</span>+click anywhere on the ring.
+        is away from it. Clicking the image inside or outside it opens the image as before. Holding
+        <span class="kbd">Ctrl</span> hides the ring and all other controls of the hovered image, so a click anywhere
+        on it opens the image.
       </p>
       <p>
         The button in the middle, ringed with the marking colors, shows the marking of the image. Click it to switch

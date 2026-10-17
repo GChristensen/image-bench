@@ -584,7 +584,6 @@ onDeactivated(() => {
               :separator-width="SEPARATOR_WIDTH"
               v-model:zoom="cropZoom"
               :ctx="actionContext"
-              @remove="store.removeImage"
               @set-marking="setMarking"
               @open="openOverlay"/>
 
@@ -604,7 +603,6 @@ onDeactivated(() => {
                      :zoom="zoom"
                      :center="center"
                      :ctx="actionContext"
-                     @remove="store.removeImage(image)"
                      @set-marking="marking => setMarking(image, marking)"
                      @move="onMove"
                      @open="openOverlay(index)"/>

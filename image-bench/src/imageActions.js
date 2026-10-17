@@ -147,11 +147,21 @@ async function upscaleVaryingDenoising(image) {
 }
 
 /**
- * Set the seed of an image, or all its parameters, in the host (from the parameters overlay)
+ * Set the seed of an image, or all its parameters, in the host (from the parameters overlay), after asking,
+ * since they replace the current ones
+ * @returns {Promise<boolean>} Whether they were set
  */
 export async function reuseParameters(image, all) {
   if (!await ensureGenerationIdle())
-    return;
+    return false;
+
+  const title = all ? "Apply parameters" : "Apply seed";
+  const message = all
+    ? `Set the prompts and all generation parameters of this image in ${HOST_NAME}? The current ones are replaced.`
+    : `Set the seed of this image in ${HOST_NAME}?`;
+
+  if (!await dialog.confirm(message, {title, okText: title}))
+    return false;
 
   const parameters = useImageOperations().cloneImage(image).parameters;
 
@@ -159,6 +169,8 @@ export async function reuseParameters(image, all) {
     useWebUIBridge().setImageParams(parameters);
   else
     useWebUIBridge().setImageSeed(parameters);
+
+  return true;
 }
 
 // Images uploaded to the Compare tab or sent there from the editor may have no generation parameters

@@ -31,7 +31,7 @@ export const DEFAULT_ACCENT_COLOR = "orange";
 
 // Forge UI presets shown as buttons in the Generate tab by default (configurable in the settings);
 // the other presets of the WebUI are in the menu next to them
-export const DEFAULT_GENERATE_UI_PRESETS = ["xl", "anima", "klein", "flux"];
+export const DEFAULT_GENERATE_UI_PRESETS = ["xl", "anima", "krea", "klein"];
 
 // Forge and Forge Neo UI presets, offered in the settings before the WebUI reports its own
 export const KNOWN_UI_PRESETS = ["sd", "xl", "flux", "klein", "qwen", "lumina", "zit", "wan", "anima", "ernie", "pid",
