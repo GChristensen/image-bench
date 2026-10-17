@@ -49,18 +49,18 @@ export function createPopupManager(config = {}) {
   let attached = false;
   let websocket = null;
   let messageQueue = [];
-  // The "openInTab" setting, read ahead so that window.open() stays within the user gesture of the click.
+  // The "openInWindow" setting, read ahead so that window.open() stays within the user gesture of the click.
   // It may be changed in the popup, the user then returns to this window
-  let openInTab = false;
+  let openInWindow = false;
 
-  async function loadOpenInTab() {
+  async function loadOpenInWindow() {
     const appConfig = await loadAppConfig();
     if (appConfig)
-      openInTab = !!appConfig.openInTab;
+      openInWindow = !!appConfig.openInWindow;
   }
 
-  loadOpenInTab();
-  window.addEventListener("focus", loadOpenInTab);
+  loadOpenInWindow();
+  window.addEventListener("focus", loadOpenInWindow);
 
   /**
    * Connect to WebSocket for real-time communication (ComfyUI mode)
@@ -117,9 +117,9 @@ export function createPopupManager(config = {}) {
     }
 
     // Without window features the browser opens a tab, which keeps window.opener like a popup
-    popupWindow = openInTab
-      ? window.open(endpoint, windowName)
-      : window.open(endpoint, windowName, windowFeatures);
+    popupWindow = openInWindow
+      ? window.open(endpoint, windowName, windowFeatures)
+      : window.open(endpoint, windowName);
 
     if (!popupWindow) {
       console.error('[Image Bench] Failed to open popup window. Check popup blocker settings.');

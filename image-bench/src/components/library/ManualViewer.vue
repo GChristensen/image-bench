@@ -122,10 +122,10 @@ const hostOrigin = location.origin;
       <h2>The window</h2>
       <p>
         To open Image Bench, click the <b>🔬 Image Bench</b> button
-        {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}. It opens in a window of its
-        own, which stays connected to the {{ HOST_NAME }} page it was opened from. With the setting <b>Open Image
-        Bench in a browser tab instead of a popup window</b> it opens in a tab instead; drag that tab into a window
-        of its own, so that the {{ HOST_NAME }} page stays the active tab of its window (see below).
+        {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}. It opens in a browser tab,
+        which stays connected to the {{ HOST_NAME }} page it was opened from; drag that tab into a window of its
+        own, so that the {{ HOST_NAME }} page stays the active tab of its window (see below). With the setting
+        <b>Open Image Bench in a popup window instead of a browser tab</b> it opens in a popup window instead.
       </p>
       <p>
         Keep that page open, and keep it as the active tab of its browser window. The browser window may be
@@ -144,7 +144,7 @@ const hostOrigin = location.origin;
       <h3>Opening Image Bench without the {{ HOST_NAME }} page</h3>
       <p>
         <a :href="`${hostOrigin}/image-bench/app`" target="_blank">{{ hostOrigin }}/image-bench/app</a> (bookmark
-        it) opens Image Bench in a popup window that loads {{ HOST_NAME }} itself: the
+        it) opens Image Bench in a tab that loads {{ HOST_NAME }} itself: the
         <AppIcon name="appWindow" :size="13" class="inline-icon"/> tab after Settings shows the {{ HOST_NAME }}
         page, which keeps working while another tab is shown, so no {{ HOST_NAME }} tab has to be opened. If the
         page is reloaded in that tab, or {{ HOST_NAME }} restarts, Image Bench shows <span class="kbd warn">Connecting
@@ -154,12 +154,11 @@ const hostOrigin = location.origin;
         {{ HOST_NAME }}.
       </p>
       <p>
-        The link opens a small page that opens the popup and closes itself (when the link was opened in a new
-        tab). If the browser blocks the popup, that page shows a button that opens it; allow popups for the
-        {{ HOST_NAME }} address to skip it. A second visit to the link brings the open window to the front instead
-        of opening another one, and the window opens at the size and place it had when it was last closed. With the
-        setting <b>Open Image Bench in a browser tab instead of a popup window</b> the link opens Image Bench in
-        the same tab.
+        A second visit to the link brings the open Image Bench to the front instead of opening another one. With
+        the setting <b>Open Image Bench in a popup window instead of a browser tab</b> the link opens a small page
+        that opens the popup and closes itself (when the link was opened in a new tab). If the browser blocks the
+        popup, that page shows a button that opens it; allow popups for the {{ HOST_NAME }} address to skip it. The
+        window opens at the size and place it had when it was last closed.
       </p>
       <div class="note">
         <AppIcon name="info" :size="15"/>
@@ -711,10 +710,9 @@ const hostOrigin = location.origin;
       <p>The <b>Settings</b> tab holds the following options, which are saved on the {{ HOST_NAME }} server:</p>
       <ul>
         <li><b>Accent color</b> — the highlight color of the window: buttons, active tabs, selections.</li>
-        <li><b>Open Image Bench in a browser tab instead of a popup window</b> — the 🔬 button opens a regular
-          browser tab (with an address bar, bookmarks and extensions) instead of a popup window, and the
-          <code>/image-bench/app</code> link opens Image Bench in its own tab. Takes effect the next time Image
-          Bench is opened.</li>
+        <li><b>Open Image Bench in a popup window instead of a browser tab</b> — the 🔬 button and the
+          <code>/image-bench/app</code> link open Image Bench in a popup window (without bookmarks and extension
+          buttons) instead of a regular browser tab. Takes effect the next time Image Bench is opened.</li>
         <li><b>Flash the Generated tab when an image arrives while another tab is shown</b> — generations started
           from the Generate tab or in {{ HOST_NAME }} itself leave Image Bench on the tab it shows, and the tab that
           receives each image flashes; Image Bench never switches to the Generated tab by itself (only upscaling

@@ -25,13 +25,13 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
-    // Open Image Bench in a browser tab instead of a popup window (disabled unless set to true)
-    const openInTab = computed({
+    // Open Image Bench in a popup window instead of a browser tab (disabled unless set to true)
+    const openInWindow = computed({
         get() {
-            return _config.openInTab ?? false;
+            return _config.openInWindow ?? false;
         },
         set(v) {
-            _config.openInTab = v;
+            _config.openInWindow = v;
             return persist();
         }
     });
@@ -191,7 +191,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         init, persist,
         repositionConfigPresetsDropdown,
         addModelInfoButton,
-        openInTab,
+        openInWindow,
         civitaiDomain,
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,

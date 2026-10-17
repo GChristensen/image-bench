@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Image Bench</title>
-<!-- Served at /image-bench/app by both hosts (shared_backend/launcher.py): opens Image Bench in the embedded mode
-     (the host UI in its own iframe tab) as a popup window, then closes itself if it may. An app already open is
-     activated instead; with the openInTab setting the app is loaded in this tab -->
+<!-- Served at /image-bench/app by both hosts (shared_backend/launcher.py): loads Image Bench in the embedded mode
+     (the host UI in its own iframe tab) in this tab, or with the openInWindow setting opens it as a popup window,
+     then closes itself if it may. An app already open is activated instead -->
 <style>
   :root { color-scheme: dark; --bg: #16161a; --fg: #e4e4e7; --muted: #9a9aa3; --accent: #f97316; --ink: #1a0b00; }
   @media (prefers-color-scheme: light) {
@@ -29,7 +29,7 @@
 </style>
 </head>
 <body>
-<!-- Shown only with a message: a found app or the openInTab redirect leave the page blank -->
+<!-- Shown only with a message: a found app or the redirect to the app leave the page blank -->
 <main hidden>
   <h1>🔬 Image Bench</h1>
   <div id="blocked" hidden>
@@ -125,11 +125,11 @@
     });
   }
 
-  // The openInTab setting loads the app in this tab instead of a popup
-  async function readOpenInTab() {
+  // The openInWindow setting opens the app as a popup instead of loading it in this tab
+  async function readOpenInWindow() {
     try {
       const response = await fetch("/image-bench/config.json", {cache: "no-store"});
-      return response.ok && !!(await response.json())?.openInTab;
+      return response.ok && !!(await response.json())?.openInWindow;
     } catch {
       return false;
     }
@@ -148,11 +148,11 @@
   });
 
   async function launch() {
-    const [found, openInTab] = await Promise.all([findOpenApp(), readOpenInTab()]);
+    const [found, openInWindow] = await Promise.all([findOpenApp(), readOpenInWindow()]);
 
     if (found)
       opened("found");
-    else if (openInTab)
+    else if (!openInWindow)
       openHere();
     // Firefox allows a popup without a click only for sites in its popup exceptions, try it right away
     else if (openPopup())
