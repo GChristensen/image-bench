@@ -506,6 +506,78 @@ def add_file(root: str, path: str, filename: Optional[str], content: Optional[by
     return {"name": os.path.basename(target), "project": get_project(root, path)}
 
 
+# Documents saved by the editor plugins (Keep › File / Final): the file names and formats
+EDITOR_SAVES = {"file": (".psd",), "final": (".psd", ".png", ".jpg")}
+JPEG_QUALITY = 95
+
+
+def editor_save_stem(directory: str, save: str) -> str:
+    """
+    The name of the next document saved by an editor plugin: <project folder name>-NNN (File) or final-NNN (Final),
+    numbered after the highest number of that name in the folder, in any format
+    """
+    prefix = os.path.basename(os.path.normpath(directory)) if save == "file" else "final"
+    pattern = re.compile(re.escape(prefix.lower()) + r"-(\d+)\.[^.]+")
+    numbers = [int(match.group(1)) for match in map(pattern.fullmatch, (name.lower() for name in os.listdir(directory)))
+               if match]
+    return f"{prefix}-{max(numbers, default=0) + 1:03d}"
+
+
+def save_editor_document(root: str, store_dir: str, save: str, psd: bytes,
+                         image: Optional[Image.Image] = None) -> Dict[str, Any]:
+    """
+    Save a document of an editor plugin into the folder of the current project: save="file" as <project>-NNN.psd,
+    save="final" as final-NNN.psd, .png and .jpg (the image is the merged document), whose PNG becomes
+    the project's final image
+
+    Returns:
+        {"project": name of the project, "files": names of the files written}
+    """
+    if save not in EDITOR_SAVES:
+        raise ProjectError(f"Unknown save: {save}")
+
+    if not psd.startswith(b"8BPS"):
+        raise ProjectError("The document is not a PSD file.", 415)
+
+    if save == "final" and image is None:
+        raise ProjectError("The merged image of the document is missing.")
+
+    path = read_current(store_dir).get("path")
+
+    if path is None:
+        raise ProjectError("No project is open in Image Bench.", 409)
+
+    directory, _ = project_paths(root, path)
+    stem = editor_save_stem(directory, save)
+    files = []
+
+    for ext in EDITOR_SAVES[save]:
+        target = os.path.join(directory, stem + ext)
+
+        if ext == ".psd":
+            with open(target, "wb") as file:
+                file.write(psd)
+        elif ext == ".png":
+            image.save(target, format="PNG")
+        else:
+            rgb = to_rgb(image)
+
+            # JPEG has no transparency: flattened onto white
+            if rgb.mode == "RGBA":
+                background = Image.new("RGB", rgb.size, (255, 255, 255))
+                background.paste(rgb, mask=rgb.getchannel("A"))
+                rgb = background
+
+            rgb.save(target, format="JPEG", quality=JPEG_QUALITY, subsampling=0)
+
+        files.append(stem + ext)
+
+    if save == "final":
+        set_final(root, path, name=stem + ".png")
+
+    return {"project": os.path.basename(directory), "files": files}
+
+
 def create_folder(root: str, parent: str, name: str) -> Dict[str, Any]:
     directory = os.path.join(resolve(root, parent), check_name(name))
 

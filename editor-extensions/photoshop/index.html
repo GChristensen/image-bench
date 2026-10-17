@@ -181,10 +181,15 @@
         </div>
     </div>
     <div class="row section">
-        <sp-label>To Image Bench: Compare</sp-label>
+        <sp-label title="Compare works without a project; File and Final save into the folder of the project open in Image Bench"
+            >To Image Bench: Keep</sp-label>
         <div class="buttons">
             <sp-button id="send-compare" variant="secondary"
-                       title="Add the image to the Compare tab of Image Bench">Image</sp-button>
+                       title="Add the image to the Compare tab of Image Bench">Compare</sp-button>
+            <sp-button id="save-file" variant="secondary"
+                       title="Save the document as &lt;project name&gt;-NNN.psd into the current project folder">File</sp-button>
+            <sp-button id="save-final" variant="secondary"
+                       title="Save the document as final-NNN.psd, .png and .jpg into the current project folder; the PNG becomes the project's final image">Final</sp-button>
         </div>
     </div>
     <div class="row section">

@@ -62,6 +62,28 @@ def read_mask(image):
     return _read_buffer(image.get_selection(), width, height, MASK_FORMAT), width, height, 1
 
 
+def read_document(image):
+    """The image as a layered PSD file, exported from a duplicate, so that the image keeps its file and export state"""
+    directory = tempfile.mkdtemp(prefix="image_bench_")
+    path = os.path.join(directory, "document.psd")
+    duplicate = image.duplicate()
+
+    try:
+        if not Gimp.file_save(Gimp.RunMode.NONINTERACTIVE, duplicate, Gio.File.new_for_path(path), None):
+            raise DocumentError("Unable to save the image as PSD")
+
+        with open(path, "rb") as file:
+            return file.read()
+    except Exception as e:
+        if isinstance(e, DocumentError):
+            raise
+
+        raise DocumentError(f"Unable to save the image as PSD: {e}") from None
+    finally:
+        duplicate.delete()
+        shutil.rmtree(directory, ignore_errors=True)
+
+
 class _TempFile:
     """The received data in a temporary file named like the image, which GIMP loads by its path"""
 

@@ -5,7 +5,8 @@ Image Bench extension, and places images sent from the Image Bench window into K
 the Photoshop plugin (`../PROTOCOL.md`).
 
 - **Settings › Dockers › Image Bench**: the server URL (with the recent ones), the connection state, and the buttons
-  Input / Inpaint (Image, Mask, Image + Mask), ControlNet (Preprocess, Image, Mask) and Compare.
+  Input / Inpaint (Image, Mask, Image + Mask), ControlNet (Preprocess, Image, Mask) and Keep (Compare; File and Final
+  save the document as PSD, and as PNG and JPEG for Final, into the project open in Image Bench).
 - **Tools › Scripts › Image Bench**: the same send actions, which can get shortcuts in
   Settings › Configure Krita › Keyboard Shortcuts.
 - **Send to Krita** on an image in the Image Bench window places it as a layer above the active one (centered,

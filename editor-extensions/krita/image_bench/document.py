@@ -1,7 +1,11 @@
 """
 The Krita side: pixels of the active document and its selection, received images as layers or documents
 """
-from krita import Krita
+import os
+import shutil
+import tempfile
+
+from krita import InfoObject, Krita
 from PyQt5.QtGui import QImage
 
 # The color space of the pixel data exchanged with setPixelData: 8-bit RGBA, stored as B,G,R,A
@@ -50,6 +54,26 @@ def read_mask(doc):
 
     width, height = doc.width(), doc.height()
     return bytes(selection.pixelData(0, 0, width, height)), width, height, 1
+
+
+def read_document(doc):
+    """The document as a layered PSD file, exported without dialogs; the document keeps its file name"""
+    directory = tempfile.mkdtemp(prefix="image_bench_")
+    path = os.path.join(directory, "document.psd")
+    batch = doc.batchmode()
+    doc.setBatchmode(True)
+
+    try:
+        if not doc.exportImage(path, InfoObject()):
+            raise DocumentError("Unable to save the document as PSD")
+
+        with open(path, "rb") as file:
+            return file.read()
+    except OSError as e:
+        raise DocumentError(f"Unable to save the document as PSD: {e}") from None
+    finally:
+        doc.setBatchmode(batch)
+        shutil.rmtree(directory, ignore_errors=True)
 
 
 def _decode(data, name):

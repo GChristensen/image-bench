@@ -32,7 +32,7 @@ ERROR_COLOR = "#f85149"
 GROUPS = [
     ("Input / Inpaint", ("send_image", "send_mask", "send_image_and_mask")),
     ("ControlNet", ("send_cn_preprocess", "send_cn_image", "send_cn_mask")),
-    ("Compare", ("send_compare",)),
+    ("Keep", ("send_compare", "save_file", "save_final")),
 ]
 
 # The window size and position in the settings

@@ -16,6 +16,7 @@ from websocket import WebSocketClient
 EDITOR_NAME = "GIMP"
 WEBSOCKET_PATH = "/image-bench/editor/websocket"
 UPLOAD_PATH = "/image-bench/editor/upload"
+PROJECT_PATH = "/image-bench/editor/project"
 RECONNECT_DELAY = 5000
 # Close code of a connection replaced by another editor, which is not restored on its own (editor.REPLACED_CLOSE_CODE)
 REPLACED_CLOSE_CODE = 4000
@@ -136,8 +137,16 @@ class ImageBenchClient:
             connection.close()
 
         if not 200 <= response.status < 300:
-            raise ClientError(f"The server responded with {response.status}: "
-                              f"{data.decode('utf-8', errors='replace')}")
+            text = data.decode("utf-8", errors="replace")
+
+            # The message of a JSON error ({"error"} of Image Bench, {"detail"} of FastAPI)
+            try:
+                body = json.loads(text)
+                text = body.get("error") or body.get("detail") or text
+            except (ValueError, AttributeError):
+                pass
+
+            raise ClientError(f"The server responded with {response.status}: {text}")
 
         return data
 
@@ -162,6 +171,30 @@ class ImageBenchClient:
         # Images of the Compare tab are saved by the server and shown when the Image Bench window opens
         if not result.get("clients") and not result.get("saved"):
             raise ClientError("No WebUI or ComfyUI page is open")
+
+    def save_document(self, save, psd, pixels=None):
+        """
+        Save the document into the folder of the current project of Image Bench
+        :param save: "file" (<project>-NNN.psd) or "final" (final-NNN.psd, .png and .jpg, the project's final image)
+        :param psd: the document as a PSD file
+        :param pixels: the merged image as (data, width, height, components) for "final"
+        :return: {"project": name, "files": names of the files written}
+        """
+        query = {"save": save, "psd": len(psd)}
+        body = psd
+
+        if pixels is not None:
+            data, width, height, components = pixels
+            query.update(width=width, height=height, components=components)
+            body = psd + data
+
+        response = self._request("POST", f"{PROJECT_PATH}?{urlencode(query)}", body,
+                                 {"Content-Type": "application/octet-stream"})
+
+        try:
+            return json.loads(response)
+        except ValueError:
+            raise ClientError("The server sent an invalid response") from None
 
     def download(self, path):
         """Fetch a file by its URL relative to the server"""

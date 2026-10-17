@@ -1,5 +1,5 @@
 """
-The bridge to the editor plugins (editor-extensions/: Photoshop, Krita), which follow editor-extensions/PROTOCOL.md.
+The bridge to the editor plugins (editor-extensions/: Photoshop, Krita, GIMP), which follow editor-extensions/PROTOCOL.md.
 One editor is connected at a time (EditorConnection); the backend never branches on which one it is.
 """
 import asyncio
@@ -196,6 +196,25 @@ def image_to_png(image: Image.Image) -> bytes:
 def raw_pixels_to_png(data: bytes, width: int, height: int, components: int) -> bytes:
     """Encode raw interleaved 8-bit pixel data (see raw_pixels_to_image) into a PNG image"""
     return image_to_png(raw_pixels_to_image(data, width, height, components))
+
+
+def split_project_upload(data: bytes, psd_size: int, width: int = 0, height: int = 0,
+                         components: int = 0) -> tuple:
+    """
+    The parts of a document saved into the current project (/image-bench/editor/project, Keep › File / Final):
+    the body is the PSD file, followed by the raw pixels of the merged document for Final
+
+    Returns:
+        (PSD bytes, merged image or None without pixels)
+
+    Raises:
+        ValueError: If the sizes do not match the data
+    """
+    if not 0 < psd_size <= len(data):
+        raise ValueError(f"PSD size {psd_size} does not match the data size {len(data)}")
+
+    psd, pixels = data[:psd_size], data[psd_size:]
+    return psd, raw_pixels_to_image(pixels, width, height, components) if pixels else None
 
 
 def mask_to_png(mask: Image.Image) -> bytes:

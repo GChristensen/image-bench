@@ -32,6 +32,24 @@ Content-Type: application/octet-stream
 - Reply: `{"clients": n}` (host pages that received it; 0 means no WebUI/ComfyUI page is open, an error for the user),
   plus `"saved": true` for `compare`. 400 with a message for a bad kind, target or size.
 
+## Editor → project: Keep › File / Final
+
+```
+POST /image-bench/editor/project?save=<file|final>&psd=<n>[&width=<w>&height=<h>&components=<n>]
+Content-Type: application/octet-stream
+<PSD file><raw pixels>
+```
+
+- The plugin saves the document as a layered PSD itself (Photoshop `saveAs.psd` as a copy, Krita `exportImage`, GIMP
+  `file_save` of a duplicate) and sends it, `psd` bytes, followed for `final` by the merged document as raw pixels
+  (as for the upload, 3 or 4 components).
+- The backend writes into the folder of the project open in Image Bench (`projects.save_editor_document`):
+  `file` → `<project folder name>-NNN.psd` (after the highest number there); `final` → `final-NNN.psd`, `.png`, `.jpg`
+  (JPEG quality 95, transparency on white), also numbered after the highest number, and the PNG
+  becomes the project's final image.
+- Reply: `{"project": name, "files": [names]}`. Errors are `{"error": message}`: 409 when no project is open,
+  400 / 415 for bad sizes or a body that is not a PSD.
+
 ## Image Bench → editor: the plugin WebSocket
 
 `GET /image-bench/editor/websocket` (WebSocket, text frames, JSON messages). The plugin keeps it open for its whole

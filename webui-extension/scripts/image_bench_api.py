@@ -119,6 +119,7 @@ class ImageBenchApi():
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/heartbeat", self.handle_heartbeat)
         self.add_api_route("/editor/upload", self.editor_upload, methods=["POST"])
+        self.add_api_route("/editor/project", self.editor_project, methods=["POST"])
         self.add_api_route("/editor/send", self.editor_send, methods=["POST"])
         self.add_api_route("/editor/image", self.get_editor_image, methods=["GET"])
         self.add_api_route("/editor/status", self.get_editor_status, methods=["GET"])
@@ -451,6 +452,28 @@ class ImageBenchApi():
         return JSONResponse([{"name": style.name, "prompt": style.prompt or "",
                               "negative_prompt": style.negative_prompt or ""}
                              for name, style in styles.items() if name and name != "None"])
+
+    async def editor_project(self, request: Request, save: str, psd: int, width: int = 0, height: int = 0,
+                             components: int = 0):
+        """
+        Save the editor's document into the folder of the current project (Keep › File / Final of the plugins,
+        see projects.save_editor_document): the body is the PSD file, then the raw pixels of the merged document
+        """
+        store_dir = self.get_file_path("store", upper=True)
+        config = persist.read_json_file(self.get_file_path(EXTENSION_CONFIG_FILE, upper=True)) or {}
+
+        try:
+            document, image = editor.split_project_upload(await request.body(), psd, width, height, components)
+            result = await asyncio.to_thread(projects.save_editor_document, projects.get_root(config), store_dir,
+                                             save, document, image)
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
+        except projects.ProjectError as e:
+            return JSONResponse({"error": str(e)}, status_code=e.status)
+        except OSError as e:
+            return JSONResponse({"error": str(e)}, status_code=500)
+
+        return JSONResponse(result)
 
     async def projects_action(self, action: str, request: Request):
         """Projects of the Library tab (see projects.dispatch)"""

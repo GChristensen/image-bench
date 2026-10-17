@@ -3,6 +3,7 @@
  * Sends the active document and its selection (as a black and white mask)
  * to SD WebUI (the inpaint upload tab of img2img) or ComfyUI (the nodes marked ib:img and ib:mask)
  * with the Image Bench extension, or to a ControlNet unit of SD WebUI (the one shown in the Image Bench window),
+ * saves it into the current project of Image Bench (Keep › File / Final),
  * and places images sent from the Image Bench window into Photoshop
  */
 
@@ -121,13 +122,87 @@ async function upload(kind, pixels, target = "input") {
     }
 
     if (!response.ok)
-        throw new Error(`The server responded with ${response.status}: ${await response.text()}`);
+        throw await responseError(response);
 
     const {clients, saved} = await response.json();
 
     // Images of the Compare tab are saved by the server and shown when the Image Bench window opens
     if (!clients && !saved)
         throw new Error("No WebUI or ComfyUI page is open");
+}
+
+/**
+ * The error of a failed response, with the message of a JSON error ({error} of Image Bench, {detail} of FastAPI)
+ */
+async function responseError(response) {
+    let text = await response.text();
+
+    try {
+        const body = JSON.parse(text);
+        text = body.error || body.detail || text;
+    } catch (e) {
+        // Not JSON: the text as it is
+    }
+
+    return new Error(`The server responded with ${response.status}: ${text}`);
+}
+
+/**
+ * The document as a layered PSD file, saved as a copy into the temporary folder, so that the document keeps its file
+ * @returns {Promise<ArrayBuffer>}
+ */
+async function readDocumentPsd(doc) {
+    const folder = await fs.getTemporaryFolder();
+    const file = await folder.createFile("image-bench-document.psd", {overwrite: true});
+
+    await core.executeAsModal(async () => {
+        await doc.saveAs.psd(file, {layers: true, embedColorProfile: true, maximizeCompatibility: true}, true);
+    }, {commandName: "Image Bench: Save Document"});
+
+    try {
+        return await file.read({format: storage.formats.binary});
+    } finally {
+        await file.delete().catch(() => {});
+    }
+}
+
+/**
+ * Save the document into the folder of the current project of Image Bench
+ * @param {'file'|'final'} save - <project>-NNN.psd, or final-NNN.psd, .png and .jpg (the project's final image)
+ * @param {ArrayBuffer} psd - The document as a PSD file
+ * @param {{data: Uint8Array, width: number, height: number, components: number}} [pixels] - The merged image, for "final"
+ * @returns {Promise<string>} The result message
+ */
+async function saveToProject(save, psd, pixels) {
+    const query = {save, psd: psd.byteLength};
+    let body = new Uint8Array(psd);
+
+    if (pixels) {
+        const {data, width, height, components} = pixels;
+        Object.assign(query, {width, height, components});
+        body = new Uint8Array(psd.byteLength + data.byteLength);
+        body.set(new Uint8Array(psd), 0);
+        body.set(data, psd.byteLength);
+    }
+
+    const queryString = Object.entries(query).map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join("&");
+    let response;
+
+    try {
+        response = await fetch(`${getWebuiUrl()}/image-bench/editor/project?${queryString}`, {
+            method: "POST",
+            headers: {"Content-Type": "application/octet-stream"},
+            body: body.buffer
+        });
+    } catch (error) {
+        throw new Error(`Unable to connect to ${getWebuiUrl()}`);
+    }
+
+    if (!response.ok)
+        throw await responseError(response);
+
+    const {project, files} = await response.json();
+    return `Saved ${files.join(", ")} in ${project}`;
 }
 
 async function sendImage() {
@@ -169,6 +244,15 @@ async function sendControlNetMask() {
 async function sendCompare() {
     await upload("image", await readDocumentImage(getActiveDocument()), "compare");
     return "Image added to the Compare tab";
+}
+
+async function saveFile() {
+    return saveToProject("file", await readDocumentPsd(getActiveDocument()));
+}
+
+async function saveFinal() {
+    const doc = getActiveDocument();
+    return saveToProject("final", await readDocumentPsd(doc), await readDocumentImage(doc));
 }
 
 // ==================== RECEIVING ====================
@@ -542,6 +626,8 @@ function initPanel() {
     document.getElementById("send-cn-image").addEventListener("click", () => run(sendControlNetImage, true));
     document.getElementById("send-cn-mask").addEventListener("click", () => run(sendControlNetMask, true));
     document.getElementById("send-compare").addEventListener("click", () => run(sendCompare, true));
+    document.getElementById("save-file").addEventListener("click", () => run(saveFile, true));
+    document.getElementById("save-final").addEventListener("click", () => run(saveFinal, true));
 
     panelReady = true;
 }
@@ -554,7 +640,9 @@ entrypoints.setup({
         sendControlNetPreprocess: () => run(sendControlNetPreprocess),
         sendControlNetImage: () => run(sendControlNetImage),
         sendControlNetMask: () => run(sendControlNetMask),
-        sendCompare: () => run(sendCompare)
+        sendCompare: () => run(sendCompare),
+        saveFile: () => run(saveFile),
+        saveFinal: () => run(saveFinal)
     },
     panels: {
         imageBenchPanel: {

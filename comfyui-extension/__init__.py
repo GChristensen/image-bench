@@ -730,6 +730,29 @@ async def editor_upload(request):
 
 
 PromptServer.instance.routes.post(BASE_PATH + "/editor/upload")(editor_upload)
+
+
+# Save the editor's document into the folder of the current project (Keep › File / Final of the plugins,
+# see projects.save_editor_document): the body is the PSD file, then the raw pixels of the merged document
+@PromptServer.instance.routes.post(BASE_PATH + "/editor/project")
+async def editor_project(request):
+    store_dir = os.path.join(get_extension_root(), "store")
+    config = persist.read_json_file(get_config_path()) or {}
+
+    try:
+        sizes = [int(request.query.get(name) or 0) for name in ("psd", "width", "height", "components")]
+        document, image = editor.split_project_upload(await request.read(), *sizes)
+        result = await asyncio.to_thread(projects.save_editor_document, projects.get_root(config), store_dir,
+                                         request.query.get("save"), document, image)
+    except ValueError as e:
+        return web.json_response({"error": str(e)}, status=400)
+    except projects.ProjectError as e:
+        return web.json_response({"error": str(e)}, status=e.status)
+    except OSError as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+    return web.json_response(result)
+
 # The route of the Photoshop plugins installed before the editor bridge
 PromptServer.instance.routes.post(BASE_PATH + "/photoshop/upload")(editor_upload)
 

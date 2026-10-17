@@ -830,8 +830,14 @@ const hostOrigin = location.origin;
           preprocessor, and places the result back in Photoshop as a layer. <b>ControlNet: image</b> uses the image
           as the control image as it is, without a preprocessor, and <b>ControlNet: mask</b> sends the selection as
           the unit's mask.</li>
-        <li><b>Compare: image</b> — adds the composite image of the document to the Compare tab, also while the
-          Image Bench window is closed (it appears when the window opens).</li>
+        <li><b>Keep</b> — <b>Compare</b> adds the composite image of the document to the Compare tab, also while
+          the Image Bench window is closed (it appears when the window opens). <b>File</b> saves the document, with
+          its layers, as <code>&lt;project name&gt;-NNN.psd</code> (the next free number) into the folder of the project open in
+          Image Bench. <b>Final</b> saves it as <code>final-NNN.psd</code>, <code>.png</code> and a high-quality
+          <code>.jpg</code> (the next free number, <code>final-001</code> first) and makes the PNG the
+          project's final image. File and Final need an open project (see
+          <a href="#" @click.prevent="scrollTo('projects')">Projects</a>); the same buttons are in the Krita and
+          GIMP plugins.</li>
       </ul>
       <p class="muted">
         The same commands appear in the <b>Plugins › Image Bench</b> menu, so you can assign keyboard shortcuts to
@@ -902,7 +908,7 @@ const hostOrigin = location.origin;
       <h4>Krita → {{ HOST_NAME }}</h4>
       <p>
         The docker has the commands of the Photoshop panel: <b>Input / Inpaint</b> (Image, Mask, Image + Mask),
-        <b>ControlNet</b> (Preprocess, Image, Mask) and <b>Compare</b>. The image is the merged document, converted to
+        <b>ControlNet</b> (Preprocess, Image, Mask) and <b>Keep</b> (Compare, File, Final). The image is the merged document, converted to
         8-bit sRGB whatever the color space of the document; the mask is the selection. The same commands are in
         <b>Tools › Scripts › Image Bench</b>, and can get shortcuts in <b>Settings › Configure Krita › Keyboard
         Shortcuts</b>.
@@ -945,7 +951,7 @@ const hostOrigin = location.origin;
       <h4>GIMP → {{ HOST_NAME }}</h4>
       <p>
         The panel has the commands of the Photoshop panel: <b>Input / Inpaint</b> (Image, Mask, Image + Mask),
-        <b>ControlNet</b> (Preprocess, Image, Mask) and <b>Compare</b>. They send the image chosen in the
+        <b>ControlNet</b> (Preprocess, Image, Mask) and <b>Keep</b> (Compare, File, Final). They send the image chosen in the
         panel's <b>Image</b> list (GIMP does not tell plugins which image window is active; opening the panel
         from an image window chooses that image). The image is the visible layers merged, converted to 8-bit
         sRGB whatever the mode and precision of the image; the mask is the selection. The same commands are in

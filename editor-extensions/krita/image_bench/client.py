@@ -13,6 +13,7 @@ from .websocket import WebSocketClient
 EDITOR_NAME = "Krita"
 WEBSOCKET_PATH = "/image-bench/editor/websocket"
 UPLOAD_PATH = "/image-bench/editor/upload"
+PROJECT_PATH = "/image-bench/editor/project"
 RECONNECT_DELAY = 5000
 # Close code of a connection replaced by another editor, which is not restored on its own (editor.REPLACED_CLOSE_CODE)
 REPLACED_CLOSE_CODE = 4000
@@ -108,7 +109,16 @@ class ImageBenchClient(QObject):
         reply.deleteLater()
 
         if status is not None and not 200 <= status < 300:
-            raise ClientError(f"The server responded with {status}: {body.decode('utf-8', errors='replace')}")
+            text = body.decode("utf-8", errors="replace")
+
+            # The message of a JSON error ({"error"} of Image Bench, {"detail"} of FastAPI)
+            try:
+                message = json.loads(text)
+                text = message.get("error") or message.get("detail") or text
+            except (ValueError, AttributeError):
+                pass
+
+            raise ClientError(f"The server responded with {status}: {text}")
 
         if error != QNetworkReply.NoError:
             raise ClientError(f"Unable to connect to {self._url}")
@@ -132,6 +142,30 @@ class ImageBenchClient(QObject):
         # Images of the Compare tab are saved by the server and shown when the Image Bench window opens
         if not result.get("clients") and not result.get("saved"):
             raise ClientError("No WebUI or ComfyUI page is open")
+
+    def save_document(self, save, psd, pixels=None):
+        """
+        Save the document into the folder of the current project of Image Bench
+        :param save: "file" (<project>-NNN.psd) or "final" (final-NNN.psd, .png and .jpg, the project's final image)
+        :param psd: the document as a PSD file
+        :param pixels: the merged image as (data, width, height, components) for "final"
+        :return: {"project": name, "files": names of the files written}
+        """
+        query = {"save": save, "psd": len(psd)}
+        body = psd
+
+        if pixels is not None:
+            data, width, height, components = pixels
+            query.update(width=width, height=height, components=components)
+            body = psd + data
+
+        request = QNetworkRequest(QUrl(f"{self._url}{PROJECT_PATH}?{urlencode(query)}"))
+        request.setHeader(QNetworkRequest.ContentTypeHeader, "application/octet-stream")
+
+        try:
+            return json.loads(self._wait(self._network.post(request, QByteArray(body))))
+        except ValueError:
+            raise ClientError("The server sent an invalid response") from None
 
     def download(self, path):
         """Fetch a file by its URL relative to the server"""

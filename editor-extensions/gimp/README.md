@@ -6,7 +6,8 @@ and Krita plugins (`../PROTOCOL.md`). GIMP 2.10 is not supported.
 
 - **Tools › Image Bench › Panel**: a window with the server URL (with the recent ones), the connection state, the image to
   work on, and the buttons Input / Inpaint (Image, Mask, Image + Mask), ControlNet (Preprocess, Image, Mask) and
-  Compare. Its process holds the connection: closing the window hides it, **Quit** ends it. Running Panel again shows
+  Keep (Compare; File and Final save the image as PSD, and as PNG and JPEG for Final, into the project open in
+  Image Bench). Its process holds the connection: closing the window hides it, **Quit** ends it. Running Panel again shows
   the running panel (and selects the image it was run from).
 - **Tools › Image Bench › Send ...**: the same send actions for the image of the window they are chosen in. Each runs in its
   own process and uploads over HTTP, so they work without the panel. Shortcuts: Edit › Keyboard Shortcuts.

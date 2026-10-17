@@ -64,6 +64,19 @@ def send_compare(client):
     return "Image added to the Compare tab"
 
 
+def _saved(result):
+    return f"Saved {', '.join(result['files'])} in {result['project']}"
+
+
+def save_file(client):
+    return _saved(client.save_document("file", document.read_document(document.active_document())))
+
+
+def save_final(client):
+    doc = document.active_document()
+    return _saved(client.save_document("final", document.read_document(doc), document.read_image(doc)))
+
+
 # (id, menu text, docker button text, function), in the order of the docker groups
 SEND_ACTIONS = [
     ("send_image", "Send Image", "Image", send_image),
@@ -73,6 +86,8 @@ SEND_ACTIONS = [
     ("send_cn_image", "Send ControlNet Image", "Image", send_controlnet_image),
     ("send_cn_mask", "Send ControlNet Mask", "Mask", send_controlnet_mask),
     ("send_compare", "Send to Compare", "Compare", send_compare),
+    ("save_file", "Save to Project as File", "File", save_file),
+    ("save_final", "Save to Project as Final", "Final", save_final),
 ]
 
 
