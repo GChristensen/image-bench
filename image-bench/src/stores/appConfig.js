@@ -102,6 +102,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Show the action rim of an image on hover, not only while Ctrl is held (disabled unless set to true)
+    const rimOnHover = computed({
+        get() {
+            return _config.rimOnHover ?? false;
+        },
+        set(v) {
+            _config.rimOnHover = v;
+            return persist();
+        }
+    });
+
     // Remember txt2img prompts and parameters across WebUI reloads (disabled unless set to true)
     const persistGenerationParams = computed({
         get() {
@@ -209,6 +220,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         exploreLoraFreeImages,
         flashGeneratedTab,
         keepSessionStrip,
+        rimOnHover,
         persistGenerationParams,
         generateUiPresets,
         generatePresetImages,

@@ -252,7 +252,8 @@ const hostOrigin = location.origin;
           button before it switches between them, remembered per mode; Inpaint shows the inputs by default.</li>
         <li><b>Result, Input and Mask</b> panes. Upload, drop or paste an input image or an img2img mask onto its pane.
           The buttons of the Input pane also resize the generation to the size of the input image and show the
-          mask over it. While no generation runs, hovering the Result pane opens the action rim of an image card
+          mask over it. While no generation runs, holding <span class="kbd">Ctrl</span> over the Result pane or its
+          <AppIcon name="rim" :size="13" class="inline-icon"/> button at the lower left shows the action rim of an image card
           (parameters, inpaint, ControlNet, editor, Compare, the trays, markings) for the image shown, above the input
           thumbnail. In a wide window the image has a column of its own that fits the image size; otherwise it is below the
           LoRA list and fits the column width. Drag the grips to resize the negative prompt, the parameters and the filmstrip, the LoRA column, the
@@ -643,15 +644,21 @@ const hostOrigin = location.origin;
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        Hovering over an image of the Generated, Upscaled and Explore tabs, the trays and the Result pane of the
-        Generate tab opens its action rim: a
+        Holding <span class="kbd">Ctrl</span> over an image of the Generated, Upscaled and Explore tabs, the trays,
+        Compare and the Result pane of the Generate tab shows its action rim, as does the
+        <AppIcon name="rim" :size="13" class="inline-icon"/> button at the top right of the image (not in Compare)
+        until it is clicked again or the pointer leaves the image: a
         ring of colored sectors around the middle of the image, one per action: the parameters at the top, then
         clockwise the send actions, the trays, Delete at the bottom, and generating and upscaling. The middle of the
         ring names the sector under the pointer and its key. Sectors with an alternative action perform it on a
-        middle click or Shift+click; holding Shift shows their alternative icons. The ring is faint while the pointer
-        is away from it. Clicking the image inside or outside it opens the image as before. Holding
-        <span class="kbd">Ctrl</span> hides the ring and all other controls of the hovered image, so a click anywhere
-        on it opens the image.
+        middle click or Shift+click; holding Shift shows their alternative icons. Clicking the image inside or
+        outside the ring opens the image as before.
+      </p>
+      <p>
+        With <b>Show the action rim of an image on hover</b> on the Settings tab, hovering opens the ring and the
+        <AppIcon name="eye" :size="13" class="inline-icon"/> button takes the place of the toggle and opens the image.
+        The ring is then faint while the pointer is away from it, and holding <span class="kbd">Ctrl</span> hides the
+        ring and all other controls of the hovered image, so a click anywhere on it opens the image.
       </p>
       <p>
         The button in the middle, ringed with the marking colors, shows the marking of the image. Click it to switch
@@ -716,6 +723,9 @@ const hostOrigin = location.origin;
         <li><b>Show the Image Bench button in the {{ HOST_NAME }} interface</b> — shows the 🔬 Image Bench button
           {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}, which opens Image Bench from
           that page. Off by default, since Image Bench is opened by its <code>/image-bench/app</code> link.</li>
+        <li><b>Show the action rim of an image on hover (without holding Ctrl)</b> — opens the action rim of an image
+          when the pointer is over it, as in <i>Working with images</i>. Off by default: the rim shows while
+          <span class="kbd">Ctrl</span> is held or with its toggle button.</li>
         <li><b>Open Image Bench in a popup window instead of a browser tab</b> — the 🔬 button and the
           <code>/image-bench/app</code> link open Image Bench in a popup window (without bookmarks and extension
           buttons) instead of a regular browser tab. Takes effect the next time Image Bench is opened.</li>

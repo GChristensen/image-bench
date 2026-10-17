@@ -3,7 +3,8 @@
  * Image area of the Generate tab: the latest result or the live preview, and in img2img and inpaint
  * the input image and mask (Result / Input / Mask views). The input is shown as a thumbnail over the result,
  * marked when a new one arrives (e.g. from the editor). Images are uploaded with the buttons, dropped or pasted;
- * WebUI keeps them, the cell shows what it reports. Hovering the result opens its action rim (ActionRim.vue).
+ * WebUI keeps them, the cell shows what it reports. Ctrl over the result or its toggle shows its action rim
+ * (ActionRim.vue), hovering does with the rimOnHover setting.
  */
 import {computed, onBeforeUnmount, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
@@ -14,6 +15,7 @@ import {useShiftKey} from "@/composables/useShiftKey.js";
 import {useCtrlKey} from "@/composables/useCtrlKey.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
 import {KIND_GENERATED} from "@/consts.js";
+import {useAppConfigStore} from "@/stores/appConfig.js";
 
 const props = defineProps({
   // Generation mode: txt2img, img2img, inpaint or other (another img2img mode, without input)
@@ -128,11 +130,16 @@ const rimGroups = computed(() => rimImage.value ? rimActionGroups(rimImage.value
 const shiftDown = useShiftKey();
 const hovered = ref(false);
 const showAlt = computed(() => hovered.value && shiftDown.value);
-// Ctrl over the result hides all chrome, so that a click on the bare image opens the overlay
+// As on an image card, the rim shows while Ctrl is held over the result or its toggle is on. With the rimOnHover
+// setting it opens on hover instead, and Ctrl hides all chrome, so that a click on the bare image opens the overlay
+const config = useAppConfigStore();
+const hoverMode = computed(() => config.rimOnHover);
 const ctrlDown = useCtrlKey();
-const bare = computed(() => hovered.value && ctrlDown.value && shownView.value === "result" && props.resultClickable);
+const bare = computed(() => hoverMode.value && hovered.value && ctrlDown.value && shownView.value === "result"
+  && props.resultClickable);
+const rimToggled = ref(false);
 
-// The rim opens after a short delay, like on an image card
+// On hover the rim opens after a short delay, like on an image card
 const RIM_DELAY = 100;
 const cellElement = ref(null);
 const rimOpen = ref(false);
@@ -141,14 +148,20 @@ const rimSize = ref(0);
 const rimMarking = ref(null);
 let rimTimer = 0;
 
-function openRim() {
+const rimShown = computed(() => !!rimGroups.value.length && (hoverMode.value ? rimOpen.value && !bare.value
+  : hovered.value && (ctrlDown.value || rimToggled.value)));
+
+watch(rimShown, shown => {
   const cell = cellElement.value;
 
-  if (!cell)
+  if (!shown || !cell)
     return;
 
   rimSize.value = Math.min(cell.clientWidth, cell.clientHeight);
   rimMarking.value = props.actionImage?.marking ?? null;
+});
+
+function openRim() {
   rimOpen.value = true;
 }
 
@@ -182,11 +195,14 @@ function onCellEnter() {
   setHoveredImageTarget({getImage: () => rimImage.value, ctx: actionContext, element: cellElement.value,
     setMarking, view: () => emit('result-click')});
   clearTimeout(rimTimer);
-  rimTimer = setTimeout(openRim, RIM_DELAY);
+
+  if (hoverMode.value)
+    rimTimer = setTimeout(openRim, RIM_DELAY);
 }
 
 function onCellLeave() {
   hovered.value = false;
+  rimToggled.value = false;
   clearTimeout(rimTimer);
   rimOpen.value = false;
   clearHoveredImageTarget(cellElement.value);
@@ -266,10 +282,15 @@ async function onUseSize() {
       </div>
     </div>
 
+    <button v-if="!hoverMode && rimGroups.length" type="button" class="overlay-button icon-only rim-toggle"
+            :class="{on: rimToggled}" :aria-pressed="rimToggled" aria-label="Show actions"
+            :title="rimToggled ? 'Hide actions' : 'Show actions (or hold Ctrl)'"
+            @click="rimToggled = !rimToggled"><AppIcon name="rim" :size="14"/></button>
+
     <!-- Last, so that it stays above the input thumbnail and the controls -->
     <Transition name="rim">
-      <ActionRim v-if="rimOpen && !bare && rimGroups.length" class="result-rim" :groups="rimGroups" :size="rimSize"
-                 :marking="rimMarking" :show-alt="showAlt"
+      <ActionRim v-if="rimShown" class="result-rim" :groups="rimGroups" :size="rimSize"
+                 :marking="rimMarking" :show-alt="showAlt" :dim-far="hoverMode"
                  @run="onAction" @set-marking="setMarking"/>
     </Transition>
   </div>
@@ -451,6 +472,18 @@ async function onUseSize() {
 .overlay-button.on {
   border-color: var(--ib-accent-border);
   color: var(--ib-accent);
+}
+
+.overlay-button.icon-only {
+  justify-content: center;
+  width: 24px;
+  padding: 0;
+}
+
+.rim-toggle {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
 }
 
 .pip {

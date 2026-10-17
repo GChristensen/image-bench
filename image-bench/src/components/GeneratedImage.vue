@@ -8,6 +8,7 @@
   import {rimActionGroups, runImageAction} from "@/imageActions.js";
   import {openImageMenu} from "@/contextMenu.js";
   import {startImageDrag, endImageDrag} from "@/imageDrag.js";
+  import {useAppConfigStore} from "@/stores/appConfig.js";
   import AppIcon from "@/components/AppIcon.vue";
   import ActionRim from "@/components/ActionRim.vue";
 
@@ -99,9 +100,15 @@
   // Shift over the card shows the alternative actions of the sectors that have one
   const hovered = ref(false);
   const showAlt = computed(() => hovered.value && shiftDown.value);
-  // Ctrl over the card hides all its chrome, so that a click on the bare image opens the overlay
+  // The card is dragged by its image, so that the rim and the markings do not start drags
+  const dragging = ref(false);
+  // The rim shows while Ctrl is held over the card or its rim toggle is on. With the rimOnHover setting it opens
+  // on hover instead, and Ctrl hides all chrome, so that a click on the bare image opens the overlay
+  const config = useAppConfigStore();
+  const hoverMode = computed(() => config.rimOnHover);
   const ctrlDown = useCtrlKey();
-  const bare = computed(() => hovered.value && ctrlDown.value);
+  const bare = computed(() => hoverMode.value && hovered.value && ctrlDown.value);
+  const rimToggled = ref(false);
   // Badges and markings show their description in the same place instead of a tooltip;
   // a function keeps it current while the pointer stays (e.g. after toggling the marking filter)
   const hoveredText = ref(null);
@@ -112,21 +119,28 @@
     ? "Click: show all images · Middle: remove marking"
     : "Click: show only this marking · Middle: remove marking";
 
-  // The action rim opens after a short delay, so that it does not flash on the cards the pointer crosses
+  // On hover the action rim opens after a short delay, so that it does not flash on the cards the pointer crosses
   const RIM_DELAY = 100;
   const frameElement = ref(null);
   const rimOpen = ref(false);
   const rimSize = ref(0);
   let rimTimer = 0;
 
-  function openRim() {
+  const rimShown = computed(() => hoverMode.value ? rimOpen.value && !bare.value
+    : hovered.value && !dragging.value && (ctrlDown.value || rimToggled.value));
+
+  watch(rimShown, shown => {
     const frame = frameElement.value;
 
-    if (!frame || dragging.value)
-      return;
+    if (shown && frame)
+      rimSize.value = Math.min(frame.clientWidth, frame.clientHeight);
+  });
 
-    rimSize.value = Math.min(frame.clientWidth, frame.clientHeight);
-    rimOpen.value = true;
+  const rimToggleText = () => rimToggled.value ? "Hide actions" : "Show actions (or hold Ctrl)";
+
+  function openRim() {
+    if (!dragging.value)
+      rimOpen.value = true;
   }
 
   function closeRim() {
@@ -141,12 +155,15 @@
     setHoveredImageTarget({getImage: () => props.image, ctx: actionContext, element: rootElement.value,
       setMarking, view: () => emit("imageClick")});
     clearTimeout(rimTimer);
-    rimTimer = setTimeout(openRim, RIM_DELAY);
+
+    if (hoverMode.value)
+      rimTimer = setTimeout(openRim, RIM_DELAY);
   }
 
   function onFrameLeave() {
     hovered.value = false;
     hoveredText.value = null;
+    rimToggled.value = false;
     closeRim();
     clearHoveredImageTarget(rootElement.value);
   }
@@ -154,9 +171,6 @@
   function onAction(action, alt) {
     runImageAction(action, props.image, actionContext, alt);
   }
-
-  // The card is dragged by its image, so that the rim and the markings do not start drags
-  const dragging = ref(false);
 
   function onDragStart(e) {
     closeRim();
@@ -219,8 +233,8 @@
 
     <!-- Before the other controls, which stay above it where a small card overlaps them -->
     <Transition name="rim">
-      <ActionRim v-if="rimOpen && !bare" :groups="rimGroups" :size="rimSize" :marking="image.marking ?? null"
-                 :show-alt="showAlt" :deletable="deletable" :filterable="filterable"
+      <ActionRim v-if="rimShown" :groups="rimGroups" :size="rimSize" :marking="image.marking ?? null"
+                 :show-alt="showAlt" :deletable="deletable" :filterable="filterable" :dim-far="hoverMode"
                  :filter-active="!!image.marking && markingFilter === image.marking"
                  @run="onAction" @delete="$emit('deleteImage')" @set-marking="setMarking"
                  @filter-marking="marking => $emit('filterMarking', marking)"/>
@@ -233,11 +247,16 @@
       <span class="select-circle"><AppIcon name="check" :size="12"/></span>
     </label>
 
-    <!-- Visual anchor for viewing the image; it opens the overlay like a click on the image -->
-    <button type="button" class="view-eye" aria-label="View image"
+    <!-- Rim on hover: visual anchor for viewing the image; it opens the overlay like a click on the image -->
+    <button v-if="hoverMode" type="button" class="corner-button" aria-label="View image"
             @click="$emit('imageClick')" @mousedown.middle.prevent @auxclick="onImageAuxClick"
             @mouseenter="hoveredText = 'View'" @mouseleave="hoveredText = null"
       ><AppIcon name="eye" :size="20"/></button>
+    <!-- Otherwise it shows and hides the action rim -->
+    <button v-else type="button" class="corner-button" :class="{on: rimToggled}" :aria-pressed="rimToggled"
+            aria-label="Show actions" @click="rimToggled = !rimToggled"
+            @mouseenter="hoveredText = rimToggleText" @mouseleave="hoveredText = null"
+      ><AppIcon name="rim" :size="20"/></button>
 
     <div v-if="image.comment" class="image-comment" :class="{selectable}" :title="image.comment"
          @click="$emit('imageClick')">{{ image.comment }}</div>
@@ -295,9 +314,9 @@
   transform: scale(0.92);
 }
 
-/* Ctrl held: the bare image (but the batch color bar), a click opens the overlay */
+/* Ctrl held with the rim on hover: the bare image (but the batch color bar), a click opens the overlay */
 .image-frame.bare .select-box,
-.image-frame.bare .view-eye,
+.image-frame.bare .corner-button,
 .image-frame.bare .image-comment,
 .image-frame.bare .image-bottom-bar {
   display: none;
@@ -425,7 +444,7 @@
   cursor: pointer;
 }
 
-/* Clear of the view eye at the right */
+/* Clear of the corner button at the right */
 .image-comment {
   max-width: calc(100% - 46px);
 }
@@ -435,8 +454,8 @@
   max-width: calc(100% - 80px);
 }
 
-/* No background: white with a shadow, like the select circle */
-.view-eye {
+/* View eye or rim toggle. No background: white with a shadow, like the select circle */
+.corner-button {
   position: absolute;
   top: 1px;
   right: 1px;
@@ -456,17 +475,21 @@
   transition: opacity 0.15s, transform 0.15s;
 }
 
-.view-eye:hover {
+.corner-button:hover {
   color: #fff;
   transform: scale(1.1);
 }
 
-.view-eye:focus-visible {
+.corner-button:focus-visible {
   outline: 2px solid var(--ib-accent);
   outline-offset: -2px;
 }
 
-.image-frame:hover .view-eye {
+.corner-button.on {
+  color: var(--ib-accent);
+}
+
+.image-frame:hover .corner-button {
   opacity: 1;
 }
 

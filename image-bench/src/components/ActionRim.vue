@@ -6,7 +6,7 @@ import {MARKINGS} from "@/consts.js";
 /**
  * Action rim of an image card: a hollow ring of sectors around the image center, one per image action
  * (imageActions.js) plus Delete at the bottom. The center button switches the ring to the markings and back.
- * The hovered sector or the center shows its label in the hole. Mounted while the card is hovered,
+ * The hovered sector or the center shows its label in the hole. Mounted while it is shown on the card,
  * so it starts with the actions each time.
  */
 const props = defineProps({
@@ -38,6 +38,11 @@ const props = defineProps({
     default: false
   },
   filterActive: {
+    type: Boolean,
+    default: false
+  },
+  // Faint while the pointer is away from the ring (the rim opened on hover)
+  dimFar: {
     type: Boolean,
     default: false
   }
@@ -266,6 +271,9 @@ function onPointerMove(e) {
 let pointerSource = null;
 
 onMounted(() => {
+  if (!props.dimFar)
+    return;
+
   pointerSource = root.value?.parentElement;
   pointerSource?.addEventListener("pointermove", onPointerMove);
 });
