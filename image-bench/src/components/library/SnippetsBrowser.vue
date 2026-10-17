@@ -6,7 +6,7 @@
 import {computed, ref} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import TreeView from "@/components/TreeView.vue";
-import {parseStylesCsv, useSnippetsStore} from "@/stores/snippets.js";
+import {hasPlaceholder, parseStylesCsv, useSnippetsStore} from "@/stores/snippets.js";
 import {openContextMenu} from "@/contextMenu.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {isWebUI} from "@/host.js";
@@ -157,7 +157,7 @@ const snippetTitle = item => [item.prompt, item.negative && `Negative: ${item.ne
           <span class="name" :title="node.children ? null : snippetTitle(node.item)">{{ node.name }}</span>
           <span v-if="node.children" class="row-count">{{ node.children.length || "" }}</span>
           <span v-else-if="node.item.negative" class="negative" title="Has a negative part">−</span>
-          <span v-if="!node.children && node.item.prompt?.includes('{}')" class="wrap" title="Wraps the selection">{}</span>
+          <span v-if="!node.children && hasPlaceholder(node.item.prompt)" class="wrap" title="Wraps the selection">{}</span>
         </template>
       </TreeView>
     </div>

@@ -6,9 +6,21 @@ const PERSIST_DELAY = 500;
 /**
  * Snippets of the Library tab: prompt text with an optional negative part, inserted into the prompts of the
  * Generate tab from its Snippets panel. Kept in store/snippets.json as {version, items}: an item is a folder
- * {id, name, children} or a snippet {id, name, prompt, negative}. "{}" in a snippet stands for the selected
- * prompt text, which it wraps.
+ * {id, name, children} or a snippet {id, name, prompt, negative}. "{}" or "{prompt}" (as in WebUI styles) in a
+ * snippet stands for the selected prompt text, which it wraps.
  */
+
+// The first one in a snippet is used
+const PLACEHOLDER = /\{(?:prompt)?\}/;
+
+/**
+ * @param {string} text
+ * @returns {boolean} Whether the snippet text has a placeholder for the selected prompt text
+ */
+export function hasPlaceholder(text) {
+  return PLACEHOLDER.test(text ?? "");
+}
+
 export const useSnippetsStore = defineStore("snippets", () => {
   const items = ref([]);
   const loaded = ref(false);
@@ -180,7 +192,7 @@ export const useSnippetsStore = defineStore("snippets", () => {
 
   /**
    * Add styles (of WebUI's styles.csv) as snippets to a folder, which is created if missing;
-   * styles already there by name are skipped. "{prompt}" becomes "{}"
+   * styles already there by name are skipped
    * @param {{name: string, prompt: string, negative_prompt: string}[]} styles
    * @param {string} folderName
    * @returns {number} Number of the added snippets
@@ -194,15 +206,14 @@ export const useSnippetsStore = defineStore("snippets", () => {
     }
 
     const names = new Set(folder.children.map(item => item.name));
-    const placeholder = text => String(text ?? "").replaceAll("{prompt}", "{}");
     let added = 0;
 
     for (const style of styles) {
       if (!style.name || names.has(style.name))
         continue;
 
-      folder.children.push({id: createId(), name: style.name, prompt: placeholder(style.prompt),
-                            negative: placeholder(style.negative_prompt)});
+      folder.children.push({id: createId(), name: style.name, prompt: style.prompt ?? "",
+                            negative: style.negative_prompt ?? ""});
       names.add(style.name);
       added++;
     }
@@ -278,11 +289,11 @@ export function parseStylesCsv(text) {
 
 /**
  * Insert snippet text into a prompt textarea at its caret, as typing would, so that Ctrl+Z undoes it.
- * Commas separate it from the neighbouring text. "{}" in the text is replaced by the selected text (wrap)
- * or removed, the caret then stands there
+ * Commas separate it from the neighbouring text. The placeholder ("{}" or "{prompt}") in the text is replaced by
+ * the selected text (wrap) or removed, the caret then stands there
  * @param {HTMLTextAreaElement} textarea
  * @param {string} text
- * @param {boolean} wrap - Wrap the selected text with the text around "{}"; else the selection is kept
+ * @param {boolean} wrap - Wrap the selected text with the text around the placeholder; else the selection is kept
  *                          and the text inserted after it
  */
 export function insertIntoTextarea(textarea, text, wrap) {
@@ -292,20 +303,21 @@ export function insertIntoTextarea(textarea, text, wrap) {
   let start = textarea.selectionStart ?? value.length;
   const end = textarea.selectionEnd ?? start;
   const selected = value.slice(start, end);
-  const placeholder = text.indexOf("{}");
+  const match = text.match(PLACEHOLDER);
+  const placeholder = match ? match.index : -1;
   let insert = text;
   let caret = null;
 
-  if (wrap && placeholder !== -1) {
-    insert = text.replace("{}", selected);
+  if (wrap && match) {
+    insert = text.replace(PLACEHOLDER, () => selected);
     caret = placeholder + selected.length;
   }
   else {
     // Inserted after the selection, which stays
     start = end;
 
-    if (placeholder !== -1) {
-      insert = text.replace("{}", "");
+    if (match) {
+      insert = text.replace(PLACEHOLDER, "");
       caret = placeholder;
     }
   }
@@ -338,7 +350,7 @@ export function insertIntoTextarea(textarea, text, wrap) {
  */
 export function appendToPrompt(prompt, text) {
   const base = String(prompt ?? "").replace(/\s+$/, "");
-  text = text.replace("{}", "");
+  text = text.replace(PLACEHOLDER, "");
 
   if (!base)
     return text;

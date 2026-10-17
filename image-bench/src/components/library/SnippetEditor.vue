@@ -65,7 +65,8 @@ const preview = computed(() => {
       <textarea :value="item.negative" rows="2" spellcheck="false" placeholder="Text added to the negative prompt"
                 @input="e => update('negative', e.target.value)"></textarea>
     </label>
-    <p class="hint">Put <code>{}</code> into the text to make it wrap the selected prompt text on Shift+click,
+    <p class="hint">Put <code>{}</code> or <code>{prompt}</code> into the text to make it wrap the selected prompt
+      text on Shift+click,
       e.g. <code>(({}:1.2))</code>.</p>
 
     <section class="preview" aria-label="Preview">
@@ -77,7 +78,7 @@ const preview = computed(() => {
     <section class="usage" aria-label="Usage">
       <div><b>Click</b><span>Inserts the part of the focused prompt at its caret and adds the other part to the other prompt</span></div>
       <div><b>Middle-click</b><span>Inserts only the part of the focused prompt</span></div>
-      <div><b>Shift+click</b><span>Wraps the selected prompt text where the snippet has <code>{}</code></span></div>
+      <div><b>Shift+click</b><span>Wraps the selected prompt text where the snippet has <code>{}</code> or <code>{prompt}</code></span></div>
     </section>
   </div>
   <div v-else-if="item" class="placeholder">
