@@ -50,6 +50,7 @@ import {onHostReady} from "@/hostWindow.js";
 import {toast} from "@/toast.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
 import {imageFilesFromDataTransfer} from "@/imageFiles.js";
+import {isStill, mediaKind, previewUrl} from "@/media.js";
 import {appendToPrompt, insertIntoTextarea, useSnippetsStore} from "@/stores/snippets.js";
 import {useRouter} from "vue-router";
 
@@ -659,7 +660,10 @@ const selectedImage = ref(null);
 const resultImage = computed(() => selectedImage.value ?? latestImage.value);
 
 const livePreview = computed(() => !selectedImage.value && sdWebUI.live.active ? sdWebUI.live.preview : null);
-const shownImageUrl = computed(() => livePreview.value || createImageLink(resultImage.value));
+const shownImageUrl = computed(() => livePreview.value || previewUrl(resultImage.value));
+// A video or audio result plays in the cell
+const resultMedia = computed(() => !resultImage.value || isStill(resultImage.value) ? null
+  : {src: createImageLink(resultImage.value), kind: mediaKind(resultImage.value)});
 
 // Dropped from the session by its image limit
 watch(() => sessionImagesStore.images, images => {
@@ -1189,7 +1193,7 @@ const gridStyle = computed(() => ({
 
         <!-- Latest image or live preview; the input images in img2img and inpaint -->
         <GenerateImageCell class="image-cell" :style="wide ? null : {height: `${imageHeight.size}px`}"
-                           :mode="mode" :result-url="shownImageUrl"
+                           :mode="mode" :result-url="shownImageUrl" :result-media="resultMedia"
                            :live-progress="livePreview ? sdWebUI.live.progress : null"
                            :result-clickable="!!resultImage && !livePreview"
                            :input-image="inputs.image" :input-mask="inputs.mask"

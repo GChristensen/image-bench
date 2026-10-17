@@ -10,7 +10,7 @@ import {KIND_SESSION} from "@/consts.js";
 import {openImageMenu} from "@/contextMenu.js";
 import {startImageDrag, endImageDrag} from "@/imageDrag.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
-import {createImageLink} from "@/sdwebui.js";
+import {previewUrl} from "@/media.js";
 
 // Pixels of a wheel line (deltaMode 1)
 const WHEEL_LINE = 40;
@@ -146,7 +146,7 @@ function onMouseLeave(e) {
     <div v-for="(image, index) in images" :key="image.sessionId" class="item"
          :class="{'run-start': index > 0 && image.run !== images[index - 1].run}"
          v-memo="[image === selected, index > 0 && image.run !== images[index - 1].run]">
-      <img :src="createImageLink(image)" :class="{selected: image === selected}" :style="aspectStyle(image)" alt="" loading="lazy"
+      <img :src="previewUrl(image)" :class="{selected: image === selected}" :style="aspectStyle(image)" alt="" loading="lazy"
            @load="onImageLoad"
            :title="image === selected ? 'Click to open; shown in the result pane: middle-click to show the latest image' : 'Click to open; middle-click to show in the result pane'"
            @click="emit('open', image)" @mousedown.middle.prevent @auxclick="onAuxClick($event, image)"

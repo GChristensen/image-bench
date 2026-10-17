@@ -352,6 +352,9 @@ async function handleExecuted(event) {
                 parameters: parameters
             };
 
+            if (imageData.mediaType)
+                message.mediaType = imageData.mediaType;
+
             if (controlnet)
                 message.controlnet = controlnet;
 

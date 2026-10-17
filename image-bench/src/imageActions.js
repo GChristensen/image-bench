@@ -14,6 +14,7 @@ import {HOST_NAME, hostHas, isWebUI} from "@/host.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
 import {editorIcon, editorName} from "@/editor.js";
+import {KIND_AUDIO, isStill, mediaKind} from "@/media.js";
 
 const VARYING_TEXT_ENCODERS_KEY = "imageBench_varyingTextEncoders";
 
@@ -198,32 +199,33 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "steps", side: "left", group: 1, icon: "steps", label: "Generate with steps", key: "G",
-    visible: (image, ctx) => ctx.isTray && !image.img2img,
+    visible: (image, ctx) => ctx.isTray && !image.img2img && mediaKind(image) !== KIND_AUDIO,
     run: image => generateVaryingSteps(image)
   },
   {
     id: "textEncoders", side: "left", group: 1, icon: "puzzle", label: "Generate with text encoders", key: "E",
-    visible: (image, ctx) => isWebUI && ctx.isTray && !image.img2img && hasParameters(image),
+    visible: (image, ctx) => isWebUI && ctx.isTray && !image.img2img && hasParameters(image)
+      && mediaKind(image) !== KIND_AUDIO,
     run: image => generateVaryingTextEncoders(image)
   },
   {
     id: "upscale", side: "left", group: 1, icon: "upscale", label: `Upscale with the current ${HOST_NAME} settings`, key: "U",
-    visible: (image, ctx) => ctx.upscalable && !image.img2img,
+    visible: (image, ctx) => ctx.upscalable && !image.img2img && isStill(image),
     run: (image, ctx) => ctx.handlers.upscale?.(image)
   },
   {
     id: "denoising", side: "left", group: 1, icon: "denoise", label: "Upscale with denoising", key: "D",
-    visible: (image, ctx) => ctx.isTray && !image.img2img,
+    visible: (image, ctx) => ctx.isTray && !image.img2img && isStill(image),
     run: image => upscaleVaryingDenoising(image)
   },
   {
     id: "inpaint", side: "right", group: 2, icon: "brush", label: INPAINT_LABEL, key: "B",
-    visible: () => true,
+    visible: image => isStill(image),
     run: image => sendToInpaint(image)
   },
   {
     id: "controlnet", side: "right", group: 2, icon: "controlnet", label: "Send to ControlNet", key: "N",
-    visible: () => hostHas("images", "sendToControlNet"),
+    visible: image => hostHas("images", "sendToControlNet") && isStill(image),
     run: image => sendToControlNet(image)
   },
   {
@@ -232,12 +234,12 @@ export const IMAGE_ACTIONS = [
     get icon() { return editorIcon(); },
     get label() { return `Send to ${editorName.value} as a new document`; },
     alt: {icon: "layers", get label() { return `Send to ${editorName.value} as a new layer`; }},
-    visible: () => true,
+    visible: image => isStill(image),
     run: (image, ctx, alt) => sendToEditor(image, !alt)
   },
   {
     id: "compare", side: "right", group: 3, icon: "compare", label: "Add to compare", key: "A",
-    visible: (image, ctx) => ctx.kind !== KIND_COMPARE,
+    visible: (image, ctx) => ctx.kind !== KIND_COMPARE && isStill(image),
     run: image => {
       useCompareStore().addImage(image);
       flashTrayTab("compare-tab");

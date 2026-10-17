@@ -1,13 +1,16 @@
 <script setup>
 /**
  * Full-size view of the image files of a project, with ← / → through the files and Escape to close.
+ * A video or audio file plays at once, with sound.
  * The actions slot (with the shown file) is placed at the lower right
  */
 import {computed, onBeforeUnmount, onMounted} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
+import MediaView from "@/components/MediaView.vue";
+import {KIND_IMAGE, mediaKindOfName} from "@/media.js";
 
 const props = defineProps({
-  // [{name, url}]
+  // [{name, url, kind}] (kind: image, video or audio; by the name if left out)
   files: {
     type: Array,
     required: true
@@ -26,6 +29,7 @@ const props = defineProps({
 const emit = defineEmits(["update:index", "close"]);
 
 const file = computed(() => props.files[props.index]);
+const kind = computed(() => file.value ? file.value.kind ?? mediaKindOfName(file.value.name) : KIND_IMAGE);
 
 function step(delta) {
   const index = props.index + delta;
@@ -58,7 +62,8 @@ onBeforeUnmount(() => document.removeEventListener("keydown", onKeydown, true));
 <template>
   <Teleport to="body">
     <div class="file-viewer" @click.self="emit('close')">
-      <img v-if="file" :src="file.url" :alt="file.name" @click="emit('close')">
+      <MediaView v-if="file && kind !== KIND_IMAGE" :key="file.url" class="media" :src="file.url" :kind="kind"/>
+      <img v-else-if="file" :src="file.url" :alt="file.name" @click="emit('close')">
       <div class="bar">
         <button class="ib flat" :disabled="index === 0" aria-label="Previous" @click="step(-1)"
           ><AppIcon name="chevron" :size="16" class="prev"/></button>
@@ -95,6 +100,11 @@ img {
   max-height: 100%;
   object-fit: contain;
   cursor: zoom-out;
+}
+
+.media {
+  width: 100%;
+  height: 100%;
 }
 
 .bar {

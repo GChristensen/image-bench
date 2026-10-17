@@ -18,6 +18,8 @@
   import GenerationParameters from "@/components/GenerationParameters.vue";
   import GenerationParametersHeader from "@/components/GenerationParametersHeader.vue";
   import ControlNetUnits from "@/components/ControlNetUnits.vue";
+  import MediaView from "@/components/MediaView.vue";
+  import {isStill, mediaKind} from "@/media.js";
 
   const props = defineProps({
     image: {
@@ -66,6 +68,14 @@
   const imageOps = useImageOperations();
 
   const imageLink = computed(() => imageOps.getImageLink(props.image));
+  // A video or audio file plays in the overlay; it has no full size and is not sent where pixels are needed
+  const fileKind = computed(() => mediaKind(props.image));
+  const still = computed(() => isStill(props.image));
+
+  watch(still, value => {
+    if (!value)
+      isFullSize.value = false;
+  });
   const isFullSize = ref(false);
   const containerElement = ref(null);
 
@@ -99,6 +109,10 @@
 
   // A click on the image toggles full size, a click on the dimmed background around it closes the overlay
   function onContainerClick(e) {
+    // The controls of a video or audio file
+    if (e.target.closest(".overlay-media"))
+      return;
+
     if (e.target.classList.contains("overlay-image")) {
       if (!dragged)
         toggleFullSize(e);
@@ -220,7 +234,7 @@
 
   function onImageAuxClick(e) {
     if (e.button === 1)
-      window.open(e.target.src, "_blank");
+      window.open(imageLink.value, "_blank");
   }
 
   function onEditorAuxClick(e) {
@@ -324,7 +338,10 @@
           <div class="overlay-image-container" ref="containerElement"
                :class="{ 'full-size': isFullSize }"
                @click="onContainerClick">
-            <img class="overlay-image" :src="imageLink" draggable="false"
+            <MediaView v-if="!still" class="overlay-media" :src="imageLink" :kind="fileKind"
+                       @mousedown.middle.prevent @auxclick="onImageAuxClick"
+                       @contextmenu="openImageMenu($event, image, actionContext)"/>
+            <img v-else class="overlay-image" :src="imageLink" draggable="false"
                  :title="isFullSize ? 'Click to fit to screen, drag to pan' : 'Click to view in full size'"
                  @mousedown="onImageMouseDown" @auxclick="onImageAuxClick" @load="onImageLoad"
                  @contextmenu="openImageMenu($event, image, actionContext)">
@@ -368,6 +385,7 @@
                     @click="$emit('deleteImage', image)"><AppIcon name="trash" :size="20"/></button>
             <span class="actions-separator"></span>
           </template>
+          <template v-if="still">
           <button class="ib" :title="INPAINT_LABEL" :aria-label="INPAINT_LABEL"
                   @click="sendToInpaint(image)"><AppIcon name="brush" :size="20"/></button>
           <button v-if="canSendToControlNet" class="ib" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
@@ -375,7 +393,8 @@
           <button class="ib" :title="`Left: send to ${editorName} as a new image, Middle/Shift: send to ${editorName} as a new layer`" :aria-label="`Send to ${editorName}`"
                   @click="onSendToEditor($event, !$event.shiftKey)" @mousedown.middle.prevent @auxclick="onEditorAuxClick"><AppIcon :name="editorIcon()" :size="20"/></button>
           <span class="actions-separator"></span>
-          <button v-if="kind !== KIND_COMPARE" class="ib" title="Add to compare" aria-label="Add to compare"
+          </template>
+          <button v-if="kind !== KIND_COMPARE && still" class="ib" title="Add to compare" aria-label="Add to compare"
                   @click="onAddToCompare"><AppIcon name="compare" :size="20"/></button>
           <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib" title="Add to concept tray" aria-label="Add to concept tray"
                   @click="onPlaceToConceptTray"><AppIcon name="concept" :size="20"/></button>
@@ -475,6 +494,13 @@
 
 .full-size .overlay-image:active {
   cursor: grabbing;
+}
+
+/* A video or audio file, centered by the auto margins like the image */
+.overlay-media {
+  margin: auto;
+  padding: 64px 72px;
+  box-sizing: border-box;
 }
 
 /* Transparent over the image, dark only on hover */

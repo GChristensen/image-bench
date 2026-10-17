@@ -16,7 +16,8 @@ from server import PromptServer
 import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, controlnet_inputs, editor, editor_plugins, explore_export, launcher, loras, persist, pnginfo, projects
+from shared import (civitai, controlnet_inputs, editor, editor_plugins, explore_export, launcher, loras, media, persist,
+                    pnginfo, projects)
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
 from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
@@ -577,6 +578,22 @@ async def upload_compare(request):
         return web.json_response({"error": str(e)})
 
     return web.json_response(image)
+
+
+@PromptServer.instance.routes.get(BASE_PATH + "/media/thumb")
+async def media_thumb(request):
+    """Thumbnail of a generated video by its /view URL; 404 without PyAV or ffmpeg (the popup shows the video)"""
+    path = resolve_view_path(request.query.get("url"))
+
+    if not path or media.media_kind(path) != "video":
+        return web.Response(text="Not a video", status=400)
+
+    try:
+        thumb_path = await asyncio.to_thread(media.video_thumbnail, get_image_bench_dir(), path)
+    except (media.MediaError, OSError) as e:
+        return web.Response(text=str(e), status=404)
+
+    return web.FileResponse(thumb_path, headers={"Content-Type": "image/jpeg", "Cache-Control": "max-age=86400"})
 
 
 @PromptServer.instance.routes.post(BASE_PATH + "/png_info")

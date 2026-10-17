@@ -20,6 +20,7 @@ import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useKeyboardShortcuts} from "@/composables/useKeyboardShortcuts.js";
 import {dialog} from "@/dialogs/useDialog.js";
+import {isStill} from "@/media.js";
 
 const props = defineProps({
   kind: {
@@ -89,14 +90,14 @@ function onRemoveSelectedClick() {
 async function onCompareSelectedClick() {
   const compareStore = useCompareStore();
 
-  for (const image of imageStore.images.filter(i => i.selected && !i.separator))
+  for (const image of imageStore.images.filter(i => i.selected && !i.separator && isStill(i)))
     await compareStore.addImage(toRaw(image));
 
   flashTrayTab("compare-tab");
 }
 
 async function onUpscaleSelectedClick() {
-  const selectedImages = imageStream.value.getSelectedImages();
+  const selectedImages = imageStream.value.getSelectedImages().filter(isStill);
 
   if (upscaledImageStore.generationInProgress) {
     webUI.stopGeneration();

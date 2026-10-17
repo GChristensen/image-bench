@@ -39,6 +39,7 @@ from urllib.parse import quote
 
 from PIL import Image
 
+from . import media
 from .controlnet_inputs import HASH, image_hashes, input_dir, input_path
 from .persist import read_json_file
 from .tray import TRAY_FILES, unique_file_path
@@ -63,12 +64,14 @@ FINAL_MARKING = "\U0001F3C1"
 ARCHIVE_TRAY_FILE = TRAY_FILES["image_tray"]
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif", ".psd", ".tif", ".tiff"}
+# The files of a project: images, videos and audio
+FILE_EXTENSIONS = IMAGE_EXTENSIONS | media.MEDIA_EXTENSIONS
 # Images whose generation parameters are read (infotext, or the prompt of ComfyUI)
 INFO_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 # Served as they are; other images are converted to PNG
-BROWSER_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif"}
+BROWSER_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif"} | media.MEDIA_EXTENSIONS
 MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
-               ".gif": "image/gif", ".bmp": "image/bmp", ".avif": "image/avif"}
+               ".gif": "image/gif", ".bmp": "image/bmp", ".avif": "image/avif", **media.MEDIA_TYPES}
 
 # Directories not shown in the tree
 SKIPPED_DIRS = {PROJECT_DIR.lower(), "$recycle.bin", "system volume information", "__pycache__", "node_modules"}
@@ -311,7 +314,7 @@ def get_tree(root: str, store_dir: str) -> Dict[str, Any]:
 # ---------- Project ----------
 
 def list_files(directory: str) -> List[Dict[str, Any]]:
-    """Image files of a project directory and its subdirectories, except ib_project and nested projects"""
+    """Image, video and audio files of a project directory and its subdirectories, except ib_project and nested projects"""
     files = []
 
     def walk(path: str, prefix: str, depth: int):
@@ -328,7 +331,7 @@ def list_files(directory: str) -> List[Dict[str, Any]]:
                 if (depth < MAX_FILE_DEPTH and entry.name.lower() not in SKIPPED_DIRS
                         and not entry.name.startswith(".") and not is_project_dir(entry.path)):
                     walk(entry.path, prefix + entry.name + "/", depth + 1)
-            elif os.path.splitext(entry.name)[1].lower() in IMAGE_EXTENSIONS:
+            elif os.path.splitext(entry.name)[1].lower() in FILE_EXTENSIONS:
                 try:
                     stat = entry.stat()
                 except OSError:
@@ -354,16 +357,23 @@ def add_file_parameters(directory: str, data_dir: str, files: List[Dict[str, Any
     cache = {}
 
     for file in files:
-        if os.path.splitext(file["name"])[1].lower() not in INFO_EXTENSIONS:
+        ext = os.path.splitext(file["name"])[1].lower()
+
+        if ext not in INFO_EXTENSIONS and ext not in media.VIDEO_EXTENSIONS:
             continue
 
         key = f"{file['size']}|{file['modified']}"
         entry = cached.get(file["name"])
 
         if not entry or entry.get("key") != key:
+            file_path = os.path.join(directory, *split_path(file["name"]))
+
             try:
-                with open(os.path.join(directory, *split_path(file["name"])), "rb") as source:
-                    parameters = image_info(source.read()).get("parameters") or {}
+                if ext in media.VIDEO_EXTENSIONS:
+                    parameters = media.media_info(file_path).get("parameters") or {}
+                else:
+                    with open(file_path, "rb") as source:
+                        parameters = image_info(source.read()).get("parameters") or {}
             except OSError:
                 continue
 
@@ -443,36 +453,33 @@ def get_thumbnail(root: str, path: str, name: str, file_path: str) -> FileResult
     """JPEG thumbnail, cached in ib_project/thumbs by the name, size and modification time of the file"""
     _, data_dir = project_paths(root, path)
     stat = os.stat(file_path)
-    return cached_thumbnail(data_dir, f"{name}|{stat.st_size}|{stat.st_mtime_ns}", lambda: file_path)
+    return cached_thumbnail(data_dir, f"{name}|{stat.st_size}|{stat.st_mtime_ns}", lambda: file_path,
+                            video=media.media_kind(file_path) == "video")
 
 
-def cached_thumbnail(data_dir: str, key: str, open_source) -> FileResult:
+def cached_thumbnail(data_dir: str, key: str, open_source, video: bool = False) -> FileResult:
     """
     JPEG thumbnail cached in ib_project/thumbs under the hash of a key that changes with the image
-    open_source() gives the image to open: a path or a file object
+    open_source() gives the image to open: a path or a file object; of a video (a path), a frame is taken.
+    Audio files have no thumbnail (the popup shows a placeholder)
     """
     thumb_path = os.path.join(data_dir, THUMBS_DIR, hashlib.sha1(key.encode("utf-8")).hexdigest() + ".jpg")
 
     if os.path.isfile(thumb_path):
         return FileResult("image/jpeg", path=thumb_path)
 
-    try:
+    def open_image() -> Image.Image:
+        if video:
+            return media.video_frame(open_source())
+
         with Image.open(open_source()) as image:
             image.draft("RGB", (THUMB_SIZE * 2, THUMB_SIZE * 2))
-            image = to_rgb(image)
+            return to_rgb(image)
 
-            if image.mode == "RGBA":
-                background = Image.new("RGB", image.size, (22, 25, 29))
-                background.paste(image, mask=image.getchannel("A"))
-                image = background
-
-            image.thumbnail((THUMB_SIZE, THUMB_SIZE))
-            buffer = io.BytesIO()
-            image.save(buffer, format="JPEG", quality=82)
+    try:
+        content = media.thumbnail_jpeg(open_image, THUMB_SIZE)
     except Exception as e:
         raise ProjectError(f"Unable to read the image: {e}", 415)
-
-    content = buffer.getvalue()
 
     try:
         os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
@@ -488,14 +495,14 @@ def cached_thumbnail(data_dir: str, key: str, open_source) -> FileResult:
 # ---------- File system ----------
 
 def add_file(root: str, path: str, filename: Optional[str], content: Optional[bytes]) -> Dict[str, Any]:
-    """Save an image into a project directory under its name (another name if it is taken)"""
+    """Save an image, video or audio file into a project directory under its name (another name if it is taken)"""
     directory, _ = project_paths(root, path)
     name = os.path.basename((filename or "").replace("\\", "/")) or "image.png"
 
     if content is None:
         raise ProjectError("No file")
 
-    if os.path.splitext(name)[1].lower() not in IMAGE_EXTENSIONS:
+    if os.path.splitext(name)[1].lower() not in FILE_EXTENSIONS:
         raise ProjectError("Not an image file.", 415)
 
     target = unique_file_path(directory, check_name(name))
@@ -734,7 +741,7 @@ def delete_file(root: str, path: str, name: str) -> Dict[str, Any]:
 
     file_path = project_file_path(root, path, name)
 
-    if os.path.splitext(file_path)[1].lower() not in IMAGE_EXTENSIONS:
+    if os.path.splitext(file_path)[1].lower() not in FILE_EXTENSIONS:
         raise ProjectError("Not an image file.", 415)
 
     if can_trash(file_path):
@@ -918,7 +925,7 @@ def write_final(data_dir: str, data: Dict[str, Any], ext: Optional[str], source_
     """
     ext = ext.lower() if ext else None
 
-    if ext is not None and ext not in IMAGE_EXTENSIONS:
+    if ext is not None and ext not in FILE_EXTENSIONS:
         raise ProjectError("Not an image file.", 415)
 
     for old in os.listdir(data_dir):
@@ -1029,7 +1036,8 @@ def get_tray_image(root: str, path: str, kind: str, member: str, thumb: bool = F
 
     if thumb:
         version = os.stat(image_path).st_mtime_ns
-        return cached_thumbnail(data_dir, f"{kind}|{member}|{version}", lambda: image_path)
+        return cached_thumbnail(data_dir, f"{kind}|{member}|{version}", lambda: image_path,
+                                video=media.media_kind(image_path) == "video")
 
     ext = os.path.splitext(member)[1].lower()
 

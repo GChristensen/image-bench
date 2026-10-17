@@ -1,29 +1,55 @@
 import {getSystemPaths} from "./paths.js";
 
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "mkv", "m4v"];
+const AUDIO_EXTENSIONS = ["wav", "mp3", "flac", "ogg", "opus", "m4a", "aac"];
+
+// Outputs of the nodes holding files: images (also SaveVideo / SaveWEBM, as animated images),
+// gifs (VideoHelperSuite's Video Combine), video and audio (SaveAudio*)
+const OUTPUT_KEYS = ["images", "gifs", "video", "audio"];
+
+/** "video" or "audio" by the file extension (or the format of VideoHelperSuite), null for an image */
+function mediaTypeOf(fileData) {
+    const ext = (fileData.filename || "").split(".").pop().toLowerCase();
+
+    if (VIDEO_EXTENSIONS.includes(ext) || /^video\//.test(fileData.format || ""))
+        return "video";
+
+    return AUDIO_EXTENSIONS.includes(ext) || /^audio\//.test(fileData.format || "") ? "audio" : null;
+}
+
 /**
- * Extract image information from execution output
+ * Extract the image, video and audio files of an execution output
  */
 export async function extractImageInfo(nodeId, output, promptId) {
     const images = [];
 
-    if (output && output.images) {
-        // The output already contains all image information we need
-        for (const imageData of output.images) {
+    for (const key of OUTPUT_KEYS) {
+        if (!Array.isArray(output?.[key]))
+            continue;
+
+        // The output already contains all file information we need
+        for (const imageData of output[key]) {
             try {
+                if (!imageData?.filename)
+                    continue;
+
                 const type = imageData.type || 'output';
                 const subfolder = imageData.subfolder || '';
-                const imageUrl = `/view?filename=${imageData.filename}&type=${type}&subfolder=${subfolder}`;
+                const imageUrl = `/view?filename=${encodeURIComponent(imageData.filename)}&type=${type}`
+                    + `&subfolder=${encodeURIComponent(subfolder)}`;
                 // Path of the file as /view resolves it: in the output (or temp) directory, with the subfolder
                 const paths = getSystemPaths();
                 const baseDir = type === 'temp' ? paths.temp_dir ?? paths.output_dir : paths.output_dir;
                 const imagePath = [baseDir, subfolder, imageData.filename].filter(Boolean).join("/");
+                const mediaType = mediaTypeOf(imageData);
 
                 images.push({
                     imageUrl,
                     imagePath,
                     filename: imageData.filename,
                     subfolder: imageData.subfolder || '',
-                    type: imageData.type || 'output'
+                    type: imageData.type || 'output',
+                    ...(mediaType ? {mediaType} : {})
                 });
             } catch (e) {
                 console.error('[Image Bench] Failed to process image:', imageData, e);

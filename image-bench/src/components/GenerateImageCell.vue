@@ -9,6 +9,7 @@
 import {computed, onBeforeUnmount, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import ActionRim from "@/components/ActionRim.vue";
+import MediaPlayback from "@/components/MediaPlayback.vue";
 import {getImageSize, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {rimActionGroups, runImageAction} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
@@ -25,6 +26,11 @@ const props = defineProps({
   },
   resultUrl: {
     type: String,
+    default: null
+  },
+  // A video or audio result, {src, kind}: resultUrl is its thumbnail or placeholder, the play button plays it
+  resultMedia: {
+    type: Object,
     default: null
   },
   // Progress of the live preview, null if there is none
@@ -228,6 +234,8 @@ async function onUseSize() {
       <span v-else class="empty">The generated image appears here</span>
       <span v-if="liveProgress !== null" class="live-progress"><i :style="{width: `${liveProgress}%`}"></i></span>
     </button>
+    <MediaPlayback v-if="shownView === 'result' && resultMedia && liveProgress === null" :key="resultMedia.src"
+                   :src="resultMedia.src" :kind="resultMedia.kind" @open="emit('result-click')"/>
 
     <div v-else-if="shownView === 'input'" class="view">
       <template v-if="inputImage">

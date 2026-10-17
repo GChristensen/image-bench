@@ -2,16 +2,24 @@
  * Image files dropped, pasted or picked in the Generate tab (input and reference images)
  */
 
+// Video and audio files too, where the target takes them (the final image of a project)
+const MEDIA_TYPE = /^(image|video|audio)\//;
+
+function accepted(type, media) {
+    return media ? MEDIA_TYPE.test(type || "") : (type || "").startsWith("image/");
+}
+
 /**
  * Image files of a drop or paste: files, or else the image dragged from a page (e.g. the Generated tab) by its URL
  * @param {DataTransfer|null} dataTransfer
+ * @param {{media?: boolean}} options - media: video and audio files too
  * @returns {Promise<File[]>}
  */
-export async function imageFilesFromDataTransfer(dataTransfer) {
+export async function imageFilesFromDataTransfer(dataTransfer, {media = false} = {}) {
     if (!dataTransfer)
         return [];
 
-    const files = Array.from(dataTransfer.files || []).filter(file => file.type.startsWith("image/"));
+    const files = Array.from(dataTransfer.files || []).filter(file => accepted(file.type, media));
 
     if (files.length)
         return files;
@@ -26,7 +34,7 @@ export async function imageFilesFromDataTransfer(dataTransfer) {
         const response = await fetch(url);
         const blob = await response.blob();
 
-        if (!response.ok || !blob.type.startsWith("image/"))
+        if (!response.ok || !accepted(blob.type, media))
             return [];
 
         const name = decodeURIComponent(new URL(url, location.href).pathname.split("/").pop() || "image.png");
@@ -40,13 +48,14 @@ export async function imageFilesFromDataTransfer(dataTransfer) {
 /**
  * Let the user choose image files
  * @param {boolean} multiple
+ * @param {{media?: boolean}} options - media: video and audio files too
  * @returns {Promise<File[]>} Empty if cancelled
  */
-export function pickImageFiles(multiple = false) {
+export function pickImageFiles(multiple = false, {media = false} = {}) {
     return new Promise(resolve => {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = "image/*";
+        input.accept = media ? "image/*,video/*,audio/*" : "image/*";
         input.multiple = multiple;
         input.addEventListener("change", () => resolve(Array.from(input.files || [])));
         input.addEventListener("cancel", () => resolve([]));

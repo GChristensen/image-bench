@@ -5,6 +5,7 @@ Handles upload, download, import, and export operations.
 This module is framework-agnostic and works with both FastAPI and aiohttp.
 """
 
+import filecmp
 import os
 import json
 import time
@@ -163,9 +164,10 @@ async def save_image_to_tray(
     else:
         new_filename = os.path.basename(source_path)
 
-    # Handle filename conflicts (the prompt_id is unique)
+    # Handle filename conflicts; a file of the prompt_id is the same image again unless its content differs
+    # (several outputs of one prompt: images of a batch, a video and its audio)
     dest_path = os.path.join(tray_dir, new_filename)
-    if os.path.exists(dest_path) and not prompt_id:
+    if os.path.exists(dest_path) and not (prompt_id and same_content(source_path, dest_path)):
         # Append counter if file exists
         base_name, ext = os.path.splitext(new_filename)
         counter = 1
@@ -192,6 +194,13 @@ async def save_image_to_tray(
         image_data["imageUrl"] = f"/file={dest_path}"
 
     return image_data
+
+
+def same_content(path: str, other: str) -> bool:
+    try:
+        return os.path.samefile(path, other) or filecmp.cmp(path, other, shallow=False)
+    except OSError:
+        return False
 
 
 def unique_file_path(directory: str, filename: str) -> str:

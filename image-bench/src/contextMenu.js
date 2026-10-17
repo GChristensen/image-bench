@@ -177,10 +177,14 @@ export async function copyToProject(images) {
   }
 }
 
-const EXTENSIONS = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"};
+const EXTENSIONS = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif",
+  "video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov", "video/x-matroska": ".mkv",
+  "audio/wav": ".wav", "audio/x-wav": ".wav", "audio/mpeg": ".mp3", "audio/flac": ".flac", "audio/ogg": ".ogg",
+  "audio/mp4": ".m4a", "audio/aac": ".aac"};
 
 /**
- * File name of an image: that of its file (or of its /view URL), with the extension of its type
+ * File name of an image (or video or audio file): that of its file (or of its /view URL), with the extension
+ * of its type
  */
 function fileNameOf(image, type) {
   let name = String(image.imagePath || "").split(/[\\/]/).pop();
@@ -195,7 +199,7 @@ function fileNameOf(image, type) {
   }
 
   name = name || "image";
-  return /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(name) ? name : name.replace(/\.[^.]*$/, "") + (EXTENSIONS[type] ?? ".png");
+  return /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|mov|mkv|m4v|wav|mp3|flac|ogg|opus|m4a|aac)$/i.test(name) ? name : name.replace(/\.[^.]*$/, "") + (EXTENSIONS[type] ?? ".png");
 }
 
 async function copyImage(image) {

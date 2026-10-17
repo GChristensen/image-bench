@@ -28,6 +28,7 @@ from shared import controlnet_inputs
 from shared import explore_export
 from shared import launcher
 from shared import loras
+from shared import media
 from shared import editor
 from shared import editor_plugins
 from shared import pnginfo
@@ -94,6 +95,7 @@ class ImageBenchApi():
         self.add_api_route("/compare", self.write_compare, methods=["POST"])
         self.add_api_route("/compare_upload", self.compare_upload, methods=["POST"])
         self.add_api_route("/png_info", self.png_info, methods=["POST"])
+        self.add_api_route("/media/thumb", self.get_media_thumb, methods=["GET"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["GET"])
         self.add_api_route("/download_image_tray", self.download_image_tray, methods=["GET"])
@@ -198,6 +200,57 @@ class ImageBenchApi():
             }
 
             self.post_websocket_message(msg)
+
+    def on_video_saved(self, p, path, info):
+        """A video saved by Forge Neo (modules.images.save_video, which has no callback), sent like an image"""
+        if not path or not os.path.isfile(path):
+            return
+
+        path = os.path.abspath(path).replace("\\", "/")
+        prompt = getattr(p, "prompt", "") if not isinstance(p, str) else ""
+        negative_prompt = getattr(p, "negative_prompt", "") if not isinstance(p, str) else ""
+
+        self.post_websocket_message({
+            "type": "SAVED_IMAGE",
+            "mediaType": "video",
+            "imageUrl": f"/file={path}",
+            "imagePath": path,
+            "batchId": getattr(shared.state, "job_timestamp", None),
+            "parameters": self.pnginfo_to_dict(prompt, negative_prompt, {"parameters": info}) if info else {}
+        })
+
+    def media_file_path(self, url):
+        """File path of a /file= URL of a generated file, None outside of the output directories"""
+        if not (url or "").startswith("/file="):
+            return None
+
+        path = os.path.abspath(url[len("/file="):])
+        roots = {self.outputs_dir, self.image_bench_dir, shared.opts.data.get("outdir_videos") or ""}
+
+        for root in filter(None, roots):
+            root = os.path.abspath(root)
+
+            try:
+                if os.path.commonpath([root, path]) == root:
+                    return path
+            except ValueError:
+                continue
+
+        return None
+
+    async def get_media_thumb(self, url: str):
+        """Thumbnail of a generated video by its /file= URL; 404 without PyAV or ffmpeg (the popup shows the video)"""
+        path = self.media_file_path(url)
+
+        if not path or media.media_kind(path) != "video":
+            raise HTTPException(status_code=400, detail="Not a video")
+
+        try:
+            thumb_path = await asyncio.to_thread(media.video_thumbnail, self.image_bench_dir, path)
+        except (media.MediaError, OSError) as e:
+            raise HTTPException(status_code=404, detail=str(e))
+
+        return FileResponse(thumb_path, media_type="image/jpeg", headers={"Cache-Control": "max-age=86400"})
 
     def pnginfo_to_dict(self, prompt, negative_prompt, pnginfo):
         return tray.pnginfo_to_dict(prompt, negative_prompt, pnginfo)
@@ -819,10 +872,40 @@ class ImageBenchApi():
         return JSONResponse(content=result)
 
 
+def install_video_hook(api):
+    """
+    Wrap modules.images.save_video (Forge Neo) once, so that its videos reach the popup; a reload of the scripts only
+    points the wrapper to the new api. The generation never fails because of it
+    """
+    save_video = getattr(webui_images, "save_video", None)
+
+    if save_video is None:
+        return
+
+    if not getattr(save_video, "_image_bench", False):
+        original = save_video
+
+        def save_video(p, frames, *args, **kwargs):
+            path = original(p, frames, *args, **kwargs)
+
+            try:
+                save_video._image_bench_api.on_video_saved(p, path, kwargs.get("info"))
+            except Exception as e:
+                print(f"[Image Bench] Unable to send a saved video: {e}")
+
+            return path
+
+        save_video._image_bench = True
+        webui_images.save_video = save_video
+
+    save_video._image_bench_api = api
+
+
 try:
     api = ImageBenchApi()
     script_callbacks.on_app_started(api.start)
     script_callbacks.on_image_saved(api.on_image_saved)
+    install_video_hook(api)
     script_callbacks.on_before_component(api.on_before_config_presets)
 except Exception as e:
     print(e)

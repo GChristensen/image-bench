@@ -6,6 +6,7 @@ import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useCompareStore} from "@/stores/compare.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED, KIND_GENERATED, KIND_COMPARE} from "@/consts.js";
+import {isStill} from "@/media.js";
 
 /**
  * Dragging image cards onto the tray tabs and the Compare tab: images dragged from the other tray are moved,
@@ -97,8 +98,10 @@ export async function dropImages(trayKind) {
 
   dragged = null;
 
+  // Compare takes images only, not video or audio files
   for (const image of images)
-    await targetStore.addImage(image);
+    if (trayKind !== KIND_COMPARE || isStill(image))
+      await targetStore.addImage(image);
 
   if (move) {
     const sourceStore = storeOfKind(sourceKind);

@@ -11,6 +11,8 @@
   import {useAppConfigStore} from "@/stores/appConfig.js";
   import AppIcon from "@/components/AppIcon.vue";
   import ActionRim from "@/components/ActionRim.vue";
+  import MediaPlayback from "@/components/MediaPlayback.vue";
+  import {KIND_IMAGE, KIND_VIDEO, mediaKind, previewUrl} from "@/media.js";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams',
     'select', 'upscaleImage', 'addComment', 'deleteImage']);
@@ -73,6 +75,20 @@
 
   const imageOps = useImageOperations();
   const shiftDown = useShiftKey();
+
+  // A video shows its thumbnail, audio a placeholder; both have a play button. Without a thumbnail (no PyAV or
+  // ffmpeg on the server) the video itself shows its first frame
+  const fileKind = computed(() => mediaKind(props.image));
+  const link = computed(() => imageOps.getImageLink(props.image));
+  const preview = computed(() => previewUrl(props.image));
+  const thumbFailed = ref(false);
+
+  watch(preview, () => thumbFailed.value = false);
+
+  function onPreviewError() {
+    if (fileKind.value === KIND_VIDEO)
+      thumbFailed.value = true;
+  }
 
   // Context of the image actions (imageActions.js)
   const actionContext = {
@@ -221,14 +237,25 @@
   <div class="image-separator" v-if="image.separator"></div>
   <div v-else ref="frameElement" class="image-frame" :class="{bare}" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
        @contextmenu="openImageMenu($event, image, actionContext)">
-    <img class="selectable-image-preview"
-         :src="imageOps.getImageLink(image)"
+    <video v-if="thumbFailed" class="selectable-image-preview"
+           :src="`${link}#t=0.5`" preload="metadata" muted draggable="true"
+           :title="imageOps.createImageTooltip(image)"
+           @click="$emit('imageClick')"
+           @mousedown.middle.prevent
+           @auxclick="onImageAuxClick"
+           @dragstart="onDragStart"
+           @dragend="onDragEnd"></video>
+    <img v-else class="selectable-image-preview"
+         :src="preview"
          :title="imageOps.createImageTooltip(image)"
+         @error="onPreviewError"
          @click="$emit('imageClick')"
          @mousedown.middle.prevent
          @auxclick="onImageAuxClick"
          @dragstart="onDragStart"
          @dragend="onDragEnd">
+
+    <MediaPlayback v-if="fileKind !== KIND_IMAGE" :src="link" :kind="fileKind" @open="$emit('imageClick')"/>
 
     <span v-if="image.tagColor" class="tag-bar" :style="{background: image.tagColor}"></span>
 

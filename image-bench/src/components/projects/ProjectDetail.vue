@@ -7,6 +7,8 @@
 import {computed, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import FileViewer from "@/components/projects/FileViewer.vue";
+import MediaPlayback from "@/components/MediaPlayback.vue";
+import {AUDIO_PLACEHOLDER, KIND_AUDIO, KIND_IMAGE, KIND_VIDEO, mediaKindOfName} from "@/media.js";
 import ImageActionButtons from "@/components/ImageActionButtons.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {canReuseParameters, reuseParameters, runImageAction, visibleActionGroups} from "@/imageActions.js";
@@ -134,10 +136,15 @@ function saveNotes() {
 // ---------- Final image ----------
 
 const finalUrl = computed(() => data.value.final ? fileUrl(data.value.final, {version: store.fileVersion}) : null);
+// A video or audio final plays in its card (the only playable card of the project); a video shows its thumbnail
+const finalKind = computed(() => data.value.final ? mediaKindOfName(data.value.final) : KIND_IMAGE);
+const finalPreview = computed(() => finalKind.value === KIND_VIDEO
+  ? fileUrl(data.value.final, {thumb: true, version: store.fileVersion})
+  : finalKind.value === KIND_AUDIO ? AUDIO_PLACEHOLDER : finalUrl.value);
 const dropActive = ref(false);
 
 async function changeFinal() {
-  const [file] = await pickImageFiles();
+  const [file] = await pickImageFiles(false, {media: true});
 
   if (file)
     await store.setFinal(project.value.path, {file});
@@ -146,7 +153,7 @@ async function changeFinal() {
 async function onFinalDrop(e) {
   dropActive.value = false;
 
-  const [file] = await imageFilesFromDataTransfer(e.dataTransfer);
+  const [file] = await imageFilesFromDataTransfer(e.dataTransfer, {media: true});
 
   if (file)
     await store.setFinal(project.value.path, {file});
@@ -212,16 +219,16 @@ const finalSourceLabel = computed(() => {
 });
 
 /**
- * Items of the image grid of the shown tab: {key, name, url, thumb, marking, comment, title, final, image}
- * (final: the source passed to setFinal; image: the image of the image actions, with the generation parameters
- * of a tray image)
+ * Items of the image grid of the shown tab: {key, name, kind, url, thumb, marking, comment, title, final, image}
+ * (kind: image, video or audio, which shows a placeholder; final: the source passed to setFinal; image: the image
+ * of the image actions, with the generation parameters of a tray image)
  */
 const gridItems = computed(() => {
   if (!project.value)
     return [];
 
   if (imageTab.value === "files")
-    return files.value.map(file => ({
+    return files.value.map(file => mediaItem(file.name, {
       key: file.name, name: file.name, url: fileUrl(file.name),
       thumb: fileUrl(file.name, {thumb: true, version: file.modified}),
       title: [file.name, file.parameters?.prompt].filter(Boolean).join("\n\n"), final: {name: file.name},
@@ -235,7 +242,7 @@ const gridItems = computed(() => {
   return (tray?.images ?? []).map(image => {
     const url = trayImageUrl(project.value.path, kind, image.member, {version: tray.version});
 
-    return {
+    return mediaItem(image.name, {
       key: image.member, name: image.name, url,
       thumb: trayImageUrl(project.value.path, kind, image.member, {thumb: true, version: tray.version}),
       marking: image.marking, comment: image.comment,
@@ -243,9 +250,20 @@ const gridItems = computed(() => {
       final: {kind, member: image.member},
       image: {imageUrl: url, imagePath: image.name, parameters: image.parameters, img2img: image.img2img,
               generationId: image.generationId, controlnet: image.controlnet}
-    };
+    });
   });
 });
+
+// The kind of a grid item by its file name: audio has no thumbnail but the placeholder
+function mediaItem(name, item) {
+  const kind = mediaKindOfName(name);
+
+  if (kind === KIND_IMAGE)
+    return {...item, kind};
+
+  return {...item, kind, thumb: kind === KIND_AUDIO ? AUDIO_PLACEHOLDER : item.thumb,
+          image: {...item.image, mediaType: kind}};
+}
 
 // ---------- Image actions ----------
 
@@ -337,12 +355,12 @@ function viewFiles(list, index) {
 }
 
 function openItem(index) {
-  viewFiles(gridItems.value.map(item => ({name: item.name, url: item.url, item})), index);
+  viewFiles(gridItems.value.map(item => ({name: item.name, url: item.url, kind: item.kind, item})), index);
 }
 
 function openFinal() {
   if (finalUrl.value)
-    viewFiles([{name: finalSourceLabel.value || "Final image", url: finalUrl.value}], 0);
+    viewFiles([{name: finalSourceLabel.value || "Final image", url: finalUrl.value, kind: finalKind.value}], 0);
 }
 
 async function addToCompare(url, name) {
@@ -376,11 +394,15 @@ async function sendToEditor(url, name, e) {
 }
 
 function onItemMenu(e, item) {
+  // Compare and the editor take images only
+  const still = item.kind === KIND_IMAGE;
   const items = [
     {icon: "star", label: "Set as the final image", run: () => store.setFinal(project.value.path, item.final)},
-    {icon: "compare", label: "Add to compare", run: () => addToCompare(item.url, item.name)},
-    {icon: editorIcon(), label: `Send to ${editorName.value} as a new document`, run: () => sendToEditor(item.url, item.name)},
-    {icon: "layers", label: `Send to ${editorName.value} as a new layer`, run: () => sendToEditor(item.url, item.name, {button: 1})},
+    ...still ? [
+      {icon: "compare", label: "Add to compare", run: () => addToCompare(item.url, item.name)},
+      {icon: editorIcon(), label: `Send to ${editorName.value} as a new document`, run: () => sendToEditor(item.url, item.name)},
+      {icon: "layers", label: `Send to ${editorName.value} as a new layer`, run: () => sendToEditor(item.url, item.name, {button: 1})}
+    ] : [],
     {separator: true},
     {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")}
   ];
@@ -484,7 +506,10 @@ const unitDetails = unit => [
       <section class="final" aria-label="Final image">
         <div class="final-image" :class="{drop: dropActive}" @dragover="onFinalDragOver" @dragleave="dropActive = false"
              @drop.prevent="onFinalDrop">
-          <img v-if="finalUrl" :src="finalUrl" alt="Final image" @click="openFinal">
+          <template v-if="finalUrl">
+            <img :src="finalPreview" alt="Final image" @click="openFinal">
+            <MediaPlayback v-if="finalKind !== KIND_IMAGE" :src="finalUrl" :kind="finalKind" @open="openFinal"/>
+          </template>
           <div v-else class="final-empty">
             <AppIcon name="star" :size="22"/>
             <span>Drop the final image here, choose it, or set an image of the trays or files below as final.</span>
@@ -494,7 +519,7 @@ const unitDetails = unit => [
         <div class="final-bar">
           <span class="final-source" :title="finalSourceLabel">{{ finalSourceLabel }}</span>
           <button class="btn outline small" @click="changeFinal">Choose…</button>
-          <button v-if="finalUrl" class="ib sm" :title="`Left: send to ${editorName} as a new image, Middle/Shift: send to ${editorName} as a new layer`"
+          <button v-if="finalUrl && finalKind === KIND_IMAGE" class="ib sm" :title="`Left: send to ${editorName} as a new image, Middle/Shift: send to ${editorName} as a new layer`"
                   :aria-label="`Send the final image to ${editorName}`"
                   @click="sendToEditor(finalUrl, data.final, $event)" @mousedown.middle.prevent
                   @auxclick="sendToEditor(finalUrl, data.final, $event)"><AppIcon :name="editorIcon()" :size="13"/></button>
@@ -590,6 +615,8 @@ const unitDetails = unit => [
              @contextmenu.prevent="e => onItemMenu(e, item)">
           <div class="file-image">
             <img :src="item.thumb" alt="" loading="lazy" draggable="false">
+            <span v-if="item.kind !== KIND_IMAGE" class="file-kind" :title="item.kind === KIND_VIDEO ? 'Video' : 'Audio'"
+              ><AppIcon :name="item.kind" :size="12"/></span>
             <span v-if="item.marking" class="file-marking">{{ item.marking }}</span>
             <div class="file-actions left" @click.stop>
               <ImageActionButtons :groups="actionGroups(item.image, 'left')" :show-alt="shiftKey"
@@ -603,7 +630,7 @@ const unitDetails = unit => [
                       @click="store.setFinal(project.path, item.final)"><AppIcon name="star" :size="12"/></button>
             </div>
             <div class="file-actions bottom" @click.stop>
-              <button class="ib sm" title="Add to compare" aria-label="Add to compare"
+              <button v-if="item.kind === KIND_IMAGE" class="ib sm" title="Add to compare" aria-label="Add to compare"
                       @click="addToCompare(item.url, item.name)"><AppIcon name="compare" :size="12"/></button>
               <ImageActionButtons :groups="actionGroups(item.image, 'right')" :show-alt="shiftKey"
                                   @run="(action, alt) => onImageAction(item, action, alt)"/>
@@ -628,8 +655,8 @@ const unitDetails = unit => [
           <span v-if="file.item.image.parameters" class="viewer-sep"></span>
           <button class="ib sm viewer-button" title="Set as the final image" aria-label="Set as the final image"
                   @click="store.setFinal(project.path, file.item.final)"><AppIcon name="star" :size="13"/></button>
-          <span class="viewer-sep"></span>
-          <button class="ib sm viewer-button" title="Add to compare" aria-label="Add to compare"
+          <span v-if="file.item.kind === KIND_IMAGE" class="viewer-sep"></span>
+          <button v-if="file.item.kind === KIND_IMAGE" class="ib sm viewer-button" title="Add to compare" aria-label="Add to compare"
                   @click="addToCompare(file.item.url, file.item.name)"><AppIcon name="compare" :size="13"/></button>
           <ImageActionButtons :groups="actionGroups(file.item.image, 'right')" :show-alt="shiftKey"
                               @run="(action, alt) => onImageAction(file.item, action, alt)"/>
@@ -1234,6 +1261,23 @@ h2 {
 .image-tab.on {
   border-bottom-color: var(--ib-accent);
   color: var(--ib-text);
+}
+
+/* Video or audio: the thumbnail or placeholder does not play here (only the final image does) */
+.file-kind {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(17, 19, 23, 0.75);
+  color: var(--ib-text);
+}
+
+.file:hover .file-kind {
+  display: none;
 }
 
 .file-marking {
