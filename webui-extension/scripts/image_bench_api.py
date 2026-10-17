@@ -436,7 +436,7 @@ class ImageBenchApi():
         return Response("", media_type="application/json")
 
     def get_snippets(self):
-        return self.serve_store_file(SNIPPETS_FILE)
+        return self.serve_store_file(SNIPPETS_FILE, persist.DEFAULT_SNIPPETS_FILE)
 
     async def write_snippets(self, request: Request):
         base_dir = self.get_file_path("", upper=True)
@@ -543,9 +543,9 @@ class ImageBenchApi():
         # Return updated tray data so frontend can update its store with new paths
         return Response(json.dumps(tray_data), media_type="application/json")
 
-    def serve_store_file(self, filename):
+    def serve_store_file(self, filename, default_file=""):
         base_dir = self.get_file_path("", upper=True)
-        result = persist.serve_store_file_content(base_dir, filename)
+        result = persist.serve_store_file_content(base_dir, filename, default_file)
         return Response(result, media_type="application/json")
 
     async def write_store_file(self, filename, content):

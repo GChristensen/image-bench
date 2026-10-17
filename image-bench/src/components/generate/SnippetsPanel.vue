@@ -154,7 +154,7 @@ const snippetTitle = item => [item.prompt, item.negative && `Negative: ${item.ne
              @keydown.esc.stop="filter ? filter = '' : emit('close')">
     </label>
     <div class="list">
-      <TreeView :nodes="store.nodes" :selected-key="selected" storage-key="imageBench_librarySnippetsFolded" default-open
+      <TreeView :nodes="store.nodes" :selected-key="selected" storage-key="imageBench_snippetsUnfolded"
                 keep-focus click-toggles :filter="matches" :empty-text="matches ? 'No snippets match' : 'No snippets yet'"
                 @select="onSelect" @middle="onMiddle">
         <template #row="{node}">

@@ -121,18 +121,27 @@ def get_store_file_path(base_dir: str, filename: str) -> str:
     return os.path.join(base_dir, "store", filename)
 
 
-def serve_store_file_content(base_dir: str, filename: str) -> str:
+# The snippets of a new install, styles of comfyui-styles-all and Fooocus (see THIRD_PARTY_LICENSES)
+DEFAULT_SNIPPETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_snippets.json")
+
+
+def serve_store_file_content(base_dir: str, filename: str, default_file: str = "") -> str:
     """
     Read store file content.
 
     Args:
         base_dir: Base directory containing 'store' folder
         filename: Name of file in store folder
+        default_file: Path of a file served while the store file doesn't exist
 
     Returns:
-        File content as string, or empty string if file doesn't exist
+        File content as string, or empty string if neither file exists
     """
     file_path = get_store_file_path(base_dir, filename)
+
+    if default_file and not os.path.exists(file_path):
+        file_path = default_file
+
     return read_file_content(file_path, "")
 
 

@@ -202,7 +202,8 @@ async def update_explore_presets(request):
 # Snippets of the Library tab, inserted into the prompts of the Generate tab
 @PromptServer.instance.routes.get(BASE_PATH + "/snippets")
 async def get_snippets(request):
-    content = persist.serve_store_file_content(get_extension_root(), SNIPPETS_FILE)
+    content = persist.serve_store_file_content(get_extension_root(), SNIPPETS_FILE,
+                                               persist.DEFAULT_SNIPPETS_FILE)
     return web.Response(text=content, content_type="application/json")
 
 

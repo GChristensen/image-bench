@@ -147,7 +147,7 @@ const snippetTitle = item => [item.prompt, item.negative && `Negative: ${item.ne
              spellcheck="false" @keydown.esc.stop="filter = ''">
     </label>
     <div class="list">
-      <TreeView :nodes="store.nodes" :selected-key="selected" storage-key="imageBench_librarySnippetsFolded" default-open
+      <TreeView :nodes="store.nodes" :selected-key="selected" storage-key="imageBench_snippetsUnfolded"
                 :filter="matches" :can-drop="matches ? null : canDrop"
                 :empty-text="matches ? 'No snippets match' : 'No snippets yet'"
                 @select="node => selected = node.key" @menu="onMenu" @move="onMove"

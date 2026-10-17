@@ -20,11 +20,11 @@ webui_dest := env("WEBUI_DEST", "")
 comfy_dest := env("COMFY_DEST", "")
 
 # Build and copy the code files of the extension to the remote WebUI install (symlinked shared code included)
-deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html") (_deploy_docs webui_dest) (_deploy_editors webui_dest)
+deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html default_snippets.json") (_deploy_docs webui_dest) (_deploy_editors webui_dest)
 
 # Build and copy the code files of the extension and its workflows to the remote ComfyUI install
 # (symlinked shared code included)
-deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_docs comfy_dest) (_deploy_editors comfy_dest)
+deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md default_snippets.json") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_docs comfy_dest) (_deploy_editors comfy_dest)
 
 # The model docs, into the default docs folder of the remote install
 _deploy_docs dest: (_deploy "model-docs/docs" (dest + "/model_docs") "*")
