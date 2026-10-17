@@ -126,6 +126,8 @@ function setGenerateUiPreset(index, value) {
     </div>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.openInWindow"
     >Open Image Bench in a popup window instead of a browser tab</label>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.showHostButton"
+    >Show the Image Bench button in the {{ HOST_NAME }} interface</label>
     <h3>Generation</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.flashGeneratedTab"
     >Flash the Generated tab when an image arrives while another tab is shown</label>

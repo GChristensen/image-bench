@@ -56,6 +56,7 @@ const controlNetRecorder = createControlNetRecorder(controlNet);
 
 let appConfig;
 let modelInfoButton;
+let openButton;
 // Where images sent from the editor go, set in the Generate tab of the popup: 'input' or 'reference'
 let editorTarget = 'input';
 
@@ -189,19 +190,21 @@ async function initUI() {
 
     modelInfoButton = createHeaderButton('Civitai Model Info', "ℹ️", {}, onShowModelInfo,
         document.querySelector(SELECTORS.MODEL_REFRESH_BUTTON));
-    updateModelInfoButton();
-    // The setting may be changed in the popup, the user then returns to this window
+    openButton = createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
+    updateHeaderButtons();
+    // The settings may be changed in the popup, the user then returns to this window
     window.addEventListener("focus", async () => {
         appConfig = await loadAppConfig() || appConfig;
-        updateModelInfoButton();
+        updateHeaderButtons();
     });
 
-    createHeaderButton('Image Bench', "🔬",  {}, onShowWindow);
     popupManager.dispose();
 }
 
-function updateModelInfoButton() {
+function updateHeaderButtons() {
     modelInfoButton.style.display = appConfig?.addModelInfoButton ? "" : "none";
+    // Hidden by default: Image Bench is opened by its URL (/image-bench/app)
+    openButton.style.display = appConfig?.showHostButton ? "" : "none";
 }
 
 /**

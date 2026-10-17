@@ -36,6 +36,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Show the button that opens Image Bench in the host UI (disabled unless set to true: the app is opened by its URL)
+    const showHostButton = computed({
+        get() {
+            return _config.showHostButton ?? false;
+        },
+        set(v) {
+            _config.showHostButton = v;
+            return persist();
+        }
+    });
+
     // Civitai domain of the model pages: "com" or "red"
     const civitaiDomain = computed({
         get() {
@@ -192,6 +203,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         repositionConfigPresetsDropdown,
         addModelInfoButton,
         openInWindow,
+        showHostButton,
         civitaiDomain,
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,

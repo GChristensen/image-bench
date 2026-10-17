@@ -121,7 +121,10 @@ const hostOrigin = location.origin;
     <section id="manual-window">
       <h2>The window</h2>
       <p>
-        To open Image Bench, click the <b>🔬 Image Bench</b> button
+        Image Bench is usually opened by its link (see <i>Opening Image Bench without the {{ HOST_NAME }} page</i>
+        below).
+        To open it from the {{ HOST_NAME }} page instead, turn on the setting <b>Show the Image Bench button in the
+        {{ HOST_NAME }} interface</b> and click the <b>🔬 Image Bench</b> button
         {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}. It opens in a browser tab,
         which stays connected to the {{ HOST_NAME }} page it was opened from; drag that tab into a window of its
         own, so that the {{ HOST_NAME }} page stays the active tab of its window (see below). With the setting
@@ -710,6 +713,9 @@ const hostOrigin = location.origin;
       <p>The <b>Settings</b> tab holds the following options, which are saved on the {{ HOST_NAME }} server:</p>
       <ul>
         <li><b>Accent color</b> — the highlight color of the window: buttons, active tabs, selections.</li>
+        <li><b>Show the Image Bench button in the {{ HOST_NAME }} interface</b> — shows the 🔬 Image Bench button
+          {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}, which opens Image Bench from
+          that page. Off by default, since Image Bench is opened by its <code>/image-bench/app</code> link.</li>
         <li><b>Open Image Bench in a popup window instead of a browser tab</b> — the 🔬 button and the
           <code>/image-bench/app</code> link open Image Bench in a popup window (without bookmarks and extension
           buttons) instead of a regular browser tab. Takes effect the next time Image Bench is opened.</li>

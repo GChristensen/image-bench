@@ -21,6 +21,7 @@ import {messageBus} from "./shared/messaging/messageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager, getEmbeddingWindow} from "./shared/popup.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
+import {loadAppConfig} from "./shared/utils.js";
 
 // Create popup manager instance with WebSocket integration for ComfyUI
 const popupManager = createPopupManager({
@@ -269,6 +270,16 @@ function addToolbarButton() {
     });
 
     button.addEventListener('click', () => popupManager.open());
+
+    // Hidden by default: Image Bench is opened by its URL (/image-bench/app)
+    const updateButton = async () => {
+        const appConfig = await loadAppConfig();
+        button.style.display = appConfig?.showHostButton ? "" : "none";
+    };
+    button.style.display = "none";
+    updateButton();
+    // The setting may be changed in the popup, the user then returns to this window
+    window.addEventListener("focus", updateButton);
 
     // Insert button before the settings group (same approach as rgthree)
     app.menu.settingsGroup.element.before(button);
