@@ -4,7 +4,7 @@ import { KIND_COMPARE } from "@/consts.js";
 import { useTrayStoreState } from "@/stores/composables/useTrayStoreState.js";
 
 /**
- * Images of the Compare tab, saved like the trays. Images sent from Photoshop are added to the store file
+ * Images of the Compare tab, saved like the trays. Images sent from the editor are added to the store file
  * by the backend and arrive as COMPARE_IMAGE while the popup is open.
  */
 export const useCompareStore = defineStore('compare', () => {
@@ -35,7 +35,7 @@ export const useCompareStore = defineStore('compare', () => {
     state.persist();
   }
 
-  // Images uploaded or sent from Photoshop are already in the compare directory
+  // Images uploaded or sent from the editor are already in the compare directory
   function onSDEvent(e) {
     if (e.type === "COMPARE_IMAGE" && e.image)
       state.addImage(e.image);

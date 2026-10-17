@@ -76,6 +76,9 @@
   --color-background: var(--ib-bg);
   --color-text: var(--ib-text);
   --color-border: var(--ib-border);
+
+  /* Dark native scrollbars and form controls in Chrome */
+  color-scheme: dark;
 }
 
 
@@ -85,6 +88,12 @@
   box-sizing: border-box;
   margin: 0;
   font-weight: normal;
+}
+
+/* scrollbar-width is not inherited */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ib-border-2) transparent;
 }
 
 body {

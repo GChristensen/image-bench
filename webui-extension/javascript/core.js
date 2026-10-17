@@ -18,7 +18,7 @@ import {UIOperations} from "./facade/UIOperations.js";
 import {messageBus} from "./shared/messaging/MessageBus.js";
 import {SELECTORS} from "./adapters/selectors.js";
 import {restoreUiParams, saveUiParams} from "./persistence.js";
-import {initControlNetPreviewButtons, initPhotoshopBridge} from "./photoshop.js";
+import {initControlNetPreviewButtons, initEditorBridge} from "./editor.js";
 import {createHeaderButton} from "./utils_html.js";
 import {createWebUIMirror} from "./mirror.js";
 import {createControlNet} from "./controlnet.js";
@@ -48,7 +48,7 @@ const {exploration: explorationStrategy, batch: batchStrategy, processing: proce
 
 // txt2img parameters mirrored in the Generate tab of the popup
 const mirror = createWebUIMirror(uiOperations, adapter, {sendMessage: sendPopupMessage, isOpen: popupManager.isOpen});
-// ControlNet unit mirrored in the ControlNet tab of the popup, also the target of the Photoshop ControlNet buttons
+// ControlNet unit mirrored in the ControlNet tab of the popup, also the target of the ControlNet buttons of the editor plugin
 const controlNet = createControlNet(uiOperations, adapter, {sendMessage: sendPopupMessage, isOpen: popupManager.isOpen},
     showAlert);
 // ControlNet inputs of each generation, read when Generate is clicked and carried by its images
@@ -56,8 +56,8 @@ const controlNetRecorder = createControlNetRecorder(controlNet);
 
 let appConfig;
 let modelInfoButton;
-// Where images sent from Photoshop go, set in the Generate tab of the popup: 'input' or 'reference'
-let photoshopTarget = 'input';
+// Where images sent from the editor go, set in the Generate tab of the popup: 'input' or 'reference'
+let editorTarget = 'input';
 
 export async function init() {
     setGenerationState("BATCH_GENERATION");
@@ -78,8 +78,8 @@ export async function init() {
     // Set up message bus event handlers
     setupMessageBusHandlers();
 
-    // Receive images sent from the Photoshop plugin
-    initPhotoshopBridge(onPhotoshopImage, image => sendPopupMessage({type: "COMPARE_IMAGE", image}));
+    // Receive images sent from the editor plugin
+    initEditorBridge(onEditorImage, image => sendPopupMessage({type: "COMPARE_IMAGE", image}));
     initControlNetPreviewButtons(showAlert);
 
     // Only user clicks fire mousedown, strategies click the buttons programmatically
@@ -316,8 +316,8 @@ async function onMessage(msg) {
         await mirror.setInputImage(payload.kind, payload.file, payload.mode)
     else if (payload.type === "EDIT_REFERENCES")
         await mirror.editReferences(payload.edit)
-    else if (payload.type === "SET_PHOTOSHOP_TARGET")
-        photoshopTarget = payload.target
+    else if (payload.type === "SET_EDITOR_TARGET")
+        editorTarget = payload.target
     else if (payload.type === "CONTROLNET_SUBSCRIBE")
         controlNet.subscribe(payload.active, payload.unit)
     else if (payload.type === "SET_CONTROLNET_PARAMS")
@@ -389,7 +389,7 @@ function refreshModelLists() {
 }
 
 /**
- * Put an image sent from Photoshop where the Generate tab of the popup routes it: a new reference image
+ * Put an image sent from the editor where the Generate tab of the popup routes it: a new reference image
  * of the shown generation tab, or the input of the shown mode. Without the popup, the input of img2img
  * if its img2img mode is shown, else the inpaint upload (the mask always goes there).
  * The ControlNet buttons of the plugin send to the unit shown in the ControlNet tab of the popup
@@ -397,13 +397,13 @@ function refreshModelLists() {
  * @param {File} file
  * @param {'input'|'cn_preprocess'|'cn_image'|'cn_mask'} target
  */
-async function onPhotoshopImage(kind, file, target) {
+async function onEditorImage(kind, file, target) {
     if (target !== 'input') {
-        await controlNet.onPhotoshopImage(target, file);
+        await controlNet.onEditorImage(target, file);
         return;
     }
 
-    if (kind === 'image' && photoshopTarget === 'reference' && popupManager.isOpen()) {
+    if (kind === 'image' && editorTarget === 'reference' && popupManager.isOpen()) {
         await mirror.editReferences({add: [file]});
         return;
     }

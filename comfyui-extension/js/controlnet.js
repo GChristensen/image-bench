@@ -1,5 +1,5 @@
 /**
- * ControlNet units for the ControlNet tab of the popup and the ControlNet targets of the Photoshop plugin,
+ * ControlNet units for the ControlNet tab of the popup and the ControlNet targets of the editor plugin,
  * the ComfyUI counterpart of webui-extension/javascript/controlnet.js with the same messages.
  * Unit N is the ControlNet apply node marked ib:cn:N (node types in the "controlnet" section of node_config.json):
  * its strength and percent range are the weight and guidance range, the loader linked to its control_net input
@@ -15,7 +15,7 @@ import {MARKER_ROLES, getMarkerTargets, getNodeMarkerIndex, getRoleMarker, getTa
 import {findUpstream, getLinkedSource, MODE_ALWAYS, MODE_BYPASS} from "./graph.js";
 import {getImageSize, getMaskPreview, getTargetImageUrl, setLoadImage, uploadInputImage,
         uploadInputMask} from "./images.js";
-import {sendImageToPhotoshop} from "./shared/photoshop-send.js";
+import {sendImageToEditor} from "./shared/editor-send.js";
 import {getWidgetChoices} from "./params.js";
 
 const POLL_INTERVAL = 600;
@@ -53,7 +53,7 @@ function getPixelPerfectResolution(image, width, height) {
  */
 export function createControlNet({app, api, ops, popup, showAlert}) {
     let timer = null;
-    // Unit shown in the popup, also the one that receives images from Photoshop
+    // Unit shown in the popup, also the one that receives images from the editor
     let unit = 0;
     let lastState = null;
     let lastImages = null;
@@ -479,16 +479,16 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         return ownedPrompts.has(promptId);
     }
 
-    // ---------- Photoshop ----------
+    // ---------- Editor ----------
 
     /**
-     * Put an image sent from Photoshop (already saved to the input directory) into the unit shown in the popup
+     * Put an image sent from the editor (already saved to the input directory) into the unit shown in the popup
      * (the first one if it was not opened): cn_preprocess runs the preprocessor and sends the preview back
-     * to Photoshop, cn_image is used as the control image without a preprocessor, cn_mask becomes the mask of the unit
+     * to the editor, cn_image is used as the control image without a preprocessor, cn_mask becomes the mask of the unit
      * @param {'cn_preprocess'|'cn_image'|'cn_mask'} target
      * @param {string} filename
      */
-    async function onPhotoshopImage(target, filename) {
+    async function onEditorImage(target, filename) {
         const index = unit;
 
         try {
@@ -505,13 +505,13 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
                 previews.delete(index);
             }
             else if (target === 'cn_preprocess')
-                await preprocessToPhotoshop(index);
+                await preprocessToEditor(index);
         } finally {
             pollIfActive();
         }
     }
 
-    async function preprocessToPhotoshop(index) {
+    async function preprocessToEditor(index) {
         if (!hasPreprocessorNode()) {
             showAlert('Running a ControlNet preprocessor needs comfyui_controlnet_aux (AIO_Preprocessor).');
             return;
@@ -526,7 +526,7 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         const preprocessor = resolved?.preprocessor
             ? getTargetWidget(resolved.preprocessor, 'preprocessor')?.value
             : getChoice(index).preprocessor;
-        const error = await sendImageToPhotoshop(preview, `ControlNet ${index + 1} ${preprocessor || ''} preview`);
+        const error = await sendImageToEditor(preview, `ControlNet ${index + 1} ${preprocessor || ''} preview`);
 
         if (error)
             showAlert(error);
@@ -614,5 +614,5 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         SET_CONTROLNET_TAB: () => {}
     };
 
-    return {handlers, ownsPrompt, onPhotoshopImage, captureUnits, restoreUnits};
+    return {handlers, ownsPrompt, onEditorImage, captureUnits, restoreUnits};
 }

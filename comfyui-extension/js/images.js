@@ -33,7 +33,7 @@ export async function uploadInputImage(file, name) {
 
 /**
  * Upload a mask file (white is masked, or transparent where masked) to the ComfyUI input directory.
- * The backend stores it as an RGBA image readable as a mask by any ComfyUI loader (photoshop.mask_to_png).
+ * The backend stores it as an RGBA image readable as a mask by any ComfyUI loader (editor.mask_to_png).
  * @param {File|Blob} file
  * @param {string} name - File name in the input directory, overwritten
  * @returns {Promise<string>} Widget value of the uploaded file

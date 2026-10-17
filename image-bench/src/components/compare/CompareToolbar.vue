@@ -1,6 +1,7 @@
 <script setup>
 import {computed} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
+import {editorIcon, editorName} from "@/editor.js";
 import {REGION_ASPECTS} from "@/components/compare/compareGeometry.js";
 
 /**
@@ -58,7 +59,7 @@ const props = defineProps({
 const pixelsOf = computed(() => props.cropView ? "largest crop" : "first image");
 
 defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCrop", "zoom",
-  "cycleSeparator", "savePng", "sendToPhotoshop", "removeMarked", "clear"]);
+  "cycleSeparator", "savePng", "sendToEditor", "removeMarked", "clear"]);
 </script>
 
 <template>
@@ -88,8 +89,8 @@ defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCr
     <template v-if="cropView">
       <button class="ib" title="Save the crops as one PNG image" aria-label="Save the crops as PNG"
               :disabled="exporting" @click="$emit('savePng')"><AppIcon name="save" :size="14"/></button>
-      <button class="ib" title="Send the crops to Photoshop as a new document" aria-label="Send the crops to Photoshop"
-              :disabled="exporting" @click="$emit('sendToPhotoshop')"><AppIcon name="photoshop" :size="14"/></button>
+      <button class="ib" :title="`Send the crops to ${editorName} as a new document`" :aria-label="`Send the crops to ${editorName}`"
+              :disabled="exporting" @click="$emit('sendToEditor')"><AppIcon :name="editorIcon()" :size="14"/></button>
     </template>
 
     <div class="vsep"></div>

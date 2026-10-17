@@ -59,7 +59,7 @@ export function createReferences({app, ops}) {
 
     /**
      * Put images into the free slots; the last image replaces the last slot if none is free.
-     * Each slot has its own file, so a file of the input directory (sent from Photoshop) is copied
+     * Each slot has its own file, so a file of the input directory (sent from the editor) is copied
      * @param {Array<File|string>} files - Files, or names of files in the input directory
      * @returns {Promise<boolean>} Whether the workflow has reference slots
      */

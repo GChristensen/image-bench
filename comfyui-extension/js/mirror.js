@@ -25,8 +25,8 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
     let timer = null;
     let lastState = null;
     let lastInputs = null;
-    // Where images sent from Photoshop go: 'input' or 'reference' (set in the Generate tab)
-    let photoshopTarget = 'input';
+    // Where images sent from the editor go: 'input' or 'reference' (set in the Generate tab)
+    let editorTarget = 'input';
 
     /**
      * @returns {'txt2img'|'img2img'|'inpaint'}
@@ -173,12 +173,12 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
         SET_WEBUI_PARAMS: payload => applyParams(payload.params),
         SET_INPUT_IMAGE: payload => setInputImage(payload.kind, payload.file),
         EDIT_REFERENCES: payload => editReferences(payload.edit),
-        SET_PHOTOSHOP_TARGET: payload => photoshopTarget = payload.target,
+        SET_EDITOR_TARGET: payload => editorTarget = payload.target,
         // WebUI features the Generate tab does not offer in ComfyUI
         REUSE_SEED: () => {},
         LOCK_WEBUI_PROMPTS: () => {},
         SET_GENERATION_MODE: () => {}
     };
 
-    return {handlers, getMode, getPhotoshopTarget: () => photoshopTarget, pollIfActive};
+    return {handlers, getMode, getEditorTarget: () => editorTarget, pollIfActive};
 }

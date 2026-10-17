@@ -1,6 +1,6 @@
 <script setup>
 /**
- * Left pane of the Library projects: the folders and projects under the project root, the search by name and prompt
+ * Left pane of the Projects tab: the folders and projects under the project root, the search by name and prompt
  * words, #tag and host:, the tags of the shown projects with their counts, and the file operations
  * (context menu, dragging onto folders, F2, Delete). Double-click or Enter opens a project.
  */

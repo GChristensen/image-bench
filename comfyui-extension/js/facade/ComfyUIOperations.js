@@ -341,7 +341,7 @@ export class ComfyUIOperations {
     // ==================== INPAINT IMAGES ====================
 
     /**
-     * Load an image sent from Photoshop into the node marked with ib:img (kind=image) or ib:mask (kind=mask)
+     * Load an image sent from the editor into the node marked with ib:img (kind=image) or ib:mask (kind=mask)
      * @param {'image'|'mask'} kind - Image kind
      * @param {string} filename - Name of the file in the ComfyUI input directory
      * @returns {boolean} Whether a marked node was found

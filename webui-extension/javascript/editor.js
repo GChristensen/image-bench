@@ -1,12 +1,12 @@
 /**
- * Receives images sent by the Image Bench Photoshop plugin and passes them to core.js, which puts them
+ * Receives images sent by the editor plugin (Photoshop, Krita) and passes them to core.js, which puts them
  * into img2img (the inpaint upload by default) or a ControlNet unit. The connection is kept regardless of the popup state.
  */
 
 import {createWebSocket} from "./shared/websocket.js";
-import {sendImageToPhotoshop} from "./shared/photoshop-send.js";
+import {sendImageToEditor} from "./shared/editor-send.js";
 
-const ENDPOINT = '/image-bench/photoshop/websocket';
+const ENDPOINT = '/image-bench/editor/host-websocket';
 const RECONNECT_DELAY = 5000;
 
 /**
@@ -16,17 +16,17 @@ const RECONNECT_DELAY = 5000;
  * @param {(image: Object) => void} onCompareImage - Receives the image data of an image the backend has added
  *   to the Compare tab (target 'compare')
  */
-export function initPhotoshopBridge(onImage, onCompareImage) {
+export function initEditorBridge(onImage, onCompareImage) {
     createWebSocket({
         endpoint: ENDPOINT,
-        onMessage: (e) => onPhotoshopMessage(onImage, onCompareImage, e),
-        onClose: () => setTimeout(() => initPhotoshopBridge(onImage, onCompareImage), RECONNECT_DELAY)
+        onMessage: (e) => onEditorMessage(onImage, onCompareImage, e),
+        onClose: () => setTimeout(() => initEditorBridge(onImage, onCompareImage), RECONNECT_DELAY)
     });
 }
 
 /**
- * Add a "Photoshop" link next to Download/Close under ControlNet preprocessor previews, which sends
- * the preview to Photoshop as a new document. The preview elements have random uuid ids, so they are
+ * Add an "Editor" link next to Download/Close under ControlNet preprocessor previews, which sends
+ * the preview to the connected editor as a new document. The preview elements have random uuid ids, so they are
  * located by class; the observer covers units that Gradio renders later.
  * @param {(message: string) => void} showAlert - Shows errors in the popup or in the WebUI window
  */
@@ -69,8 +69,8 @@ function createSendBlock(closeBlock, showAlert) {
 
     const link = block.querySelector("a");
     link.removeAttribute("onclick");
-    link.title = "Send to Photoshop as a new document";
-    link.textContent = "Photoshop";
+    link.title = "Send to the connected editor (Photoshop, Krita) as a new document";
+    link.textContent = "Editor";
     link.addEventListener("click", () => sendControlNetPreview(link, showAlert));
 
     return block;
@@ -86,16 +86,16 @@ async function sendControlNetPreview(link, showAlert) {
 
     // txt2img_controlnet_ControlNet-0_generated_image -> txt2img ControlNet-0 preview
     const unit = container.id.replace(/_generated_image$/, "").replace("_controlnet_", " ");
-    const error = await sendImageToPhotoshop(image.src, `${unit} preview`, true);
+    const error = await sendImageToEditor(image.src, `${unit} preview`, true);
 
     if (error)
         showAlert(error);
 }
 
-async function onPhotoshopMessage(onImage, onCompareImage, e) {
+async function onEditorMessage(onImage, onCompareImage, e) {
     const msg = JSON.parse(e.data);
 
-    if (msg.type !== "PHOTOSHOP_IMAGE")
+    if (msg.type !== "EDITOR_IMAGE")
         return;
 
     if (msg.target === "compare") {
@@ -109,9 +109,9 @@ async function onPhotoshopMessage(onImage, onCompareImage, e) {
         if (!response.ok)
             throw new Error(`HTTP ${response.status}`);
 
-        const file = new File([await response.blob()], `photoshop-${msg.kind}.png`, {type: "image/png"});
+        const file = new File([await response.blob()], `editor-${msg.kind}.png`, {type: "image/png"});
         await onImage(msg.kind, file, msg.target ?? "input");
     } catch (error) {
-        console.error(`[Image Bench] Unable to insert ${msg.kind} from Photoshop:`, error);
+        console.error(`[Image Bench] Unable to insert ${msg.kind} from the editor:`, error);
     }
 }

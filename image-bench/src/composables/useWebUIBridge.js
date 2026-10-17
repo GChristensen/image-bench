@@ -57,13 +57,13 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'EDIT_REFERENCES', edit });
   };
 
-  // Where images sent from Photoshop go: 'input' or 'reference'
-  const setPhotoshopTarget = (target) => {
-    sendWebUIMessage({ type: 'SET_PHOTOSHOP_TARGET', target });
+  // Where images sent from the editor go: 'input' or 'reference'
+  const setEditorTarget = (target) => {
+    sendWebUIMessage({ type: 'SET_EDITOR_TARGET', target });
   };
 
   // Start or stop mirroring a ControlNet unit (CONTROLNET_STATE and CONTROLNET_IMAGES messages);
-  // the unit also receives the images sent to ControlNet from Photoshop
+  // the unit also receives the images sent to ControlNet from the editor
   const subscribeControlNet = (active, unit) => {
     sendWebUIMessage({ type: 'CONTROLNET_SUBSCRIBE', active, unit });
   };
@@ -152,7 +152,7 @@ export function useWebUIBridge() {
     syncWorkflows,
     setInputImage,
     editReferences,
-    setPhotoshopTarget,
+    setEditorTarget,
     subscribeMirror,
     subscribeControlNet,
     setControlNetParams,

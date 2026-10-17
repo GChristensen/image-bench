@@ -72,7 +72,7 @@ app.registerExtension({
         api.addEventListener("executed", handleExecuted);
         api.addEventListener("execution_start", handleExecutionStart);
         api.addEventListener("execution_error", handleExecutionError);
-        api.addEventListener("image-bench.photoshop", handlePhotoshopImage);
+        api.addEventListener("image-bench.editor", handleEditorImage);
 
         // Listen for postMessage from popup window
         window.addEventListener("message", handlePostMessage);
@@ -394,11 +394,11 @@ function handleExecutionError(event) {
 }
 
 /**
- * Load an image or a mask sent from Photoshop, which the backend has already saved to the input directory:
+ * Load an image or a mask sent from the editor, which the backend has already saved to the input directory:
  * into the node marked with ib:img or ib:mask, a new reference image if the Generate tab routes images there,
  * or the ControlNet unit shown in the ControlNet tab (target cn_*)
  */
-async function handlePhotoshopImage(event) {
+async function handleEditorImage(event) {
     const {kind, filename, target = "input"} = event.detail;
 
     // Already added to the Compare tab by the backend
@@ -408,12 +408,12 @@ async function handlePhotoshopImage(event) {
     }
 
     if (target !== "input") {
-        await controlNet?.onPhotoshopImage(target, filename);
+        await controlNet?.onEditorImage(target, filename);
         return;
     }
 
     // Without nodes marked ib:ref the image goes to the input
-    if (kind === "image" && mirror?.getPhotoshopTarget() === "reference" && popupManager.isOpen()) {
+    if (kind === "image" && mirror?.getEditorTarget() === "reference" && popupManager.isOpen()) {
         try {
             if (await references.addImages([filename])) {
                 mirror.pollIfActive();
@@ -429,8 +429,8 @@ async function handlePhotoshopImage(event) {
         return;
 
     showAlert(kind === "mask"
-        ? 'Unable to insert the mask from Photoshop: no node is marked "ib:mask" apart from the "ib:img" node.'
-        : 'Unable to insert the image from Photoshop: no node is marked "ib:img".');
+        ? 'Unable to insert the mask from the editor: no node is marked "ib:mask" apart from the "ib:img" node.'
+        : 'Unable to insert the image from the editor: no node is marked "ib:img".');
 }
 
 // Popup messages that start a generation, refused while one is active

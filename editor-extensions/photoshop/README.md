@@ -43,8 +43,8 @@ Requires Photoshop 2024 (25.0) or newer.
 
 - From Image Bench: the **Manual** tab of the Image Bench window has an **Install** button (copies the plugin as
   `just ps-deploy` does, asking for administrator rights on Windows; on the computer the host runs on) and a
-  **Download .ccx** link. The backend (`common-extension/shared_backend/photoshop_plugin.py`) finds the plugin in
-  `shared/photoshop-plugin` of the extension (copied there by `just deploy-webui` / `deploy-comfy`) or in this folder.
+  **Download .ccx** link. The backend (`common-extension/shared_backend/editor_plugins.py`, `uxp_install.py`) finds the plugin in
+  `shared/editor-extensions/photoshop` of the extension (copied there by `just deploy-webui` / `deploy-comfy`) or in this folder.
 - With the Creative Cloud app: run `just ps-package` (or **Package** in UXP Developer Tool), then double-click
   the produced `dist/*.ccx` file.
 - Without it: run `just ps-deploy` from an elevated shell. It copies the plugin to

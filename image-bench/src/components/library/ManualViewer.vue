@@ -69,7 +69,7 @@ const hostOrigin = location.origin;
       <p class="lead">
         Image Bench automates the repetitive micro-tasks of working with
         {{ isWebUI ? "SD WebUI (Forge / Forge Neo)" : "ComfyUI" }}: generating batches, comparing models,
-        collecting the best images, moving images to and from Photoshop, etc. Everything is done from one window,
+        collecting the best images, moving images to and from Photoshop or Krita, etc. Everything is done from one window,
         without hunting for controls in the {{ HOST_NAME }} page.
       </p>
       <p>
@@ -89,7 +89,7 @@ const hostOrigin = location.origin;
         <div>
           Image Bench works through the {{ HOST_NAME }} page, so that page must stay open in a browser window and
           remain the active tab of that window. The window itself need not be visible: minimize it, move it to
-          another display or let other windows cover it, and keep only Image Bench and Photoshop open.
+          another display or let other windows cover it, and keep only Image Bench and your editor open.
         </div>
       </div>
       <p>The window is organised into the following tabs:</p>
@@ -103,15 +103,18 @@ const hostOrigin = location.origin;
           best of several variants.</li>
         <li><b>Concept tray</b> and <b>Image tray</b> — permanent collections of the images worth keeping.</li>
         <li><b>Upscaled</b> — upscaled (Hires. fix) versions of the images you choose.</li>
-        <li><b>Library</b> — docs, your Markdown notes; snippets, prompt text inserted from the Generate tab;
-          projects, which keep the trays and the generation parameters of a piece of work; and this manual.</li>
+        <li><b>Library</b> — docs, your Markdown notes; snippets, prompt text inserted from the Generate tab; and
+          this manual.</li>
+        <li><AppIcon name="box" :size="13" class="inline-icon"/> <b>Project</b> (the chip at the right of the tab
+          bar) — the current project and, on a click, all projects, which keep the trays and the generation
+          parameters of a piece of work.</li>
         <li><AppIcon name="settings" :size="13" class="inline-icon"/> <b>Settings</b> (at the right end of the tab
           bar) — the options of the window.</li>
       </ul>
       <p>
-        A Photoshop plugin comes with the extension. It sends images from Photoshop to {{ HOST_NAME }} and opens
-        any image from Image Bench in Photoshop as a new document or a layer (see
-        <a href="#" @click.prevent="scrollTo('photoshop')">Photoshop</a>).
+        Plugins for Photoshop and Krita come with the extension. They send images from the editor to {{ HOST_NAME }}
+        and open any image from Image Bench in the editor as a new document or a layer (see
+        <a href="#" @click.prevent="scrollTo('editors')">Editors</a>).
       </p>
     </section>
 
@@ -133,7 +136,7 @@ const hostOrigin = location.origin;
       <div class="note">
         <AppIcon name="info" :size="15"/>
         <div>
-          The layout is designed for a window of <b>1200×800</b> pixels placed in a separate display above the main one with Photoshop,
+          The layout is designed for a window of <b>1200×800</b> pixels placed in a separate display above the main one with the editor,
           so that the two share the screen while {{ HOST_NAME }} stays in the background. An Image Bench window with larger dimensions fits more images in a
           row; a smaller one still works, though some toolbars wrap onto two lines.
         </div>
@@ -220,7 +223,8 @@ const hostOrigin = location.origin;
             the current model (it is the WebUI setting of that model family); <b>Use</b> passes the images to the
             model, and <b>Max side</b> limits their size (0 for no limit).</span>
           <AppIcon name="trash" :size="13" class="inline-icon"/> removes all references. The
-          <span class="kbd">Ps</span> <b>sends to</b> option decides whether an image arriving from Photoshop
+          <span class="kbd">Ps</span> <b>sends to</b> option (<span class="kbd">Kr</span> for Krita) decides whether
+          an image arriving from the editor
           becomes the input image or a new reference.</li>
         <li><b>Sampling, Seed and Hires. fix</b> groups. A seed of −1 means a random seed; the reuse button takes
           the seed of the image shown in the Result pane.</li>
@@ -246,8 +250,9 @@ const hostOrigin = location.origin;
           button before it switches between them, remembered per mode; Inpaint shows the inputs by default.</li>
         <li><b>Result, Input and Mask</b> panes. Upload, drop or paste an input image or an img2img mask onto its pane.
           The buttons of the Input pane also resize the generation to the size of the input image and show the
-          mask over it. While no generation runs, hovering the Result pane shows the send buttons of an image card
-          (ControlNet, Photoshop, Compare, the trays) for the image shown. In a wide window the image has a column of its own that fits the image size; otherwise it is below the
+          mask over it. While no generation runs, hovering the Result pane opens the action rim of an image card
+          (parameters, inpaint, ControlNet, editor, Compare, the trays, markings) for the image shown, above the input
+          thumbnail. In a wide window the image has a column of its own that fits the image size; otherwise it is below the
           LoRA list and fits the column width. Drag the grips to resize the negative prompt, the parameters and the filmstrip, the LoRA column, the
           image column or the image; double-click a grip to restore the automatic size.</li>
         <li><b>Generate</b> — makes one image and shows it with a live preview. Ask for more than one image (or
@@ -306,8 +311,8 @@ const hostOrigin = location.origin;
       </p>
       <p>
         The <b>Unit</b> buttons of the toolbar choose the unit; a dot marks the enabled ones. The unit chosen here
-        also receives the images sent with <b>Send to ControlNet</b> and the ControlNet commands of the Photoshop
-        plugin.
+        also receives the images sent with <b>Send to ControlNet</b> and the ControlNet commands of the editor
+        plugins.
       </p>
       <p>Each unit has the following controls:</p>
       <ul>
@@ -319,10 +324,10 @@ const hostOrigin = location.origin;
           to the apply node, and <b>Enable</b> bypasses the unit's nodes.</li>
         <li><b>Source</b> pane — the control image. Drop, paste or browse for it, or click
           <AppIcon name="controlnet" :size="13" class="inline-icon"/> <b>Send to ControlNet</b> on any image in
-          the lists to send it to the unit selected here. <b>To Photoshop</b> sends the shown control image or mask
-          to Photoshop.</li>
+          the lists to send it to the unit selected here. <b>To Photoshop</b> (or <b>To Krita</b>) sends the shown control
+          image or mask to the editor.</li>
         <li><b>Preprocessor</b> and <b>Run preprocessor</b> — the result appears in the <b>Preview</b> pane,
-          from where <b>To Photoshop</b> passes it on (middle-click or Shift+click: as a new layer); its other buttons copy,
+          from where <b>To Photoshop</b> / <b>To Krita</b> passes it on (middle-click or Shift+click: as a new layer); its other buttons copy,
           save and clear the preview. <b>Pixel Perfect</b> derives the preprocessor resolution
           from the image and the generation size.
           <span v-if="isWebUI">Pixel Perfect and <b>Allow Preview</b> are checked for you the first time a unit is
@@ -418,9 +423,9 @@ const hostOrigin = location.origin;
         prompt with different seeds or LoRAs. Add an image with its <AppIcon name="compare" :size="13"
         class="inline-icon"/> button (key <span class="kbd">A</span>) in any view or the large image view, by
         dragging it onto the <b>Compare</b> tab, from files with <AppIcon name="upload" :size="13"
-        class="inline-icon"/>, or from Photoshop with the plugin's <b>Compare</b> button. Like the trays, the tab
+        class="inline-icon"/>, or from the editor with the plugin's <b>Compare</b> button. Like the trays, the tab
         keeps its images across restarts (in the <code>image-bench/compare</code> folder of the outputs directory)
-        and is saved with the trays into a <a href="#" @click.prevent="scrollTo('library')">project</a>.
+        and is saved with the trays into a <a href="#" @click.prevent="scrollTo('projects')">project</a>.
         <b>Clear</b> removes them all from the tab (the files stay on disk).
       </p>
       <ul>
@@ -444,9 +449,9 @@ const hostOrigin = location.origin;
           as the window allows. The wheel scales them around the pointer (the zoom buttons too: 100% is the
           native resolution of the largest crop), and dragging pans them. <AppIcon name="save" :size="13" class="inline-icon"/> saves the crops as one PNG at
           their native resolution, and <AppIcon name="photoshop" :size="13" class="inline-icon"/> opens that image in
-          Photoshop as a new document.</li>
+          the editor as a new document.</li>
         <li><b>Image actions</b> — hovering over an image shows its buttons (parameters, ControlNet,
-          Photoshop, the trays, a comment shown below the buttons), a marking badge and <AppIcon name="close" :size="13" class="inline-icon"/>, which
+          editor, the trays, a comment shown below the buttons), a marking badge and <AppIcon name="close" :size="13" class="inline-icon"/>, which
           removes it from the tab (the file stays on disk). Crops show only their number and marking: right-click
           one for its actions, markings and Remove from compare, or use the keys. Middle-click or Shift+click an
           image to view it large (in Crops, click or middle-click it);
@@ -462,7 +467,7 @@ const hostOrigin = location.origin;
         The two trays are permanent collections, stored on the {{ HOST_NAME }} server, so they survive restarts.
         One way to use them: let the <b>concept tray</b> gather promising ideas — compositions, prompts, seeds
         to return to — and the <b>image tray</b> the images you mean to finish by upscaling, refining or editing
-        them in Photoshop. The same buttons copy images from one tray to the other.
+        them in the editor. The same buttons copy images from one tray to the other.
       </p>
       <p>
         You can also drag a thumbnail by its image onto the <b>Concept tray</b> or <b>Image tray</b> tab. Images
@@ -505,8 +510,8 @@ const hostOrigin = location.origin;
         <li><b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (parameters
           included) or a tray archive (.zip). A tray saved in a project is a folder of
           <code>ib_project/trays</code> in the same layout: zip its contents to import it. The
-          trays themselves are saved into the projects of the
-          <a href="#" @click.prevent="scrollTo('library')">Library</a>.</li>
+          trays themselves are saved into the
+          <a href="#" @click.prevent="scrollTo('projects')">projects</a>.</li>
       </ul>
       <div v-if="isComfy" class="note warn">
         <AppIcon name="alert" :size="15"/>
@@ -537,12 +542,11 @@ const hostOrigin = location.origin;
     <section id="manual-library">
       <h2><AppIcon name="library" :size="17"/>Library</h2>
       <p>
-        The Library tab has four parts, switched at the top of its left column: <b>Docs</b>
+        The Library tab has three parts, switched at the top of its left column: <b>Docs</b>
         <AppIcon name="book" :size="13" class="inline-icon"/>, <b>Snippets</b>
-        <AppIcon name="snippet" :size="13" class="inline-icon"/>, <b>Projects</b>
-        <AppIcon name="box" :size="13" class="inline-icon"/> and <b>Manual</b>
-        <AppIcon name="help" :size="13" class="inline-icon"/>. The switch names only the part shown; the others are
-        their icons, the same as those of their items in the tree.
+        <AppIcon name="snippet" :size="13" class="inline-icon"/> and <b>Manual</b>
+        <AppIcon name="help" :size="13" class="inline-icon"/>. The icons are the same as those of their items in the
+        tree.
       </p>
       <h3 id="manual-library-docs">Docs</h3>
       <p>
@@ -558,7 +562,29 @@ const hostOrigin = location.origin;
         (spaces and underscores are the same) to find it; exact and leading matches come first, then the more used
         tags. Click a tag to copy it with spaces for underscores, as it is written in prompts.
       </p>
-      <h3 id="manual-library-projects">Projects</h3>
+      <h3 id="manual-library-snippets">Snippets</h3>
+      <p>
+        Snippets are pieces of prompt text, organised in folders, with an optional negative part, inserted from
+        the Snippets panel of the Generate tab. <code>{}</code> in a snippet stands for the selected prompt
+        text, which Shift+click wraps, e.g. <code>(({}:1.2))</code>. Edit a snippet in the right pane; the changes
+        are saved as you type. Drag snippets to reorder them or onto a folder. The
+        <AppIcon name="download" :size="13" class="inline-icon"/> button imports the styles of a WebUI
+        <code>styles.csv</code> file<template v-if="isWebUI"> or of this WebUI</template> as snippets
+        (<code>{prompt}</code> becomes <code>{}</code>).
+      </p>
+      <h3 id="manual-library-manual">Manual</h3>
+      <p>
+        This manual. The contents at the left follow the chapter you read and scroll to the one you click; the
+        manual keeps its place while another part of the Library is shown.
+      </p>
+    </section>
+
+    <section id="manual-projects">
+      <h2><AppIcon name="box" :size="17"/>Projects</h2>
+      <p>
+        The projects have no tab of their own: the project chip at the right of the tab bar is their tab. Click
+        it to show the projects, with the current one selected; while they are shown, the chip is highlighted.
+      </p>
       <p>
         A project keeps a piece of work: the image tray, the concept tray and the Compare tab (the
         <i>workspace</i>), the parameters of the Generate and ControlNet tabs with the ControlNet images, and in
@@ -566,7 +592,7 @@ const hostOrigin = location.origin;
         folder of the {{ HOST_NAME }} server computer, also a network (UNC) path such as
         <code>\\server\share\projects</code>, since {{ HOST_NAME }} may run on another computer. A folder
         containing an <code>ib_project</code> folder is a project; Image Bench keeps its data there, and the
-        other image files of the project folder (your edits, Photoshop files, references) are listed in the
+        other image files of the project folder (your edits, Photoshop or Krita files, references) are listed in the
         project.
       </p>
       <ul>
@@ -583,8 +609,9 @@ const hostOrigin = location.origin;
           changed since the last save. Its <AppIcon name="save" :size="13" class="inline-icon"/> button or
           <span class="kbd">Ctrl</span>+<span class="kbd">S</span> saves the workspace into it; nothing is saved
           automatically. Image Bench remembers the current project across restarts. Without a current project the
-          chip reads <i>No project</i>: a click shows the projects here, and its
-          <AppIcon name="plus" :size="13" class="inline-icon"/> button creates a new project.</li>
+          chip reads <i>No project</i>, and its <AppIcon name="plus" :size="13" class="inline-icon"/> button
+          creates a new project. Right-click the chip for the recent projects, to open one without showing the
+          projects. Drop image cards on the chip to copy them into the folder of the current project.</li>
         <li><b>New project</b> creates the folder and, unless unchecked, saves the workspace into it and makes it
           current.</li>
         <li><b>Open</b> (or double-click) restores the trays and the parameters of a project and makes it current.
@@ -606,31 +633,17 @@ const hostOrigin = location.origin;
         <li><b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b> and <b>Files</b> (tabs under the parameters) — the
           images of the trays as the project was last saved, and the image files of the project folder, also PSD and
           TIFF. Hovering over a tray image shows its buttons: generation parameters, reuse the prompts and all parameters <AppIcon name="sliders" :size="13" class="inline-icon"/>,
-          set as final, add to compare, send to ControlNet and to Photoshop. Click one to view it
+          set as final, add to compare, send to ControlNet and to the editor. Click one to view it
           (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click to open it in
-          a new tab, right-click for the menu (final image, Compare, Photoshop, and deleting a file of the project folder).</li>
+          a new tab, right-click for the menu (final image, Compare, editor, and deleting a file of the project folder).</li>
       </ul>
-      <h3 id="manual-library-snippets">Snippets</h3>
-      <p>
-        Snippets are pieces of prompt text, organised in folders, with an optional negative part, inserted from
-        the Snippets panel of the Generate tab. <code>{}</code> in a snippet stands for the selected prompt
-        text, which Shift+click wraps, e.g. <code>(({}:1.2))</code>. Edit a snippet in the right pane; the changes
-        are saved as you type. Drag snippets to reorder them or onto a folder. The
-        <AppIcon name="download" :size="13" class="inline-icon"/> button imports the styles of a WebUI
-        <code>styles.csv</code> file<template v-if="isWebUI"> or of this WebUI</template> as snippets
-        (<code>{prompt}</code> becomes <code>{}</code>).
-      </p>
-      <h3 id="manual-library-manual">Manual</h3>
-      <p>
-        This manual. The contents at the left follow the chapter you read and scroll to the one you click; the
-        manual keeps its place while another part of the Library is shown.
-      </p>
     </section>
 
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        Hovering over an image of the Generated, Upscaled and Explore tabs and the trays opens its action rim: a
+        Hovering over an image of the Generated, Upscaled and Explore tabs, the trays and the Result pane of the
+        Generate tab opens its action rim: a
         ring of colored sectors around the middle of the image, one per action: the parameters at the top, then
         clockwise the send actions, the trays, Delete at the bottom, and generating and upscaling. The middle of the
         ring names the sector under the pointer and its key. Sectors with an alternative action perform it on a
@@ -667,7 +680,7 @@ const hostOrigin = location.origin;
         <tr><td><AppIcon name="controlnet" :size="14"/></td><td><span class="kbd">N</span> Sends the image to the
           control image of the ControlNet tab.</td></tr>
         <tr><td><AppIcon name="photoshop" :size="14"/></td><td><span class="kbd">P</span> Sends the image to
-          Photoshop as a new document; middle click or
+          the editor (Photoshop or Krita) as a new document; middle click or
           <span class="kbd">Shift</span>+<span class="kbd">P</span> places it as a layer of the active document.</td></tr>
         <tr><td><AppIcon name="compare" :size="14"/></td><td><span class="kbd">A</span> Adds the image to the
           Compare tab.</td></tr>
@@ -715,7 +728,7 @@ const hostOrigin = location.origin;
             <code>"txt2img/Batch count/maximum"</code> and <code>"img2img/Batch count/maximum"</code> in
             <code>ui-config.json</code> in the WebUI folder, then restart WebUI.</li>
         </template>
-        <li><b>Project root</b> — the folder of the projects of the Library, as the {{ HOST_NAME }} server sees it
+        <li><b>Project root</b> — the folder of the projects, as the {{ HOST_NAME }} server sees it
           (a local or network path). <b>Check</b> tells whether it exists and is writable.</li>
         <li><b>Docs root</b> — the folder of the Markdown documents of the Library; empty for the
           <code>model_docs</code> folder of the extension. <b>Check</b> counts the documents in it.</li>
@@ -759,12 +772,25 @@ const hostOrigin = location.origin;
       </ul>
     </section>
 
-    <section id="manual-photoshop">
-      <h2>Photoshop</h2>
+    <section id="manual-editors">
+      <h2>Editors</h2>
       <p>
-        The <b>Image Bench</b> plugin for Photoshop (2024 / version 25.0 or newer) comes with this extension and
-        links Photoshop to {{ HOST_NAME }}. Sending images from Photoshop works even while the Image Bench window
-        is closed.
+        Plugins for <b>Photoshop</b> and <b>Krita</b> come with this extension and link the editor to
+        {{ HOST_NAME }}: they send the document and its selection to the Generate, ControlNet and Compare tabs, and
+        receive any image from Image Bench as a new document or layer. Sending from the editor works even while the
+        Image Bench window is closed.
+      </p>
+      <p>
+        One editor is connected at a time. The send buttons of Image Bench name it and show its icon
+        (<AppIcon name="photoshop" :size="13" class="inline-icon"/> or <AppIcon name="krita" :size="13"
+        class="inline-icon"/>); the last one connected is kept while none is. When an editor connects, the one
+        connected before shows <b>Reconnect</b> with a grey dot and stays disconnected until you click it, so that
+        two running editors do not take the connection from each other.
+      </p>
+
+      <h3 id="manual-editor-photoshop">Photoshop</h3>
+      <p>
+        The <b>Image Bench</b> plugin for Photoshop (2024 / version 25.0 or newer) links Photoshop to {{ HOST_NAME }}.
       </p>
 
       <PluginCard plugin="image-bench" title="Image Bench plugin" menu="Plugins › Image Bench">
@@ -779,18 +805,18 @@ const hostOrigin = location.origin;
           turn on <b>Preferences › Plugins › Enable Developer Mode</b> in Photoshop and restart it once more.</li>
       </PluginCard>
 
-      <h3>Connecting</h3>
+      <h4>Connecting</h4>
       <ol>
         <li>In Photoshop, open <b>Plugins › Image Bench › Image Bench</b> and dock the panel.</li>
         <li>Enter the address of {{ HOST_NAME }} in the panel. The default is
           <code>{{ isComfy ? "http://127.0.0.1:8188" : "http://127.0.0.1:7860" }}</code>; this page is served from
           <code>{{ hostOrigin }}</code>, and press Enter. The plugin talks to one host at a time.</li>
         <li>The button next to the address shows the connection state (<b>Connected</b>, <b>Connecting...</b> or
-          <b>Reconnect</b>, with a green, orange or red dot) and reconnects when clicked. Once connected, the plugin
-          stays connected for as long as Photoshop runs.</li>
+          <b>Reconnect</b>, with a green, orange or red dot; grey when another editor took the connection) and
+          reconnects when clicked. Once connected, the plugin stays connected for as long as Photoshop runs.</li>
       </ol>
 
-      <h3>Photoshop → {{ HOST_NAME }}</h3>
+      <h4>Photoshop → {{ HOST_NAME }}</h4>
       <p>The plugin panel offers these commands:</p>
       <ul>
         <li><b>Inpaint upload: Image</b> — the composite image of the document becomes the input image:
@@ -814,7 +840,7 @@ const hostOrigin = location.origin;
         them under <b>Edit › Keyboard Shortcuts › Plugins</b>.
       </p>
 
-      <h3>{{ HOST_NAME }} → Photoshop</h3>
+      <h4>{{ HOST_NAME }} → Photoshop</h4>
       <p>
         The <AppIcon name="photoshop" :size="13" class="inline-icon"/> <b>Send to Photoshop</b> button of any image,
         like <b>To Photoshop</b> in the ControlNet panes, opens the image as a new document.
@@ -850,6 +876,45 @@ const hostOrigin = location.origin;
           step; applying again in the same document overwrites that layer. <b>As document</b> opens them as a new
           document.</li>
       </ul>
+
+      <h3 id="manual-editor-krita">Krita</h3>
+      <p>
+        The <b>Image Bench</b> plugin for Krita (5.2 or newer) does what the Photoshop plugin does.
+      </p>
+
+      <PluginCard plugin="krita" title="Image Bench plugin for Krita" editor="Krita" badge="Kr"
+                  menu="Settings › Dockers › Image Bench">
+        <li><b>Install</b> copies the plugin into Krita's Python plugin folder (<code>%APPDATA%\krita\pykrita</code>
+          on Windows) and enables it. Close Krita first: it rewrites its settings when it exits. The plugin is
+          installed on the computer that runs {{ HOST_NAME }}.</li>
+        <li><b>Download .zip</b> is for any other computer: in Krita, choose <b>Tools › Scripts › Import Python
+          Plugin from File</b> and pick the file.</li>
+        <li>Either way, restart Krita afterwards. If the docker is missing, enable <b>Image Bench</b> in
+          <b>Settings › Configure Krita › Python Plugin Manager</b> and restart Krita once more.</li>
+      </PluginCard>
+
+      <h4>Connecting</h4>
+      <p>
+        Show the docker with <b>Settings › Dockers › Image Bench</b>, enter the address of {{ HOST_NAME }}
+        (<code>{{ hostOrigin }}</code>) and press Enter; the recent addresses are in its dropdown. The button next to
+        it shows and restores the connection, as in the Photoshop panel. The connection lasts as long as Krita
+        runs, whether or not the docker is shown.
+      </p>
+
+      <h4>Krita → {{ HOST_NAME }}</h4>
+      <p>
+        The docker has the commands of the Photoshop panel: <b>Input / Inpaint</b> (Image, Mask, Image + Mask),
+        <b>ControlNet</b> (Preprocess, Image, Mask) and <b>Compare</b>. The image is the merged document, converted to
+        8-bit sRGB whatever the color space of the document; the mask is the selection. The same commands are in
+        <b>Tools › Scripts › Image Bench</b>, and can get shortcuts in <b>Settings › Configure Krita › Keyboard
+        Shortcuts</b>.
+      </p>
+
+      <h4>{{ HOST_NAME }} → Krita</h4>
+      <p>
+        <b>Send to Krita</b> opens the image as a new document; middle-click or Shift+click places it as a new paint
+        layer above the active one, centered on the canvas and converted to the color space of the document.
+      </p>
     </section>
 
     <section v-if="isComfy" id="manual-comfy-setup">
@@ -872,7 +937,7 @@ const hostOrigin = location.origin;
         <tr><td><code>ib:hr</code></td><td>If/Else Switch between the first-pass and the Hires. fix image</td>
           <td>Hires. fix checkbox; the Upscale action</td></tr>
         <tr><td><code>ib:lora</code></td><td>LoraLoader</td><td>LoRA exploration</td></tr>
-        <tr><td><code>ib:img</code> / <code>ib:mask</code></td><td>LoadImage / LoadImageMask</td><td>img2img, inpaint, images from Photoshop</td></tr>
+        <tr><td><code>ib:img</code> / <code>ib:mask</code></td><td>LoadImage / LoadImageMask</td><td>img2img, inpaint, images from the editor</td></tr>
         <tr><td><code>ib:ref:0</code>, <code>ib:ref:1</code>, ...</td><td>LoadImage of edit-model references</td><td>References panel</td></tr>
         <tr><td><code>ib:cn:0</code>, <code>ib:cn:1</code>, ...</td><td>ControlNet apply node</td><td>ControlNet tab</td></tr>
       </table>
@@ -934,7 +999,7 @@ const hostOrigin = location.origin;
         <tr><td><code>ib:lora</code></td><td>Load LoRA, LoraLoaderModelOnly</td><td>Exploring LoRAs is
           refused</td></tr>
         <tr><td><code>ib:img</code> / <code>ib:mask</code></td><td>Load Image / Load Image (as Mask) or Load
-          Image</td><td>txt2img mode; images from Photoshop are saved, and a message says that no node is
+          Image</td><td>txt2img mode; images from the editor are saved, and a message says that no node is
           marked</td></tr>
         <tr><td><code>ib:ref:N</code></td><td>Load Image</td><td>No References panel</td></tr>
         <tr><td><code>ib:cn:N</code></td><td>Apply ControlNet (also the SD3 and old ones), the Advanced-ControlNet
@@ -1010,7 +1075,7 @@ const hostOrigin = location.origin;
         <tr><td>Load Image</td><td>Load Image (as Mask)</td><td>The usual setup.</td></tr>
         <tr><td>Load Image</td><td>Another Load Image</td><td>Use the <code>MASK</code> output of the mask
           node.</td></tr>
-        <tr><td>Load Image</td><td>—</td><td>img2img; a mask sent from Photoshop is reported.</td></tr>
+        <tr><td>Load Image</td><td>—</td><td>img2img; a mask sent from the editor is reported.</td></tr>
         <tr><td>—</td><td>Either</td><td>Mask only; the image comes from elsewhere in the workflow (the Generate
           tab stays in txt2img mode).</td></tr>
       </table>
@@ -1073,7 +1138,7 @@ const hostOrigin = location.origin;
         Images for the marked nodes are saved in the ComfyUI <code>input</code> folder under fixed names and
         overwritten by the next image of the same kind: <code>image_bench_input_*.png</code> (Input and Mask
         panes), <code>image_bench_reference_N.png</code> (references), <code>image_bench_cn_N_*.png</code>
-        (ControlNet units) and <code>image_bench_photoshop_*.png</code> (Photoshop). The trays, presets, model
+        (ControlNet units) and <code>image_bench_photoshop_*.png</code> (the editor). The trays, presets, model
         hashes and Civitai lookups are kept in <code>store/</code> of the extension folder.
       </p>
     </section>
@@ -1090,7 +1155,7 @@ const hostOrigin = location.origin;
           current project</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+click</td><td>Switch between full size and fit to screen in the image view</td></tr>
         <tr><td>Middle click</td><td>On an image, open it in a new tab. On a button, perform its alternative action
-          (place as a new Photoshop layer); on a marking, remove it</td></tr>
+          (place as a new layer in the editor); on a marking, remove it</td></tr>
         <tr><td><span class="kbd">Shift</span>+click</td><td>On a button of an image, perform its alternative
           action</td></tr>
         <tr><td>Right click</td><td>The menu of an image</td></tr>
@@ -1127,10 +1192,16 @@ const hostOrigin = location.origin;
         <dt>The Photoshop plugin is not in the Plugins menu</dt>
         <dd>Restart Photoshop after installing. If the plugin is still missing, enable Developer Mode under
           Preferences › Plugins and restart Photoshop again (see
-          <a href="#" @click.prevent="scrollTo('photoshop')">Photoshop</a>).</dd>
-        <dt>The Photoshop panel shows "Reconnect" with a red dot</dt>
-        <dd>Check the address in the panel, and that {{ HOST_NAME }} is running. The plugin retries every 5 seconds
-          on its own; click <b>Reconnect</b> to retry at once.</dd>
+          <a href="#" @click.prevent="scrollTo('editor-photoshop')">Photoshop</a>).</dd>
+        <dt>The editor panel shows "Reconnect" with a red dot</dt>
+        <dd>Check the address in the Photoshop panel or the Krita docker, and that {{ HOST_NAME }} is running. The
+          plugin retries every 5 seconds on its own; click <b>Reconnect</b> to retry at once.</dd>
+        <dt>The editor panel shows "Reconnect" with a grey dot</dt>
+        <dd>Another editor (or another Photoshop or Krita) has connected since. Click <b>Reconnect</b> to take the
+          connection back.</dd>
+        <dt>The Krita docker is not in Settings › Dockers</dt>
+        <dd>Enable <b>Image Bench</b> in Settings › Configure Krita › Python Plugin Manager and restart Krita. Install
+          only while Krita is closed (see <a href="#" @click.prevent="scrollTo('editor-krita')">Krita</a>).</dd>
         <dt>The Civitai information of a model is outdated</dt>
         <dd>Found models are stored in the <code>store/civitai</code> folder of the extension, one file per model
           hash. Delete the file of the model (or the whole folder) to look it up again.</dd>
@@ -1187,6 +1258,12 @@ h2 {
 h3 {
   margin: 16px 0 6px;
   font-size: 14px;
+  font-weight: 600;
+}
+
+h4 {
+  margin: 12px 0 6px;
+  font-size: 13px;
   font-weight: 600;
 }
 

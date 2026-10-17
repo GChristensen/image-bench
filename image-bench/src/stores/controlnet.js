@@ -10,7 +10,7 @@ const UNIT_KEY = "imageBench_controlNetUnit";
 export const useControlNetStore = defineStore('controlNet', () => {
     const storage = useLocalStorage();
     // Unit chosen in the ControlNet tab (0-based, WebUI labels the units from 1), which also receives
-    // the images sent to ControlNet from the image lists and Photoshop
+    // the images sent to ControlNet from the image lists and the editor
     const selectedUnit = ref(Math.max(0, parseInt(storage.getItem(UNIT_KEY)) || 0))
     // Generation tab whose ControlNet is mirrored: "txt2img" or "img2img"
     const tab = ref("txt2img")

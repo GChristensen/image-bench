@@ -1,17 +1,28 @@
 <script setup>
 /**
- * Current project in the tab bar: its name (opens it in the Library), a dot while the workspace has unsaved
- * changes, the Save button, and the close button, which starts a blank workspace (as the clean-up action).
- * Without a current project: "No project" (opens the projects in the Library) and a button creating a new project
+ * Current project in the tab bar, also the tab of the Projects view: its name (shows the project in the Projects
+ * tab), a dot while the workspace has unsaved changes, the Save button, and the close button, which starts a blank
+ * workspace (as the clean-up action). Without a current project: "No project" (shows the projects) and a button
+ * creating a new project. Right-click lists the recent projects; image cards dropped on the chip are copied into
+ * the folder of the current project
  */
-import {computed} from "vue";
-import {useRouter} from "vue-router";
+import {computed, ref} from "vue";
+import {RouterLink, useRoute, useRouter} from "vue-router";
 import AppIcon from "@/components/AppIcon.vue";
-import {PROJECT_TRAYS, useProjectsStore} from "@/stores/projects.js";
+import {baseName, PROJECT_TRAYS, useProjectsStore} from "@/stores/projects.js";
 import {startBlankWorkspace} from "@/workspace.js";
+import {copyToProject, openContextMenu} from "@/contextMenu.js";
+import {canDropOn, KIND_PROJECT, takeDraggedImages} from "@/imageDrag.js";
+
+const PROJECTS_ROUTE = "/projects";
 
 const store = useProjectsStore();
+const route = useRoute();
 const router = useRouter();
+
+const active = computed(() => route.path === PROJECTS_ROUTE);
+const canTakeImages = computed(() => store.hasCurrent && store.current.exists !== false);
+const dropTarget = ref(false);
 
 const title = computed(() => {
   const current = store.current;
@@ -21,33 +32,70 @@ const title = computed(() => {
     `Current project: ${current.path}`,
     current.exists === false ? "The project folder is not found" : null,
     changed.length ? `Changed since the last save: ${changed.join(", ")}` : "No unsaved tray changes",
-    "Click to show it in the Library"
+    "Click to show it in the projects; right-click for the recent projects",
+    canTakeImages.value ? "Drop images here to copy them into the project folder" : null
   ].filter(Boolean).join("\n");
 });
 
-async function show() {
-  await router.push("/library");
-  await store.show(store.hasCurrent ? store.current.path : null);
+function show() {
+  store.show(store.hasCurrent ? store.current.path : null);
+}
+
+function openRecentMenu(event) {
+  const items = store.recent.filter(path => path !== store.current.path).map(path => {
+    const folder = path.slice(0, -baseName(path).length - 1);
+    return {icon: "box", label: baseName(path), hint: folder, run: () => store.open(path)};
+  });
+
+  if (items.length)
+    items.push({separator: true});
+
+  items.push({icon: "folder", label: "All projects…", run: () => router.push(PROJECTS_ROUTE)});
+  openContextMenu(event, items);
+}
+
+function onDragOver(e) {
+  if (!canTakeImages.value || !canDropOn(e, KIND_PROJECT))
+    return;
+
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  dropTarget.value = true;
+}
+
+// Moving between the buttons of the chip also leaves it
+function onDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget))
+    dropTarget.value = false;
+}
+
+function onDrop() {
+  dropTarget.value = false;
+  const images = takeDraggedImages();
+
+  if (images.length)
+    copyToProject(images);
 }
 </script>
 
 <template>
-  <div v-if="!store.hasCurrent" class="project-chip empty">
-    <button class="chip-name" title="No current project: the workspace is not saved anywhere.&#10;Click to show the projects in the Library"
-            @click="show">
+  <div v-if="!store.hasCurrent" class="project-chip empty" :class="{active}" @contextmenu="openRecentMenu">
+    <RouterLink :to="PROJECTS_ROUTE" class="chip-name"
+                title="No current project: the workspace is not saved anywhere.&#10;Click to show the projects; right-click for the recent projects">
       <AppIcon name="box" :size="13"/>
       <span class="name">No project</span>
-    </button>
+    </RouterLink>
     <button class="chip-save" :disabled="!!store.busy"
             :title="store.busy || 'New project, into which the workspace can be saved'" aria-label="New project"
             @click="store.createProject()"><span v-if="store.busy" class="spinner"></span><AppIcon v-else name="plus" :size="13"/></button>
   </div>
-  <div v-else class="project-chip" :class="{missing: store.current.exists === false}">
-    <button class="chip-name" :title="title" @click="show">
+  <div v-else class="project-chip" :class="{active, missing: store.current.exists === false, 'drop-target': dropTarget}"
+       @contextmenu="openRecentMenu" @dragover="onDragOver" @dragleave="onDragLeave" @drop.prevent="onDrop">
+    <RouterLink :to="PROJECTS_ROUTE" class="chip-name" :title="title" @click="show">
       <AppIcon :name="store.current.exists === false ? 'alert' : 'box'" :size="13"/>
       <span class="name">{{ store.current.name }}</span>
       <span v-if="store.unsaved" class="dot" aria-label="Unsaved changes"></span>
-    </button>
+    </RouterLink>
     <button class="chip-save" :disabled="!!store.busy || store.current.exists === false"
             :title="store.busy || 'Save the workspace into the project (Ctrl+S)'" aria-label="Save the project"
             @click="store.save()"><span v-if="store.busy" class="spinner"></span><AppIcon v-else name="save" :size="13"/></button>
@@ -92,6 +140,26 @@ async function show() {
   border-color: rgba(240, 164, 49, 0.5);
 }
 
+/* The chip is the tab of the Projects view: shown, it takes the look of a selected tab */
+.project-chip.active {
+  border-style: solid;
+  border-color: var(--ib-accent);
+  background: var(--ib-accent-soft);
+}
+
+.active .name {
+  color: #fff;
+}
+
+.empty.active .chip-name .app-icon {
+  color: var(--ib-accent);
+}
+
+.project-chip.drop-target {
+  background: var(--ib-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--ib-accent-border);
+}
+
 .chip-name,
 .chip-save,
 .chip-close {
@@ -102,6 +170,7 @@ async function show() {
   background: none;
   color: var(--ib-text);
   font: inherit;
+  text-decoration: none;
   cursor: pointer;
 }
 

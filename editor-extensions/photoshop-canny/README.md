@@ -25,6 +25,6 @@ Requires Photoshop 2024 (25.0) or newer.
 ## Development and installation
 
 The plugin is supplied with the Image Bench extension: the Photoshop chapter of its manual (Library tab) has
-**Install** and **Download .ccx** for it. Otherwise, as for the Image Bench plugin (see `photoshop-extension/README.md`), with the `canny-*` recipes:
+**Install** and **Download .ccx** for it. Otherwise, as for the Image Bench plugin (see `../photoshop/README.md`), with the `canny-*` recipes:
 load `manifest.json` from this folder in UXP Developer Tool (developer mode: `just ps-enable`), or run
 `just canny-package` (`dist/*.ccx`), `just canny-deploy` / `just canny-undeploy` (elevated shell).

@@ -2,15 +2,16 @@
 /**
  * Image area of the Generate tab: the latest result or the live preview, and in img2img and inpaint
  * the input image and mask (Result / Input / Mask views). The input is shown as a thumbnail over the result,
- * marked when a new one arrives (e.g. from Photoshop). Images are uploaded with the buttons, dropped or pasted;
- * WebUI keeps them, the cell shows what it reports.
+ * marked when a new one arrives (e.g. from the editor). Images are uploaded with the buttons, dropped or pasted;
+ * WebUI keeps them, the cell shows what it reports. Hovering the result opens its action rim (ActionRim.vue).
  */
-import {computed, ref, watch} from "vue";
+import {computed, onBeforeUnmount, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
-import ImageActionButtons from "@/components/ImageActionButtons.vue";
+import ActionRim from "@/components/ActionRim.vue";
 import {getImageSize, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
-import {IMAGE_ACTIONS, imageActionHint, runImageAction, visibleActionGroups} from "@/imageActions.js";
+import {rimActionGroups, runImageAction} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
+import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
 import {KIND_GENERATED} from "@/consts.js";
 
 const props = defineProps({
@@ -40,14 +41,14 @@ const props = defineProps({
     type: String,
     default: null
   },
-  // Image of the result view whose send actions are offered on hover, null while generating
+  // Image of the result view whose actions the rim offers on hover, null while generating
   actionImage: {
     type: Object,
     default: null
   }
 });
 
-const emit = defineEmits(['result-click', 'upload', 'use-size', 'show-params']);
+const emit = defineEmits(['result-click', 'upload', 'use-size', 'show-params', 'set-marking']);
 
 const hasInput = computed(() => props.mode === "img2img" || props.mode === "inpaint");
 const hasMask = computed(() => props.mode === "inpaint");
@@ -109,36 +110,82 @@ async function onPaste(e) {
   }
 }
 
-// ---------- Actions of the result: parameters at the top left, send actions (the right side of an image card) ----------
+// ---------- Action rim of the result, as on an image card, above the input thumbnail and the controls ----------
 
 const actionContext = {
   kind: KIND_GENERATED, isTray: false, upscalable: false,
-  handlers: {showParams: image => emit('show-params', image)}
+  handlers: {
+    showParams: image => emit('show-params', image),
+    setMarking: (image, marking) => setMarking(marking),
+    removeMarking: () => setMarking(null)
+  }
 };
 
-const actionGroups = computed(() => props.actionImage && shownView.value === "result"
-  ? visibleActionGroups(props.actionImage, actionContext, "right") : []);
-
-const paramsGroups = computed(() => {
-  const action = props.actionImage && shownView.value === "result"
-    && IMAGE_ACTIONS.find(action => action.id === "params");
-
-  return action && action.visible(props.actionImage, actionContext) ? [[action]] : [];
-});
+const rimImage = computed(() => shownView.value === "result" ? props.actionImage : null);
+const rimGroups = computed(() => rimImage.value ? rimActionGroups(rimImage.value, actionContext) : []);
 
 const shiftDown = useShiftKey();
 const hovered = ref(false);
-const hoveredAction = ref(null);
 const showAlt = computed(() => hovered.value && shiftDown.value);
-const actionHint = computed(() => hoveredAction.value && imageActionHint(hoveredAction.value, showAlt.value));
+
+// The rim opens after a short delay, like on an image card
+const RIM_DELAY = 100;
+const cellElement = ref(null);
+const rimOpen = ref(false);
+const rimSize = ref(0);
+// The session images are not deeply reactive: the rim reads the marking when it opens and when it is set
+const rimMarking = ref(null);
+let rimTimer = 0;
+
+function openRim() {
+  const cell = cellElement.value;
+
+  if (!cell)
+    return;
+
+  rimSize.value = Math.min(cell.clientWidth, cell.clientHeight);
+  rimMarking.value = props.actionImage?.marking ?? null;
+  rimOpen.value = true;
+}
+
+onBeforeUnmount(() => clearTimeout(rimTimer));
+
+// A result arriving under the pointer gets its own rim
+watch(rimImage, () => rimMarking.value = props.actionImage?.marking ?? null);
 
 function onAction(action, alt) {
-  runImageAction(action, props.actionImage, actionContext, alt);
+  runImageAction(action, rimImage.value, actionContext, alt);
+}
+
+// null removes the marking; the view passes it to the other copies of the image
+function setMarking(marking) {
+  const image = rimImage.value;
+
+  if (!image)
+    return;
+
+  if (marking)
+    image.marking = marking;
+  else
+    delete image.marking;
+
+  rimMarking.value = marking;
+  emit('set-marking', image);
+}
+
+function onCellEnter() {
+  hovered.value = true;
+  setHoveredImageTarget({getImage: () => rimImage.value, ctx: actionContext, element: cellElement.value,
+    setMarking, view: () => emit('result-click')});
+  clearTimeout(rimTimer);
+  rimTimer = setTimeout(openRim, RIM_DELAY);
 }
 
 function onCellLeave() {
   hovered.value = false;
-  hoveredAction.value = null;
+  clearTimeout(rimTimer);
+  rimOpen.value = false;
+  clearHoveredImageTarget(cellElement.value);
 }
 
 async function onUseSize() {
@@ -150,9 +197,9 @@ async function onUseSize() {
 </script>
 
 <template>
-  <div class="cell" :class="{dragover: dragOver}" :tabindex="hasInput ? 0 : undefined"
+  <div ref="cellElement" class="cell" :class="{dragover: dragOver}" :tabindex="hasInput ? 0 : undefined"
        @dragover.prevent="dragOver = hasInput" @dragleave="dragOver = false" @drop.prevent="onDrop" @paste="onPaste"
-       @mouseenter="hovered = true" @mouseleave="onCellLeave">
+       @mouseenter="onCellEnter" @mouseleave="onCellLeave">
 
     <button v-if="shownView === 'result'" type="button" class="view" :class="{clickable: resultClickable}"
             :title="liveProgress !== null ? 'Live preview' : resultClickable ? 'Click to view' : ''"
@@ -167,17 +214,17 @@ async function onUseSize() {
         <img :src="inputImage" alt="Input image">
         <img v-if="hasMask && maskOverlay && inputMask" class="mask-overlay" :src="inputMask" alt="">
       </template>
-      <span v-else class="empty">No input image<br><small>Upload, drop or paste one, or send it from Photoshop</small></span>
+      <span v-else class="empty">No input image<br><small>Upload, drop or paste one, or send it from the editor</small></span>
     </div>
 
     <div v-else class="view mask">
       <img v-if="inputMask" :src="inputMask" alt="Mask">
-      <span v-else class="empty">No mask<br><small>Upload, drop or paste one, or send it from Photoshop</small></span>
+      <span v-else class="empty">No mask<br><small>Upload, drop or paste one, or send it from the editor</small></span>
     </div>
 
-    <!-- The views of img2img and inpaint, below them the parameters of the result on hover -->
-    <div class="top-left">
-      <div v-if="hasInput" class="seg views" role="tablist" aria-label="Image shown">
+    <!-- The views of img2img and inpaint -->
+    <div v-if="hasInput" class="top-left">
+      <div class="seg views" role="tablist" aria-label="Image shown">
         <button type="button" role="tab" :class="{on: shownView === 'result'}" :aria-selected="shownView === 'result'"
                 @click="show('result')">Result</button>
         <button type="button" role="tab" :class="{on: shownView === 'input'}" :aria-selected="shownView === 'input'"
@@ -185,8 +232,6 @@ async function onUseSize() {
         <button v-if="hasMask" type="button" role="tab" :class="{on: shownView === 'mask'}"
                 :aria-selected="shownView === 'mask'" @click="show('mask')">Mask</button>
       </div>
-      <ImageActionButtons v-if="paramsGroups.length" class="result-actions" :groups="paramsGroups" :show-alt="showAlt"
-                          @run="onAction" @hover="action => hoveredAction = action"/>
     </div>
 
     <template v-if="hasInput">
@@ -207,20 +252,22 @@ async function onUseSize() {
       </button>
     </template>
 
-    <!-- Uploads of the input, below them the send actions of the result on hover -->
-    <div class="top-right">
-      <div v-if="hasInput" class="uploads">
+    <!-- Uploads of the input -->
+    <div v-if="hasInput" class="top-right">
+      <div class="uploads">
         <button type="button" class="overlay-button" title="Upload the input image (or drop or paste it here)"
                 @click="onUpload('image')"><AppIcon name="upload" :size="12"/>Image</button>
         <button v-if="hasMask" type="button" class="overlay-button" title="Upload the mask"
                 @click="onUpload('mask')"><AppIcon name="upload" :size="12"/>Mask</button>
       </div>
-      <template v-if="actionGroups.length">
-        <ImageActionButtons class="result-actions" :groups="actionGroups" :show-alt="showAlt"
-                            @run="onAction" @hover="action => hoveredAction = action"/>
-        <span v-if="actionHint" class="action-hint">{{ actionHint }}</span>
-      </template>
     </div>
+
+    <!-- Last, so that it stays above the input thumbnail and the controls -->
+    <Transition name="rim">
+      <ActionRim v-if="rimOpen && rimGroups.length" class="result-rim" :groups="rimGroups" :size="rimSize"
+                 :marking="rimMarking" :show-alt="showAlt"
+                 @run="onAction" @set-marking="setMarking" @view="emit('result-click')"/>
+    </Transition>
   </div>
 </template>
 
@@ -348,23 +395,14 @@ async function onUseSize() {
   gap: 4px;
 }
 
-/* The send actions show on hover, like on an image card */
-.result-actions {
-  visibility: hidden;
+.result-rim {
+  z-index: 1;
 }
 
-.cell:hover .result-actions {
-  visibility: visible;
-}
-
-.action-hint {
-  max-width: 260px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(17, 19, 23, 0.85);
-  color: var(--ib-text);
-  font-size: 11px;
-  pointer-events: none;
+.rim-enter-from,
+.rim-leave-to {
+  opacity: 0;
+  transform: scale(0.92);
 }
 
 .input-actions {

@@ -7,6 +7,7 @@ import Generate from "@/views/Generate.vue";
 import ControlNet from "@/views/ControlNet.vue";
 import Compare from "@/views/Compare.vue";
 import Library from "@/views/Library.vue";
+import Projects from "@/views/Projects.vue";
 import {EMBEDDED} from "@/hostWindow.js";
 
 const scrollBehavior = (to, from) => {
@@ -114,6 +115,11 @@ const router = createRouter({
       path: '/library',
       name: 'library',
       component: Library
+    },
+    {
+      path: '/projects',
+      name: 'projects',
+      component: Projects
     },
     {
       path: '/settings',

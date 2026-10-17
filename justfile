@@ -20,17 +20,17 @@ webui_dest := env("WEBUI_DEST", "")
 comfy_dest := env("COMFY_DEST", "")
 
 # Build and copy the code files of the extension to the remote WebUI install (symlinked shared code included)
-deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html") (_deploy_docs webui_dest) (_deploy_ps webui_dest)
+deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html") (_deploy_docs webui_dest) (_deploy_editors webui_dest)
 
 # Build and copy the code files of the extension and its workflows to the remote ComfyUI install
 # (symlinked shared code included)
-deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_docs comfy_dest) (_deploy_ps comfy_dest)
+deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_docs comfy_dest) (_deploy_editors comfy_dest)
 
 # The model docs, into the default docs folder of the remote install
 _deploy_docs dest: (_deploy "model-docs/docs" (dest + "/model_docs") "*")
 
-# The Photoshop plugins, supplied with the extension for installing them from the manual (Library tab)
-_deploy_ps dest: (_deploy "photoshop-extension" (dest + "/shared/photoshop-plugin") "index.js index.html manifest.json uxp.ps1") (_deploy "photoshop-canny" (dest + "/shared/photoshop-canny") "*.js index.html manifest.json")
+# The editor plugins, supplied with the extension for installing them from the manual (Library tab)
+_deploy_editors dest: (_deploy "editor-extensions/photoshop" (dest + "/shared/editor-extensions/photoshop") "index.js index.html manifest.json uxp.ps1") (_deploy "editor-extensions/photoshop-canny" (dest + "/shared/editor-extensions/photoshop-canny") "*.js index.html manifest.json") (_deploy "editor-extensions/krita" (dest + "/shared/editor-extensions/krita") "*.py *.desktop manifest.json")
 
 _require name value:
     @{{ if value == "" { error(name + " is not set: copy .env.example to .env and set it") } else { "echo " + name + "=" + value } }}
@@ -45,13 +45,13 @@ test-webui:
 test-comfy:
     cd D:/ai/sd/comfyui; cmd //c start _run_nvidia_gpu.bat
 
-ps := "powershell.exe -NoProfile -ExecutionPolicy Bypass -File photoshop-extension/uxp.ps1"
+ps := "powershell.exe -NoProfile -ExecutionPolicy Bypass -File editor-extensions/photoshop/uxp.ps1"
 
 # Enable UXP developer mode for loading the Photoshop plugin from UXP Developer Tool (elevated shell)
 ps-enable:
     {{ps}} enable
 
-# Package the Photoshop plugin into photoshop-extension/dist/*.ccx
+# Package the Photoshop plugin into editor-extensions/photoshop/dist/*.ccx
 ps-package:
     {{ps}} package
 
@@ -63,9 +63,9 @@ ps-deploy:
 ps-undeploy:
     {{ps}} undeploy
 
-canny := ps + " -PluginDir photoshop-canny"
+canny := ps + " -PluginDir editor-extensions/photoshop-canny"
 
-# Package the Canny Edges Photoshop plugin into photoshop-canny/dist/*.ccx
+# Package the Canny Edges Photoshop plugin into editor-extensions/photoshop-canny/dist/*.ccx
 canny-package:
     {{canny}} package
 
@@ -76,3 +76,17 @@ canny-deploy:
 # Remove the Canny Edges Photoshop plugin installed by canny-deploy (elevated shell)
 canny-undeploy:
     {{canny}} undeploy
+
+krita := "python editor-extensions/krita/krita.py"
+
+# Package the Krita plugin into editor-extensions/krita/dist/*.zip
+krita-package:
+    {{krita}} package
+
+# Install the Krita plugin into Krita's Python plugin folder and enable it (Krita closed)
+krita-deploy:
+    {{krita}} deploy
+
+# Remove the Krita plugin installed by krita-deploy
+krita-undeploy:
+    {{krita}} undeploy

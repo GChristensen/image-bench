@@ -1,5 +1,5 @@
 import {defineStore} from "pinia";
-import {computed, ref} from "vue";
+import {computed, ref, watch} from "vue";
 import {dialog} from "@/dialogs/useDialog.js";
 import {requestHost} from "@/hostRequest.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
@@ -20,6 +20,9 @@ export const PROJECT_TRAYS = [
 ];
 
 const SELECTED_KEY = "imageBench_librarySelectedProject";
+const RECENT_KEY = "imageBench_recentProjects";
+// Projects listed by the context menu of the project chip
+const RECENT_SIZE = 8;
 const STATUS_DELAY = 300;
 const CAPTURE_TIMEOUT = 30000;
 const RESTORE_TIMEOUT = 180000;
@@ -111,10 +114,10 @@ export function fetchTray(path, kind) {
 export const baseName = path => String(path ?? "").split("/").pop();
 
 /**
- * Projects of the Library tab: the directory tree under the project root, the project shown in the Library,
- * and the current project, into which the workspace (the trays, the Generate and ControlNet parameters) is saved.
- * The backend keeps the current project (store/current_project.json) with the state of the trays at the last save,
- * from which it tells the unsaved changes.
+ * Projects of the Projects tab: the directory tree under the project root, the project shown in the tab, the recent
+ * projects and the current project, into which the workspace (the trays, the Generate and ControlNet parameters)
+ * is saved. The backend keeps the current project (store/current_project.json) with the state of the trays at the
+ * last save, from which it tells the unsaved changes.
  */
 export const useProjectsStore = defineStore("projects", () => {
   const storage = useLocalStorage();
@@ -126,20 +129,41 @@ export const useProjectsStore = defineStore("projects", () => {
   // {path: null} or {path, name, exists, trays: {kind: {workspace, saved, changed}}, changed}
   const current = ref({path: null});
   const selectedPath = ref(storage.getItem(SELECTED_KEY));
-  // Project shown in the Library: {path, name, data, files, trays}
+  // Project shown in the Projects tab: {path, name, data, files, trays}
   const project = ref(null);
   const projectError = ref(null);
   // What the store is busy with ("Saving…", "Opening…"), null if idle
   const busy = ref(null);
   // Changes with each change of the final image, against cached images
   const fileVersion = ref(Date.now());
-  // Set to show the Projects section of the Library (the project chip), reset by Library.vue
-  const shownRequested = ref(false);
+  // Paths of the projects that were current, newest first
+  const recent = ref(readRecent());
 
   const hasCurrent = computed(() => current.value.path !== null && current.value.path !== undefined);
   const unsaved = computed(() => !!current.value.changed);
 
   const trayStores = () => [useImageTrayStore(), useConceptTrayStore(), useCompareStore()];
+
+  // ---------- Recent projects ----------
+
+  function readRecent() {
+    try {
+      const paths = JSON.parse(storage.getItem(RECENT_KEY) || "[]");
+      return Array.isArray(paths) ? paths.filter(path => typeof path === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function setRecent(paths) {
+    recent.value = [...new Set(paths)].slice(0, RECENT_SIZE);
+    storage.setItem(RECENT_KEY, JSON.stringify(recent.value));
+  }
+
+  watch(() => current.value.path, path => {
+    if (path)
+      setRecent([path, ...recent.value]);
+  });
 
   // ---------- Loading ----------
 
@@ -169,6 +193,10 @@ export const useProjectsStore = defineStore("projects", () => {
 
     try {
       tree.value = await call("tree", {}, {method: "GET"});
+
+      // Projects deleted or moved outside of Image Bench leave the recent list
+      if (tree.value.exists !== false)
+        setRecent(recent.value.filter(path => findNode(tree.value.nodes ?? [], path)?.type === "project"));
     } catch (error) {
       treeError.value = error.message;
     } finally {
@@ -249,7 +277,7 @@ export const useProjectsStore = defineStore("projects", () => {
     try {
       return await operation();
     } catch (error) {
-      await dialog.alert(error.message, {title: "Library"});
+      await dialog.alert(error.message, {title: "Projects"});
       return null;
     } finally {
       busy.value = null;
@@ -465,6 +493,8 @@ export const useProjectsStore = defineStore("projects", () => {
     const follow = path => path === oldPath || path?.startsWith(oldPath + "/")
       ? newPath + path.slice(oldPath.length) : path;
 
+    setRecent(recent.value.map(follow));
+
     // The tab bar chip follows the current project at once; the backend has moved it too
     if (hasCurrent.value && follow(current.value.path) !== current.value.path) {
       const path = follow(current.value.path);
@@ -511,7 +541,11 @@ export const useProjectsStore = defineStore("projects", () => {
     if (!await run("Deleting…", () => call("delete", {path: node.path})))
       return;
 
-    if (selectedPath.value === node.path || selectedPath.value?.startsWith(node.path + "/"))
+    const inside = path => path === node.path || path?.startsWith(node.path + "/");
+
+    setRecent(recent.value.filter(path => !inside(path)));
+
+    if (inside(selectedPath.value))
       await select(null);
 
     await loadTree();
@@ -596,18 +630,16 @@ export const useProjectsStore = defineStore("projects", () => {
   }
 
   /**
-   * Show the Projects section of the Library, with a project selected if given
-   * @param {string|null} path
+   * Select a project for the Projects tab (the router is switched by the caller)
+   * @param {string|null} path - null keeps the selection
    */
   async function show(path = null) {
-    shownRequested.value = true;
-
     if (path !== null)
       await select(path);
   }
 
   return {
-    tree, treeLoading, treeError, current, selectedPath, project, projectError, busy, fileVersion, shownRequested,
+    tree, treeLoading, treeError, current, selectedPath, project, projectError, busy, fileVersion, recent,
     hasCurrent, unsaved,
     init, loadTree, loadCurrent, loadProject, select, findNode, show,
     save, saveInto, open, close,

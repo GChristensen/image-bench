@@ -28,8 +28,8 @@ from shared import controlnet_inputs
 from shared import explore_export
 from shared import launcher
 from shared import loras
-from shared import photoshop
-from shared import photoshop_plugin
+from shared import editor
+from shared import editor_plugins
 from shared import pnginfo
 from shared import projects
 from shared import tray
@@ -60,14 +60,12 @@ class ImageBenchApi():
         self.websocket_queue = asyncio.Queue()
         # Loop of the websocket, which owns the queue (asyncio queues are not thread-safe)
         self.websocket_loop = None
-        # WebUI pages listening for images sent from Photoshop
-        self.photoshop_websockets = set()
-        # Photoshop plugins listening for images sent from the Image Bench window
-        self.photoshop_plugin_websockets = set()
-        # The plugins among them that report when a sent image is in Photoshop
-        self.photoshop_plugin_ack_websockets = set()
+        # WebUI pages listening for images sent from the editor
+        self.editor_host_websockets = set()
+        # The editor plugin receiving images sent from the Image Bench window
+        self.editor = editor.EditorConnection()
         # Last image of each kind as (content, media type)
-        self.photoshop_images = {}
+        self.editor_images = {}
         self.config_presets_dropdown = None
         self.outputs_dir = webui_config.get("outdir_samples") or os.path.join(self.get_webui_root_dir(), "outputs")
         self.image_bench_dir = os.path.join(self.outputs_dir, "image-bench")
@@ -120,15 +118,18 @@ class ImageBenchApi():
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/heartbeat", self.handle_heartbeat)
-        self.add_api_route("/photoshop/upload", self.photoshop_upload, methods=["POST"])
-        self.add_api_route("/photoshop/send", self.photoshop_send, methods=["POST"])
-        self.add_api_route("/photoshop/image", self.get_photoshop_image, methods=["GET"])
-        self.add_api_route("/photoshop/plugin", self.get_photoshop_plugin_status, methods=["GET"])
-        self.add_api_route("/photoshop/plugin.ccx", self.download_photoshop_plugin, methods=["GET"])
-        self.add_api_route("/photoshop/plugin/install", self.install_photoshop_plugin, methods=["POST"])
-        self.app.add_websocket_route(self.BASE_PATH + "/photoshop/websocket", self.handle_photoshop_websocket)
-        self.app.add_websocket_route(self.BASE_PATH + "/photoshop/plugin-websocket",
-                                     self.handle_photoshop_plugin_websocket)
+        self.add_api_route("/editor/upload", self.editor_upload, methods=["POST"])
+        self.add_api_route("/editor/send", self.editor_send, methods=["POST"])
+        self.add_api_route("/editor/image", self.get_editor_image, methods=["GET"])
+        self.add_api_route("/editor/status", self.get_editor_status, methods=["GET"])
+        self.add_api_route("/editor/plugin", self.get_editor_plugin_status, methods=["GET"])
+        self.add_api_route("/editor/plugin/package", self.download_editor_plugin, methods=["GET"])
+        self.add_api_route("/editor/plugin/install", self.install_editor_plugin, methods=["POST"])
+        self.app.add_websocket_route(self.BASE_PATH + "/editor/host-websocket", self.handle_editor_host_websocket)
+        self.app.add_websocket_route(self.BASE_PATH + "/editor/websocket", self.handle_editor_websocket)
+        # The routes of the Photoshop plugins installed before the editor bridge
+        self.add_api_route("/photoshop/upload", self.editor_upload, methods=["POST"])
+        self.app.add_websocket_route(self.BASE_PATH + "/photoshop/plugin-websocket", self.handle_editor_websocket)
 
     def get_path(self, path):
         return f"{self.BASE_PATH}{path}"
@@ -261,27 +262,25 @@ class ImageBenchApi():
         except Exception:
             pass
 
-    async def handle_photoshop_websocket(self, websocket, *args):
-        """Keep a WebUI page connected to receive images sent from the Photoshop plugin"""
-        await self.keep_websocket(websocket, self.photoshop_websockets)
+    async def handle_editor_host_websocket(self, websocket, *args):
+        """Keep a WebUI page connected to receive images sent from the editor plugin"""
+        await self.keep_websocket(websocket, self.editor_host_websockets)
 
-    async def handle_photoshop_plugin_websocket(self, websocket, *args):
+    async def handle_editor_websocket(self, websocket, *args):
         """
-        Keep the Photoshop plugin connected to receive images sent from the Image Bench window,
-        and to report when they are in Photoshop
+        Keep the editor plugin connected to receive images sent from the Image Bench window,
+        and to report when they are in the editor; a new plugin connection replaces this one
         """
         await websocket.accept()
-        self.photoshop_plugin_websockets.add(websocket)
+        token = await self.editor.attach(websocket.send_text, lambda code: websocket.close(code=code))
 
         try:
             while True:
-                if photoshop.handle_plugin_message(await websocket.receive_text()) == "hello":
-                    self.photoshop_plugin_ack_websockets.add(websocket)
+                self.editor.handle_message(token, await websocket.receive_text())
         except Exception:
             pass
         finally:
-            self.photoshop_plugin_websockets.discard(websocket)
-            self.photoshop_plugin_ack_websockets.discard(websocket)
+            self.editor.detach(token)
 
     @staticmethod
     async def keep_websocket(websocket, clients):
@@ -311,80 +310,72 @@ class ImageBenchApi():
 
         return receivers
 
-    def get_photoshop_image_url(self, kind):
-        return f"{self.BASE_PATH}/photoshop/image?kind={kind}&t={time.time_ns()}"
+    def get_editor_image_url(self, kind):
+        return f"{self.BASE_PATH}/editor/image?kind={kind}&t={time.time_ns()}"
 
-    async def photoshop_upload(self, request: Request, kind: str, width: int, height: int, components: int,
-                               target: str = "input"):
+    async def editor_upload(self, request: Request, kind: str, width: int, height: int, components: int,
+                            target: str = "input"):
         """
-        Receive raw pixels of the document (kind=image) or its selection (kind=mask) from the Photoshop plugin
-        and notify the connected WebUI pages to insert it into the target (see photoshop.PHOTOSHOP_TARGET_KINDS)
+        Receive raw pixels of the document (kind=image) or its selection (kind=mask) from the editor plugin
+        and notify the connected WebUI pages to insert it into the target (see editor.EDITOR_TARGET_KINDS)
         """
-        if kind not in photoshop.PHOTOSHOP_IMAGE_KINDS:
+        if kind not in editor.EDITOR_IMAGE_KINDS:
             raise HTTPException(status_code=400, detail=f"Unknown image kind: {kind}")
 
-        if kind not in photoshop.PHOTOSHOP_TARGET_KINDS.get(target, ()):
+        if kind not in editor.EDITOR_TARGET_KINDS.get(target, ()):
             raise HTTPException(status_code=400, detail=f"Unknown target of the {kind}: {target}")
 
         try:
-            png = photoshop.raw_pixels_to_png(await request.body(), width, height, components)
+            png = editor.raw_pixels_to_png(await request.body(), width, height, components)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
         # Saved and added to the Compare tab here, so that it arrives even if the popup is closed
-        if target == photoshop.COMPARE_TARGET:
-            image = tray.save_compare_file(f"photoshop_{time.strftime('%Y%m%d-%H%M%S')}.png", png,
+        if target == editor.COMPARE_TARGET:
+            image = tray.save_compare_file(f"editor_{time.strftime('%Y%m%d-%H%M%S')}.png", png,
                                            self.image_bench_dir, "webui")
             tray.append_tray_image(self.get_file_path("store", upper=True), tray.COMPARE_KIND, image)
-            clients = await self.broadcast(self.photoshop_websockets, {
-                "type": "PHOTOSHOP_IMAGE",
+            clients = await self.broadcast(self.editor_host_websockets, {
+                "type": "EDITOR_IMAGE",
                 "kind": kind,
                 "target": target,
                 "image": image
             })
             return JSONResponse({"clients": clients, "saved": True})
 
-        self.photoshop_images[kind] = (png, "image/png")
+        self.editor_images[kind] = (png, "image/png")
 
-        clients = await self.broadcast(self.photoshop_websockets, {
-            "type": "PHOTOSHOP_IMAGE",
+        clients = await self.broadcast(self.editor_host_websockets, {
+            "type": "EDITOR_IMAGE",
             "kind": kind,
             "target": target,
-            "imageUrl": self.get_photoshop_image_url(kind)
+            "imageUrl": self.get_editor_image_url(kind)
         })
 
         return JSONResponse({"clients": clients})
 
-    async def photoshop_send(self, request: Request, name: str = "image.png", new_document: bool = False):
+    async def editor_send(self, request: Request, name: str = "image.png", new_document: bool = False):
         """
-        Receive an image file from the Image Bench window and notify the Photoshop plugin to open it,
-        answering when the plugin reports the image is in Photoshop
+        Receive an image file from the Image Bench window and notify the editor plugin to open it,
+        answering when the plugin reports the image is in the editor
         """
         media_type = request.headers.get("content-type", "").split(";")[0].strip()
 
-        if media_type not in photoshop.SENDABLE_MEDIA_TYPES:
+        if media_type not in editor.SENDABLE_MEDIA_TYPES:
             raise HTTPException(status_code=400, detail=f"Unsupported image type: {media_type}")
 
-        kind = photoshop.OUTGOING_IMAGE_KIND
-        self.photoshop_images[kind] = (await request.body(), media_type)
+        kind = editor.OUTGOING_IMAGE_KIND
+        self.editor_images[kind] = (await request.body(), media_type)
 
-        request_id = photoshop.create_send_request()
-        clients = await self.broadcast(self.photoshop_plugin_websockets, {
-            "type": "OPEN_IMAGE",
-            "requestId": request_id,
-            "name": photoshop.get_image_file_name(name, media_type),
-            "imageUrl": self.get_photoshop_image_url(kind),
-            "newDocument": new_document
-        })
+        return JSONResponse(await self.editor.send_open_image(editor.get_image_file_name(name, media_type),
+                                                              self.get_editor_image_url(kind), new_document))
 
-        # broadcast() drops the plugins it could not reach
-        self.photoshop_plugin_ack_websockets &= self.photoshop_plugin_websockets
-        result = await photoshop.wait_for_plugin(request_id, bool(self.photoshop_plugin_ack_websockets))
+    def get_editor_status(self):
+        """The name of the connected editor, or null"""
+        return JSONResponse(self.editor.status())
 
-        return JSONResponse({"clients": clients, **result})
-
-    def get_photoshop_image(self, kind: str):
-        image = self.photoshop_images.get(kind)
+    def get_editor_image(self, kind: str):
+        image = self.editor_images.get(kind)
 
         if image is None:
             raise HTTPException(status_code=404, detail="Not found")
@@ -393,26 +384,29 @@ class ImageBenchApi():
         return Response(content, media_type=media_type, headers={"Cache-Control": "no-store"})
 
     @staticmethod
-    def get_photoshop_plugin_status(plugin: str = photoshop_plugin.DEFAULT_PLUGIN):
-        """Version of a supplied Photoshop plugin (photoshop_plugin.PLUGIN_DIRS) and of the one installed on the server computer"""
-        return JSONResponse(photoshop_plugin.get_status(plugin))
+    def get_editor_plugin_status(plugin: str = editor_plugins.DEFAULT_PLUGIN):
+        """Version of a supplied editor plugin (editor_plugins.PLUGINS) and of the one installed on the server computer"""
+        try:
+            return JSONResponse(editor_plugins.get_status(plugin))
+        except editor_plugins.PluginError as e:
+            raise HTTPException(status_code=404, detail=str(e))
 
     @staticmethod
-    def download_photoshop_plugin(plugin: str = photoshop_plugin.DEFAULT_PLUGIN):
+    def download_editor_plugin(plugin: str = editor_plugins.DEFAULT_PLUGIN):
         try:
-            name, content = photoshop_plugin.build_ccx(plugin)
-        except photoshop_plugin.PluginError as e:
+            name, content = editor_plugins.package(plugin)
+        except editor_plugins.PluginError as e:
             raise HTTPException(status_code=404, detail=str(e))
 
         return Response(content, media_type="application/octet-stream",
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
     @staticmethod
-    def install_photoshop_plugin(plugin: str = photoshop_plugin.DEFAULT_PLUGIN):
-        """Install a Photoshop plugin on the server computer (see photoshop_plugin.install_or_elevate)"""
+    def install_editor_plugin(plugin: str = editor_plugins.DEFAULT_PLUGIN):
+        """Install an editor plugin on the server computer (see editor_plugins.install_or_elevate)"""
         try:
-            return JSONResponse(photoshop_plugin.install_or_elevate(plugin))
-        except (photoshop_plugin.PluginError, OSError) as e:
+            return JSONResponse(editor_plugins.install_or_elevate(plugin))
+        except (editor_plugins.PluginError, OSError) as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod

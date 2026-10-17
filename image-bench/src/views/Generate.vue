@@ -74,7 +74,8 @@ const NEGATIVE_HEIGHT_KEY = "imageBench_generateNegativeHeight";
 const SIDE_TAB_KEY = "imageBench_generateSideTab";
 const MODEL_SLOT_KEY = "imageBench_generateModelSlot";
 const SIZE_INPUT_KEY = "imageBench_generateSizeInput";
-const PHOTOSHOP_TARGET_KEY = "imageBench_generatePhotoshopTarget";
+// Named before the editor bridge (Photoshop only)
+const EDITOR_TARGET_KEY = "imageBench_generatePhotoshopTarget";
 const PARAMS_COLLAPSED_KEY = "imageBench_generateParamsCollapsed";
 const SNIPPETS_OPEN_KEY = "imageBench_generateSnippetsOpen";
 const SIDE_WIDTH_KEY = "imageBench_generateSideWidth";
@@ -210,7 +211,7 @@ onActivated(() => {
 
 // A host page loaded again in the iframe of the embedded mode knows nothing of the popup
 onHostReady(() => {
-  webUI.setPhotoshopTarget(photoshopTarget.value);
+  webUI.setEditorTarget(editorTarget.value);
 
   if (activated)
     webUI.subscribeMirror(true);
@@ -807,16 +808,16 @@ watch(() => sdWebUI.references, state => {
       delete referenceEdits[name];
 });
 
-const photoshopTarget = ref(storage.getItem(PHOTOSHOP_TARGET_KEY) === "reference" ? "reference" : "input");
+const editorTarget = ref(storage.getItem(EDITOR_TARGET_KEY) === "reference" ? "reference" : "input");
 
-function setPhotoshopTarget(target) {
-  photoshopTarget.value = target;
-  storage.setItem(PHOTOSHOP_TARGET_KEY, target);
-  webUI.setPhotoshopTarget(target);
+function setEditorTarget(target) {
+  editorTarget.value = target;
+  storage.setItem(EDITOR_TARGET_KEY, target);
+  webUI.setEditorTarget(target);
 }
 
 // The host page forgets the target when WebUI is reloaded
-onActivated(() => webUI.setPhotoshopTarget(photoshopTarget.value));
+onActivated(() => webUI.setEditorTarget(editorTarget.value));
 
 // ---------- Model info ----------
 
@@ -1163,13 +1164,13 @@ const gridStyle = computed(() => ({
       <!-- LoRAs or references with the image below them; wide, the image is in a column of its own -->
       <div class="side">
         <ReferencesPanel v-if="shownSideTab === 'references'" class="side-panel" :references="references"
-                         :photoshop-target="photoshopTarget" :has="has"
+                         :editor-target="editorTarget" :has="has"
                          @add="files => webUI.editReferences({add: files})"
                          @remove="index => webUI.editReferences({remove: index})"
                          @clear="webUI.editReferences({clear: true})"
                          @enabled="value => setReferenceParam('enabled', 'referencesEnabled', value)"
                          @max-size="value => setReferenceParam('maxSize', 'referenceMaxSize', value)"
-                         @photoshop-target="setPhotoshopTarget"/>
+                         @editor-target="setEditorTarget"/>
 
         <div v-else class="lora-tree side-panel">
           <CheckTree v-if="loraItems.length" :items="loraItems" :selected="selectedLoras"
@@ -1194,7 +1195,7 @@ const gridStyle = computed(() => ({
                            :input-image="inputs.image" :input-mask="inputs.mask"
                            :action-image="generating || livePreview ? null : resultImage"
                            @result-click="onResultClick" @upload="onInputUpload" @show-params="onShowParams"
-                           @use-size="(width, height) => setParams({width, height})"/>
+                           @set-marking="onSetMarking" @use-size="(width, height) => setParams({width, height})"/>
       </div>
 
       <div class="column-grip side-grip" :class="{active: sideWidth.resizing}" role="separator"

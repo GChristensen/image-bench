@@ -7,7 +7,7 @@ import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {dialog, dialogStack} from "@/dialogs/useDialog.js";
 import {isContextMenuOpen} from "@/contextMenu.js";
-import {sendUrlToPhotoshop} from "@/photoshop.js";
+import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {
   REGION_ASPECTS, MIN_REGION, stripDirection, spanRegion, resizeRegion, moveRegion, fitRegionToAspect,
   containsPoint, regionPixelRatio, renderCropGrid
@@ -443,18 +443,18 @@ async function onSavePng() {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-async function onSendToPhotoshop() {
+async function onSendToEditor() {
   const blob = await renderCrops();
 
   if (!blob)
     return;
 
   const url = URL.createObjectURL(blob);
-  const error = await sendUrlToPhotoshop(url, "Compare crops.png", true);
+  const error = await sendUrlToEditor(url, "Compare crops.png", true);
   URL.revokeObjectURL(url);
 
   if (error)
-    await dialog.alert(error, {title: "Send to Photoshop"});
+    await dialog.alert(error, {title: `Send to ${editorName.value}`});
 }
 
 // ---------- Keys ----------
@@ -566,13 +566,13 @@ onDeactivated(() => {
                     @zoom="onZoom"
                     @cycle-separator="cycleSeparator"
                     @save-png="onSavePng"
-                    @send-to-photoshop="onSendToPhotoshop"
+                    @send-to-editor="onSendToEditor"
                     @remove-marked="onRemoveMarked"
                     @clear="onClear"/>
 
     <div v-if="!store.images.length" class="empty-hint">
       Add images with the <b>Add to compare</b> button of an image (key A), by dragging images onto the Compare tab,
-      from files with the upload button, or from Photoshop.
+      from files with the upload button, or from the editor (Photoshop, Krita).
     </div>
 
     <CropGrid v-if="cropView && region"

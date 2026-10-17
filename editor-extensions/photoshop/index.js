@@ -16,8 +16,10 @@ const WEBUI_URL_KEY = "webuiUrl";
 const RECENT_URLS_KEY = "recentWebuiUrls";
 const MAX_RECENT_URLS = 5;
 const SMART_OBJECTS_KEY = "placeSmartObjects";
-const PLUGIN_WEBSOCKET_PATH = "/image-bench/photoshop/plugin-websocket";
+const PLUGIN_WEBSOCKET_PATH = "/image-bench/editor/websocket";
 const RECONNECT_DELAY = 5000;
+// Close code of a connection replaced by another editor, which is not restored on its own
+const REPLACED_CLOSE_CODE = 4000;
 
 function getWebuiUrl() {
     return (localStorage.getItem(WEBUI_URL_KEY) || DEFAULT_WEBUI_URL).replace(/\/+$/, "");
@@ -109,7 +111,7 @@ async function upload(kind, pixels, target = "input") {
 
     let response;
     try {
-        response = await fetch(`${getWebuiUrl()}/image-bench/photoshop/upload?${query}`, {
+        response = await fetch(`${getWebuiUrl()}/image-bench/editor/upload?${query}`, {
             method: "POST",
             headers: {"Content-Type": "application/octet-stream"},
             body
@@ -200,16 +202,23 @@ function connect() {
             setConnectionState("connected");
             rememberUrl(getWebuiUrl());
             // The server then waits for OPEN_IMAGE_DONE, so that Image Bench shows the transfer until it ends
-            websocket.send(JSON.stringify({type: "HELLO", acks: true}));
+            websocket.send(JSON.stringify({type: "HELLO", editor: "Photoshop", acks: true}));
         }
     };
     websocket.onmessage = onWebuiMessage;
-    websocket.onclose = () => {
+    websocket.onclose = e => {
         // A replaced connection is closed deliberately
-        if (socket === websocket) {
-            setConnectionState("disconnected");
-            reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
+        if (socket !== websocket)
+            return;
+
+        // Another editor (another Photoshop or Krita) took the connection: both would take it in turn otherwise
+        if (e.code === REPLACED_CLOSE_CODE) {
+            setConnectionState("replaced");
+            return;
         }
+
+        setConnectionState("disconnected");
+        reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
     };
 }
 
@@ -362,12 +371,13 @@ function setBusy(busy, text) {
 const CONNECTION_STATES = {
     connected: {label: "Connected", title: "Connected to the server: click to reconnect"},
     connecting: {label: "Connecting...", title: "Connecting to the server: click to retry"},
-    disconnected: {label: "Reconnect", title: "Not connected to the server: click to reconnect"}
+    disconnected: {label: "Reconnect", title: "Not connected to the server: click to reconnect"},
+    replaced: {label: "Reconnect", title: "Another editor connected to the server: click to take the connection"}
 };
 
 /**
  * Show the connection state in the reconnect button and the indicator next to it
- * @param {'connected'|'connecting'|'disconnected'} state
+ * @param {'connected'|'connecting'|'disconnected'|'replaced'} state
  */
 function setConnectionState(state) {
     const {label, title} = CONNECTION_STATES[state];

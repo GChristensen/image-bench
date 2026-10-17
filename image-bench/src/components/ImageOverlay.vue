@@ -13,6 +13,7 @@
   import {INPAINT_LABEL, canReuseParameters, reuseParameters, sendToInpaint} from "@/imageActions.js";
   import {setOverlayImageTarget, clearOverlayImageTarget} from "@/composables/useImageActionKeys.js";
   import {toast} from "@/toast.js";
+  import {editorIcon, editorName} from "@/editor.js";
   import AppIcon from "@/components/AppIcon.vue";
   import GenerationParameters from "@/components/GenerationParameters.vue";
   import GenerationParametersHeader from "@/components/GenerationParametersHeader.vue";
@@ -208,13 +209,13 @@
       flashTrayTab("controlnet-tab");
   }
 
-  async function onSendToPhotoshop(e, newDocument) {
+  async function onSendToEditor(e, newDocument) {
     e.preventDefault();
 
-    const error = await imageOps.sendToPhotoshop(props.image, newDocument);
+    const error = await imageOps.sendToEditor(props.image, newDocument);
 
     if (error)
-      await dialog.alert(error, {title: "Send to Photoshop"});
+      await dialog.alert(error, {title: `Send to ${editorName.value}`});
   }
 
   function onImageAuxClick(e) {
@@ -222,9 +223,9 @@
       window.open(e.target.src, "_blank");
   }
 
-  function onPhotoshopAuxClick(e) {
+  function onEditorAuxClick(e) {
     if (e.button === 1)
-      onSendToPhotoshop(e, false);
+      onSendToEditor(e, false);
   }
 
   // Clicking the current marking removes it
@@ -371,8 +372,8 @@
                   @click="sendToInpaint(image)"><AppIcon name="brush" :size="20"/></button>
           <button v-if="canSendToControlNet" class="ib" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
                   @click="onSendToControlNet"><AppIcon name="controlnet" :size="20"/></button>
-          <button class="ib" title="Left: send to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer" aria-label="Send to Photoshop"
-                  @click="onSendToPhotoshop($event, !$event.shiftKey)" @mousedown.middle.prevent @auxclick="onPhotoshopAuxClick"><AppIcon name="photoshop" :size="20"/></button>
+          <button class="ib" :title="`Left: send to ${editorName} as a new image, Middle/Shift: send to ${editorName} as a new layer`" :aria-label="`Send to ${editorName}`"
+                  @click="onSendToEditor($event, !$event.shiftKey)" @mousedown.middle.prevent @auxclick="onEditorAuxClick"><AppIcon :name="editorIcon()" :size="20"/></button>
           <span class="actions-separator"></span>
           <button v-if="kind !== KIND_COMPARE" class="ib" title="Add to compare" aria-label="Add to compare"
                   @click="onAddToCompare"><AppIcon name="compare" :size="20"/></button>

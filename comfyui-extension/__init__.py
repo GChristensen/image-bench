@@ -16,7 +16,7 @@ from server import PromptServer
 import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, controlnet_inputs, explore_export, launcher, loras, persist, photoshop, photoshop_plugin, pnginfo, projects
+from shared import civitai, controlnet_inputs, editor, editor_plugins, explore_export, launcher, loras, persist, pnginfo, projects
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
 from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
@@ -27,12 +27,10 @@ WEB_DIRECTORY = "./js"
 # WebSocket clients for broadcasting image events
 websocket_clients = set()
 
-# Photoshop plugins listening for images sent from the Image Bench window
-photoshop_plugin_websockets = set()
-# The plugins among them that report when a sent image is in Photoshop
-photoshop_plugin_ack_websockets = set()
-# Images exchanged with the Photoshop plugin: kind -> (content, media type)
-photoshop_images = {}
+# The editor plugin receiving images sent from the Image Bench window
+editor_connection = editor.EditorConnection()
+# Images exchanged with the editor plugin: kind -> (content, media type)
+editor_images = {}
 
 # Base path for all routes
 BASE_PATH = "/image-bench"
@@ -631,91 +629,81 @@ async def heartbeat_handler(request):
     return ws
 
 
-# Photoshop plugin WebSocket: receives notifications about images sent from the Image Bench window
-@PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin-websocket")
-async def photoshop_plugin_websocket_handler(request):
+# Editor plugin WebSocket: receives notifications about images sent from the Image Bench window
+async def editor_websocket_handler(request):
     """
-    Keep the Photoshop plugin connected to receive images sent from the Image Bench window,
-    and to report when they are in Photoshop
+    Keep the editor plugin connected to receive images sent from the Image Bench window,
+    and to report when they are in the editor; a new plugin connection replaces this one
     """
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
-    photoshop_plugin_websockets.add(ws)
+    token = await editor_connection.attach(ws.send_str, lambda code: ws.close(code=code))
 
     try:
         async for msg in ws:
-            if msg.type == web.WSMsgType.TEXT and photoshop.handle_plugin_message(msg.data) == "hello":
-                photoshop_plugin_ack_websockets.add(ws)
+            if msg.type == web.WSMsgType.TEXT:
+                editor_connection.handle_message(token, msg.data)
     finally:
-        photoshop_plugin_websockets.discard(ws)
-        photoshop_plugin_ack_websockets.discard(ws)
+        editor_connection.detach(token)
 
     return ws
 
 
-def get_photoshop_image_url(kind):
-    return f"{BASE_PATH}/photoshop/image?kind={kind}&t={time.time_ns()}"
+PromptServer.instance.routes.get(BASE_PATH + "/editor/websocket")(editor_websocket_handler)
+# The route of the Photoshop plugins installed before the editor bridge
+PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin-websocket")(editor_websocket_handler)
 
 
-# Send an image to Photoshop
-@PromptServer.instance.routes.post(BASE_PATH + "/photoshop/send")
-async def photoshop_send(request):
+def get_editor_image_url(kind):
+    return f"{BASE_PATH}/editor/image?kind={kind}&t={time.time_ns()}"
+
+
+# Send an image to the editor
+@PromptServer.instance.routes.post(BASE_PATH + "/editor/send")
+async def editor_send(request):
     """
-    Receive an image file from the Image Bench window and notify the Photoshop plugin to open it,
-    answering when the plugin reports the image is in Photoshop
+    Receive an image file from the Image Bench window and notify the editor plugin to open it,
+    answering when the plugin reports the image is in the editor
     """
     media_type = request.content_type
 
-    if media_type not in photoshop.SENDABLE_MEDIA_TYPES:
+    if media_type not in editor.SENDABLE_MEDIA_TYPES:
         return web.Response(text=f"Unsupported image type: {media_type}", status=400)
 
-    kind = photoshop.OUTGOING_IMAGE_KIND
-    photoshop_images[kind] = (await request.read(), media_type)
+    kind = editor.OUTGOING_IMAGE_KIND
+    editor_images[kind] = (await request.read(), media_type)
 
-    request_id = photoshop.create_send_request()
-    message = {
-        "type": "OPEN_IMAGE",
-        "requestId": request_id,
-        "name": photoshop.get_image_file_name(request.query.get("name", "image.png"), media_type),
-        "imageUrl": get_photoshop_image_url(kind),
-        "newDocument": request.query.get("new_document") == "true"
-    }
-
-    clients = 0
-    for ws in list(photoshop_plugin_websockets):
-        try:
-            await ws.send_json(message)
-            clients += 1
-        except Exception:
-            photoshop_plugin_websockets.discard(ws)
-
-    photoshop_plugin_ack_websockets.intersection_update(photoshop_plugin_websockets)
-    result = await photoshop.wait_for_plugin(request_id, bool(photoshop_plugin_ack_websockets))
-
-    return web.json_response({"clients": clients, **result})
+    return web.json_response(await editor_connection.send_open_image(
+        editor.get_image_file_name(request.query.get("name", "image.png"), media_type),
+        get_editor_image_url(kind), request.query.get("new_document") == "true"))
 
 
-# Receive an image or a mask from Photoshop
-@PromptServer.instance.routes.post(BASE_PATH + "/photoshop/upload")
-async def photoshop_upload(request):
+# The name of the connected editor, or null
+@PromptServer.instance.routes.get(BASE_PATH + "/editor/status")
+async def get_editor_status(request):
+    return web.json_response(editor_connection.status())
+
+
+# Receive an image or a mask from the editor
+async def editor_upload(request):
     """
-    Receive raw pixels of the document (kind=image) or its selection (kind=mask) from the Photoshop plugin,
+    Receive raw pixels of the document (kind=image) or its selection (kind=mask) from the editor plugin,
     save them to the input directory and notify the ComfyUI pages to load them into the node marked ib:img or ib:mask,
     or into the ControlNet unit shown in the ControlNet tab (target cn_*)
     """
     kind = request.query.get("kind")
     target = request.query.get("target", "input")
 
-    if kind not in photoshop.PHOTOSHOP_IMAGE_KINDS:
+    if kind not in editor.EDITOR_IMAGE_KINDS:
         return web.Response(text=f"Unknown image kind: {kind}", status=400)
 
-    if kind not in photoshop.PHOTOSHOP_TARGET_KINDS.get(target, ()):
+    if kind not in editor.EDITOR_TARGET_KINDS.get(target, ()):
         return web.Response(text=f"Unknown target {target} of {kind}", status=400)
 
     try:
         width, height, components = (int(request.query.get(name, "")) for name in ("width", "height", "components"))
-        to_png = photoshop.raw_mask_to_png if kind == "mask" else photoshop.raw_pixels_to_png
+        to_png = editor.raw_mask_to_png if kind == "mask" else editor.raw_pixels_to_png
         png = to_png(await request.read(), width, height, components)
     except ValueError as e:
         return web.Response(text=str(e), status=400)
@@ -723,21 +711,26 @@ async def photoshop_upload(request):
     server = PromptServer.instance
 
     # Saved and added to the Compare tab here, so that it arrives even if the popup is closed
-    if target == photoshop.COMPARE_TARGET:
-        image = save_compare_file(f"photoshop_{time.strftime('%Y%m%d-%H%M%S')}.png", png,
+    if target == editor.COMPARE_TARGET:
+        image = save_compare_file(f"editor_{time.strftime('%Y%m%d-%H%M%S')}.png", png,
                                   get_image_bench_dir(), "comfyui")
         append_tray_image(os.path.join(get_extension_root(), "store"), COMPARE_KIND, image)
-        await server.send("image-bench.photoshop", {"kind": kind, "target": target, "image": image})
+        await server.send("image-bench.editor", {"kind": kind, "target": target, "image": image})
         return web.json_response({"clients": len(server.sockets), "saved": True})
 
-    filename = photoshop.COMFYUI_INPUT_FILES[target][kind]
+    filename = editor.COMFYUI_INPUT_FILES[target][kind]
 
     with open(os.path.join(folder_paths.get_input_directory(), filename), "wb") as file:
         file.write(png)
 
-    await server.send("image-bench.photoshop", {"kind": kind, "filename": filename, "target": target})
+    await server.send("image-bench.editor", {"kind": kind, "filename": filename, "target": target})
 
     return web.json_response({"clients": len(server.sockets)})
+
+
+PromptServer.instance.routes.post(BASE_PATH + "/editor/upload")(editor_upload)
+# The route of the Photoshop plugins installed before the editor bridge
+PromptServer.instance.routes.post(BASE_PATH + "/photoshop/upload")(editor_upload)
 
 
 # Mask uploaded from the Generate or ControlNet tab
@@ -753,7 +746,7 @@ async def upload_input_mask(request):
         return web.Response(text="The mask name must be a .png file name", status=400)
 
     try:
-        png = photoshop.image_file_to_mask_png(await request.read())
+        png = editor.image_file_to_mask_png(await request.read())
     except Exception as e:
         return web.Response(text=f"Unable to read the mask: {e}", status=400)
 
@@ -835,10 +828,10 @@ def record_controlnet_inputs(json_data):
 PromptServer.instance.add_on_prompt_handler(record_controlnet_inputs)
 
 
-# Image downloaded by the Photoshop plugin
-@PromptServer.instance.routes.get(BASE_PATH + "/photoshop/image")
-async def get_photoshop_image(request):
-    image = photoshop_images.get(request.query.get("kind"))
+# Image downloaded by the editor plugin
+@PromptServer.instance.routes.get(BASE_PATH + "/editor/image")
+async def get_editor_image(request):
+    image = editor_images.get(request.query.get("kind"))
 
     if image is None:
         return web.Response(text="Not found", status=404)
@@ -847,34 +840,37 @@ async def get_photoshop_image(request):
     return web.Response(body=content, content_type=media_type, headers={"Cache-Control": "no-store"})
 
 
-def _photoshop_plugin_name(request):
-    """The plugin of a request (?plugin=, a key of photoshop_plugin.PLUGIN_DIRS)"""
-    return request.query.get("plugin", photoshop_plugin.DEFAULT_PLUGIN)
+def _editor_plugin_name(request):
+    """The plugin of a request (?plugin=, a key of editor_plugins.PLUGINS)"""
+    return request.query.get("plugin", editor_plugins.DEFAULT_PLUGIN)
 
 
-# Version of a supplied Photoshop plugin and of the one installed on the server computer
-@PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin")
-async def get_photoshop_plugin_status(request):
-    return web.json_response(photoshop_plugin.get_status(_photoshop_plugin_name(request)))
-
-
-@PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin.ccx")
-async def download_photoshop_plugin(request):
+# Version of a supplied editor plugin and of the one installed on the server computer
+@PromptServer.instance.routes.get(BASE_PATH + "/editor/plugin")
+async def get_editor_plugin_status(request):
     try:
-        name, content = photoshop_plugin.build_ccx(_photoshop_plugin_name(request))
-    except photoshop_plugin.PluginError as e:
+        return web.json_response(editor_plugins.get_status(_editor_plugin_name(request)))
+    except editor_plugins.PluginError as e:
+        return web.Response(text=str(e), status=404)
+
+
+@PromptServer.instance.routes.get(BASE_PATH + "/editor/plugin/package")
+async def download_editor_plugin(request):
+    try:
+        name, content = editor_plugins.package(_editor_plugin_name(request))
+    except editor_plugins.PluginError as e:
         return web.Response(text=str(e), status=404)
 
     return web.Response(body=content, content_type="application/octet-stream",
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
-# Install a Photoshop plugin on the server computer (see photoshop_plugin.install_or_elevate)
-@PromptServer.instance.routes.post(BASE_PATH + "/photoshop/plugin/install")
-async def install_photoshop_plugin(request):
+# Install an editor plugin on the server computer (see editor_plugins.install_or_elevate)
+@PromptServer.instance.routes.post(BASE_PATH + "/editor/plugin/install")
+async def install_editor_plugin(request):
     try:
-        return web.json_response(photoshop_plugin.install_or_elevate(_photoshop_plugin_name(request)))
-    except (photoshop_plugin.PluginError, OSError) as e:
+        return web.json_response(editor_plugins.install_or_elevate(_editor_plugin_name(request)))
+    except (editor_plugins.PluginError, OSError) as e:
         return web.json_response({"detail": str(e)}, status=500)
 
 

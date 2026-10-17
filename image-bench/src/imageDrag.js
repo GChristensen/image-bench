@@ -9,12 +9,16 @@ import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED, KIND_GENERATED, KIND_
 
 /**
  * Dragging image cards onto the tray tabs and the Compare tab: images dragged from the other tray are moved,
- * from other views (and to the Compare tab) copied.
+ * from other views (and to the Compare tab) copied. The project chip takes them too (KIND_PROJECT), copying them
+ * into the folder of the current project.
  * The card keeps the native URL of its image, so it can also be dropped into the image inputs of the Generate
  * and ControlNet tabs.
  */
 
 const IMAGE_DRAG_TYPE = "application/x-image-bench";
+
+// Drop target kind of the project chip, never a source
+export const KIND_PROJECT = "project";
 
 const TRAY_TAB_IDS = {
   [KIND_IMAGE_TRAY]: "image-tray-tab",
@@ -71,6 +75,16 @@ export function canDropOn(e, trayKind) {
 export function isMoveTo(trayKind) {
   return !!dragged && dragged.sourceKind in TRAY_TAB_IDS && trayKind in TRAY_TAB_IDS
     && dragged.sourceKind !== trayKind;
+}
+
+/**
+ * The dragged images, for a drop target that handles them itself (the project chip)
+ * @returns {Object[]}
+ */
+export function takeDraggedImages() {
+  const images = dragged?.images ?? [];
+  dragged = null;
+  return images;
 }
 
 export async function dropImages(trayKind) {

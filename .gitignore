@@ -10,7 +10,6 @@ CLAUDE.md
 !/webui-extension/model_docs/.gitkeep
 /comfyui-extension/model_docs/*
 !/comfyui-extension/model_docs/.gitkeep
-/photoshop-extension/dist/
-/photoshop-canny/dist/
+/editor-extensions/*/dist/
 /.env
 /.local/

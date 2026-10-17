@@ -78,10 +78,10 @@ function imageMenuItems(image, ctx) {
 
   const projects = useProjectsStore();
 
-  // Not from the Library, whose images are in a project already
-  if (ctx.kind !== "library" && projects.hasCurrent && projects.current.exists !== false)
+  // Not from the Projects tab, whose images are in a project already
+  if (ctx.kind !== "project" && projects.hasCurrent && projects.current.exists !== false)
     others.push({icon: "save", label: "Copy to project folder",
-      run: () => copyToProject(image)});
+      run: () => copyToProject([image])});
 
   const markingMenu = markingSubmenu(image, ctx);
 
@@ -148,24 +148,32 @@ function markingSubmenu(image, ctx) {
 }
 
 /**
- * Save the image file into the folder of the current project at once, with a notice
+ * Save the image files into the folder of the current project at once, with one notice
+ * (the context menu, and cards dropped on the project chip)
+ * @param {Object[]} images
  */
-async function copyToProject(image) {
+export async function copyToProject(images) {
   const projects = useProjectsStore();
   const name = projects.current.name;
+  const saved = [];
 
   try {
-    const response = await fetch(useImageOperations().getImageLink(image));
+    for (const image of images) {
+      const response = await fetch(useImageOperations().getImageLink(image));
 
-    if (!response.ok)
-      throw new Error(`Unable to read the image (${response.status}).`);
+      if (!response.ok)
+        throw new Error(`Unable to read the image (${response.status}).`);
 
-    const blob = await response.blob();
-    const file = new File([blob], fileNameOf(image, blob.type), {type: blob.type});
-    const saved = await projects.addFile(file);
-    toast(`Copied to the folder of "${name}" as ${saved}`);
+      const blob = await response.blob();
+      const file = new File([blob], fileNameOf(image, blob.type), {type: blob.type});
+      saved.push(await projects.addFile(file));
+    }
+
+    toast(saved.length === 1 ? `Copied to the folder of "${name}" as ${saved[0]}`
+      : `Copied ${saved.length} images to the folder of "${name}"`);
   } catch (error) {
-    toast(`Not copied to the folder of "${name}": ${error.message}`, {kind: "error", duration: 6000});
+    const done = saved.length ? ` (${saved.length} of ${images.length} copied)` : "";
+    toast(`Not copied to the folder of "${name}": ${error.message}${done}`, {kind: "error", duration: 6000});
   }
 }
 

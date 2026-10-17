@@ -3,10 +3,11 @@
  * Reference images of the edit models (Forge ImageStitch of the shown WebUI tab, or the LoadImage nodes marked
  * ib:ref in ComfyUI), named Image 1, 2, ...
  * as edit prompts refer to them. Images are added by browsing, dropping (also from the Generated tab
- * and the trays) or pasting, and from Photoshop if it sends here.
+ * and the trays) or pasting, and from the editor if it sends here.
  */
 import {ref} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
+import {editorName, editorShortName} from "@/editor.js";
 import NumberStepper from "@/components/NumberStepper.vue";
 import {imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 
@@ -16,8 +17,8 @@ defineProps({
     type: Object,
     required: true
   },
-  // Where images sent from Photoshop go: input or reference
-  photoshopTarget: {
+  // Where images sent from the editor go: input or reference
+  editorTarget: {
     type: String,
     required: true,
     validator: value => ["input", "reference"].includes(value)
@@ -29,7 +30,7 @@ defineProps({
   }
 });
 
-const emit = defineEmits(['add', 'remove', 'clear', 'enabled', 'max-size', 'photoshop-target']);
+const emit = defineEmits(['add', 'remove', 'clear', 'enabled', 'max-size', 'editor-target']);
 
 const dragOver = ref(false);
 
@@ -92,11 +93,11 @@ async function onPaste(e) {
       <small>or drag from Generated and the trays</small>
     </button>
 
-    <label class="row photoshop">
-      <span class="ps">Ps</span>sends to
+    <label class="row editor">
+      <span class="ps">{{ editorShortName() }}</span>sends to
       <span class="select-wrap">
-        <select :value="photoshopTarget" aria-label="Where images from Photoshop go"
-                @change="e => emit('photoshop-target', e.target.value)">
+        <select :value="editorTarget" :aria-label="`Where images from ${editorName} go`"
+                @change="e => emit('editor-target', e.target.value)">
           <option value="input">Input image</option>
           <option value="reference">New reference</option>
         </select>
@@ -219,7 +220,7 @@ async function onPaste(e) {
   color: var(--ib-text);
 }
 
-.photoshop {
+.editor {
   padding-top: 6px;
   border-top: 1px solid var(--ib-border);
   font-size: 11px;

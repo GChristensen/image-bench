@@ -1,12 +1,12 @@
 <script setup>
 /**
- * Project shown in the Library: open/save actions, tags, the final image, the saved parameters (prompts,
+ * Project shown in the Projects tab: open/save actions, tags, the final image, the saved parameters (prompts,
  * generation parameters, ControlNet units, trays), and the images of its saved trays and of the project folder,
  * any of which may be made the final image
  */
 import {computed, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
-import FileViewer from "@/components/library/FileViewer.vue";
+import FileViewer from "@/components/projects/FileViewer.vue";
 import ImageActionButtons from "@/components/ImageActionButtons.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {canReuseParameters, reuseParameters, runImageAction, visibleActionGroups} from "@/imageActions.js";
@@ -19,7 +19,7 @@ import {HOST, isComfy} from "@/host.js";
 import {openContextMenu} from "@/contextMenu.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
-import {sendUrlToPhotoshop} from "@/photoshop.js";
+import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {startBlankWorkspace} from "@/workspace.js";
 
@@ -249,15 +249,15 @@ const gridItems = computed(() => {
 
 // ---------- Image actions ----------
 
-// Generation parameters, send to inpaint, ControlNet and Photoshop; the tray actions (Compare, trays) need
+// Generation parameters, send to inpaint, ControlNet and the editor; the tray actions (Compare, trays) need
 // the image file in the workspace, so the cards add to Compare by uploading
-const CARD_ACTIONS = ["params", "inpaint", "controlnet", "photoshop"];
+const CARD_ACTIONS = ["params", "inpaint", "controlnet", "editor"];
 
 const shiftKey = useShiftKey();
 const paramsImage = ref(null);
 
 const actionContext = {
-  kind: "library",
+  kind: "project",
   isTray: false,
   upscalable: false,
   handlers: {showParams: image => paramsImage.value = image}
@@ -364,23 +364,23 @@ async function addToCompare(url, name) {
 }
 
 // A new document, or a layer of the active document on a middle click or Shift+click
-async function sendToPhotoshop(url, name, e) {
+async function sendToEditor(url, name, e) {
   if (e && e.button !== 0 && e.button !== 1)
     return;
 
   const newLayer = !!e && (e.button === 1 || e.shiftKey);
-  const error = await sendUrlToPhotoshop(url, baseName(name), !newLayer);
+  const error = await sendUrlToEditor(url, baseName(name), !newLayer);
 
   if (error)
-    await dialog.alert(error, {title: "Photoshop"});
+    await dialog.alert(error, {title: editorName.value});
 }
 
 function onItemMenu(e, item) {
   const items = [
     {icon: "star", label: "Set as the final image", run: () => store.setFinal(project.value.path, item.final)},
     {icon: "compare", label: "Add to compare", run: () => addToCompare(item.url, item.name)},
-    {icon: "photoshop", label: "Send to Photoshop as a new document", run: () => sendToPhotoshop(item.url, item.name)},
-    {icon: "layers", label: "Send to Photoshop as a new layer", run: () => sendToPhotoshop(item.url, item.name, {button: 1})},
+    {icon: editorIcon(), label: `Send to ${editorName.value} as a new document`, run: () => sendToEditor(item.url, item.name)},
+    {icon: "layers", label: `Send to ${editorName.value} as a new layer`, run: () => sendToEditor(item.url, item.name, {button: 1})},
     {separator: true},
     {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")}
   ];
@@ -494,10 +494,10 @@ const unitDetails = unit => [
         <div class="final-bar">
           <span class="final-source" :title="finalSourceLabel">{{ finalSourceLabel }}</span>
           <button class="btn outline small" @click="changeFinal">Choose…</button>
-          <button v-if="finalUrl" class="ib sm" title="Left: send to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer"
-                  aria-label="Send the final image to Photoshop"
-                  @click="sendToPhotoshop(finalUrl, data.final, $event)" @mousedown.middle.prevent
-                  @auxclick="sendToPhotoshop(finalUrl, data.final, $event)"><AppIcon name="photoshop" :size="13"/></button>
+          <button v-if="finalUrl" class="ib sm" :title="`Left: send to ${editorName} as a new image, Middle/Shift: send to ${editorName} as a new layer`"
+                  :aria-label="`Send the final image to ${editorName}`"
+                  @click="sendToEditor(finalUrl, data.final, $event)" @mousedown.middle.prevent
+                  @auxclick="sendToEditor(finalUrl, data.final, $event)"><AppIcon :name="editorIcon()" :size="13"/></button>
           <button v-if="finalUrl" class="ib sm danger" title="Remove the final image" aria-label="Remove the final image"
                   @click="store.setFinal(project.path)"><AppIcon name="close" :size="13"/></button>
         </div>
@@ -641,7 +641,7 @@ const unitDetails = unit => [
   </div>
   <div v-else-if="store.projectError" class="placeholder">{{ store.projectError }}</div>
   <div v-else class="placeholder">
-    <AppIcon name="library" :size="26"/>
+    <AppIcon name="box" :size="26"/>
     <p>Select a project in the tree, or create one: it keeps the trays and the parameters of the workspace.</p>
   </div>
 </template>

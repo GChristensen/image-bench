@@ -13,6 +13,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {HOST_NAME, hostHas, isWebUI} from "@/host.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
+import {editorIcon, editorName} from "@/editor.js";
 
 const VARYING_TEXT_ENCODERS_KEY = "imageBench_varyingTextEncoders";
 
@@ -50,11 +51,11 @@ export async function sendToInpaint(image) {
     flashTrayTab("generate-tab");
 }
 
-async function sendToPhotoshop(image, newDocument) {
-  const error = await useImageOperations().sendToPhotoshop(image, newDocument);
+async function sendToEditor(image, newDocument) {
+  const error = await useImageOperations().sendToEditor(image, newDocument);
 
   if (error)
-    await dialog.alert(error, {title: "Send to Photoshop"});
+    await dialog.alert(error, {title: `Send to ${editorName.value}`});
 }
 
 async function generateVaryingSteps(image) {
@@ -160,7 +161,7 @@ export async function reuseParameters(image, all) {
     useWebUIBridge().setImageSeed(parameters);
 }
 
-// Images uploaded to the Compare tab or sent there from Photoshop may have no generation parameters
+// Images uploaded to the Compare tab or sent there from the editor may have no generation parameters
 function hasParameters(image) {
   return !!image.parameters && Object.keys(image.parameters).length > 0;
 }
@@ -214,10 +215,13 @@ export const IMAGE_ACTIONS = [
     run: image => sendToControlNet(image)
   },
   {
-    id: "photoshop", side: "right", group: 2, icon: "photoshop", label: "Send to Photoshop as a new document", key: "P",
-    alt: {icon: "layers", label: "Send to Photoshop as a new layer"},
+    // Labelled by the connected editor (editor.js), so the label and icon are getters
+    id: "editor", side: "right", group: 2, key: "P",
+    get icon() { return editorIcon(); },
+    get label() { return `Send to ${editorName.value} as a new document`; },
+    alt: {icon: "layers", get label() { return `Send to ${editorName.value} as a new layer`; }},
     visible: () => true,
-    run: (image, ctx, alt) => sendToPhotoshop(image, !alt)
+    run: (image, ctx, alt) => sendToEditor(image, !alt)
   },
   {
     id: "compare", side: "right", group: 3, icon: "compare", label: "Add to compare", key: "A",

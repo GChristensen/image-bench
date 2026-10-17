@@ -3,7 +3,7 @@
  * ControlNet tab: a unit of Forge "ControlNet Integrated" in the txt2img or img2img tab of WebUI, or a ControlNet
  * apply node marked ib:cn:<unit> in ComfyUI, mirrored both ways like the Generate tab. The host page polls the unit
  * while the tab is shown (CONTROLNET_STATE, CONTROLNET_IMAGES) and applies the edits made here (SET_CONTROLNET_PARAMS).
- * The unit shown here also receives the images sent to ControlNet from Photoshop.
+ * The unit shown here also receives the images sent to ControlNet from the editor.
  * In WebUI img2img a unit uses the img2img image unless it has an independent image, which an image set here turns on.
  * ComfyUI reports which parts the workflow has (features, see src/host.js).
  * In WebUI the pose of an openpose preview is edited in sd-webui-openpose-editor (OpenposeEditorModal).
@@ -18,7 +18,7 @@ import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useFeatures} from "@/composables/useFeatures.js";
 import {HOST_NAME, isComfy} from "@/host.js";
 import {copyImageToClipboard, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
-import {sendUrlToPhotoshop} from "@/photoshop.js";
+import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {ensureOpenposeEditor} from "@/openposeEditor.js";
@@ -336,17 +336,17 @@ const sourceImage = computed(() => shownSourceView.value === "mask" ? images.val
 const sourceName = computed(() => `ControlNet ${unit.value + 1} ${shownSourceView.value === "mask" ? "mask" : "image"}`);
 
 // Left click opens the image as a new document, middle click or Shift+click places it as a layer of the active document
-async function onToPhotoshop(e, url, name) {
+async function onToEditor(e, url, name) {
   if (e.button !== 0 && e.button !== 1)
     return;
 
   e.preventDefault();
 
   const newLayer = e.button === 1 || e.shiftKey;
-  const error = await sendUrlToPhotoshop(url, name, !newLayer);
+  const error = await sendUrlToEditor(url, name, !newLayer);
 
   if (error)
-    await dialog.alert(error, {title: "Send to Photoshop"});
+    await dialog.alert(error, {title: `Send to ${editorName.value}`});
 }
 
 function onSavePreview() {
@@ -447,7 +447,7 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
         <ControlNetImagePane :image="sourceImage"
                              :dark="shownSourceView === 'mask'" :droppable="connected"
                              :empty-text="ownImage
-                               ? (shownSourceView === 'mask' ? 'No mask' : 'No control image') + '\nUpload, drop or paste one, or send it from Photoshop'
+                               ? (shownSourceView === 'mask' ? 'No mask' : 'No control image') + '\nUpload, drop or paste one, or send it from the editor'
                                : 'The unit uses the img2img image\nUpload, drop or paste one to use an independent image'"
                              @file="file => onFile(shownSourceView, file)">
           <template #label>
@@ -461,12 +461,12 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
             <span v-else class="label-small">Source</span>
           </template>
           <template #actions>
-            <button class="btn outline photoshop" :disabled="!sourceImage"
-                    :title="`Left: send the ${shownSourceView === 'mask' ? 'mask' : 'control image'} to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer`"
-                    @click="onToPhotoshop($event, sourceImage, sourceName)"
+            <button class="btn outline editor" :disabled="!sourceImage"
+                    :title="`Left: send the ${shownSourceView === 'mask' ? 'mask' : 'control image'} to ${editorName} as a new image, Middle/Shift: send to ${editorName} as a new layer`"
+                    @click="onToEditor($event, sourceImage, sourceName)"
                     @mousedown.middle.prevent
-                    @auxclick="onToPhotoshop($event, sourceImage, sourceName)"
-              ><AppIcon name="photoshop" :size="13"/>To Photoshop</button>
+                    @auxclick="onToEditor($event, sourceImage, sourceName)"
+              ><AppIcon :name="editorIcon()" :size="13"/>To {{ editorName }}</button>
             <button class="ib flat" :disabled="!connected"
                     :title="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
                     :aria-label="shownSourceView === 'mask' ? 'Upload the mask' : 'Upload the control image'"
@@ -491,16 +491,16 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
             <span class="label-small">Preview</span>
           </template>
           <template #actions>
-            <button v-if="openposePreview" class="btn outline photoshop"
+            <button v-if="openposePreview" class="btn outline editor"
                     :disabled="!connected || !images.pose || cn.running"
                     :title="images.pose ? 'Edit the pose in the OpenPose editor' : 'Run the preprocessor to get the pose'"
                     @click="onEditPose"><AppIcon name="pencil" :size="13"/>Edit pose</button>
-            <button class="btn outline photoshop" :disabled="!images.preview"
-                    title="Left: send the preview to Photoshop as a new image, Middle/Shift: send to Photoshop as a new layer"
-                    @click="onToPhotoshop($event, images.preview, previewName)"
+            <button class="btn outline editor" :disabled="!images.preview"
+                    :title="`Left: send the preview to ${editorName} as a new image, Middle/Shift: send to ${editorName} as a new layer`"
+                    @click="onToEditor($event, images.preview, previewName)"
                     @mousedown.middle.prevent
-                    @auxclick="onToPhotoshop($event, images.preview, previewName)"
-              ><AppIcon name="photoshop" :size="13"/>To Photoshop</button>
+                    @auxclick="onToEditor($event, images.preview, previewName)"
+              ><AppIcon :name="editorIcon()" :size="13"/>To {{ editorName }}</button>
             <button class="ib flat" :disabled="!images.preview" title="Copy the preview (Ctrl+C)"
                     aria-label="Copy the preview" @click="onCopyPreview"><AppIcon name="copy" :size="14"/></button>
             <button class="ib flat" :disabled="!images.preview" title="Save the preview" aria-label="Save the preview"
@@ -759,7 +759,7 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
   white-space: nowrap;
 }
 
-.photoshop {
+.editor {
   height: 26px;
 }
 

@@ -18,14 +18,16 @@ export const MANUAL_SECTIONS = [
   {id: "upscaled", title: "Upscaled", icon: "upscale"},
   {id: "library", title: "Library", icon: "library", children: [
     {id: "library-docs", title: "Docs", icon: "book"},
-    {id: "library-projects", title: "Projects", icon: "box"},
     {id: "library-snippets", title: "Snippets", icon: "snippet"},
     {id: "library-manual", title: "Manual", icon: "help"},
   ]},
+  {id: "projects", title: "Projects", icon: "box"},
   {id: "images", title: "Working with images", icon: "layers"},
   {id: "settings", title: "Settings & actions", icon: "settings"},
-  {id: "photoshop", title: "Photoshop", icon: "photoshop", children: [
+  {id: "editors", title: "Editors", icon: "layers", children: [
+    {id: "editor-photoshop", title: "Photoshop", icon: "photoshop"},
     {id: "photoshop-canny", title: "Canny Edges plugin", icon: "controlnet"},
+    {id: "editor-krita", title: "Krita", icon: "krita"},
   ]},
   ...(isComfy ? [{id: "comfy-setup", title: "ComfyUI setup", icon: "puzzle", children: [
     {id: "comfy-markers", title: "Markers in detail", icon: "tag"},

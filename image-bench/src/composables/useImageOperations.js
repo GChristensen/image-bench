@@ -1,5 +1,5 @@
 import { createImageLink, createImageGenerationParams } from '@/sdwebui.js';
-import { sendUrlToPhotoshop } from '@/photoshop.js';
+import { sendUrlToEditor } from '@/editor.js';
 import { sendWebUIMessage } from '@/sdwebui.js';
 import { useControlNetStore } from '@/stores/controlnet.js';
 
@@ -80,12 +80,12 @@ export function useImageOperations() {
   };
 
   /**
-   * Send image to the Image Bench Photoshop plugin, which places it as a layer of the active document
+   * Send image to the connected editor plugin, which places it as a layer of the active document
    * @param {boolean} newDocument - Open the image as a new document even if there is an active one
    * @returns {Promise<string|null>} Error message, or null on success
    */
-  const sendToPhotoshop = (image, newDocument = false) =>
-    sendUrlToPhotoshop(createImageLink(image), image.imagePath || createImageLink(image), newDocument);
+  const sendToEditor = (image, newDocument = false) =>
+    sendUrlToEditor(createImageLink(image), image.imagePath || createImageLink(image), newDocument);
 
   /**
    * Send the image file to the host page in a message made by createMessage(file)
@@ -166,7 +166,7 @@ export function useImageOperations() {
     isUpscaledImage,
     hasCustomSteps,
     openImageInNewWindow,
-    sendToPhotoshop,
+    sendToEditor,
     sendToControlNet,
     sendToInpaint,
     canCopyImage,

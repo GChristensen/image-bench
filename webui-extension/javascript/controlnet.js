@@ -1,6 +1,6 @@
 /**
  * Two-way mirror of a Forge "ControlNet Integrated" unit for the ControlNet tab of the popup,
- * and the ControlNet targets of the Photoshop plugin.
+ * and the ControlNet targets of the editor plugin.
  * While the tab is shown, the unit chosen there is polled in the shown generation tab (txt2img or img2img)
  * and sent to the popup when it changes (CONTROLNET_STATE, CONTROLNET_IMAGES); edits made in the popup are applied here.
  * In img2img a unit uses the img2img image unless "Upload independent control image" is checked,
@@ -8,7 +8,7 @@
  */
 
 import {SELECTORS} from "./adapters/selectors.js";
-import {sendImageToPhotoshop} from "./shared/photoshop-send.js";
+import {sendImageToEditor} from "./shared/editor-send.js";
 
 const POLL_INTERVAL = 600;
 // Lets WebUI process an applied value before it is read back
@@ -29,7 +29,7 @@ const RADIO_PARAMS = ['controlType', 'controlMode', 'resizeMode'];
 const DROPDOWN_PARAMS = ['preprocessor', 'model'];
 // Preprocessor sliders: Resolution (hidden with Pixel Perfect) and the two thresholds of the preprocessor
 const SLIDER_PARAMS = ['processorRes', 'thresholdA', 'thresholdB'];
-// Checked when the popup or Photoshop first uses a unit
+// Checked when the popup or the editor first uses a unit
 const DEFAULT_CHECKED = ['pixelPerfect', 'allowPreview'];
 
 /**
@@ -40,7 +40,7 @@ const DEFAULT_CHECKED = ['pixelPerfect', 'allowPreview'];
  */
 export function createControlNet(uiOperations, adapter, popup, showAlert) {
     let timer = null;
-    // Unit shown in the popup, also the one that receives images from Photoshop
+    // Unit shown in the popup, also the one that receives images from the editor
     let unit = 0;
     let lastState = null;
     let lastImages = null;
@@ -438,14 +438,14 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
     }
 
     /**
-     * Put an image sent from Photoshop into the unit shown in the popup (the first one if it was not opened):
-     * cn_preprocess runs the preprocessor and sends the preview back to Photoshop, cn_image is used as the control
+     * Put an image sent from the editor into the unit shown in the popup (the first one if it was not opened):
+     * cn_preprocess runs the preprocessor and sends the preview back to the editor, cn_image is used as the control
      * image without a preprocessor, cn_mask becomes the mask of the unit
      * @param {'cn_preprocess'|'cn_image'|'cn_mask'} target
      * @param {File} file
      * @returns {Promise<void>}
      */
-    function onPhotoshopImage(target, file) {
+    function onEditorImage(target, file) {
         return enqueue(async () => {
             const tab = getTab();
             const index = unit;
@@ -467,14 +467,14 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
                     await clearPreview(tab, index);
                 }
                 else if (target === 'cn_preprocess')
-                    await preprocessToPhotoshop(tab, index);
+                    await preprocessToEditor(tab, index);
             }
 
             pollIfActive();
         });
     }
 
-    async function preprocessToPhotoshop(tab, index) {
+    async function preprocessToEditor(tab, index) {
         const preview = await runPreprocessor(tab, index);
 
         if (!preview) {
@@ -483,7 +483,7 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
         }
 
         const preprocessor = element(tab, index, 'preprocessor')?.querySelector(SELECTORS.DROPDOWN_INPUT)?.value;
-        const error = await sendImageToPhotoshop(preview, `ControlNet ${index + 1} ${preprocessor || ''} preview`);
+        const error = await sendImageToEditor(preview, `ControlNet ${index + 1} ${preprocessor || ''} preview`);
 
         if (error)
             showAlert(error);
@@ -785,6 +785,6 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
         adapter.setCheckedIn(get('enabled'), params.enabled ?? true);
     }
 
-    return {subscribe, applyParams, runAction, setUnitImage, setPose, setTab, onPhotoshopImage,
+    return {subscribe, applyParams, runAction, setUnitImage, setPose, setTab, onEditorImage,
             readEnabledUnits, captureUnits, restoreUnits};
 }
