@@ -242,7 +242,7 @@ const gridItems = computed(() => {
       title: [image.name, image.comment, image.prompt].filter(Boolean).join("\n\n"),
       final: {kind, member: image.member},
       image: {imageUrl: url, imagePath: image.name, parameters: image.parameters, img2img: image.img2img,
-              generationId: image.generationId, controlnetId: image.controlnetId}
+              generationId: image.generationId}
     };
   });
 });

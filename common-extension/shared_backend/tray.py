@@ -15,7 +15,6 @@ from typing import Dict, Any, Optional, Tuple, Union
 from urllib.parse import quote
 from PIL import Image
 
-from .controlnet_capture import capture_dirs
 from .persist import read_json_file
 
 # Store files of the persistent image collections by kind; the images are copied to image-bench/<kind>/
@@ -370,7 +369,6 @@ def download_image_tray(
     if tray_file_path and os.path.exists(tray_file_path):
         image_tray = read_json_file(tray_file_path)
         images = image_tray["images"]
-        controlnet_artifacts = {}
 
         if images and len(images):
             with zipfile.ZipFile(export_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -379,14 +377,7 @@ def download_image_tray(
                     zip_file.write(image["imagePath"], archive_name)
                     image["imagePath"] = archive_name
 
-                    controlnet_artifacts.update(capture_dirs(image_bench_dir, image))
-
                 zip_file.writestr(image_tray_file, json.dumps(image_tray))
-
-                for gen_id, gen_dir in controlnet_artifacts.items():
-                    for gen_file in os.listdir(gen_dir):
-                        gen_file_path = os.path.join(gen_dir, gen_file)
-                        zip_file.write(gen_file_path, "controlnet/" + gen_id + "/" + gen_file)
 
             return (export_file, 200)  # OK
         else:

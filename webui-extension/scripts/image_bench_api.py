@@ -24,7 +24,6 @@ from starlette.status import HTTP_204_NO_CONTENT
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import persist
 from shared import civitai
-from shared import controlnet_capture
 from shared import explore_export
 from shared import launcher
 from shared import loras
@@ -108,9 +107,6 @@ class ImageBenchApi():
         self.add_api_route("/webui_options", self.get_webui_options, methods=["GET"])
         self.add_api_route("/webui_options", self.write_webui_options, methods=["POST"])
         self.add_api_route("/controlnet/choices", self.get_controlnet_choices, methods=["GET"])
-        self.add_api_route("/controlnet/capture", self.save_controlnet_capture, methods=["POST"])
-        self.add_api_route("/controlnet/capture", self.get_controlnet_capture, methods=["GET"])
-        self.add_api_route("/controlnet/capture_file", self.get_controlnet_capture_file, methods=["GET"])
         self.add_api_route("/civitai/model_info", self.get_civitai_model_info, methods=["GET"])
         self.add_api_route("/snippets", self.get_snippets, methods=["GET"])
         self.add_api_route("/snippets", self.write_snippets, methods=["POST"])
@@ -708,26 +704,6 @@ class ImageBenchApi():
 
     def clear_outputs_dir(self):
         persist.clear_directory(self.outputs_dir)
-
-    async def save_controlnet_capture(self, request: Request):
-        try:
-            controlnet_capture.save_capture(self.image_bench_dir, json.loads(await request.body()))
-        except controlnet_capture.CaptureError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-        return Response(status_code=HTTP_204_NO_CONTENT)
-
-    async def get_controlnet_capture(self, id: str):
-        try:
-            return JSONResponse(controlnet_capture.read_capture(self.image_bench_dir, id))
-        except controlnet_capture.CaptureError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-    async def get_controlnet_capture_file(self, path: str):
-        try:
-            return FileResponse(controlnet_capture.capture_file_path(self.image_bench_dir, path))
-        except controlnet_capture.CaptureError:
-            raise HTTPException(status_code=404)
 
     async def image_tray_upload(self, file: UploadFile):
         file_data = await file.read()
