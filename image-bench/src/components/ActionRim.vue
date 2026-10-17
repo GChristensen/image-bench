@@ -32,6 +32,11 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  // Label of the Delete sector, e.g. for a view that only references the image
+  deleteLabel: {
+    type: String,
+    default: "Delete"
+  },
   // The view filters by markings; filterActive tells that it is filtered by this marking
   filterable: {
     type: Boolean,
@@ -100,7 +105,7 @@ const items = computed(() => {
     }
 
     if (group.index === 3 && props.deletable)
-      result.push({id: "delete", group: "delete", color: DELETE_COLOR, icon: "trash", label: "Delete", strong: true});
+      result.push({id: "delete", group: "delete", color: DELETE_COLOR, icon: "trash", label: props.deleteLabel, strong: true});
   }
 
   return result;

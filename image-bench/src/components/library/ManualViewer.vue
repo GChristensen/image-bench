@@ -336,13 +336,13 @@ const hostOrigin = location.origin;
           preset to check its items, <AppIcon name="save" :size="13" class="inline-icon"/> saves the checked items
           to it, and the menu next to it creates or deletes presets. <b>Clear</b> above the list unchecks all
           items.</li>
-        <li><b>LoRA-free images</b> — when LoRAs are checked, each model also gets an image without them for
-          comparison. The setting <b>Generate LoRA-free images for each model when exploring LoRAs</b> turns this
-          off.<span v-if="isComfy"> In ComfyUI, exploring LoRAs requires a
+        <li><b>No LoRA</b> — the toggle after the layout switch, available when LoRAs are checked. While it is on
+          (the default), each model also gets an image without the LoRAs, as a baseline to compare them against;
+          the choice is kept.<span v-if="isComfy"> In ComfyUI, exploring LoRAs requires a
             LoRA loader titled <code>ib:lora</code>.</span></li>
         <li><b>By model / Matrix</b> — the switch next to <b>×</b>, available when LoRAs are checked. Matrix
           generates one image per model and LoRA, all with the same seed, and lays them out as a grid: a row per
-          model, a column per LoRA (plus the LoRA-free column). Back in By model, the number of images is 3 again.</li>
+          model, a column per LoRA (plus the No LoRA column). Back in By model, the number of images is 3 again.</li>
         <li><b>Save results</b> stores the whole comparison as a single HTML page; <b>Clear results</b> empties
           the tab.</li>
         <li>The <AppIcon name="info" :size="13" class="inline-icon"/> button shows the Civitai information of the
@@ -427,7 +427,7 @@ const hostOrigin = location.origin;
           the editor as a new document.</li>
         <li><b>Image actions</b> — images and crops show only their number, comment and marking. Hold
           <span class="kbd">Ctrl</span> over one to show its action rim (parameters, ControlNet, editor, the trays,
-          a comment, the markings in the middle), right-click it for its actions, or use the keys. Middle-click or Shift+click an
+          a comment, Remove from compare at the bottom, the markings in the middle), right-click it for its actions, or use the keys. Middle-click or Shift+click an
           image to view it large (in Crops, click or middle-click it).</li>
         <li><b>Clear</b> — <b>Marked</b> / <b>Unmarked</b> remove the images with or without a marking, and
           <b>All</b> all of them; the files stay on disk.</li>
@@ -726,8 +726,6 @@ const hostOrigin = location.origin;
           (a local or network path). <b>Check</b> tells whether it exists and is writable.</li>
         <li><b>Docs root</b> — the folder of the Markdown documents of the Library; empty for the
           <code>model_docs</code> folder of the extension. <b>Check</b> counts the documents in it.</li>
-        <li><b>Generate LoRA-free images for each model when exploring LoRAs</b> — adds an image without any LoRA
-          to each model in Explore, as a baseline to compare the LoRAs against.</li>
         <li v-if="isWebUI"><b>Add 'Civitai Model Info' settings button</b> — adds an ℹ️ button next to the
           checkpoint list of the WebUI page, which opens the Civitai page of the selected checkpoint. It appears
           or disappears when you return to the WebUI window.</li>

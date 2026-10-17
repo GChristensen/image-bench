@@ -491,6 +491,11 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
                   :aria-checked="matrixMode" title="One image per model and LoRA, with the same seed"
                   @click="matrixMode = true">Matrix</button>
         </div>
+        <button class="btn lora-free" :class="{on: appConfigStore.exploreLoraFreeImages}"
+                :aria-pressed="appConfigStore.exploreLoraFreeImages" :disabled="!loras.selected.value.size"
+                :title="loras.selected.value.size ? 'Also generate the images of each model without LoRAs, for comparison'
+                  : 'Select LoRAs to generate LoRA-free images for comparison'"
+                @click="appConfigStore.exploreLoraFreeImages = !appConfigStore.exploreLoraFreeImages">No LoRA</button>
       </div>
       <ProgressIndicator v-if="exploreImagesStore.generationInProgress"
                          :value="exploreImagesStore.generationProgress" :label="progressLabel"/>
@@ -715,6 +720,16 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
 
 .layout-switch button:disabled:hover {
   color: var(--ib-text-2);
+}
+
+.lora-free.on {
+  background: var(--ib-accent-soft);
+  color: var(--ib-accent);
+}
+
+.lora-free:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .matrix {

@@ -7,7 +7,8 @@ import ActionRim from "@/components/ActionRim.vue";
 
 /**
  * Index badge, comment and marking shown over an image of the Compare tab (strip item or crop cell); holding Ctrl
- * over the image shows its action rim (ActionRim.vue). The other actions are in the context menu and the keys.
+ * over the image shows its action rim (ActionRim.vue), with the view's removeImage handler as its Delete sector.
+ * The other actions are in the context menu and the keys.
  * The root takes no pointer events, so that drags on the image reach the view; its controls do. Their clicks
  * stop here: a control may re-render away before the click bubbles on, so the image could no longer tell it came
  * from the chrome.
@@ -76,7 +77,9 @@ function onMarkingAuxClick(e) {
 
     <Transition name="rim">
       <ActionRim v-if="rimOpen" :groups="rimGroups" :size="rimSize" :marking="image.marking ?? null"
-                 :show-alt="showAlt" @run="onAction" @set-marking="marking => emit('setMarking', marking)"/>
+                 :show-alt="showAlt" :deletable="!!ctx.handlers.removeImage" :delete-label="ctx.removeLabel ?? 'Remove'"
+                 @run="onAction" @delete="ctx.handlers.removeImage(image)"
+                 @set-marking="marking => emit('setMarking', marking)"/>
     </Transition>
   </div>
 </template>

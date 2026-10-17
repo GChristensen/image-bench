@@ -188,9 +188,6 @@ function setGenerateUiPreset(index, value) {
         <template v-else>{{ docsCheck.error || "Not found" }}</template>
       </span>
     </div>
-    <h3>Model Exploration</h3>
-    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.exploreLoraFreeImages"
-    >Generate LoRA-free images for each model when exploring LoRAs</label>
     <h3>SD WebUI Interface</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.addModelInfoButton"
     >Add 'Civitai Model Info' settings button (restart required)</label>

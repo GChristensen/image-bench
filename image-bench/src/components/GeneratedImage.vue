@@ -216,8 +216,9 @@
 </script>
 
 <template>
-<div v-if="displayed" ref="rootElement" class="selectable-image" :class="{selected, highlighted, dragging}">
-  <div class="image-separator" v-if="image.separator">◇</div>
+<div v-if="displayed" ref="rootElement" class="selectable-image"
+     :class="{selected, highlighted, dragging, separator: image.separator}">
+  <div class="image-separator" v-if="image.separator"></div>
   <div v-else ref="frameElement" class="image-frame" :class="{bare}" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
        @contextmenu="openImageMenu($event, image, actionContext)">
     <img class="selectable-image-preview"
@@ -549,9 +550,19 @@
   box-shadow: inset 0 0 0 1px var(--ib-accent);
 }
 
+/* A batch separator spans the height of its row of cards */
+.selectable-image.separator {
+  align-self: stretch;
+  display: flex;
+  height: auto;
+  min-height: 48px;
+}
+
 .image-separator {
-  color: var(--ib-muted);
-  font-size: 120%;
-  font-weight: bold;
+  width: 2px;
+  margin: 4px 0;
+  border-radius: 1px;
+  background: var(--ib-muted);
+  opacity: .6;
 }
 </style>
