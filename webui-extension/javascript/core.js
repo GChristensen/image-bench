@@ -2,6 +2,7 @@ import {loadAppConfig} from "./shared/utils.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager, getEmbeddingWindow} from "./shared/popup.js";
+import {showAppLinkDialog} from "./shared/appLink.js";
 import {createWebSocket, isConnectionClosed} from "./shared/websocket.js";
 import {
     fetchCurrentModelInfo,
@@ -203,8 +204,8 @@ async function initUI() {
 
 function updateHeaderButtons() {
     modelInfoButton.style.display = appConfig?.addModelInfoButton ? "" : "none";
-    // Hidden by default: Image Bench is opened by its URL (/image-bench/app)
-    openButton.style.display = appConfig?.showHostButton ? "" : "none";
+    // Not in the iframe of Image Bench, which has its own tabs
+    openButton.style.display = getEmbeddingWindow() ? "none" : "";
 }
 
 /**
@@ -247,6 +248,10 @@ async function onShowModelInfo() {
 }
 
 async function onShowWindow() {
+    // Image Bench is started by its link (/image-bench/app) unless it is set to be opened from here
+    if (!appConfig?.openFromHostUI)
+        return showAppLinkDialog("WebUI");
+
     if (popupManager.open())
         connectPopup();
 }

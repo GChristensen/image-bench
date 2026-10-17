@@ -36,13 +36,14 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
-    // Show the button that opens Image Bench in the host UI (disabled unless set to true: the app is opened by its URL)
-    const showHostButton = computed({
+    // The Image Bench button of the host UI opens Image Bench from that page; unset, it shows the link to the app
+    // (/image-bench/app), which loads the host UI in its iframe
+    const openFromHostUI = computed({
         get() {
-            return _config.showHostButton ?? false;
+            return _config.openFromHostUI ?? false;
         },
         set(v) {
-            _config.showHostButton = v;
+            _config.openFromHostUI = v;
             return persist();
         }
     });
@@ -214,7 +215,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         repositionConfigPresetsDropdown,
         addModelInfoButton,
         openInWindow,
-        showHostButton,
+        openFromHostUI,
         civitaiDomain,
         automaticallyClearGeneratedImages,
         exploreLoraFreeImages,

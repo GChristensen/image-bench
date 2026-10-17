@@ -20,6 +20,7 @@ import {createWorkflows} from "./workflows.js";
 import {messageBus} from "./shared/messaging/messageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager, getEmbeddingWindow} from "./shared/popup.js";
+import {showAppLinkDialog} from "./shared/appLink.js";
 import {getGenerationState, setGenerationState} from "./shared/state.js";
 import {loadAppConfig} from "./shared/utils.js";
 
@@ -269,17 +270,28 @@ function addToolbarButton() {
         button.style.background = '#4a4a4a';
     });
 
-    button.addEventListener('click', () => popupManager.open());
-
-    // Hidden by default: Image Bench is opened by its URL (/image-bench/app)
-    const updateButton = async () => {
+    // Image Bench is started by its link (/image-bench/app) unless it is set to be opened from here. The setting is
+    // read ahead, so that window.open() stays within the user gesture of the click
+    let openFromHostUI = false;
+    const loadSetting = async () => {
         const appConfig = await loadAppConfig();
-        button.style.display = appConfig?.showHostButton ? "" : "none";
+        if (appConfig)
+            openFromHostUI = !!appConfig.openFromHostUI;
     };
-    button.style.display = "none";
-    updateButton();
+    loadSetting();
     // The setting may be changed in the popup, the user then returns to this window
-    window.addEventListener("focus", updateButton);
+    window.addEventListener("focus", loadSetting);
+
+    button.addEventListener('click', () => {
+        if (openFromHostUI)
+            popupManager.open();
+        else
+            showAppLinkDialog("ComfyUI");
+    });
+
+    // Not in the iframe of Image Bench, which has its own tabs
+    if (getEmbeddingWindow())
+        button.style.display = "none";
 
     // Insert button before the settings group (same approach as rgthree)
     app.menu.settingsGroup.element.before(button);

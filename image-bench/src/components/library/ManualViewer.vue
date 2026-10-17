@@ -133,12 +133,16 @@ const hostOrigin = location.origin;
       </p>
 
       <p>
-       The setting <b>Show the Image Bench button in the
-        {{ HOST_NAME }} interface</b> allows to open Image Bench from the {{ HOST_NAME }} interface instead.
-        After enabling the setting above restart {{ HOST_NAME }}, click the <b>🔬 Image Bench</b> button
-        {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}. It opens in a browser tab,
-        which stays connected to the {{ HOST_NAME }} page it was opened from and drag that tab into a window of its
-        own, so that the {{ HOST_NAME }} page stays the active tab of its window (see below).
+       The <b>🔬 Image Bench</b> button {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}
+        shows this link in a dialog: a click on it, with any mouse button, loads Image Bench in place of the
+        {{ HOST_NAME }} page of that tab. The button is not shown in the {{ HOST_NAME }} page loaded inside Image Bench.
+      </p>
+
+      <p>
+        The setting <b>Open Image Bench from the {{ HOST_NAME }} interface</b> makes the button open Image Bench from
+        the {{ HOST_NAME }} page instead. It opens in a browser tab, which stays connected to the {{ HOST_NAME }} page
+        it was opened from; drag that tab into a window of its own, so that the {{ HOST_NAME }} page stays the active
+        tab of its window (see below).
       </p>
 
       <div class="note">
@@ -701,9 +705,10 @@ const hostOrigin = location.origin;
       <ul>
         <li><b>Accent color</b> — the highlight color of the window: buttons, active tabs, selections. May be useful to distinguish Image Bench windows from different
         hosts (WebuUI/ComfyUI)</li>
-        <li><b>Show the Image Bench button in the {{ HOST_NAME }} interface</b> — shows the <b>🔬 Image Bench</b> button
-          {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}, which opens Image Bench from
-          that page. Off by default, since Image Bench is opened by its <code>/image-bench/app</code> link.</li>
+        <li><b>Open Image Bench from the {{ HOST_NAME }} interface</b> — the <b>🔬 Image Bench</b> button
+          {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }} opens Image Bench from that
+          page. Off by default: Image Bench is opened by its <code>/image-bench/app</code> link, which the button
+          then shows.</li>
         <li><b>Show the action rim of an image on hover (without holding Ctrl)</b> — opens the action rim of an image
           when the pointer is over it, as in <a href="#" @click.prevent="scrollTo('images')">Working with images</a>. Off by default: the rim shows while
           <span class="kbd">Ctrl</span> is held or with its toggle button.</li>

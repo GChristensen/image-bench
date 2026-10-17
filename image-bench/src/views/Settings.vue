@@ -126,8 +126,8 @@ function setGenerateUiPreset(index, value) {
     </div>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.openInWindow"
     >Open Image Bench in a popup window instead of a browser tab</label>
-    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.showHostButton"
-    >Show the Image Bench button in the {{ HOST_NAME }} interface</label>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.openFromHostUI"
+    >Open Image Bench from the {{ HOST_NAME }} interface</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.rimOnHover"
     >Show the action rim of an image on hover (without holding Ctrl)</label>
     <h3>Generation</h3>
