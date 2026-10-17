@@ -2,8 +2,10 @@
 /.claude/
 CLAUDE.md
 /webui-extension/store/
+/webui-extension/config.json
 /webui-extension/scripts/index.html
 /comfyui-extension/store/
+/comfyui-extension/config.json
 /comfyui-extension/js/index.html
 /comfyui-extension/js/shared/
 /webui-extension/model_docs/*
@@ -13,3 +15,4 @@ CLAUDE.md
 /editor-extensions/*/dist/
 /.env
 /.local/
+__pycache__/

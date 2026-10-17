@@ -4,7 +4,6 @@ Adds a toolbar button to open the Image Bench popup window for batch generation 
 """
 
 import os
-import sys
 import asyncio
 import json
 import shutil
@@ -15,12 +14,12 @@ from aiohttp import web
 from server import PromptServer
 import folder_paths
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import (civitai, controlnet_inputs, editor, editor_plugins, explore_export, launcher, loras, media, persist,
-                    pnginfo, projects)
+from .image_bench_shared import (civitai, controlnet_inputs, editor, editor_plugins, explore_export, launcher, loras,
+                                 media, persist, pnginfo, projects)
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
-from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
-from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
+from .image_bench_shared.tray import (TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler,
+                                      save_tray_images)
+from .image_bench_shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
 
 # Tell ComfyUI to serve files from the js/ directory
 WEB_DIRECTORY = "./js"
@@ -122,35 +121,59 @@ async def update_config(request):
         return web.Response(text=str(e), status=500)
 
 
+# Used when the shipped node_config.json is missing
+DEFAULT_NODE_CONFIG = {
+    "checkpoint": {
+        "marker": "cp",
+        "nodeTypes": [
+            "CheckpointLoaderSimple",
+            "CheckpointLoader",
+            "unCLIPCheckpointLoader",
+            "UNETLoader"
+        ],
+        "widgetNames": {
+            "CheckpointLoaderSimple": "ckpt_name",
+            "CheckpointLoader": "ckpt_name",
+            "unCLIPCheckpointLoader": "ckpt_name",
+            "UNETLoader": "unet_name"
+        }
+    }
+}
+
+
+def merge_node_config(base, overlay):
+    """
+    Merge the user's overlay over the shipped node config: dicts recursively, the overlay's scalars win,
+    and lists take the overlay's items first, then the shipped ones not among them
+    """
+    if isinstance(base, dict) and isinstance(overlay, dict):
+        merged = dict(base)
+
+        for key, value in overlay.items():
+            merged[key] = merge_node_config(base[key], value) if key in base else value
+
+        return merged
+
+    if isinstance(base, list) and isinstance(overlay, list):
+        return overlay + [item for item in base if item not in overlay]
+
+    return overlay
+
+
+def load_node_config():
+    """The shipped node_config.json with store/node_config.json of the user merged over it (kept by updates)"""
+    config = persist.read_json_file(get_node_config_path()) or DEFAULT_NODE_CONFIG
+    overlay_path = persist.get_store_file_path(get_extension_root(), "node_config.json")
+    overlay = persist.read_json_file(overlay_path) if os.path.isfile(overlay_path) else None
+
+    return merge_node_config(config, overlay) if isinstance(overlay, dict) else config
+
+
 # Serve node_config.json
 @PromptServer.instance.routes.get(BASE_PATH + "/node_config.json")
 async def get_node_config(request):
-    """Serve the node configuration file for marker-based node discovery"""
-    node_config_path = get_node_config_path()
-
-    # Create default config if it doesn't exist
-    if not os.path.exists(node_config_path):
-        default_node_config = {
-            "checkpoint": {
-                "marker": "cp",
-                "nodeTypes": [
-                    "CheckpointLoaderSimple",
-                    "CheckpointLoader",
-                    "unCLIPCheckpointLoader",
-                    "UNETLoader"
-                ],
-                "widgetNames": {
-                    "CheckpointLoaderSimple": "ckpt_name",
-                    "CheckpointLoader": "ckpt_name",
-                    "unCLIPCheckpointLoader": "ckpt_name",
-                    "UNETLoader": "unet_name"
-                }
-            }
-        }
-        with open(node_config_path, 'w') as f:
-            json.dump(default_node_config, f, indent=2)
-
-    return web.FileResponse(node_config_path, headers={"Cache-Control": "no-cache"})
+    """Serve the node configuration for marker-based node discovery"""
+    return web.json_response(load_node_config(), headers={"Cache-Control": "no-cache"})
 
 
 # System information endpoint
@@ -857,11 +880,7 @@ def record_controlnet_inputs(json_data):
     Record the ControlNet units of every posted prompt into its extra_data, read back from /history by core.js;
     ComfyUI keeps the prompt if a handler fails
     """
-    if not os.path.isfile(get_node_config_path()):
-        return json_data
-
-    with open(get_node_config_path(), "r", encoding="utf-8") as f:
-        config = json.load(f).get("controlnet") or {}
+    config = load_node_config().get("controlnet") or {}
 
     return controlnet_inputs.record_comfy_prompt(json_data, get_image_bench_dir(), config, input_file_path)
 

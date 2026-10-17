@@ -1,0 +1,14 @@
+[project]
+name = "image-bench"
+description = "Systematic Stable Diffusion experimentation: batch generation, model exploration, parameter variation, image trays and editor plugins (Photoshop, Krita, GIMP)."
+version = "0.1.0"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/GChristensen/comfyui-image-bench"
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "Image Bench"
+Icon = ""

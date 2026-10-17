@@ -16,7 +16,7 @@ _SHARED_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPOSITORY_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..")
 
 # Folder of the plugin folders: copied next to this module by the deploy, or the repository folder
-# (the extension's shared directory is a symlink to common-extension/shared_backend)
+# (the extension's image_bench_shared directory is a symlink to common-extension/shared_backend)
 EDITOR_EXTENSIONS_DIRS = (os.path.join(_SHARED_DIR, "editor-extensions"),
                           os.path.join(_REPOSITORY_DIR, "editor-extensions"))
 

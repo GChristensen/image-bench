@@ -4,6 +4,29 @@ Accepted node types, widget names and parameter locations of Image Bench are con
 extension directory (served as `/image-bench/node_config.json`). The file is read when the ComfyUI page loads, so
 **reload the page** after editing it. Support for custom nodes is added there, not in code.
 
+## Your own additions
+
+Updates of the extension replace `node_config.json`. Put your additions into `store/node_config.json` in the
+extension directory instead, which updates keep: it is merged over the shipped file, so it holds only what changes.
+
+- Objects are merged key by key, recursively.
+- Other values (strings, numbers) of your file replace the shipped ones.
+- Lists take your items first, then the shipped items that are not among them. An added node type needs only that
+  type; a parameter locator of yours is tried before the shipped ones.
+
+For example, a custom checkpoint loader:
+
+```json
+{
+  "checkpoint": {
+    "nodeTypes": ["MyCustomLoader"],
+    "widgetNames": {"MyCustomLoader": "model_name"}
+  }
+}
+```
+
+The examples below show the shipped file; the same sections work in `store/node_config.json`.
+
 ## Marker roles
 
 The sections `checkpoint`, `sampler`, `positive_prompt`, `negative_prompt`, `lora`, `image`, `mask`, `reference` and

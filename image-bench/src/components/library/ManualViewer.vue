@@ -538,6 +538,10 @@ const hostOrigin = location.origin;
         documents relative to a document work; other links open in a new window.
       </p>
       <p>
+        Updates of the extension replace the documents shipped in <code>model_docs</code>, so keep documents of your
+        own in a folder of your own (copy the shipped ones there as a starting point) and set it as the docs root.
+      </p>
+      <p>
         Tag lists (<code>.csv</code> files of tag autocompletion, e.g. the Anima or Danbooru tags: tag, category,
         post count, aliases) are shown with a search field instead: type part of a tag or of one of its aliases
         (spaces and underscores are the same) to find it; exact and leading matches come first, then the more used
@@ -747,7 +751,8 @@ const hostOrigin = location.origin;
         <li><b>Project root</b> — the folder of the projects, as the {{ HOST_NAME }} server sees it
           (a local or network path). <b>Check</b> tells whether it exists and is writable.</li>
         <li><b>Docs root</b> — the folder of the Markdown documents of the Library; empty for the
-          <code>model_docs</code> folder of the extension. <b>Check</b> counts the documents in it.</li>
+          <code>model_docs</code> folder of the extension, whose documents updates replace. <b>Check</b> counts
+          the documents in it.</li>
         <li v-if="isWebUI"><b>Add 'Civitai Model Info' settings button</b> — adds an ℹ️ button next to the
           checkpoint list of the WebUI page, which opens the Civitai page of the selected checkpoint. It appears
           or disappears when you return to the WebUI window.</li>
@@ -1038,9 +1043,10 @@ const hostOrigin = location.origin;
           <b>ComfyUI-Advanced-ControlNet</b> for ControlNet masks.</li>
         <li>A marker can also go on a subgraph node; promote the widgets that Image Bench should change (see
           <a href="#" @click.prevent="scrollTo('comfy-subgraphs')">Subgraphs</a>).</li>
-        <li>Custom loader or sampler nodes can be supported by adding them to <code>node_config.json</code> in the
-          extension folder and reloading the page. <code>NODE_CONFIG.md</code> next to it describes the
-          format.</li>
+        <li>Custom loader or sampler nodes can be supported by adding them to <code>store/node_config.json</code>
+          in the extension folder and reloading the page. It is merged over the shipped
+          <code>node_config.json</code>, which updates replace, so it needs only the additions;
+          <code>NODE_CONFIG.md</code> in the extension folder describes the format.</li>
         <li>The workflow needs an output node (Save Image or Preview Image), or no images will reach Image
           Bench.</li>
       </ul>
@@ -1138,7 +1144,7 @@ const hostOrigin = location.origin;
           <code>ib:img ib:mask</code> receives only the image.</li>
         <li>A bypassed or muted marked node gets the file but stays bypassed.</li>
         <li>Other loaders that pick a file of the <code>input</code> folder by name can be added to
-          <code>node_config.json</code>.</li>
+          <code>store/node_config.json</code>.</li>
       </ul>
 
       <h3 id="manual-comfy-references">References</h3>

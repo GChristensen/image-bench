@@ -22,18 +22,18 @@ from starlette.responses import JSONResponse
 from starlette.status import HTTP_204_NO_CONTENT
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from shared import persist
-from shared import civitai
-from shared import controlnet_inputs
-from shared import explore_export
-from shared import launcher
-from shared import loras
-from shared import media
-from shared import editor
-from shared import editor_plugins
-from shared import pnginfo
-from shared import projects
-from shared import tray
+from image_bench_shared import persist
+from image_bench_shared import civitai
+from image_bench_shared import controlnet_inputs
+from image_bench_shared import explore_export
+from image_bench_shared import launcher
+from image_bench_shared import loras
+from image_bench_shared import media
+from image_bench_shared import editor
+from image_bench_shared import editor_plugins
+from image_bench_shared import pnginfo
+from image_bench_shared import projects
+from image_bench_shared import tray
 
 DEFAULT_CONFIG = """{
   "repositionConfigPresetsDropdown": false,
