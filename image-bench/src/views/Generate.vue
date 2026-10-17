@@ -728,11 +728,19 @@ function onShowParams(image) {
 }
 
 // The arrow keys move the overlay through the session images; the latest image is found there by its URL
-function showSessionNeighbour(step) {
+function sessionNeighbour(step) {
   const images = sessionImagesStore.images;
   const url = createImageLink(overlayImage.value);
   const index = images.findIndex(image => image === overlayImage.value || createImageLink(image) === url);
-  const neighbour = index >= 0 ? images[index + step] : null;
+
+  return index >= 0 ? images[index + step] : null;
+}
+
+const overlayHasPrev = computed(() => showImageOverlay.value && !!sessionNeighbour(-1));
+const overlayHasNext = computed(() => showImageOverlay.value && !!sessionNeighbour(1));
+
+function showSessionNeighbour(step) {
+  const neighbour = sessionNeighbour(step);
 
   if (neighbour)
     overlayImage.value = neighbour;
@@ -1005,6 +1013,7 @@ const gridStyle = computed(() => ({
 
 <template>
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage" markable @show-params="onShowParams"
+                :has-prev="overlayHasPrev" :has-next="overlayHasNext" @navigate="showSessionNeighbour"
                 @set-marking="onSetMarking" @hide-overlay="showImageOverlay = false"/>
   <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage"
                      @hide-overlay="showParamsOverlay = false"/>

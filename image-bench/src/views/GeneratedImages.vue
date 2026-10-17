@@ -265,6 +265,9 @@ function onMarkingFilterOverlay(marking) {
   onMarkingFilter(marking);
 }
 
+const overlayHasPrev = computed(() => showImageOverlay.value && !!imageStream.value?.getPrevImage(overlayImage.value));
+const overlayHasNext = computed(() => showImageOverlay.value && !!imageStream.value?.getNextImage(overlayImage.value));
+
 function displayPrevImage() {
   if (showImageOverlay.value) {
     const prevImage = imageStream.value.getPrevImage(overlayImage.value);
@@ -360,6 +363,9 @@ function isComponentTray(kind) {
                 :upscalable="isComponentTray(kind) || kind === KIND_GENERATED"
                 :marking-filter="markingFilter"
                 :markable="kind === KIND_GENERATED || kind === KIND_UPSCALED"
+                :has-prev="overlayHasPrev"
+                :has-next="overlayHasNext"
+                @navigate="step => step < 0 ? displayPrevImage() : displayNextImage()"
                 @show-params="onShowParams"
                 @upscale-image="onUpscaleImage"
                 @add-comment="image => imageStream.addComment(image)"

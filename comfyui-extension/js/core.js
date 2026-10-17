@@ -294,6 +294,8 @@ async function handleExecuted(event) {
     if (images.length > 0) {
         // Extract parameters from history API (source of truth for generated images)
         let parameters;
+        // ControlNet units recorded by the backend when the prompt was posted (shared_backend/controlnet_inputs.py)
+        let controlnet = null;
         try {
             console.log('[Image Bench] Fetching history for prompt:', prompt_id);
             const resp = await api.fetchApi(`/history/${prompt_id}`);
@@ -306,6 +308,7 @@ async function handleExecuted(event) {
                 parameters = extractParametersFromHistory(prompt_id, historyData.prompt, nodeConfig,
                     uiOperations?.getMarkerExecutionIds());
                 console.log('[Image Bench] Parameters extracted from history API');
+                controlnet = historyData.prompt[3]?.image_bench_controlnet ?? null;
             } else {
                 console.warn('[Image Bench] History data incomplete');
                 //parameters = extractParameters(prompt_id, undefined);
@@ -325,6 +328,9 @@ async function handleExecuted(event) {
                 batchId: prompt_id,
                 parameters: parameters
             };
+
+            if (controlnet)
+                message.controlnet = controlnet;
 
             // Add strategy-specific parameters if a strategy is active
             if (currentStrategy && currentStrategy.isProcessing()) {

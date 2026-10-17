@@ -15,6 +15,7 @@ from typing import Dict, Any, Optional, Tuple, Union
 from urllib.parse import quote
 from PIL import Image
 
+from .controlnet_inputs import image_hashes, input_path
 from .persist import read_json_file
 
 # Store files of the persistent image collections by kind; the images are copied to image-bench/<kind>/
@@ -369,6 +370,7 @@ def download_image_tray(
     if tray_file_path and os.path.exists(tray_file_path):
         image_tray = read_json_file(tray_file_path)
         images = image_tray["images"]
+        controlnet_inputs = set()
 
         if images and len(images):
             with zipfile.ZipFile(export_file, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -376,14 +378,25 @@ def download_image_tray(
                     archive_name = "images/" + os.path.basename(image["imagePath"])
                     zip_file.write(image["imagePath"], archive_name)
                     image["imagePath"] = archive_name
+                    controlnet_inputs |= image_hashes(image)
 
                 zip_file.writestr(image_tray_file, json.dumps(image_tray))
+                write_controlnet_inputs(zip_file, controlnet_inputs, image_bench_dir)
 
             return (export_file, 200)  # OK
         else:
             return (None, 204)  # No Content
     else:
         return (None, 404)  # Not Found
+
+
+def write_controlnet_inputs(archive: zipfile.ZipFile, hashes, image_bench_dir: str) -> None:
+    """The stored ControlNet inputs of the images of an archive, as controlnet/<hash>.png (missing ones skipped)"""
+    for value in sorted(hashes):
+        try:
+            archive.write(input_path(image_bench_dir, value), f"controlnet/{value}.png")
+        except FileNotFoundError:
+            pass
 
 
 def import_image_tray(

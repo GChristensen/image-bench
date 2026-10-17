@@ -24,6 +24,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared import persist
 from shared import civitai
+from shared import controlnet_inputs
 from shared import explore_export
 from shared import launcher
 from shared import loras
@@ -57,6 +58,8 @@ class ImageBenchApi():
         webui_config = self.get_webui_config()
 
         self.websocket_queue = asyncio.Queue()
+        # Loop of the websocket, which owns the queue (asyncio queues are not thread-safe)
+        self.websocket_loop = None
         # WebUI pages listening for images sent from Photoshop
         self.photoshop_websockets = set()
         # Photoshop plugins listening for images sent from the Image Bench window
@@ -107,6 +110,8 @@ class ImageBenchApi():
         self.add_api_route("/webui_options", self.get_webui_options, methods=["GET"])
         self.add_api_route("/webui_options", self.write_webui_options, methods=["POST"])
         self.add_api_route("/controlnet/choices", self.get_controlnet_choices, methods=["GET"])
+        self.add_api_route("/controlnet/input", self.save_controlnet_input, methods=["POST"])
+        self.add_api_route("/controlnet/input", self.get_controlnet_input, methods=["GET"])
         self.add_api_route("/civitai/model_info", self.get_civitai_model_info, methods=["GET"])
         self.add_api_route("/snippets", self.get_snippets, methods=["GET"])
         self.add_api_route("/snippets", self.write_snippets, methods=["POST"])
@@ -194,7 +199,7 @@ class ImageBenchApi():
                                                    image_data.pnginfo)
             }
 
-            self.websocket_queue.put_nowait(msg)
+            self.post_websocket_message(msg)
 
     def pnginfo_to_dict(self, prompt, negative_prompt, pnginfo):
         return tray.pnginfo_to_dict(prompt, negative_prompt, pnginfo)
@@ -211,7 +216,20 @@ class ImageBenchApi():
         file_path = os.path.join(current_dir, file_name)
         return file_path
 
+    def post_websocket_message(self, msg):
+        """
+        Queue a message for the websocket from any thread: images are saved on the generation thread, where a put
+        into the queue would not wake the loop waiting for it, so that the image would arrive late or never
+        """
+        loop = self.websocket_loop
+
+        if loop and not loop.is_closed():
+            loop.call_soon_threadsafe(self.websocket_queue.put_nowait, msg)
+        else:
+            self.websocket_queue.put_nowait(msg)
+
     async def handle_websocket(self, websocket, *args):
+        self.websocket_loop = asyncio.get_running_loop()
         await websocket.accept()
 
         while not self.websocket_queue.empty():
@@ -232,7 +250,7 @@ class ImageBenchApi():
                 self.websocket_queue.task_done()
 
     def close_websocket(self):
-        self.websocket_queue.put_nowait(TERMINATE_WEBSOCKET)
+        self.post_websocket_message(TERMINATE_WEBSOCKET)
         return Response("")
 
     async def handle_photoshop_websocket(self, websocket, *args):
@@ -704,6 +722,21 @@ class ImageBenchApi():
 
     def clear_outputs_dir(self):
         persist.clear_directory(self.outputs_dir)
+
+    # ControlNet inputs of the generated images, stored by hash (see shared_backend/controlnet_inputs.py)
+    async def save_controlnet_input(self, request: Request):
+        try:
+            return JSONResponse({"hash": controlnet_inputs.save_input(self.image_bench_dir, await request.body())})
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    async def get_controlnet_input(self, hash: str):
+        try:
+            path = controlnet_inputs.input_path(self.image_bench_dir, hash)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404)
+
+        return FileResponse(path, headers={"Cache-Control": "max-age=31536000, immutable"})
 
     async def image_tray_upload(self, file: UploadFile):
         file_data = await file.read()

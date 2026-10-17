@@ -3,6 +3,7 @@ import {computed, ref} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import GenerationParameters from "@/components/GenerationParameters.vue";
 import GenerationParametersHeader from "@/components/GenerationParametersHeader.vue";
+import ControlNetUnits from "@/components/ControlNetUnits.vue";
 import {fetchModelInfo, showModelInfo} from "@/civitai.js";
 import {canReuseParameters, reuseParameters} from "@/imageActions.js";
 import {HOST_NAME} from "@/host.js";
@@ -78,6 +79,7 @@ import {toast} from "@/toast.js";
                 </button>
               </div>
               <GenerationParameters :parameters="image.parameters || {}"/>
+              <ControlNetUnits :image="image"/>
             </div>
           </div>
         </Transition>

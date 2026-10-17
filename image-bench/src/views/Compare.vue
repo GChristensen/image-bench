@@ -534,6 +534,9 @@ onDeactivated(() => {
                 :image="overlayImage"
                 :kind="KIND_COMPARE"
                 markable
+                :has-prev="overlayIndex > 0"
+                :has-next="overlayIndex < store.images.length - 1"
+                @navigate="step => overlayIndex += step"
                 @show-params="onShowParams"
                 @add-comment="addComment"
                 @hide-overlay="closeOverlay"

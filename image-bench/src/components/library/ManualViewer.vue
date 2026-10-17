@@ -636,7 +636,9 @@ const hostOrigin = location.origin;
       <table>
         <tr><td><AppIcon name="params" :size="14"/></td><td><span class="kbd">I</span> Shows the generation
           parameters, with buttons that show the Civitai information of the checkpoint and LoRAs of the
-          image. The <AppIcon name="seed" :size="13" class="inline-icon"/>
+          image, and the ControlNet units it was made with: the settings of each enabled unit with its control image,
+          mask and preprocessor preview as they were when the generation started (stored once in
+          <code>image-bench/controlnet/</code> and included in tray downloads and projects). The <AppIcon name="seed" :size="13" class="inline-icon"/>
           button next to the title reuses the seed of the image, and <AppIcon name="sliders" :size="13"
           class="inline-icon"/> all its parameters (prompt, sampler, size, ...) in {{ HOST_NAME }}.</td></tr>
         <tr><td><AppIcon name="comment" :size="14"/></td><td><span class="kbd">C</span> Comments the image

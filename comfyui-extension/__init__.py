@@ -16,7 +16,7 @@ from server import PromptServer
 import folder_paths
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from shared import civitai, explore_export, launcher, loras, persist, photoshop, photoshop_plugin, pnginfo, projects
+from shared import civitai, controlnet_inputs, explore_export, launcher, loras, persist, photoshop, photoshop_plugin, pnginfo, projects
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from shared.tray import TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler, save_tray_images
 from shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
@@ -781,6 +781,50 @@ async def get_controlnet_choices(request):
         "models": folder_paths.get_filename_list("controlnet"),
         "aux": aio is not None
     })
+
+
+# ControlNet inputs of the generated images, stored by hash (see shared_backend/controlnet_inputs.py)
+@PromptServer.instance.routes.post(BASE_PATH + "/controlnet/input")
+async def save_controlnet_input(request):
+    try:
+        return web.json_response({"hash": controlnet_inputs.save_input(get_image_bench_dir(),
+                                                                       await persist.read_request_body(request))})
+    except ValueError as e:
+        return web.Response(text=str(e), status=400)
+
+
+@PromptServer.instance.routes.get(BASE_PATH + "/controlnet/input")
+async def get_controlnet_input(request):
+    try:
+        path = controlnet_inputs.input_path(get_image_bench_dir(), request.query.get("hash"))
+    except FileNotFoundError:
+        return web.Response(status=404)
+
+    return web.FileResponse(path, headers={"Cache-Control": "max-age=31536000, immutable"})
+
+
+def input_file_path(name):
+    try:
+        return folder_paths.get_annotated_filepath(name)
+    except Exception:
+        return None
+
+
+def record_controlnet_inputs(json_data):
+    """
+    Record the ControlNet units of every posted prompt into its extra_data, read back from /history by core.js;
+    ComfyUI keeps the prompt if a handler fails
+    """
+    if not os.path.isfile(get_node_config_path()):
+        return json_data
+
+    with open(get_node_config_path(), "r", encoding="utf-8") as f:
+        config = json.load(f).get("controlnet") or {}
+
+    return controlnet_inputs.record_comfy_prompt(json_data, get_image_bench_dir(), config, input_file_path)
+
+
+PromptServer.instance.add_on_prompt_handler(record_controlnet_inputs)
 
 
 # Image downloaded by the Photoshop plugin

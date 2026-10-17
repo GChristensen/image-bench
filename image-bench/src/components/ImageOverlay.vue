@@ -16,6 +16,7 @@
   import AppIcon from "@/components/AppIcon.vue";
   import GenerationParameters from "@/components/GenerationParameters.vue";
   import GenerationParametersHeader from "@/components/GenerationParametersHeader.vue";
+  import ControlNetUnits from "@/components/ControlNetUnits.vue";
 
   const props = defineProps({
     image: {
@@ -43,11 +44,20 @@
     markingFilter: {
       type: String,
       default: null
+    },
+    // Show the chevrons that emit navigate(-1 / 1), as the arrow keys of the view do
+    hasPrev: {
+      type: Boolean,
+      default: false
+    },
+    hasNext: {
+      type: Boolean,
+      default: false
     }
   });
 
   const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking', 'deleteImage',
-    'showParams', 'upscaleImage', 'addComment', 'filterMarking']);
+    'showParams', 'upscaleImage', 'addComment', 'filterMarking', 'navigate']);
 
   const canSendToControlNet = hostHas("images", "sendToControlNet");
   const imageTrayStore = useImageTrayStore();
@@ -319,6 +329,10 @@
                  @contextmenu="openImageMenu($event, image, actionContext)">
           </div>
         </Transition>
+        <button v-if="hasPrev" class="nav-button prev" title="Previous image (←)" aria-label="Previous image"
+                @click="$emit('navigate', -1)"><AppIcon name="chevronLeft" :size="36"/></button>
+        <button v-if="hasNext" class="nav-button next" title="Next image (→)" aria-label="Next image"
+                @click="$emit('navigate', 1)"><AppIcon name="chevronRight" :size="36"/></button>
         <button v-if="hasParameters" class="ib params-button" :class="{on: showParamsPanel}"
                 :title="showParamsPanel ? 'Hide generation parameters' : 'Show generation parameters'"
                 aria-label="Generation parameters" :aria-pressed="showParamsPanel"
@@ -329,6 +343,7 @@
                                         @reuse="onReuse" @close="showParamsPanel = false"/>
             <div class="params-body">
               <GenerationParameters :parameters="image.parameters"/>
+              <ControlNetUnits :image="image"/>
             </div>
           </div>
         </Transition>
@@ -459,6 +474,44 @@
 
 .full-size .overlay-image:active {
   cursor: grabbing;
+}
+
+/* Transparent over the image, dark only on hover */
+.nav-button {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 84px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Keeps the chevron visible over light images */
+.nav-button > svg {
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8));
+}
+
+.nav-button:hover {
+  background: rgba(17, 19, 23, 0.75);
+  color: #fff;
+}
+
+.nav-button.prev {
+  left: 12px;
+}
+
+.nav-button.next {
+  right: 12px;
 }
 
 .params-button {

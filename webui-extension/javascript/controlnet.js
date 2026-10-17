@@ -648,6 +648,34 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
         return units;
     }
 
+    /**
+     * The enabled units of a generation tab as they are now, read synchronously: their parameters and the sources
+     * of their images (for the ControlNet record of a generation, see controlnetRecorder.js)
+     * @param {'txt2img'|'img2img'} tab
+     * @returns {{index: number, params: Object, image: string|null, mask: string|null, preview: string|null}[]}
+     */
+    function readEnabledUnits(tab) {
+        const count = adapter.getTabCountIn(document.getElementById(SELECTORS.CONTROLNET_TABS(tab)));
+        const units = [];
+
+        for (let index = 0; index < count; index++) {
+            if (!adapter.isCheckedIn(element(tab, index, 'enabled')))
+                continue;
+
+            const params = readUnit(tab, index).params;
+
+            units.push({
+                index,
+                params,
+                image: getCanvasImage(tab, index, 'image'),
+                mask: params.useMask ? getCanvasImage(tab, index, 'mask') : null,
+                preview: getCanvasImage(tab, index, 'preview')
+            });
+        }
+
+        return units;
+    }
+
     async function toBlob(source) {
         if (!source)
             return null;
@@ -758,5 +786,5 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
     }
 
     return {subscribe, applyParams, runAction, setUnitImage, setPose, setTab, onPhotoshopImage,
-            captureUnits, restoreUnits};
+            readEnabledUnits, captureUnits, restoreUnits};
 }

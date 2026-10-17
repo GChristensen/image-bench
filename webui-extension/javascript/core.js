@@ -22,6 +22,7 @@ import {initControlNetPreviewButtons, initPhotoshopBridge} from "./photoshop.js"
 import {createHeaderButton} from "./utils_html.js";
 import {createWebUIMirror} from "./mirror.js";
 import {createControlNet} from "./controlnet.js";
+import {createControlNetRecorder} from "./controlnetRecorder.js";
 
 // Create popup manager instance (no WebSocket integration for WebUI)
 const popupManager = createPopupManager({
@@ -50,6 +51,8 @@ const mirror = createWebUIMirror(uiOperations, adapter, {sendMessage: sendPopupM
 // ControlNet unit mirrored in the ControlNet tab of the popup, also the target of the Photoshop ControlNet buttons
 const controlNet = createControlNet(uiOperations, adapter, {sendMessage: sendPopupMessage, isOpen: popupManager.isOpen},
     showAlert);
+// ControlNet inputs of each generation, read when Generate is clicked and carried by its images
+const controlNetRecorder = createControlNetRecorder(controlNet);
 
 let appConfig;
 let modelInfoButton;
@@ -82,6 +85,17 @@ export async function init() {
     // Only user clicks fire mousedown, strategies click the buttons programmatically
     for (const id of [SELECTORS.TXT2IMG_GENERATE, SELECTORS.IMG2IMG_GENERATE])
         document.getElementById(id)?.addEventListener("mousedown", onGenerateStarted);
+
+    // Every generation clicks Generate (users, strategies, the popup and Generate Forever); the capture phase runs
+    // before Gradio reads the inputs. The recorder only reads the DOM here and uploads in the background
+    for (const [id, tab] of [[SELECTORS.TXT2IMG_GENERATE, 'txt2img'], [SELECTORS.IMG2IMG_GENERATE, 'img2img']])
+        document.getElementById(id)?.addEventListener("click", () => {
+            try {
+                controlNetRecorder.capture(tab);
+            } catch (error) {
+                console.warn('[Image Bench] Unable to read the ControlNet units:', error);
+            }
+        }, true);
 
     // Embedded mode: this page is loaded in the iframe of the Image Bench window, which takes the place of the popup
     const embeddingWindow = getEmbeddingWindow();
@@ -539,6 +553,12 @@ function onBackendMessage(e) {
             
             if (strategy && strategy.isProcessing())
                 Object.assign(msg, strategy.getMessageParams());
+
+            try {
+                controlNetRecorder.attach(msg);
+            } catch (error) {
+                console.warn('[Image Bench] Unable to add the ControlNet units to the image:', error);
+            }
         }
 
         sendPopupMessage(msg);

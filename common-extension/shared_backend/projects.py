@@ -39,8 +39,9 @@ from urllib.parse import quote
 
 from PIL import Image
 
+from .controlnet_inputs import HASH, image_hashes, input_dir
 from .persist import read_json_file
-from .tray import TRAY_FILES, unique_file_path
+from .tray import TRAY_FILES, unique_file_path, write_controlnet_inputs
 
 PROJECT_DIR = "ib_project"
 PROJECT_FILE = "project.json"
@@ -893,7 +894,7 @@ def read_archive_tray(archive: zipfile.ZipFile) -> Dict[str, Any]:
 def get_tray(root: str, path: str, kind: str) -> Dict[str, Any]:
     """
     Images of a saved tray of a project, in the tray order:
-    {member, name, marking, comment, prompt, parameters, img2img, generationId}
+    {member, name, marking, comment, prompt, parameters, img2img, generationId, controlnet}
     (images whose files were missing when the tray was saved are left out)
     """
     _, data_dir = project_paths(root, path)
@@ -918,7 +919,8 @@ def get_tray(root: str, path: str, kind: str) -> Dict[str, Any]:
                     "prompt": (image.get("parameters") or {}).get("prompt") or "",
                     "parameters": image.get("parameters") or {},
                     "img2img": image.get("img2img"),
-                    "generationId": image.get("generationId")
+                    "generationId": image.get("generationId"),
+                    "controlnet": image.get("controlnet")
                 })
 
     version = os.stat(os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")).st_mtime_ns
@@ -977,7 +979,7 @@ def marked_final(store_dir: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def write_tray_archive(store_content: bytes, archive_path: str) -> int:
+def write_tray_archive(store_content: bytes, archive_path: str, image_bench_dir: str) -> int:
     """
     Write the tray content of a store file and its images into an archive in the format of the tray download
     (see tray.download_image_tray). An image whose file is missing keeps its entry as it is.
@@ -986,6 +988,7 @@ def write_tray_archive(store_content: bytes, archive_path: str) -> int:
     tray_data = json.loads(store_content)
     images = []
     names = set()
+    controlnet_inputs = set()
     temp = archive_path + ".tmp"
 
     with zipfile.ZipFile(temp, "w", zipfile.ZIP_STORED) as archive:
@@ -1008,8 +1011,10 @@ def write_tray_archive(store_content: bytes, archive_path: str) -> int:
             archive_name = "images/" + name
             archive.write(image_path, archive_name)
             images.append({**image, "imagePath": archive_name})
+            controlnet_inputs |= image_hashes(image)
 
         archive.writestr(ARCHIVE_TRAY_FILE, json.dumps({**tray_data, "images": images}))
+        write_controlnet_inputs(archive, controlnet_inputs, image_bench_dir)
 
     os.replace(temp, archive_path)
     return len(images)
@@ -1062,6 +1067,18 @@ def extract_tray_archive(archive_path: str, image_bench_dir: str, kind: str, pla
             image["_tray_processed"] = True
             images.append(image)
 
+        # ControlNet inputs of the images, stored by hash
+        for member in names:
+            parts = member.split("/")
+            value = parts[1][:-4] if len(parts) == 2 and parts[0] == "controlnet" and parts[1].endswith(".png") else ""
+            target = os.path.join(input_dir(image_bench_dir), parts[1]) if HASH.match(value) else None
+
+            if target and not os.path.exists(target):
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+
+                with archive.open(member) as source, open(target, "wb") as file:
+                    shutil.copyfileobj(source, file)
+
     return images
 
 
@@ -1112,7 +1129,7 @@ def save_project(root: str, store_dir: str, image_bench_dir: str, platform: str,
         elif (saved_trays.get(kind) or {}).get("hash") == tray_hash and os.path.isfile(archive_path):
             trays[kind] = saved_trays[kind]
         else:
-            trays[kind] = {"count": write_tray_archive(content, archive_path), "hash": tray_hash}
+            trays[kind] = {"count": write_tray_archive(content, archive_path, image_bench_dir), "hash": tray_hash}
 
     parameters = dict(snapshot.get("parameters") or {})
     controlnet_dir = os.path.join(data_dir, CONTROLNET_DIR)
