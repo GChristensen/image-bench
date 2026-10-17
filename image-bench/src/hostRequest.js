@@ -1,5 +1,7 @@
 import {sendWebUIMessage} from "@/sdwebui.js";
 import {getHostWindow} from "@/hostWindow.js";
+import {backendConnected} from "@/backendStatus.js";
+import {HOST_NAME} from "@/host.js";
 
 /**
  * Requests to the host page answered with HOST_RESPONSE {requestId, result | error}, for operations whose result
@@ -18,6 +20,9 @@ const pending = new Map();
 export function requestHost(message, timeout = 60000) {
   if (!getHostWindow())
     return Promise.reject(new Error("The host page is closed. Reopen Image Bench from it."));
+
+  if (!backendConnected.value)
+    return Promise.reject(new Error(`${HOST_NAME} is not running. Try again when it has started.`));
 
   const requestId = nextRequestId++;
 

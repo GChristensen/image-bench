@@ -33,6 +33,9 @@ import {EMBEDDED, handleHostAttachment, hostConnected} from "@/hostWindow.js";
 import {getGenerationState} from "@/sdwebui.js";
 import HostFrame from "@/components/HostFrame.vue";
 import {HOST_NAME} from "@/host.js";
+import {backendConnected, onBackendReconnected, startBackendMonitor} from "@/backendStatus.js";
+import {resyncHost} from "@/hostResync.js";
+import {toast} from "@/toast.js";
 
 // Messages too frequent to log
 const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS", "INPUT_IMAGES", "CONTROLNET_STATE", "CONTROLNET_IMAGES"];
@@ -151,7 +154,32 @@ function onHostTabDragLeave(e) {
     clearTimeout(hostTabDragTimer);
 }
 
+// ---------- Backend restart ----------
+
+// Whether a run of the host page has begun and not finished: a restart of the backend ends it without a word
+let runActive = false;
+
+onBackendReconnected(async () => {
+  const interrupted = runActive;
+  await resyncHost();
+
+  // A ComfyUI page ends its run itself (hostResync.js), a reloaded WebUI page knows nothing of it
+  if (runActive)
+    await onSDEvent({type: "GENERATION_FINISHED"});
+
+  toast(interrupted ? `${HOST_NAME} is back. The run was interrupted by the restart` : `${HOST_NAME} is back`);
+});
+
+function trackRun(e) {
+  if (e.type === "BEGIN_PROCESSING")
+    runActive = true;
+  else if (e.type === "GENERATION_FINISHED")
+    runActive = false;
+}
+
 async function onSDEvent(e) {
+  trackRun(e);
+
   // Answers to requests of the popup (hostRequest.js)
   if (handleHostResponse(e))
     return;
@@ -213,6 +241,7 @@ function onSaveKey(e) {
 
 onMounted(() => {
   window.onSDEvent = onSDEvent;
+  startBackendMonitor();
   if (EMBEDDED)
     window.imageBenchShowApp = showAppTabs;
   initManualHint();
@@ -312,6 +341,9 @@ async function switchTabAccordingToGenerationMode(e, state) {
                   @drop.prevent="onTrayDrop(KIND_IMAGE_TRAY)" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
       <RouterLink to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <RouterLink to="/library" class="tab" id="library-tab"><AppIcon name="library" :size="14"/>Library</RouterLink>
+      <span v-if="!backendConnected" class="backend-down" role="status"
+            :title="`${HOST_NAME} is not running (the connection to its server was lost). Waiting for it to start…`"
+            :aria-label="`${HOST_NAME} is not running`"><AppIcon name="unplug" :size="15"/></span>
       <div class="tab-spacer"></div>
       <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
         ><AppIcon name="help" :size="13"/>New to Image Bench? Read the manual</a>
@@ -428,6 +460,14 @@ async function switchTabAccordingToGenerationMode(e, state) {
 
   .manual-hint:hover {
     text-decoration: underline;
+  }
+
+  .backend-down {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    color: var(--ib-warn);
+    cursor: default;
   }
 
   .window-warning {

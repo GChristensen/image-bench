@@ -7,7 +7,7 @@ below it. ib_project/ holds:
 
     project.json        name, tags, notes, final image, parameter snapshot, tray counts
     final.<ext>         copy of the image considered final
-    trays/<kind>.zip    the trays in the format of the tray download, so that any of them can be imported into a tray
+    trays/<kind>/       the trays in the layout of the tray download, so that any of them, zipped, can be imported into a tray
     controlnet/         control images of the parameter snapshot
     workflow.json       ComfyUI workflow of the parameter snapshot
     thumbs/             thumbnails of the image files of the project directory
@@ -23,6 +23,7 @@ This module is framework-agnostic: the hosts call dispatch() off the event loop.
 """
 
 import ctypes
+import filecmp
 import hashlib
 import io
 import json
@@ -33,15 +34,14 @@ import subprocess
 import sys
 import tempfile
 import time
-import zipfile
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 from PIL import Image
 
-from .controlnet_inputs import HASH, image_hashes, input_dir
+from .controlnet_inputs import HASH, image_hashes, input_dir, input_path
 from .persist import read_json_file
-from .tray import TRAY_FILES, unique_file_path, write_controlnet_inputs
+from .tray import TRAY_FILES, unique_file_path
 
 PROJECT_DIR = "ib_project"
 PROJECT_FILE = "project.json"
@@ -59,7 +59,7 @@ TRAY_KINDS = ("image_tray", "concept_tray", "compare")
 # Marking of the final choice in the trays; a project saved without a final image takes the image marked with it
 FINAL_MARKING = "\U0001F3C1"
 
-# Name of the tray content in the archives, as in the tray download, which any tray imports
+# Name of the tray content in the saved trays, as in the tray download, which any tray imports
 ARCHIVE_TRAY_FILE = TRAY_FILES["image_tray"]
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif", ".psd", ".tif", ".tiff"}
@@ -392,7 +392,7 @@ def get_project(root: str, path: str) -> Dict[str, Any]:
         "name": os.path.basename(directory),
         "data": data,
         "files": files,
-        "trays": {kind: os.path.isfile(os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")) for kind in TRAY_KINDS}
+        "trays": {kind: os.path.isfile(tray_file(tray_dir(data_dir, kind))) for kind in TRAY_KINDS}
     }
 
 
@@ -818,7 +818,7 @@ def set_final(root: str, path: str, name: Optional[str] = None, filename: Option
               member: Optional[str] = None) -> Dict[str, Any]:
     """
     Copy an image into the project as its final image: a file of the project directory (name), an image of a saved
-    tray (kind and member of its archive) or uploaded content; none of them clears it
+    tray (kind and member of its folder) or uploaded content; none of them clears it
     """
     _, data_dir = project_paths(root, path)
     data = read_project_file(data_dir)
@@ -827,8 +827,8 @@ def set_final(root: str, path: str, name: Optional[str] = None, filename: Option
         source = project_file_path(root, path, name)
         write_final(data_dir, data, os.path.splitext(source)[1], name, path=source)
     elif kind:
-        content = read_tray_member(data_dir, kind, member)
-        write_final(data_dir, data, os.path.splitext(member)[1], f"{kind}:{os.path.basename(member)}", content=content)
+        source = read_tray_member(data_dir, kind, member)
+        write_final(data_dir, data, os.path.splitext(source)[1], f"{kind}:{os.path.basename(source)}", path=source)
     elif content is not None:
         write_final(data_dir, data, os.path.splitext(filename or "")[1], filename, content=content)
     else:
@@ -875,20 +875,36 @@ def write_final(data_dir: str, data: Dict[str, Any], ext: Optional[str], source_
     data["finalSource"] = source_label
 
 
-# ---------- Tray archives ----------
+# ---------- Saved trays ----------
 
-def open_tray_archive(data_dir: str, kind: str) -> Optional[zipfile.ZipFile]:
+def tray_dir(data_dir: str, kind: str) -> str:
+    """Folder of a saved tray, in the layout of the tray download (see tray.download_image_tray)"""
     if kind not in TRAY_KINDS:
         raise ProjectError(f"Unknown tray: {kind}")
 
-    archive_path = os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")
-    return zipfile.ZipFile(archive_path, "r") if os.path.isfile(archive_path) else None
+    return os.path.join(data_dir, TRAYS_DIR, kind)
 
 
-def read_archive_tray(archive: zipfile.ZipFile) -> Dict[str, Any]:
-    names = set(archive.namelist())
-    tray_file = next((name for name in [ARCHIVE_TRAY_FILE, *TRAY_FILES.values()] if name in names), None)
-    return json.loads(archive.read(tray_file)) if tray_file else {}
+def tray_file(directory: str) -> str:
+    return os.path.join(directory, ARCHIVE_TRAY_FILE)
+
+
+def read_saved_tray(directory: str) -> Dict[str, Any]:
+    try:
+        return read_json_file(tray_file(directory)) or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def tray_member_path(directory: str, member: Optional[str]) -> Optional[str]:
+    """Path of an image of a saved tray by its member name (images/<name>), None if it is invalid or missing"""
+    parts = (member or "").replace("\\", "/").split("/")
+
+    if len(parts) != 2 or parts[0] != "images" or parts[1] in ("", ".", ".."):
+        return None
+
+    path = os.path.join(directory, "images", parts[1])
+    return path if os.path.isfile(path) else None
 
 
 def get_tray(root: str, path: str, kind: str) -> Dict[str, Any]:
@@ -898,64 +914,58 @@ def get_tray(root: str, path: str, kind: str) -> Dict[str, Any]:
     (images whose files were missing when the tray was saved are left out)
     """
     _, data_dir = project_paths(root, path)
-    archive = open_tray_archive(data_dir, kind)
+    directory = tray_dir(data_dir, kind)
 
-    if archive is None:
+    if not os.path.isfile(tray_file(directory)):
         return {"kind": kind, "images": [], "version": None}
 
-    with archive:
-        names = set(archive.namelist())
-        images = []
+    images = []
 
-        for image in read_archive_tray(archive).get("images") or []:
-            member = image.get("imagePath")
+    for image in read_saved_tray(directory).get("images") or []:
+        member = image.get("imagePath")
 
-            if member in names:
-                images.append({
-                    "member": member,
-                    "name": os.path.basename(member),
-                    "marking": image.get("marking"),
-                    "comment": image.get("comment"),
-                    "prompt": (image.get("parameters") or {}).get("prompt") or "",
-                    "parameters": image.get("parameters") or {},
-                    "img2img": image.get("img2img"),
-                    "generationId": image.get("generationId"),
-                    "controlnet": image.get("controlnet")
-                })
+        if tray_member_path(directory, member):
+            images.append({
+                "member": member,
+                "name": os.path.basename(member),
+                "marking": image.get("marking"),
+                "comment": image.get("comment"),
+                "prompt": (image.get("parameters") or {}).get("prompt") or "",
+                "parameters": image.get("parameters") or {},
+                "img2img": image.get("img2img"),
+                "generationId": image.get("generationId"),
+                "controlnet": image.get("controlnet")
+            })
 
-    version = os.stat(os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")).st_mtime_ns
-    return {"kind": kind, "images": images, "version": version}
+    return {"kind": kind, "images": images, "version": os.stat(tray_file(directory)).st_mtime_ns}
 
 
-def read_tray_member(data_dir: str, kind: str, member: Optional[str]) -> bytes:
-    archive = open_tray_archive(data_dir, kind)
+def read_tray_member(data_dir: str, kind: str, member: Optional[str]) -> str:
+    """Path of an image of a saved tray"""
+    image_path = tray_member_path(tray_dir(data_dir, kind), member)
 
-    if archive is None or not member or not member.startswith("images/"):
+    if image_path is None:
         raise ProjectError("Image not found", 404)
 
-    with archive:
-        try:
-            return archive.read(member)
-        except KeyError:
-            raise ProjectError("Image not found", 404)
+    return image_path
 
 
 def get_tray_image(root: str, path: str, kind: str, member: str, thumb: bool = False) -> FileResult:
-    """An image of a saved tray, or its thumbnail (cached by the archive modification time)"""
+    """An image of a saved tray, or its thumbnail (cached by the image modification time)"""
     _, data_dir = project_paths(root, path)
-    content = read_tray_member(data_dir, kind, member)
+    image_path = read_tray_member(data_dir, kind, member)
 
     if thumb:
-        version = os.stat(os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")).st_mtime_ns
-        return cached_thumbnail(data_dir, f"{kind}|{member}|{version}", lambda: io.BytesIO(content))
+        version = os.stat(image_path).st_mtime_ns
+        return cached_thumbnail(data_dir, f"{kind}|{member}|{version}", lambda: image_path)
 
     ext = os.path.splitext(member)[1].lower()
 
     if ext in BROWSER_EXTENSIONS:
-        return FileResult(MEDIA_TYPES[ext], content=content)
+        return FileResult(MEDIA_TYPES[ext], path=image_path)
 
     try:
-        with Image.open(io.BytesIO(content)) as image:
+        with Image.open(image_path) as image:
             buffer = io.BytesIO()
             to_rgb(image).save(buffer, format="PNG", compress_level=1)
     except Exception as e:
@@ -979,120 +989,137 @@ def marked_final(store_dir: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def write_tray_archive(store_content: bytes, archive_path: str, image_bench_dir: str) -> int:
+def same_file(path: str, other: str) -> bool:
+    """Files of the same size and modification time (copy2 keeps it), as an unchanged copy is"""
+    try:
+        a, b = os.stat(path), os.stat(other)
+    except OSError:
+        return False
+
+    return a.st_size == b.st_size and int(a.st_mtime) == int(b.st_mtime)
+
+
+def write_tray_dir(store_content: bytes, directory: str, image_bench_dir: str) -> int:
     """
-    Write the tray content of a store file and its images into an archive in the format of the tray download
-    (see tray.download_image_tray). An image whose file is missing keeps its entry as it is.
-    Returns the number of the images of the tray
+    Write the tray content of a store file and its images into a tray folder in the layout of the tray download
+    (see tray.download_image_tray): the tray file, images/ and controlnet/. The folder is built beside the old one
+    and swapped in; the unchanged files of the old one are moved over instead of copied again.
+    An image whose file is missing keeps its entry as it is. Returns the number of the images of the tray
     """
     tray_data = json.loads(store_content)
     images = []
     names = set()
     controlnet_inputs = set()
-    temp = archive_path + ".tmp"
+    temp = directory + ".tmp"
+    old = directory + ".old"
 
-    with zipfile.ZipFile(temp, "w", zipfile.ZIP_STORED) as archive:
-        for image in tray_data.get("images") or []:
-            image_path = image.get("imagePath")
+    for leftover in (temp, old):
+        shutil.rmtree(leftover, ignore_errors=True)
 
-            if image.get("separator") or not image_path or not os.path.isfile(image_path):
-                images.append(image)
-                continue
+    os.makedirs(os.path.join(temp, "images"))
 
-            name = os.path.basename(image_path)
-            stem, ext = os.path.splitext(name)
-            counter = 1
+    def place(source: str, member: str) -> None:
+        target = os.path.join(temp, *member.split("/"))
+        existing = os.path.join(directory, *member.split("/"))
 
-            while name.lower() in names:
-                name = f"{stem}_{counter:03d}{ext}"
-                counter += 1
+        if same_file(existing, source):
+            os.replace(existing, target)
+        else:
+            shutil.copy2(source, target)
 
-            names.add(name.lower())
-            archive_name = "images/" + name
-            archive.write(image_path, archive_name)
-            images.append({**image, "imagePath": archive_name})
-            controlnet_inputs |= image_hashes(image)
+    for image in tray_data.get("images") or []:
+        image_path = image.get("imagePath")
 
-        archive.writestr(ARCHIVE_TRAY_FILE, json.dumps({**tray_data, "images": images}))
-        write_controlnet_inputs(archive, controlnet_inputs, image_bench_dir)
+        if image.get("separator") or not image_path or not os.path.isfile(image_path):
+            images.append(image)
+            continue
 
-    os.replace(temp, archive_path)
+        name = os.path.basename(image_path)
+        stem, ext = os.path.splitext(name)
+        counter = 1
+
+        while name.lower() in names:
+            name = f"{stem}_{counter:03d}{ext}"
+            counter += 1
+
+        names.add(name.lower())
+        member = "images/" + name
+        place(image_path, member)
+        images.append({**image, "imagePath": member})
+        controlnet_inputs |= image_hashes(image)
+
+    # The stored ControlNet inputs of the images, as controlnet/<hash>.png (missing ones skipped)
+    for value in sorted(controlnet_inputs):
+        try:
+            source = input_path(image_bench_dir, value)
+        except FileNotFoundError:
+            continue
+
+        os.makedirs(os.path.join(temp, CONTROLNET_DIR), exist_ok=True)
+        place(source, f"{CONTROLNET_DIR}/{value}.png")
+
+    with open(tray_file(temp), "w", encoding="utf-8") as file:
+        json.dump({**tray_data, "images": images}, file)
+
+    if os.path.isdir(directory):
+        os.replace(directory, old)
+
+    os.replace(temp, directory)
+    shutil.rmtree(old, ignore_errors=True)
     return len(images)
 
 
-def extract_tray_archive(archive_path: str, image_bench_dir: str, kind: str, platform: str) -> List[Dict[str, Any]]:
+def extract_tray_dir(directory: str, image_bench_dir: str, kind: str, platform: str) -> List[Dict[str, Any]]:
     """
-    Extract the images of a tray archive into the tray directory (image-bench/<kind>/), where they are kept by the
+    Copy the images of a saved tray into the tray directory (image-bench/<kind>/), where they are kept by the
     tray. A file of the same name and content is reused, another one gets a new name.
     Returns the images of the tray with their new paths
     """
-    tray_dir = os.path.join(image_bench_dir, kind)
-    os.makedirs(tray_dir, exist_ok=True)
+    if not os.path.isfile(tray_file(directory)):
+        raise ProjectError(f"{os.path.basename(directory)} holds no tray.", 422)
+
+    target_dir = os.path.join(image_bench_dir, kind)
+    os.makedirs(target_dir, exist_ok=True)
     images = []
 
-    with zipfile.ZipFile(archive_path, "r") as archive:
-        names = set(archive.namelist())
-        tray_file = next((name for name in [ARCHIVE_TRAY_FILE, *TRAY_FILES.values()] if name in names), None)
+    for image in read_saved_tray(directory).get("images") or []:
+        member = image.get("imagePath")
+        source = tray_member_path(directory, member)
 
-        if not tray_file:
-            raise ProjectError(f"{os.path.basename(archive_path)} holds no tray.", 422)
+        # An image whose file was missing when it was saved keeps its entry
+        if source is None:
+            if member and not member.startswith("images/"):
+                images.append(image)
 
-        tray_data = json.loads(archive.read(tray_file))
+            continue
 
-        for image in tray_data.get("images") or []:
-            member = image.get("imagePath")
+        name = os.path.basename(source)
+        target = os.path.join(target_dir, name)
 
-            # An image whose file was missing when it was saved keeps its entry
-            if not member or member not in names:
-                if member and not member.startswith("images/"):
-                    images.append(image)
+        if not (os.path.isfile(target) and filecmp.cmp(target, source, shallow=False)):
+            target = unique_file_path(target_dir, name)
+            shutil.copy2(source, target)
 
-                continue
+        name = os.path.basename(target)
+        image = {key: value for key, value in image.items() if key != "selected"}
+        image["imagePath"] = target
+        image["imageUrl"] = (f"/view?filename={quote(name)}&type=output&subfolder=image-bench/{kind}"
+                             if platform == "comfyui" else f"/file={target.replace(os.sep, '/')}")
+        image["_tray_processed"] = True
+        images.append(image)
 
-            info = archive.getinfo(member)
-            name = os.path.basename(member.replace("\\", "/"))
-            target = os.path.join(tray_dir, name)
+    # ControlNet inputs of the images, stored by hash
+    controlnet_dir = os.path.join(directory, CONTROLNET_DIR)
 
-            if not (os.path.isfile(target) and same_file(target, info)):
-                target = unique_file_path(tray_dir, name)
+    for name in os.listdir(controlnet_dir) if os.path.isdir(controlnet_dir) else []:
+        value = name[:-4] if name.endswith(".png") else ""
+        target = os.path.join(input_dir(image_bench_dir), name) if HASH.match(value) else None
 
-                with archive.open(info) as source, open(target, "wb") as file:
-                    shutil.copyfileobj(source, file)
-
-            name = os.path.basename(target)
-            image = {key: value for key, value in image.items() if key != "selected"}
-            image["imagePath"] = target
-            image["imageUrl"] = (f"/view?filename={quote(name)}&type=output&subfolder=image-bench/{kind}"
-                                 if platform == "comfyui" else f"/file={target.replace(os.sep, '/')}")
-            image["_tray_processed"] = True
-            images.append(image)
-
-        # ControlNet inputs of the images, stored by hash
-        for member in names:
-            parts = member.split("/")
-            value = parts[1][:-4] if len(parts) == 2 and parts[0] == "controlnet" and parts[1].endswith(".png") else ""
-            target = os.path.join(input_dir(image_bench_dir), parts[1]) if HASH.match(value) else None
-
-            if target and not os.path.exists(target):
-                os.makedirs(os.path.dirname(target), exist_ok=True)
-
-                with archive.open(member) as source, open(target, "wb") as file:
-                    shutil.copyfileobj(source, file)
+        if target and not os.path.exists(target):
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            shutil.copy2(os.path.join(controlnet_dir, name), target)
 
     return images
-
-
-def same_file(path: str, info: zipfile.ZipInfo) -> bool:
-    if os.path.getsize(path) != info.file_size:
-        return False
-
-    crc = 0
-
-    with open(path, "rb") as file:
-        while chunk := file.read(1 << 20):
-            crc = zipfile.crc32(chunk, crc)
-
-    return crc == info.CRC
 
 
 def image_key(image: Dict[str, Any]) -> str:
@@ -1105,7 +1132,7 @@ def image_key(image: Dict[str, Any]) -> str:
 def save_project(root: str, store_dir: str, image_bench_dir: str, platform: str, path: str,
                  snapshot: Dict[str, Any], files: Dict[str, bytes]) -> Dict[str, Any]:
     """
-    Save the workspace into a project and make it current: the trays (only the archives of the changed ones are
+    Save the workspace into a project and make it current: the trays (only the folders of the changed ones are
     written again) and the parameter snapshot with its ControlNet images and ComfyUI workflow
     """
     directory, data_dir = project_paths(root, path)
@@ -1118,18 +1145,16 @@ def save_project(root: str, store_dir: str, image_bench_dir: str, platform: str,
 
     for kind in TRAY_KINDS:
         content, tray_hash, count = read_tray_store(store_dir, kind)
-        archive_path = os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")
+        directory_path = tray_dir(data_dir, kind)
         hashes[kind] = tray_hash
 
         if not count:
-            if os.path.exists(archive_path):
-                os.unlink(archive_path)
-
+            shutil.rmtree(directory_path, ignore_errors=True)
             trays[kind] = {"count": 0, "hash": ""}
-        elif (saved_trays.get(kind) or {}).get("hash") == tray_hash and os.path.isfile(archive_path):
+        elif (saved_trays.get(kind) or {}).get("hash") == tray_hash and os.path.isfile(tray_file(directory_path)):
             trays[kind] = saved_trays[kind]
         else:
-            trays[kind] = {"count": write_tray_archive(content, archive_path, image_bench_dir), "hash": tray_hash}
+            trays[kind] = {"count": write_tray_dir(content, directory_path, image_bench_dir), "hash": tray_hash}
 
     parameters = dict(snapshot.get("parameters") or {})
     controlnet_dir = os.path.join(data_dir, CONTROLNET_DIR)
@@ -1186,9 +1211,9 @@ def open_project(root: str, store_dir: str, image_bench_dir: str, platform: str,
 
     if restore_trays:
         for kind in TRAY_KINDS:
-            archive_path = os.path.join(data_dir, TRAYS_DIR, f"{kind}.zip")
-            images = extract_tray_archive(archive_path, image_bench_dir, kind, platform) \
-                if os.path.isfile(archive_path) else []
+            directory_path = tray_dir(data_dir, kind)
+            images = extract_tray_dir(directory_path, image_bench_dir, kind, platform) \
+                if os.path.isfile(tray_file(directory_path)) else []
 
             if merge:
                 content, _, _ = read_tray_store(store_dir, kind)

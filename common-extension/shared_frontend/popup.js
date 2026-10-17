@@ -126,6 +126,12 @@ export function createPopupManager(config = {}) {
       return false;
     }
 
+    setupPopup();
+    return true;
+  }
+
+  // Set up a popup window opened by this page or by the page it replaced (adopt)
+  function setupPopup() {
     // Set generation state
     setGenerationState("BATCH_GENERATION");
 
@@ -133,8 +139,9 @@ export function createPopupManager(config = {}) {
     popupWindow.getGenerationState = getGenerationState;
 
     // Handle popup close
-    popupWindow.addEventListener("unload", () => {
-      if (popupWindow.location.href !== "about:blank") {
+    const win = popupWindow;
+    win.addEventListener("unload", () => {
+      if (popupWindow === win && win.location.href !== "about:blank") {
         dispose();
       }
     });
@@ -143,7 +150,32 @@ export function createPopupManager(config = {}) {
     if (integrateWebSocket) {
       connectWebSocket();
     }
+  }
 
+  /**
+   * Forget the popup opened by this page without closing it: the popup reloads this page (its backend has
+   * restarted), and the new page adopts it
+   */
+  function release() {
+    if (!attached)
+      dispose();
+  }
+
+  /**
+   * Take over the popup opened by the page this one replaced (see release())
+   * @param {Window} targetWindow
+   * @returns {boolean} True if adopted, false if this page has a popup already
+   */
+  function adopt(targetWindow) {
+    if (attached || (popupWindow && !popupWindow.closed)) {
+      return false;
+    }
+
+    popupWindow = targetWindow;
+    setupPopup();
+
+    // The popup sends this page its state, as to a page attached in the embedded mode
+    sendMessage({type: "HOST_READY"});
     return true;
   }
 
@@ -255,6 +287,8 @@ export function createPopupManager(config = {}) {
   return {
     open: openPopup,
     attach,
+    release,
+    adopt,
     isAttached,
     close,
     dispose,

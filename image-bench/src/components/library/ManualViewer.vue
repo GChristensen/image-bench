@@ -174,6 +174,17 @@ const hostOrigin = location.origin;
         Open {{ HOST_NAME }} at its usual address and port: behind a proxy that does not pass WebSockets
         through, no images will arrive.
       </p>
+      <p>
+        If the {{ HOST_NAME }} server stops (its console was closed, it crashed or is restarting), a plug icon
+        <AppIcon name="unplug" :size="13" class="inline-icon"/> appears after the Library tab. Operations that need
+        the server (generating, upscaling, running the preprocessor, loading images) are refused with a message;
+        everything else stays usable, so prompts and parameters can still be read, copied and edited, and tray
+        changes made meanwhile are saved when the server is back.
+        <span v-if="isWebUI">Once it is back, Image Bench reloads the WebUI page (the one in its tab, or the window
+          it was opened from) and sends it its prompts and settings again.</span>
+        <span v-else>ComfyUI reconnects its page by itself and keeps the workflow.</span>
+        A run the restart interrupted is reported as such.
+      </p>
     </section>
 
     <section id="manual-generate">
@@ -492,7 +503,8 @@ const hostOrigin = location.origin;
         <li><b>Download</b> <AppIcon name="download" :size="13" class="inline-icon"/> saves the tray as a .zip
           archive (images with their parameters), which can be imported into any tray.</li>
         <li><b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (parameters
-          included) or a tray archive (.zip), such as the files in <code>ib_project/trays</code> of a project. The
+          included) or a tray archive (.zip). A tray saved in a project is a folder of
+          <code>ib_project/trays</code> in the same layout: zip its contents to import it. The
           trays themselves are saved into the projects of the
           <a href="#" @click.prevent="scrollTo('library')">Library</a>.</li>
       </ul>

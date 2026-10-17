@@ -385,7 +385,7 @@ function onItemMenu(e, item) {
     {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")}
   ];
 
-  // Files of the project folder only; the images of the saved trays are part of their archives
+  // Files of the project folder only; the images of the saved trays are in their own folders
   if (imageTab.value === "files")
     items.push({separator: true},
       {icon: "trash", label: "Delete file…", danger: true, run: () => store.deleteFile(project.value.path, item.name)});

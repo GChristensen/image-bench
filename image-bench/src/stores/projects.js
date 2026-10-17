@@ -79,7 +79,7 @@ export function projectFileUrl(path, name, {thumb = false, version = null} = {})
  * URL of an image of a saved tray of a project
  * @param {string} path - Project path relative to the root
  * @param {string} kind - image_tray or concept_tray
- * @param {string} member - Path of the image in the tray archive
+ * @param {string} member - Path of the image in the saved tray folder (images/<name>)
  * @param {{thumb?: boolean, version?: any}} options
  * @returns {string}
  */

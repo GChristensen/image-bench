@@ -623,6 +623,19 @@ async def websocket_handler(request):
     return ws
 
 
+# Kept open by the Image Bench window to tell that the backend is running; answers its pings
+@PromptServer.instance.routes.get(BASE_PATH + "/heartbeat")
+async def heartbeat_handler(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    async for msg in ws:
+        if msg.type == web.WSMsgType.TEXT and msg.data == "ping":
+            await ws.send_str("pong")
+
+    return ws
+
+
 # Photoshop plugin WebSocket: receives notifications about images sent from the Image Bench window
 @PromptServer.instance.routes.get(BASE_PATH + "/photoshop/plugin-websocket")
 async def photoshop_plugin_websocket_handler(request):

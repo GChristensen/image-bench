@@ -102,6 +102,14 @@ export async function init() {
 
     if (embeddingWindow && popupManager.attach(embeddingWindow))
         connectPopup();
+
+    // The popup reloads this page when the backend is back after a restart (opener mode): the old page lets the
+    // popup go, so its pagehide does not close it, and the new one takes it over
+    window.imageBenchReleasePopup = () => popupManager.release();
+    window.imageBenchAdoptPopup = (popup) => {
+        if (popupManager.adopt(popup))
+            connectPopup();
+    };
 }
 
 /**

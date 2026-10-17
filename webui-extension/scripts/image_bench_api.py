@@ -119,6 +119,7 @@ class ImageBenchApi():
         self.add_api_route("/projects/{action}", self.projects_action, methods=["GET", "POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
+        self.app.add_websocket_route(self.BASE_PATH + "/heartbeat", self.handle_heartbeat)
         self.add_api_route("/photoshop/upload", self.photoshop_upload, methods=["POST"])
         self.add_api_route("/photoshop/send", self.photoshop_send, methods=["POST"])
         self.add_api_route("/photoshop/image", self.get_photoshop_image, methods=["GET"])
@@ -252,6 +253,18 @@ class ImageBenchApi():
     def close_websocket(self):
         self.post_websocket_message(TERMINATE_WEBSOCKET)
         return Response("")
+
+    @staticmethod
+    async def handle_heartbeat(websocket, *args):
+        """Kept open by the Image Bench window to tell that the backend is running; answers its pings"""
+        await websocket.accept()
+
+        try:
+            while True:
+                if await websocket.receive_text() == "ping":
+                    await websocket.send_text("pong")
+        except Exception:
+            pass
 
     async def handle_photoshop_websocket(self, websocket, *args):
         """Keep a WebUI page connected to receive images sent from the Photoshop plugin"""

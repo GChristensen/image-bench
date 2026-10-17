@@ -1,5 +1,14 @@
 import {dialog} from "@/dialogs/useDialog.js";
 import {getHostWindow} from "@/hostWindow.js";
+import {backendConnected, notifyBackendDown} from "@/backendStatus.js";
+
+// Messages that start work on the server, refused while the backend is down. The others (parameter edits,
+// subscriptions) still go to the host page: a ComfyUI page stays alive, a WebUI page is reloaded with the state
+// of the popup when the backend is back
+const SERVER_MESSAGES = new Set(["GENERATE_IMAGE", "BATCH_GENERATE", "EXPLORE_MODELS", "GENERATE_VARIATIONS",
+    "UPSCALE_IMAGES", "UPSCALE_VARYING_DENOISING", "GENERATE_VARYING_STEPS", "GENERATE_VARYING_MODULES",
+    "CONTROLNET_ACTION", "REFRESH_MODELS", "SET_INPUT_IMAGE", "SET_CONTROLNET_IMAGE", "LOAD_WORKFLOW",
+    "SYNC_WORKFLOWS"]);
 
 export function createImageData(data) {
     return {...data};
@@ -93,6 +102,12 @@ export function sendWebUIMessage(msg) {
 
     if (!host) {
         console.warn("sendWebUIMessage: the host page is not connected");
+        return;
+    }
+
+    // Operations are not started while the backend is down
+    if (!backendConnected.value && SERVER_MESSAGES.has(msg.type)) {
+        notifyBackendDown();
         return;
     }
 

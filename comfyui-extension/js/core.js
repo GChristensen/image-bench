@@ -481,7 +481,9 @@ function handlePostMessage(event) {
         return;
     }
 
-    if (type === "INITIALIZE_PROMPTS")
+    if (type === "BACKEND_RECONNECTED")
+        onBackendReconnected(payload);
+    else if (type === "INITIALIZE_PROMPTS")
         initializePrompts();
     else if (type === "EXPLORE_MODELS")
         handleExploreModels(payload);
@@ -666,6 +668,21 @@ async function handleGenerateVaryingSteps(options) {
  */
 async function handleUpscaleVaryingDenoising(options) {
     await startImageStrategy("varying", "HIRES_FIX", options);
+}
+
+/**
+ * The backend is back after a restart, which lost its queue: a running strategy would wait forever for its images.
+ * Ends it as QueueProcessor.clickGenerate() does, then answers the popup's request
+ * @param {Object} payload - {requestId}
+ */
+function onBackendReconnected(payload) {
+    if (currentStrategy && currentStrategy.isProcessing()) {
+        console.log('[Image Bench] The backend restarted, ending the active strategy');
+        messageBus.publish('STRATEGY_FINISH_REQUEST');
+        messageBus.publish('GENERATION_FINISHED', {});
+    }
+
+    sendPopupMessage({type: "HOST_RESPONSE", requestId: payload.requestId, result: true});
 }
 
 /**

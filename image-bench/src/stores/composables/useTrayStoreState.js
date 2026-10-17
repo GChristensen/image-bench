@@ -1,6 +1,7 @@
 import { triggerRef } from 'vue';
 import { useImageStoreState } from './useImageStoreState.js';
 import { pickTagColor } from './tagColors.js';
+import { onBackendReconnected } from '@/backendStatus.js';
 
 const PERSIST_DELAY = 500;
 
@@ -34,8 +35,23 @@ export function useTrayStoreState(kind) {
     }
   }
 
-  // Internal persist function
+  // Whether the last save failed (the backend was down): saved again when the backend is back
+  let dirty = false;
+
+  onBackendReconnected(() => dirty && !persistTimer && (persisting = _persistToServer()));
+
+  // Internal persist function; a failed save leaves the tray dirty
   async function _persistToServer() {
+    try {
+      dirty = !await _sendToServer();
+    } catch (error) {
+      console.error(`[Image Bench] Failed to save the ${kind}:`, error);
+      dirty = true;
+    }
+  }
+
+  // Returns whether the server saved the tray
+  async function _sendToServer() {
     const trayContent = { version: 1, images: [] };
     trayContent.images = [...baseStore.images.value];
 
@@ -59,6 +75,8 @@ export function useTrayStoreState(kind) {
 
       persistListeners.forEach(listener => listener(kind));
     }
+
+    return response.ok;
   }
 
   // Debounced to reduce server calls
@@ -79,6 +97,9 @@ export function useTrayStoreState(kind) {
     }
 
     await persisting;
+
+    if (dirty)
+      throw new Error(`The ${kind.replace("_", " ")} could not be saved. Try again when the server is running.`);
   }
 
   // Images keep their original path in sourcePath after being copied to the tray directory
