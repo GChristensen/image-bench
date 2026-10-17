@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Image Bench</title>
 <!-- Served at /image-bench/app by both hosts (shared_backend/launcher.py): opens Image Bench in the embedded mode
-     (the host UI in its own iframe tab) as a popup window, then closes itself if it may. With the openInTab setting
-     the route redirects to the app instead -->
+     (the host UI in its own iframe tab) as a popup window, then closes itself if it may. An app already open is
+     activated instead; with the openInTab setting the app is loaded in this tab -->
 <style>
   :root { color-scheme: dark; --bg: #16161a; --fg: #e4e4e7; --muted: #9a9aa3; --accent: #f97316; --ink: #1a0b00; }
   @media (prefers-color-scheme: light) {
@@ -29,7 +29,8 @@
 </style>
 </head>
 <body>
-<main>
+<!-- Shown only with a message: a found app or the openInTab redirect leave the page blank -->
+<main hidden>
   <h1>🔬 Image Bench</h1>
   <div id="blocked" hidden>
     <p>The browser blocked the popup window. Open it with the button, or allow popups for this site to open
@@ -39,6 +40,9 @@
   </div>
   <div id="opened" hidden>
     <p>Image Bench is open in a popup window. This tab can be closed.</p>
+  </div>
+  <div id="found" hidden>
+    <p>Image Bench is already open in another window. This tab can be closed.</p>
   </div>
 </main>
 <script>
@@ -88,10 +92,47 @@
     return true;
   }
 
-  function opened() {
+  function opened(message = "opened") {
     // Closing succeeds only for a tab with one history entry (a typed URL or a bookmark opened in a new tab)
     window.close();
-    setTimeout(() => document.getElementById("opened").hidden = false, 200);
+    setTimeout(() => show(message), 200);
+  }
+
+  function show(id) {
+    document.querySelector("main").hidden = false;
+    document.getElementById(id).hidden = false;
+  }
+
+  // An open app answers on this channel and activates itself (src/hostWindow.js). Its window cannot be found by
+  // name from here: browsers look names up only among the windows opened from one another
+  const FIND_TIMEOUT = 150;
+
+  function findOpenApp() {
+    if (typeof BroadcastChannel === "undefined")
+      return Promise.resolve(false);
+
+    return new Promise(resolve => {
+      const channel = new BroadcastChannel("imageBench_app");
+      const done = found => {
+        clearTimeout(timer);
+        channel.close();
+        resolve(found);
+      };
+      const timer = setTimeout(() => done(false), FIND_TIMEOUT);
+
+      channel.onmessage = e => e.data?.type === "found" && done(true);
+      channel.postMessage({type: "find"});
+    });
+  }
+
+  // The openInTab setting loads the app in this tab instead of a popup
+  async function readOpenInTab() {
+    try {
+      const response = await fetch("/image-bench/config.json", {cache: "no-store"});
+      return response.ok && !!(await response.json())?.openInTab;
+    } catch {
+      return false;
+    }
   }
 
   document.getElementById("open").addEventListener("click", () => {
@@ -106,11 +147,21 @@
     openHere();
   });
 
-  // Firefox allows a popup without a click only for sites in its popup exceptions, try it right away
-  if (openPopup())
-    opened();
-  else
-    document.getElementById("blocked").hidden = false;
+  async function launch() {
+    const [found, openInTab] = await Promise.all([findOpenApp(), readOpenInTab()]);
+
+    if (found)
+      opened("found");
+    else if (openInTab)
+      openHere();
+    // Firefox allows a popup without a click only for sites in its popup exceptions, try it right away
+    else if (openPopup())
+      opened();
+    else
+      show("blocked");
+  }
+
+  launch();
 </script>
 </body>
 </html>

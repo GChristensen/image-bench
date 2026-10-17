@@ -9,8 +9,68 @@ import {computed, ref, shallowRef, watch} from "vue";
 export const EMBEDDED = new URLSearchParams(window.location.search).has("embedded");
 
 // The host page of the embedded mode looks for this flag on its parent to attach to it (shared_frontend/popup.js)
-if (EMBEDDED)
+if (EMBEDDED) {
   window.imageBenchEmbedded = true;
+  answerLauncher();
+}
+
+/**
+ * The launcher page (shared_backend/launcher.html) asks over a BroadcastChannel whether the app is open, since
+ * a launcher tab opened by hand cannot find this window by its name: it then activates this one instead of
+ * opening another
+ */
+function answerLauncher() {
+  if (typeof BroadcastChannel === "undefined")
+    return;
+
+  const channel = new BroadcastChannel("imageBench_app");
+
+  channel.onmessage = e => {
+    if (e.data?.type === "find") {
+      channel.postMessage({type: "found"});
+      activateWindow();
+    }
+  };
+}
+
+const FLASH_TITLE = "● Image Bench";
+const FLASH_INTERVAL = 600;
+const FLASH_DURATION = 6000;
+let flashTimer = null;
+
+// Browsers may not raise a window for a script (Firefox: dom.disable_window_flip); the title flashes in the
+// taskbar or the tab strip then
+function activateWindow() {
+  window.focus();
+
+  if (flashTimer || document.hasFocus())
+    return;
+
+  let title = document.title;
+  const started = Date.now();
+
+  const stop = () => {
+    clearInterval(flashTimer);
+    flashTimer = null;
+    document.title = title;
+    window.removeEventListener("focus", stop);
+  };
+
+  flashTimer = setInterval(() => {
+    if (Date.now() - started > FLASH_DURATION)
+      return stop();
+
+    // The title of the progress may change meanwhile (ProgressIndicator.vue)
+    if (document.title !== FLASH_TITLE) {
+      title = document.title;
+      document.title = FLASH_TITLE;
+    } else {
+      document.title = title;
+    }
+  }, FLASH_INTERVAL);
+
+  window.addEventListener("focus", stop);
+}
 
 const frameWindow = shallowRef(null);
 // Whether the host page in the iframe has attached (HOST_READY) and not left since (HOST_DETACHED)

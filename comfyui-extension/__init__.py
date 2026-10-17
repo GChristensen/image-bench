@@ -85,11 +85,6 @@ async def serve_window(request):
 # Image Bench with ComfyUI in its own iframe tab, opened as a popup by the launcher page
 @PromptServer.instance.routes.get(BASE_PATH + "/app")
 async def serve_app(request):
-    url = launcher.redirect_url(get_config_path())
-
-    if url:
-        raise web.HTTPFound(url, headers={"Cache-Control": "no-cache"})
-
     return web.FileResponse(launcher.LAUNCHER_PATH, headers={"Cache-Control": "no-cache"})
 
 

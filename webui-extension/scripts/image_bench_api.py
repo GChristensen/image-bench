@@ -8,7 +8,7 @@ import zipfile
 
 from fastapi import FastAPI, Body, HTTPException, Request, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 import gradio as gr
 import modules.images as webui_images
@@ -157,11 +157,6 @@ class ImageBenchApi():
         return FileResponse(index_html_path, headers={"Cache-Control": "no-cache"})
 
     def get_app(self):
-        url = launcher.redirect_url(self.get_file_path(EXTENSION_CONFIG_FILE, upper=True))
-
-        if url:
-            return RedirectResponse(url, headers={"Cache-Control": "no-cache"})
-
         return FileResponse(launcher.LAUNCHER_PATH, headers={"Cache-Control": "no-cache"})
 
     def get_extension_js(self, path: str):
