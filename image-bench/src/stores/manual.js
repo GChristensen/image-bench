@@ -41,7 +41,6 @@ export const MANUAL_SECTIONS = [
     {id: "comfy-files", title: "Files written", icon: "folder"},
   ]}] : []),
   {id: "shortcuts", title: "Keyboard & mouse", icon: "zap"},
-  {id: "troubleshooting", title: "Troubleshooting", icon: "alert"},
 ];
 
 /**

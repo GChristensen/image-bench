@@ -1,9 +1,11 @@
 # Image Bench for Photoshop
 
-A UXP plugin that sends the active document to the **img2img → Inpaint upload** tab of SD WebUI (Forge / Forge Neo),
-or to marked load nodes in ComfyUI, with the Image Bench extension installed:
+A UXP plugin that sends the active document to the input image of SD WebUI (Forge / Forge Neo): the
+**img2img → img2img** canvas while that tab is shown, the **img2img → Inpaint upload** tab otherwise; or to marked load
+nodes in ComfyUI, with the Image Bench extension installed:
 
-- **Send image** — the composite document image goes to the inpaint upload image.
+- **Send image** — the composite document image goes to the img2img canvas (img2img → img2img shown) or to the
+  inpaint upload image.
 - **Send selection as mask** — the current selection, as a black and white image of the document size,
   goes to the inpaint upload mask (feathered selections produce gray edges).
 - **Send image and mask** — both at once.

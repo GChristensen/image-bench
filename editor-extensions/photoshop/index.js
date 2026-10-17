@@ -1,7 +1,7 @@
 /**
  * Image Bench Photoshop plugin
  * Sends the active document and its selection (as a black and white mask)
- * to SD WebUI (the inpaint upload tab of img2img) or ComfyUI (the nodes marked ib:img and ib:mask)
+ * to SD WebUI (the img2img canvas while img2img › img2img is shown, else the inpaint upload tab) or ComfyUI (the nodes marked ib:img and ib:mask)
  * with the Image Bench extension, or to a ControlNet unit of SD WebUI (the one shown in the Image Bench window),
  * saves it into the current project of Image Bench (Keep › File / Final),
  * and places images sent from the Image Bench window into Photoshop
@@ -208,13 +208,13 @@ async function saveToProject(save, psd, pixels) {
 async function sendImage() {
     const doc = getActiveDocument();
     await upload("image", await readDocumentImage(doc));
-    return "Image sent to Inpaint upload";
+    return "Image sent to the input image";
 }
 
 async function sendMask() {
     const doc = getActiveDocument();
     await upload("mask", await readSelectionMask(doc));
-    return "Mask sent to Inpaint upload";
+    return "Mask sent to the input mask";
 }
 
 async function sendImageAndMask() {
@@ -223,7 +223,7 @@ async function sendImageAndMask() {
     const mask = await readSelectionMask(doc);
     await upload("image", await readDocumentImage(doc));
     await upload("mask", mask);
-    return "Image and mask sent to Inpaint upload";
+    return "Image and mask sent to the input";
 }
 
 async function sendControlNetPreprocess() {

@@ -21,7 +21,7 @@
     {
       "type": "command",
       "id": "sendImage",
-      "label": {"default": "Send Image to Inpaint Upload"}
+      "label": {"default": "Send Image to Input / Inpaint"}
     },
     {
       "type": "command",

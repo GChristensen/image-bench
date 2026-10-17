@@ -161,10 +161,10 @@
         <div id="recent-urls"></div>
     </div>
     <div class="row">
-        <sp-label title="SD WebUI: img2img › Inpaint upload (the image goes to the img2img canvas instead while img2img › img2img is shown, or to the references if the Generate tab routes it there). ComfyUI: the nodes marked ib:img and ib:mask"
-            >To Image Bench: Inpaint upload</sp-label>
+        <sp-label title="SD WebUI: the image goes to the img2img canvas while img2img › img2img is shown, else to img2img › Inpaint upload (or to the references if the Generate tab routes it there); the mask always goes to Inpaint upload. ComfyUI: the nodes marked ib:img and ib:mask"
+            >To Image Bench: Input / Inpaint</sp-label>
         <div class="buttons">
-            <sp-button id="send-image" variant="cta" title="Send the image to img2img › Inpaint upload">Image</sp-button>
+            <sp-button id="send-image" variant="cta" title="Send the image to the img2img canvas (img2img › img2img shown) or to img2img › Inpaint upload">Image</sp-button>
             <sp-button id="send-mask" variant="primary" title="Send the selection as the mask of img2img › Inpaint upload">Mask</sp-button>
             <sp-button id="send-image-and-mask" variant="secondary" title="Send the image and the selection as its mask to img2img › Inpaint upload">Both</sp-button>
         </div>
