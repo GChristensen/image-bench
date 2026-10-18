@@ -1,4 +1,4 @@
-# Qwen-Image
+# Qwen-Image Reference
 
 ## Encoder/VAE
 - Repos: HF [Qwen/Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512), [Qwen/Qwen-Image-Edit-2511](https://huggingface.co/Qwen/Qwen-Image-Edit-2511) · ComfyUI [Comfy-Org/Qwen-Image_ComfyUI](https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI), [Comfy-Org/Qwen-Image-Edit_ComfyUI](https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI)

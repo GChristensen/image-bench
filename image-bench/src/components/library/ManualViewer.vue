@@ -167,6 +167,50 @@ const hostOrigin = location.origin;
       </div>
     </section>
 
+    <section id="manual-workflow">
+      <h2>Typical workflow</h2>
+      <p>
+        Most work with Image Bench follows a few patterns: drafting small images and upscaling the good ones,
+        guiding new generations with ControlNet, editing and inpainting images together with a graphics editor, and
+        keeping the results in trays and projects.
+      </p>
+      <p>
+        Small images generate faster, so drafts are usually made at about 1 megapixel (1024×1024) or 0.5 megapixel,
+        and the good ones are upscaled 2× or 4×. The more pixels an image has, the more detail it can hold. Some
+        models can generate at 2 megapixels directly. The
+        <a href="#" @click.prevent="scrollTo('upscaled')">Upscaled</a> tab keeps its images until you remove them,
+        so you can use it as the store of your upscaled images.
+      </p>
+      <p>
+        To guide a generation with ControlNet, send an image to the
+        <a href="#" @click.prevent="scrollTo('controlnet')">ControlNet</a> tab and run the preprocessor. Send the
+        processed image to the graphics editor, correct it there, and send it back as the control image to generate
+        new images from it.
+      </p>
+      <p>
+        Edit models change an image by an instruction in the prompt, or by reference images, without a mask.
+        Activate img2img mode at the Generate tab. Send
+        the image from a tray or from the editor to <template v-if="isWebUI">img2img</template><template v-else>the load node
+        marked <code>ib:img</code></template> and describe the
+        change in the prompt.
+      </p>
+      <p>
+        For inpainting, activate the inpaint mode at the Generate tab, select the area to change in the editor and send the image with the selection as the mask
+        to <template v-if="isWebUI">img2img › Inpaint upload</template><template v-else>the nodes marked
+        <code>ib:img</code> and <code>ib:mask</code></template>.
+        Add the inpainted variants to the <a href="#" @click.prevent="scrollTo('compare')">Compare</a> tab as they arrive, pick the
+        best one there, and put it into the image tray or the concept tray.
+      </p>
+      <p>
+        The two <a href="#" @click.prevent="scrollTo('trays')">trays</a> can also be split by how long their images
+        stay: one tray holds the images you keep, and the other holds experiments and is emptied regularly.
+      </p>
+      <p>
+        A <a href="#" @click.prevent="scrollTo('projects')">project</a> is meant for one or a few images. For a long
+        series, make a project per image and group the projects in folders.
+      </p>
+    </section>
+
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>

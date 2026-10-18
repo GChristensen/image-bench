@@ -1,4 +1,4 @@
-# FLUX.1 dev
+# FLUX.1 dev Reference
 
 ## Encoder/VAE
 

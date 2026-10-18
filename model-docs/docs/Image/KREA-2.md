@@ -1,4 +1,4 @@
-# Krea 2
+# Krea 2 Reference
 
 ## Encoder/VAE
 - Repos: HF [krea/Krea-2-Raw](https://huggingface.co/krea/Krea-2-Raw), [krea/Krea-2-Turbo](https://huggingface.co/krea/Krea-2-Turbo) · ComfyUI [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2)

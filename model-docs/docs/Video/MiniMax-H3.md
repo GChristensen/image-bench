@@ -1,4 +1,4 @@
-# MiniMax H3
+# MiniMax H3 Reference
 
 The full "omni" system has three components, only one of which is open: H3-Context-IR (multimodal input preprocessor, API-only) and H3-Regenerate-2K (in-context upscaling to the marketed "2K" output, API-only) are not released. **H3-Base**, the 33B dense transformer, is what you download and run — locally you are capped at its native 768p output; the "native 2K" marketing claims describe the API pipeline, not the open weights.
 

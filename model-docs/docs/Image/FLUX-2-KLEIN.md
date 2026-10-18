@@ -1,4 +1,4 @@
-# FLUX.2 Klein
+# FLUX.2 Klein Reference
 
 ## Encoder/VAE
 - Repos: HF [black-forest-labs/FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B), [black-forest-labs/FLUX.2-klein-9B](https://huggingface.co/black-forest-labs/FLUX.2-klein-9B) · ComfyUI [Comfy-Org/flux2-klein-4B](https://huggingface.co/Comfy-Org/flux2-klein-4B), [Comfy-Org/flux2-klein-9B](https://huggingface.co/Comfy-Org/flux2-klein-9B) (text encoders; diffusion models from the BFL `*-fp8` repos)

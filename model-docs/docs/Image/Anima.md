@@ -1,4 +1,4 @@
-# Anima
+# Anima Reference
 
 ## Encoder/VAE
 - Repos: HF [circlestone-labs/Anima](https://huggingface.co/circlestone-labs/Anima) · ComfyUI: same repo, `split_files/`

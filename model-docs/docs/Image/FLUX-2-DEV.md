@@ -1,4 +1,4 @@
-# FLUX.2 dev
+# FLUX.2 dev Reference
 
 ## Encoder/VAE
 - Repos: HF [black-forest-labs/FLUX.2-dev](https://huggingface.co/black-forest-labs/FLUX.2-dev) · ComfyUI [Comfy-Org/flux2-dev](https://huggingface.co/Comfy-Org/flux2-dev)

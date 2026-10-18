@@ -1,4 +1,4 @@
-# Z-Image
+# Z-Image Reference
 
 ## Encoder/VAE
 - Repos: HF [Tongyi-MAI/Z-Image-Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo), [Tongyi-MAI/Z-Image](https://huggingface.co/Tongyi-MAI/Z-Image) · ComfyUI [Comfy-Org/z_image_turbo](https://huggingface.co/Comfy-Org/z_image_turbo), [Comfy-Org/z_image](https://huggingface.co/Comfy-Org/z_image)

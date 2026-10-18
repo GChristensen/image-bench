@@ -1,4 +1,4 @@
-# WAN 2.2
+# WAN 2.2 Reference
 
 ## Encoder/VAE
 

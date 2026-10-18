@@ -3,9 +3,13 @@
 Image Bench automates the repetitive micro-tasks of working with SD WebUI (Forge / Forge Neo): generating batches,
 comparing models and LoRAs, collecting the best images, upscaling them, moving images to and from Photoshop. It
 works from one window that drives the WebUI page, mirrors its controls both ways and receives every generated
-image with its parameters. See more at the [extension site](https://github.com/GChristensen/image-bench).
+image with its parameters. It also offers seamless graphics editors integration (send images forth and back with one click).
+See more at the [extension site](https://github.com/GChristensen/image-bench).
 
 The full manual is built in: **Library › Manual** in the Image Bench window.
+
+Note: This add-on is not designed to make SD WebUI less complicated.
+It automates repetitive tasks, not the creative process.
 
 ## Installation
 
@@ -26,8 +30,7 @@ Then restart WebUI. Updates come from **Extensions › Installed › Check for u
 extension folder. They keep your settings (`config.json`) and the trays and presets in `store/`, which are not
 part of the repository.
 
-Optional extensions: [sd-webui-openpose-editor](https://github.com/fabiencomte/sd-webui-openpose-editor) for editing
-poses from the ControlNet tab, and Config Presets, whose dropdown Image Bench can move to the results area.
+Optional extensions: [sd-webui-openpose-editor](https://github.com/fabiencomte/sd-webui-openpose-editor) for editing poses from the ControlNet tab.
 
 ## Opening Image Bench
 

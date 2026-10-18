@@ -1,4 +1,4 @@
-# LTX 2.5
+# LTX 2.5 Reference
 
 ## Encoder/VAE
 

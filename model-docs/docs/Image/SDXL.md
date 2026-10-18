@@ -1,4 +1,4 @@
-# SDXL
+# SDXL Reference
 
 ## Encoder/VAE
 - Repos: HF [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0), [stabilityai/stable-diffusion-xl-refiner-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0) · ComfyUI: no Comfy-Org repack, loads the official single-file checkpoints

@@ -3,9 +3,13 @@
 Image Bench automates the repetitive micro-tasks of working with ComfyUI: generating batches, comparing models
 and LoRAs, collecting the best images, upscaling them, moving images to and from Photoshop. It works from one
 window that drives the workflow open in ComfyUI, mirrors its marked nodes both ways and receives every generated
-image with its parameters. See more at the [extension site](https://github.com/GChristensen/image-bench).
+image with its parameters. It also offers seamless graphics editors integration (send images forth and back with one click). 
+See more at the [extension site](https://github.com/GChristensen/image-bench).
 
 The full manual is built in: **Library › Manual** in the Image Bench window.
+
+Note: This add-on is not designed to make ComfyUI less complicated. 
+It automates repetitive tasks, not the creative process.
 
 ## Installation
 

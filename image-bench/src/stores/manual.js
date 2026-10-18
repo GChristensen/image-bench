@@ -9,6 +9,7 @@ import {isComfy} from "@/host.js";
 export const MANUAL_SECTIONS = [
   {id: "overview", title: "What it is for", icon: "help"},
   {id: "window", title: "The window", icon: "fit"},
+  {id: "workflow", title: "Typical workflow", icon: "steps"},
   {id: "images", title: "Working with images", icon: "layers"},
   {id: "generate", title: "Generate", icon: "generate"},
   {id: "controlnet", title: "ControlNet", icon: "controlnet"},
