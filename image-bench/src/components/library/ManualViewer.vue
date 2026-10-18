@@ -239,7 +239,8 @@ const hostOrigin = location.origin;
         <li v-if="isWebUI"><b>UI preset buttons</b> — switch the Forge UI preset (sd, xl, flux, ...); Settings
           decides which presets they offer. <b><AppIcon name="lock" :size="13" class="inline-icon"/> Prompt
           lock</b> covers the prompts in WebUI, so that they can only be edited here;
-          <AppIcon name="eraser" :size="13" class="inline-icon"/> left of it clears the prompt and the negative prompt.</li>
+          the <AppIcon name="eraser" :size="13" class="inline-icon"/> eraser in the toolbar clears the prompt and the
+          negative prompt.</li>
         <li><b><AppIcon name="fileSearch" :size="13" class="inline-icon"/> PNG Info</b> — shows the generation
           parameters of an image chosen, dropped or pasted there (PNG, or the EXIF of a JPEG or WebP; for an image
           saved by ComfyUI, the prompts, checkpoint, LoRAs and sampling read from its workflow prompt), and
@@ -247,6 +248,13 @@ const hostOrigin = location.origin;
           v-if="isWebUI"> (checkpoint with its UI preset, VAE / Text Encoder)</template>, sampling, size, seed and
           Hires. fix (denoising in img2img). Values {{ HOST_NAME }} does not have, such as a missing checkpoint,
           are listed and left out. Dropping an image or an image card on the prompt opens it too.</li>
+        <li><b><AppIcon name="terminal" :size="13" class="inline-icon"/> Console</b> — opens a drawer over the lower
+          part of the tab with the terminal output of {{ HOST_NAME }}: the last lines written<template v-if="isWebUI">
+          since Image Bench was loaded</template><template v-else> since ComfyUI started</template>, then what is
+          written while it is open, with progress bars updated in place. Drag its top edge to resize it
+          (double-click restores the height); the buttons in its header copy all of the output or clear the shown
+          output. The drawer receives the output only while it is open and the Generate tab is shown, and it is
+          closed each time the window opens.</li>
         <li v-if="isWebUI"><b>VAE / Text Encoder</b> — the small <AppIcon name="box" :size="13" class="inline-icon"/>/<AppIcon name="puzzle" :size="13" class="inline-icon"/>
           button before the checkpoint list switches it
           with the VAE / Text Encoder list of Forge Neo. The modules list checks VAE and text

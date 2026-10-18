@@ -24,6 +24,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from image_bench_shared import persist
 from image_bench_shared import civitai
+from image_bench_shared import console
 from image_bench_shared import controlnet_inputs
 from image_bench_shared import explore_export
 from image_bench_shared import launcher
@@ -120,6 +121,7 @@ class ImageBenchApi():
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
         self.app.add_websocket_route(self.BASE_PATH + "/heartbeat", self.handle_heartbeat)
+        self.app.add_websocket_route(self.BASE_PATH + "/console", self.handle_console)
         self.add_api_route("/editor/upload", self.editor_upload, methods=["POST"])
         self.add_api_route("/editor/project", self.editor_project, methods=["POST"])
         self.add_api_route("/editor/send", self.editor_send, methods=["POST"])
@@ -314,6 +316,12 @@ class ImageBenchApi():
                     await websocket.send_text("pong")
         except Exception:
             pass
+
+    @staticmethod
+    async def handle_console(websocket, *args):
+        """The terminal output for the console drawer of the Image Bench window, while it is open"""
+        await websocket.accept()
+        await console.serve(websocket.send_text, websocket.receive_text)
 
     async def handle_editor_host_websocket(self, websocket, *args):
         """Keep a WebUI page connected to receive images sent from the editor plugin"""
@@ -891,6 +899,12 @@ def install_video_hook(api):
 
     save_video._image_bench_api = api
 
+
+try:
+    # As early as possible: the console drawer shows the output from here on
+    console.install_stream_tee()
+except Exception as e:
+    print(f"[Image Bench] Unable to capture the console output: {e}")
 
 try:
     api = ImageBenchApi()

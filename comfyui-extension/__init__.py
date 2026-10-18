@@ -14,8 +14,8 @@ from aiohttp import web
 from server import PromptServer
 import folder_paths
 
-from .image_bench_shared import (civitai, controlnet_inputs, editor, editor_plugins, explore_export, launcher, loras,
-                                 media, persist, pnginfo, projects)
+from .image_bench_shared import (civitai, console, controlnet_inputs, editor, editor_plugins, explore_export,
+                                 launcher, loras, media, persist, pnginfo, projects)
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from .image_bench_shared.tray import (TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler,
                                       save_tray_images)
@@ -26,6 +26,12 @@ WEB_DIRECTORY = "./js"
 
 # WebSocket clients for broadcasting image events
 websocket_clients = set()
+
+# The console drawer of the Image Bench window shows the output from the start of ComfyUI
+try:
+    console.install_comfy_console()
+except Exception as e:
+    print(f"[Image Bench] Unable to capture the console output: {e}")
 
 # The editor plugin receiving images sent from the Image Bench window
 editor_connection = editor.EditorConnection()
@@ -667,6 +673,22 @@ async def heartbeat_handler(request):
         if msg.type == web.WSMsgType.TEXT and msg.data == "ping":
             await ws.send_str("pong")
 
+    return ws
+
+
+# The terminal output for the console drawer of the Image Bench window, while it is open
+@PromptServer.instance.routes.get(BASE_PATH + "/console")
+async def console_handler(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    async def receive():
+        msg = await ws.receive()
+
+        if msg.type in (web.WSMsgType.CLOSE, web.WSMsgType.CLOSING, web.WSMsgType.CLOSED, web.WSMsgType.ERROR):
+            raise ConnectionError("closed")
+
+    await console.serve(ws.send_str, receive)
     return ws
 
 
