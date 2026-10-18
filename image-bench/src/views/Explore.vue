@@ -246,6 +246,12 @@ async function onExploreClick() {
   }
 }
 
+async function onClearResultsClick() {
+  if (await dialog.confirm(`Remove all ${modelImages.value.length} results? The files stay on disk.`,
+      {title: "Clear results", okText: "Remove", danger: true}))
+    exploreImagesStore.clear();
+}
+
 async function onCreateClick() {
   const presetName = await dialog.prompt("New preset name:",
     {storageKey: activeTab.value === TAB_LORAS ? "loraPresetName" : "presetName"});
@@ -505,7 +511,7 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
               title="Save the results as a single HTML page"
               @click="onSaveResults"><AppIcon name="download" :size="14"/>Save results</button>
       <button class="btn" :disabled="exploreImagesStore.generationInProgress || !modelImages.length"
-              @click="exploreImagesStore.clear()"><AppIcon name="eraser" :size="14"/>Clear results</button>
+              @click="onClearResultsClick"><AppIcon name="eraser" :size="14"/>Clear results</button>
     </div>
     <div ref="containerElement" class="explore-container">
       <div class="model-list" :style="{width: `${listWidth.size}px`}">

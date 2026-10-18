@@ -526,7 +526,11 @@ function toggleLock() {
   webUI.lockWebUIPrompts(lock);
 }
 
-function clearPrompts() {
+async function clearPrompts() {
+  if ((form.prompt || has("negativePrompt") && form.negativePrompt)
+      && !await dialog.confirm("Clear the prompts?", {okText: "Clear", danger: true}))
+    return;
+
   setParams(has("negativePrompt") ? {prompt: "", negativePrompt: ""} : {prompt: ""});
 }
 

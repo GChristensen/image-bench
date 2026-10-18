@@ -484,7 +484,8 @@ const hostOrigin = location.origin;
           — lists the text encoder files, filtered by the name of the image's own encoder (which is checked), and
           generates the image again with each checked one, its seed and other modules kept. If the image used
           several encoders (CLIP-L and T5), the one whose name is most like the checked one is replaced. The
-          modules set before are restored afterwards.</li>
+          modules set before are restored afterwards. It is in the context menu of the image (key
+          <span class="kbd">E</span>), not on the action rim.</li>
         <li><b>Upscale with denoising</b> <AppIcon name="denoise" :size="13" class="inline-icon"/>
           — asks for a list of Hires. fix denoising strengths and upscales the image with each of them. <b>Upscale
           selected</b>, shown in the toolbar next to it, upscales each of them.<template v-if="isComfy"> Upscaling
@@ -673,6 +674,8 @@ const hostOrigin = location.origin;
           image.</td></tr>
         <tr><td><AppIcon name="denoise" :size="14"/></td><td><span class="kbd">D</span> Upscales the
           image with a list of denoising strengths.</td></tr>
+        <tr v-if="isWebUI"><td><AppIcon name="imageIn" :size="14"/></td><td><span class="kbd">M</span> Sends
+          the image to the img2img input image (img2img › img2img, which is shown).</td></tr>
         <tr><td><AppIcon name="brush" :size="14"/></td><td><span class="kbd">B</span> <template v-if="isWebUI">Sends
           the image to the inpaint upload image (img2img › Inpaint upload, which is shown).</template><template
           v-else>Sends the image to the load node marked <code>ib:img</code>.</template></td></tr>

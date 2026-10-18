@@ -66,8 +66,8 @@ const preview = computed(() => {
                 @input="e => update('negative', e.target.value)"></textarea>
     </label>
     <p class="hint">Put <code>{}</code> or <code>{prompt}</code> into the text to make it wrap the selected prompt
-      text on Shift+click,
-      e.g. <code>(({}:1.2))</code>.</p>
+      text on Shift+click: with <code>({}:1.2)</code>, a selected <code>red hat</code> becomes
+      <code>(red hat:1.2)</code>.</p>
 
     <section class="preview" aria-label="Preview">
       <span class="label-small">Preview <span class="hint">with the current prompts</span></span>

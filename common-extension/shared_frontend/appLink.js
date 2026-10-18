@@ -64,17 +64,13 @@ export function showAppLinkDialog(hostName) {
       <div class="image-bench-dialog-buttons"><button type="button">Close</button></div>
     </div>`;
 
-    // The link replaces the host UI in this tab, which Image Bench then loads in its iframe: the clicks that would
-    // open it in a new tab or window (middle, Ctrl, Shift) open it here too. Dragging it to the bookmarks still works
+    // A click replaces the host UI in this tab, which Image Bench then loads in its iframe, also with Ctrl or Shift.
+    // A middle click keeps the browser default. Dragging it to the bookmarks still works
     const link = dialog.querySelector("a");
-    const openHere = e => {
+    link.addEventListener("click", e => {
         e.preventDefault();
         location.assign(url);
-    };
-    link.addEventListener("click", openHere);
-    link.addEventListener("auxclick", e => e.button === 1 && openHere(e));
-    // Firefox autoscroll
-    link.addEventListener("mousedown", e => e.button === 1 && e.preventDefault());
+    });
 
     dialog.querySelector("button").addEventListener("click", () => dialog.close());
     // Only a click on the backdrop targets the dialog itself, its content is in the padded div

@@ -48,6 +48,8 @@ const routerView = ref(null);
 const appConfigStore = useAppConfigStore();
 const exploreImagesStore = useExploreImagesStore();
 const generatedImagesStore = useGeneratedImagesStore();
+// Batch separators are entries of the Generated store too
+const generatedCount = computed(() => generatedImagesStore.images.filter(i => !i.separator).length);
 const imageTrayStore = useImageTrayStore();
 const conceptTrayStore = useConceptTrayStore();
 const compareStore = useCompareStore();
@@ -326,7 +328,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <RouterLink to="/generate" class="tab" id="generate-tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
       <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
-      <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedImagesStore.images.length" class="count">{{ generatedImagesStore.images.length }}</span></RouterLink>
+      <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedCount" class="count">{{ generatedCount }}</span></RouterLink>
       <RouterLink to="/compare" class="tab" id="compare-tab"
                   :class="{'drop-target': dropTargetKind === KIND_COMPARE}"
                   @dragover="onTrayDragOver($event, KIND_COMPARE)" @dragleave="onTrayDragLeave"

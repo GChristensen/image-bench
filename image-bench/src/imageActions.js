@@ -30,6 +30,7 @@ const VARYING_TEXT_ENCODERS_KEY = "imageBench_varyingTextEncoders";
  *
  * An action with `alt` has an alternative that runs on a middle click, a Shift+click or Shift+key.
  * visible(image, ctx) must cover both hosts.
+ * An action with `rim: false` is left out of the action rim (it stays in the context menu and on its key).
  */
 
 async function sendToControlNet(image) {
@@ -48,6 +49,15 @@ export async function sendToInpaint(image) {
 
   if (error)
     await dialog.alert(error, {title: INPAINT_LABEL});
+  else
+    flashTrayTab("generate-tab");
+}
+
+async function sendToImg2Img(image) {
+  const error = await useImageOperations().sendToImg2Img(image);
+
+  if (error)
+    await dialog.alert(error, {title: "Send to img2img"});
   else
     flashTrayTab("generate-tab");
 }
@@ -204,6 +214,7 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "textEncoders", side: "left", group: 1, icon: "puzzle", label: "Generate with text encoders", key: "E",
+    rim: false,
     visible: (image, ctx) => isWebUI && ctx.isTray && !image.img2img && hasParameters(image)
       && mediaKind(image) !== KIND_AUDIO,
     run: image => generateVaryingTextEncoders(image)
@@ -217,6 +228,11 @@ export const IMAGE_ACTIONS = [
     id: "denoising", side: "left", group: 1, icon: "denoise", label: "Upscale with denoising", key: "D",
     visible: (image, ctx) => ctx.isTray && !image.img2img && isStill(image),
     run: image => upscaleVaryingDenoising(image)
+  },
+  {
+    id: "img2img", side: "right", group: 2, icon: "imageIn", label: "Send to img2img", key: "M",
+    visible: image => isWebUI && isStill(image),
+    run: image => sendToImg2Img(image)
   },
   {
     id: "inpaint", side: "right", group: 2, icon: "brush", label: INPAINT_LABEL, key: "B",
@@ -298,7 +314,7 @@ export function rimActionGroups(image, ctx) {
   const groups = [];
 
   for (const action of IMAGE_ACTIONS)
-    if (action.visible(image, ctx))
+    if (action.rim !== false && action.visible(image, ctx))
       (groups[action.group] ??= []).push(action);
 
   return RIM_GROUP_ORDER.map(index => ({index, actions: groups[index] ?? []}));

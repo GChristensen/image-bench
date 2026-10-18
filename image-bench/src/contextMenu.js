@@ -6,10 +6,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {useProjectsStore} from "@/stores/projects.js";
 import {toast} from "@/toast.js";
 import {MARKINGS} from "@/consts.js";
-
-// Browsers put images on the clipboard only for secure pages (https or localhost), which the hosts seldom are:
-// the item is kept, but not shown
-const SHOW_COPY_IMAGE = false;
+import {isStill} from "@/media.js";
 
 /**
  * Context menu of an image (card or overlay) or of another item (openContextMenu), rendered by ImageContextMenu.vue,
@@ -73,7 +70,8 @@ function imageMenuItems(image, ctx) {
     others.push({icon: "external", label: "Open in new window", hint: "Middle-click",
       run: () => ctx.handlers.openImage(image)});
 
-  if (SHOW_COPY_IMAGE)
+  // The clipboard takes PNG only
+  if (isStill(image))
     others.push({icon: "copy", label: "Copy image", run: () => copyImage(image)});
 
   const projects = useProjectsStore();
@@ -206,16 +204,10 @@ async function copyImage(image) {
   const imageOps = useImageOperations();
 
   if (!imageOps.canCopyImage()) {
-    const host = location.hostname;
     await dialog.alert(
       `The browser puts images on the clipboard only for secure pages (https or localhost), and ${location.origin} `
-      + `is not one. To allow it for this address:
-
-`
-      + `Firefox: open about:config and add ${host} to dom.securecontext.allowlist (comma-separated), then reload.
-`
-      + `Chrome / Edge: open chrome://flags/#unsafely-treat-insecure-origin-as-secure, add ${location.origin}, `
-      + `enable it and relaunch.
+      + `is not one. Run ${HOST_NAME} over https, e.g. with a self-signed certificate (the --tls-keyfile and `
+      + `--tls-certfile command line arguments), and open it through https.
 
 On the computer that runs ${HOST_NAME}, http://localhost works as it is.`,
       {title: "Copy image"});

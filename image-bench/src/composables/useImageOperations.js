@@ -124,6 +124,13 @@ export function useImageOperations() {
     ({type: 'SET_INPUT_IMAGE', mode: 'inpaint', kind: 'image', file}));
 
   /**
+   * Put an image into the img2img canvas (WebUI, switching to img2img › img2img)
+   * @returns {Promise<string|null>} Error message, or null on success
+   */
+  const sendToImg2Img = (image) => sendImageFile(image, file =>
+    ({type: 'SET_INPUT_IMAGE', mode: 'img2img', kind: 'image', file}));
+
+  /**
    * Whether images can be put on the clipboard (needs a secure context, e.g. localhost)
    */
   const canCopyImage = () => !!(window.ClipboardItem && navigator.clipboard?.write);
@@ -169,6 +176,7 @@ export function useImageOperations() {
     sendToEditor,
     sendToControlNet,
     sendToInpaint,
+    sendToImg2Img,
     canCopyImage,
     copyImage
   };
