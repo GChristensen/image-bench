@@ -1,3 +1,4 @@
+# FLUX.2 Klein
 
 ## Encoder/VAE
 - Repos: HF [black-forest-labs/FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B), [black-forest-labs/FLUX.2-klein-9B](https://huggingface.co/black-forest-labs/FLUX.2-klein-9B) · ComfyUI [Comfy-Org/flux2-klein-4B](https://huggingface.co/Comfy-Org/flux2-klein-4B), [Comfy-Org/flux2-klein-9B](https://huggingface.co/Comfy-Org/flux2-klein-9B) (text encoders; diffusion models from the BFL `*-fp8` repos)
@@ -188,3 +189,7 @@ Thin and community-only: no ControlNet for klein; structure comes through refere
 - FLUX.1 ControlNets do not load.
 - Bottom line: if structural control is a hard requirement, FLUX.1 dev or SDXL have far more
   mature ControlNets.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

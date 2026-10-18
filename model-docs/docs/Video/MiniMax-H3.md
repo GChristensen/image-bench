@@ -1,3 +1,5 @@
+# MiniMax H3
+
 The full "omni" system has three components, only one of which is open: H3-Context-IR (multimodal input preprocessor, API-only) and H3-Regenerate-2K (in-context upscaling to the marketed "2K" output, API-only) are not released. **H3-Base**, the 33B dense transformer, is what you download and run — locally you are capped at its native 768p output; the "native 2K" marketing claims describe the API pipeline, not the open weights.
 
 ## Encoder/VAE
@@ -152,3 +154,7 @@ New but native: one Fun ControlNet Union from Alibaba PAI, in ComfyUI since 0.35
 ## Length Extension and Continuity
 
 No dedicated sliding-window, position-extrapolation, or autoregressive-chaining mechanism documented. "Extendable to ~30s" (one press piece) most likely means first-last-frame chaining of multiple 15s clips, not a native extended-context mode — inference, not a sourced fact [?]. Given Ref2VA's reference-video input, the most plausible continuity method today is: generate segment 1 → feed its final frames back in as Ref2VA reference video for segment 2 → repeat. Unverified as an official recommendation.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

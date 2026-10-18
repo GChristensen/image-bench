@@ -1,3 +1,5 @@
+# Qwen-Image-2.1
+
 ## Encoder/VAE
 - Repos: HF [Qwen/Qwen-Image-2.1](https://huggingface.co/Qwen/Qwen-Image-2.1) · ComfyUI [Comfy-Org/Qwen-Image-2.1](https://huggingface.co/Comfy-Org/Qwen-Image-2.1)
 - Text encoder: `qwen3vl_8b_int8_convrot.safetensors` (bf16: `qwen3vl_8b_bf16.safetensors`)
@@ -198,3 +200,7 @@ One Union ControlNet, recent but native in ComfyUI 0.37+.
 - Old Qwen-Image ControlNets (InstantX, DiffSynth, 2512 Fun) do not load. Forge Neo: not
   supported.
 - License: Qwen Research License, non-commercial.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

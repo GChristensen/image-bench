@@ -1,3 +1,4 @@
+# FLUX.2 dev
 
 ## Encoder/VAE
 - Repos: HF [black-forest-labs/FLUX.2-dev](https://huggingface.co/black-forest-labs/FLUX.2-dev) · ComfyUI [Comfy-Org/flux2-dev](https://huggingface.co/Comfy-Org/flux2-dev)
@@ -113,3 +114,7 @@ FLUX.2-specific guidance is sparse; most of this is carried over from general FL
 
 - Native ceiling: editing works "up to 4MP"; behavior generating natively far past that isn't documented.
 - Two-pass hires-fix: no FLUX.2-specific values found. Starting point by analogy with FLUX.1: ~1.5x latent upscale, second-pass denoise 0.3-0.5, same steps/guidance as base pass — verify empirically.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

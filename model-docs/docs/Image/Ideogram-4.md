@@ -1,3 +1,5 @@
+# Ideogram 4
+
 ## Encoder/VAE
 - Repos: HF [ideogram-ai/ideogram-4-fp8](https://huggingface.co/ideogram-ai/ideogram-4-fp8), [ideogram-ai/ideogram-4-nf4](https://huggingface.co/ideogram-ai/ideogram-4-nf4) · ComfyUI [Comfy-Org/Ideogram-4](https://huggingface.co/Comfy-Org/Ideogram-4)
 - Text encoder: `Qwen3-VL-8B-Instruct`
@@ -87,3 +89,7 @@ Ideogram's hosted app has "Canvas/Magic Fill/Extend" inpaint/outpaint tools, but
 - Occasionally misses exact counts or ignores requested orientation in complex prompts.
 - Baked-in safety filter can block generations with no override in ComfyUI; structured JSON prompts reportedly trigger it less often than free-text — if generations get refused unexpectedly, that's the likely cause, not a workflow bug.
 - Guidance-field misuse: setting guidance to 0/1 silently switches to a cheaper single-pass mode rather than "turning CFG off" the way it would on a classic model — don't copy a CFG value from another model's recipe.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

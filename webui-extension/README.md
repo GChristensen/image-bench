@@ -3,13 +3,7 @@
 Image Bench automates the repetitive micro-tasks of working with SD WebUI (Forge / Forge Neo): generating batches,
 comparing models and LoRAs, collecting the best images, upscaling them, moving images to and from Photoshop. It
 works from one window that drives the WebUI page, mirrors its controls both ways and receives every generated
-image with its parameters.
-
-- Generate and ControlNet tabs: compact editors for the txt2img, img2img and Inpaint controls, references and
-  the units of ControlNet Integrated
-- Model and LoRA exploration, batches, variations, parameter sweeps, upscaling of chosen images
-- Compare tab, image and concept trays, projects
-- Photoshop, Krita and GIMP plugins (supplied with the extension, downloaded from the manual)
+image with its parameters. See more at the [extension site](https://github.com/GChristensen/image-bench).
 
 The full manual is built in: **Library › Manual** in the Image Bench window.
 
@@ -37,7 +31,11 @@ poses from the ControlNet tab, and Config Presets, whose dropdown Image Bench ca
 
 ## Opening Image Bench
 
-- The **🔬 Image Bench** button in the header of the WebUI page opens it in a popup window connected to that page.
-  Keep the WebUI page open as the active tab of its window (the window may be minimized).
 - `http://<webui address>/image-bench/app` opens it without a WebUI tab: the window loads WebUI itself in a tab
   of its own.
+- The **🔬 Image Bench** button in the WebUI toolbar could open it as a new tab or a popup window depending on settings.
+  By default, it offers to use the url above.
+
+# Development repository link
+
+This is not a development repository! The full source code is here: https://github.com/GChristensen/image-bench

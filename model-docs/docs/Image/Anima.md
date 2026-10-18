@@ -1,3 +1,4 @@
+# Anima
 
 ## Encoder/VAE
 - Repos: HF [circlestone-labs/Anima](https://huggingface.co/circlestone-labs/Anima) · ComfyUI: same repo, `split_files/`
@@ -175,3 +176,7 @@ CircleStone Labs.
 - Forge Neo: the built-in ControlNet loads the Anima LLLite models and the Regional model (its
   Region mode draws the color masks); the VACE ControlNets are ComfyUI only.
 - License: all of them follow the CircleStone Labs Non-Commercial License.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

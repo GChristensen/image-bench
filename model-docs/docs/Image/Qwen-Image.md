@@ -1,3 +1,5 @@
+# Qwen-Image
+
 ## Encoder/VAE
 - Repos: HF [Qwen/Qwen-Image-2512](https://huggingface.co/Qwen/Qwen-Image-2512), [Qwen/Qwen-Image-Edit-2511](https://huggingface.co/Qwen/Qwen-Image-Edit-2511) · ComfyUI [Comfy-Org/Qwen-Image_ComfyUI](https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI), [Comfy-Org/Qwen-Image-Edit_ComfyUI](https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI)
 - Text encoder: `Qwen2.5-VL-7B`
@@ -189,3 +191,7 @@ Officially trained/tested only at the bucket resolutions above (~1.3-1.7MP). Com
 - Lightning + true CFG left on: running a distilled checkpoint with CFG still enabled double-applies guidance and degrades output.
 - Low GGUF quants on Edit variants: visible artifacts reported at Q2/Q4 specifically for Edit-2509 — prefer Q6_K+ for editing work if quality matters.
 - Missing mmproj on GGUF text encoder: img2img/edit silently fails to use the image properly if the GGUF Qwen2.5-VL encoder's mmproj file isn't also downloaded and selected.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

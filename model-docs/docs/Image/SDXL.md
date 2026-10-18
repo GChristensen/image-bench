@@ -1,3 +1,5 @@
+# SDXL
+
 ## Encoder/VAE
 - Repos: HF [stabilityai/stable-diffusion-xl-base-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0), [stabilityai/stable-diffusion-xl-refiner-1.0](https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0) · ComfyUI: no Comfy-Org repack, loads the official single-file checkpoints
 - Text encoder: `CLIP ViT-L/14, OpenCLIP ViT-bigG/14`
@@ -166,3 +168,7 @@ Recommended end-to-end pipeline (24GB card):
 - Aesthetic bias: base SDXL leans toward a generic "stock-photo/concept-art" look without a finetune; strong photorealism or strong anime style typically need a derivative checkpoint.
 - Off-bucket resolution: composition collapse/duplication is frequently misdiagnosed as "the model can't do faces/anatomy" when it's actually a resolution/aspect-ratio problem.
 - VAE NaN/black-image bug: still catches new users who load the original SDXL-VAE in fp16 without the fp16-fix — presents as fully black or fully noise output despite a sane-looking latent.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

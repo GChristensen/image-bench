@@ -1,3 +1,5 @@
+# FLUX.1 dev
+
 ## Encoder/VAE
 
 - Repos: HF [black-forest-labs/FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev) · ComfyUI [Comfy-Org/flux1-dev](https://huggingface.co/Comfy-Org/flux1-dev)
@@ -281,4 +283,8 @@ or with multiple subjects \[?\]
 Off-bucket resolution collapse  
 Rendering far outside trained aspect buckets or resolution causes
 duplication/tiling rather than graceful degradation (§3) — often
-misdiagnosed as a sampler/seed problem 
+misdiagnosed as a sampler/seed problem
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

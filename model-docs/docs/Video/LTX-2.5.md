@@ -1,3 +1,5 @@
+# LTX 2.5
+
 ## Encoder/VAE
 
 - Repos: HF [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) · ComfyUI: same repo (ships `comfy-int8` files), no Comfy-Org repack
@@ -165,3 +167,7 @@ RetakePipeline (regional regen) and native multishot are the official tools for 
 - No official interpolation tool named for 2.5; RIFE is the de facto community standard for this model family (not confirmed official).
 - Denoise values for latent vs. pixel refinement passes: not published [?].
 - Recommended pipeline: Stage 1 draft at base res → Stage 2 latent upscale (spatial then/or temporal) → optional DFR detailing pass → optional external frame interpolation.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

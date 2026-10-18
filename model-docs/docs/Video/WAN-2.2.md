@@ -1,3 +1,5 @@
+# WAN 2.2
+
 ## Encoder/VAE
 
 - Repos: HF [Wan-AI/Wan2.2-T2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B), [Wan-AI/Wan2.2-I2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B), [Wan-AI/Wan2.2-TI2V-5B](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B) · ComfyUI [Comfy-Org/Wan_2.2_ComfyUI_Repackaged](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged)
@@ -184,3 +186,7 @@ One reported end-to-end pipeline (community, treat as a starting point not a sta
 | Freeze-then-static tail | exceeding native frame count | stay within 4n+1, ≤81/121 |
 
 Other classic video-diffusion failures (limb/object permanence loss, face degradation over time, unintended slow-motion, physics errors) are reported anecdotally for Wan2.2 but with no systematic single fix — expect them occasionally rather than expecting a reliable single knob to fix them.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

@@ -1,3 +1,5 @@
+# Krea 2
+
 ## Encoder/VAE
 - Repos: HF [krea/Krea-2-Raw](https://huggingface.co/krea/Krea-2-Raw), [krea/Krea-2-Turbo](https://huggingface.co/krea/Krea-2-Turbo) · ComfyUI [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2)
 - Text encoder: `Qwen3-VL-4B`
@@ -200,3 +202,7 @@ Thin and community-only: control LoRAs, each with its own node pack; no classic 
 - Forge Neo: not supported; FLUX and Qwen-Image ControlNets do not load.
 - Bottom line: depth, pose and lineart work, but canny, tile and multi-control stacking need
   SDXL or FLUX.1.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*

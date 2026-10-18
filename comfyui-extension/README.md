@@ -3,13 +3,7 @@
 Image Bench automates the repetitive micro-tasks of working with ComfyUI: generating batches, comparing models
 and LoRAs, collecting the best images, upscaling them, moving images to and from Photoshop. It works from one
 window that drives the workflow open in ComfyUI, mirrors its marked nodes both ways and receives every generated
-image with its parameters.
-
-- Generate and ControlNet tabs: compact editors for the prompt, LoRAs, model, sampling, size, Hires. fix, input
-  images, references and ControlNet units of the workflow
-- Model and LoRA exploration, batches, parameter sweeps, upscaling of chosen images
-- Compare tab, image and concept trays, projects
-- Photoshop, Krita and GIMP plugins (supplied with the extension, downloaded from the manual)
+image with its parameters. See more at the [extension site](https://github.com/GChristensen/image-bench).
 
 The full manual is built in: **Library › Manual** in the Image Bench window.
 
@@ -32,7 +26,7 @@ git clone https://github.com/GChristensen/comfyui-image-bench
 ```
 
 Then restart ComfyUI: it loads extensions and the **Image Bench Prompt** node only at startup. Updates come from
-Manager (**Update**), or `git pull` in the extension folder. They keep your settings (`config.json`), the trays and
+Manager (**Update**), or `git pull` in the extension folder. Updates keep your settings (`config.json`), the trays and
 presets in `store/` and your node additions in `store/node_config.json`, which are not part of the repository.
 
 Optional node packs:
@@ -44,11 +38,10 @@ Optional node packs:
 
 ## Opening Image Bench
 
-- The **🔬 Image Bench** button in the ComfyUI toolbar opens it in a popup window connected to that page. Keep the
-  ComfyUI page open as the active tab of its window (the window may be minimized).
 - `http://<comfyui address>/image-bench/app` opens it without a ComfyUI tab: the window loads ComfyUI itself in
   a tab of its own.
-- With the setting *Open Image Bench in a browser tab instead of a popup window* both open it in a tab.
+- The **🔬 Image Bench** button in the ComfyUI toolbar could open it as a new tab or a popup window depending on settings. 
+By default, it offers to use the url above.
 
 ## Preparing a workflow
 
@@ -61,3 +54,7 @@ Image or Preview Image node.
 Example workflows with every node marked are copied into the *Image Bench* folder of the saved workflows. The
 manual's *ComfyUI setup* chapter describes the markers in full; [NODE_CONFIG.md](NODE_CONFIG.md) describes how
 to add custom nodes in `store/node_config.json`.
+
+## Development repository link
+
+This is not a development repository! The full source code is here: https://github.com/GChristensen/image-bench

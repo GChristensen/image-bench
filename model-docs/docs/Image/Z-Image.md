@@ -1,3 +1,5 @@
+# Z-Image
+
 ## Encoder/VAE
 - Repos: HF [Tongyi-MAI/Z-Image-Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo), [Tongyi-MAI/Z-Image](https://huggingface.co/Tongyi-MAI/Z-Image) · ComfyUI [Comfy-Org/z_image_turbo](https://huggingface.co/Comfy-Org/z_image_turbo), [Comfy-Org/z_image](https://huggingface.co/Comfy-Org/z_image)
 - Text encoder: `qwen_3_4b`
@@ -164,3 +166,7 @@ Turbo.
 - SageAttention 3 specifically reported to corrupt output on this model
   in at least one open GitHub issue — treat attention-backend swaps as
   something to A/B test, not assume safe.
+
+---
+
+*This file was generated automatically. Do not edit it: all edits are lost on update.*
