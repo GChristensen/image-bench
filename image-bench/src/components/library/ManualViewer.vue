@@ -392,6 +392,16 @@ const hostOrigin = location.origin;
           starts while the <AppIcon name="recycle" :size="13" class="inline-icon"/> <b>Clear automatically when a
           new batch starts</b> toggle is on; turn it off to let the images of successive runs accumulate. <b>Clear</b> removes all images
           from the tab (the files stay on disk).</li>
+        <li><b>Selecting images</b> — check images by the circle at the top left of the thumbnail, or all of them with
+          <b>Select all</b> in the toolbar. While images are checked,
+          the toolbar adds them all at once to the Compare tab
+          (<AppIcon name="compare" :size="13" class="inline-icon"/>), the concept tray
+          (<AppIcon name="concept" :size="13" class="inline-icon"/>) or the image tray
+          (<AppIcon name="palette" :size="13" class="inline-icon"/>); dragging a checked thumbnail takes them all
+          along too. <span class="kbd">Ctrl</span>+<span class="kbd">U</span> unchecks them.</li>
+        <li><b>Filtering by markings</b> — as in the trays, <AppIcon name="filter" :size="13" class="inline-icon"/>
+          shows only the marked images, and clicking the marking of an image shows only the images with that
+          marking (click it again to show all).</li>
       </ul>
     </section>
 
@@ -477,7 +487,7 @@ const hostOrigin = location.origin;
         <li><b>Removing images</b> — check them and use <b>Remove selected</b>, which appears in the toolbar
           while images are checked, or the <AppIcon name="trash" :size="13" class="inline-icon"/> button of the full image
           view. <b>Clear</b> removes all images of the tray. The files stay on disk either way.</li>
-        <li><b>Compare selected</b> — adds the checked images to the Compare tab (also in the Upscaled tab).</li>
+        <li><b>Compare selected</b> — adds the checked images to the Compare tab.</li>
         <li><b>Generate with steps</b> <AppIcon name="steps" :size="13" class="inline-icon"/> — asks for a list of
           step counts and generates the image again with each of them, in the Generated tab.</li>
         <li v-if="isWebUI"><b>Generate with text encoders</b> <AppIcon name="puzzle" :size="13" class="inline-icon"/>
@@ -519,6 +529,11 @@ const hostOrigin = location.origin;
         Like the trays, the tab keeps its images until you remove them.
         A colored bar marks the images of one upscale run. <AppIcon name="download" :size="13" class="inline-icon"/> downloads
         them as a .zip, which can be imported into a tray.
+      </p>
+      <p>
+        Images are checked as in the <a href="#" @click.prevent="scrollTo('generated')">Generated</a> tab, with the
+        same buttons to add them to the Compare tab or a tray; <b>Remove selected</b> removes them from the tab
+        (the files stay on disk).
       </p>
     </section>
 

@@ -5,6 +5,7 @@
   import {useCompareStore} from "@/stores/compare.js";
   import {syncTrayMarkings} from "@/stores/trayMarkings.js";
   import {flashTrayTab} from "@/components/utils.js";
+  import {animateColors} from "@/utils_html.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE, MARKINGS} from "@/consts.js";
   import {dialog} from "@/dialogs/useDialog.js";
@@ -188,12 +189,18 @@
     container.scrollTop += fullRect.top + fy * fullRect.height - e.clientY;
   }
 
+  // The overlay covers the tab bar, so the add buttons flash as the tabs do to show that the image was added
+  function flashButton(e) {
+    animateColors(e.currentTarget, 0.7);
+  }
+
   function onAddToCompare(e) {
     e.preventDefault();
 
     useCompareStore().addImage(props.image);
 
     flashTrayTab("compare-tab");
+    flashButton(e);
   }
 
   function onPlaceToImageTray(e) {
@@ -202,6 +209,7 @@
     imageTrayStore.addImage(props.image);
 
     flashTrayTab("image-tray-tab");
+    flashButton(e);
   }
 
   function onPlaceToConceptTray(e) {
@@ -210,6 +218,7 @@
     conceptTrayStore.addImage(props.image);
 
     flashTrayTab("concept-tray-tab");
+    flashButton(e);
   }
 
   async function onSendToControlNet(e) {

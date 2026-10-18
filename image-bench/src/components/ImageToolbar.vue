@@ -1,6 +1,6 @@
 <script setup>
 import {computed, ref, watch} from 'vue';
-import {KIND_GENERATED, KIND_UPSCALED} from "@/consts.js";
+import {KIND_GENERATED, KIND_UPSCALED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
 import AppIcon from "@/components/AppIcon.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
@@ -96,6 +96,7 @@ const emit = defineEmits([
   'stop-generation',
   'upscale-selected',
   'compare-selected',
+  'tray-selected',
   'clear',
   'remove-selected',
   'unselect-all',
@@ -104,7 +105,6 @@ const emit = defineEmits([
 ]);
 
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
-const selectable = computed(() => props.isTray || props.kind === KIND_UPSCALED);
 const generateImagesNumber = ref(props.presetImages);
 const generateForever = computed(() => generateImagesNumber.value === -1);
 let finiteImagesNumber = generateImagesNumber.value;
@@ -140,32 +140,9 @@ defineExpose({generateImagesNumber});
     <template v-if="isTray">
       <button class="ib" title="Download tray (.zip)" aria-label="Download tray" @click="$emit('save')"><AppIcon name="download"/></button>
       <button class="ib" title="Import images (.png, .zip)" aria-label="Import images" @click="$emit('open')"><AppIcon name="upload"/></button>
-      <div class="vsep"></div>
-      <button class="btn outline select-all" @click="$emit('select-all')"><AppIcon name="checks" :size="14"/>{{ selectAllText }}</button>
-      <button class="ib" :class="{on: isShowingMarked}" :aria-pressed="isShowingMarked"
-              :title="markingFilter ? `Showing ${markingFilter} only: click to show all`
-                : isShowingMarked ? 'Showing marked images: click to show all' : 'Show marked images only'"
-              aria-label="Show marked images only" @click="$emit('show-marked')"
-        ><span v-if="markingFilter" class="marking-filter">{{ markingFilter }}</span
-        ><AppIcon v-else name="filter" :size="14"/></button>
     </template>
 
-    <!-- Actions on the checked images -->
-    <template v-if="selectable && selectedCount">
-      <div class="vsep"></div>
-      <span class="selection-count">{{ selectedCount }} selected</span>
-      <button v-if="isTray" class="btn primary" :disabled="upscaleInProgress"
-              :title="upscaleInProgress ? 'An upscale is in progress' : 'Upscale the selected images'"
-              @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
-      <button class="btn outline" title="Add the selected images to the Compare tab"
-              @click="$emit('compare-selected')"><AppIcon name="compare" :size="14"/>Compare selected</button>
-      <button class="btn outline remove-selected" title="Remove the selected images from this view (the files stay on disk)"
-              @click="$emit('remove-selected')"><AppIcon name="trash" :size="14"/>Remove selected</button>
-      <button class="ib" title="Unselect all (Ctrl+U)" aria-label="Unselect all" @click="$emit('unselect-all')"
-        ><AppIcon name="close" :size="14"/></button>
-    </template>
-
-    <!-- Generated images actions -->
+    <!-- Generated images actions; before the selection bar, so that it does not move the Generate button -->
     <template v-if="kind === KIND_GENERATED">
       <div class="toolbar-group">
         <button class="btn swap" :class="generationInProgress ? 'stop' : 'primary'"
@@ -187,6 +164,45 @@ defineExpose({generateImagesNumber});
               title="Generate variations of the current seed; the variation seed and strength are set for the batch and cleared afterwards automatically"
               @click="$emit('generate-variations')"
         ><AppIcon name="shuffle" :size="14"/>Variations…</button>
+    </template>
+
+    <!-- Selection and marking filter of all views (no filter in the Upscaled tab) -->
+    <div class="vsep"></div>
+    <button class="btn outline select-all" title="Ctrl+U unselects all"
+            @click="$emit('select-all')"><AppIcon name="checks" :size="14"/>{{ selectAllText }}</button>
+    <button v-if="kind !== KIND_UPSCALED" class="ib" :class="{on: isShowingMarked}" :aria-pressed="isShowingMarked"
+            :title="markingFilter ? `Showing ${markingFilter} only: click to show all`
+              : isShowingMarked ? 'Showing marked images: click to show all' : 'Show marked images only'"
+            aria-label="Show marked images only" @click="$emit('show-marked')"
+      ><span v-if="markingFilter" class="marking-filter">{{ markingFilter }}</span
+      ><AppIcon v-else name="filter" :size="14"/></button>
+
+    <!-- Actions on the checked images -->
+    <template v-if="selectedCount">
+      <div class="vsep"></div>
+      <span class="selection-count">{{ selectedCount }} selected</span>
+      <!-- Compact add buttons in the Generated and Upscaled tabs, which feed the trays -->
+      <template v-if="!isTray">
+        <button class="ib" title="Add the selected images to the Compare tab" aria-label="Add the selected images to compare"
+                @click="$emit('compare-selected')"><AppIcon name="compare" :size="14"/></button>
+        <button class="ib" title="Add the selected images to the concept tray" aria-label="Add the selected images to the concept tray"
+                @click="$emit('tray-selected', KIND_CONCEPT_TRAY)"><AppIcon name="concept" :size="14"/></button>
+        <button class="ib" title="Add the selected images to the image tray" aria-label="Add the selected images to the image tray"
+                @click="$emit('tray-selected', KIND_IMAGE_TRAY)"><AppIcon name="palette" :size="14"/></button>
+      </template>
+      <template v-else>
+        <button class="btn primary" :disabled="upscaleInProgress"
+                :title="upscaleInProgress ? 'An upscale is in progress' : 'Upscale the selected images'"
+                @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
+        <button class="btn outline" title="Add the selected images to the Compare tab"
+                @click="$emit('compare-selected')"><AppIcon name="compare" :size="14"/>Compare selected</button>
+      </template>
+      <!-- No removal from the Generated tab -->
+      <button v-if="kind !== KIND_GENERATED" class="btn outline remove-selected"
+              title="Remove the selected images from this view (the files stay on disk)"
+              @click="$emit('remove-selected')"><AppIcon name="trash" :size="14"/>Remove selected</button>
+      <button class="ib" title="Unselect all (Ctrl+U)" aria-label="Unselect all" @click="$emit('unselect-all')"
+        ><AppIcon name="close" :size="14"/></button>
     </template>
 
     <!-- Upscale stop -->

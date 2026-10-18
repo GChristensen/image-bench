@@ -96,6 +96,17 @@ async function onCompareSelectedClick() {
   flashTrayTab("compare-tab");
 }
 
+const TRAY_TAB_IDS = {[KIND_IMAGE_TRAY]: "image-tray-tab", [KIND_CONCEPT_TRAY]: "concept-tray-tab"};
+
+async function onTraySelectedClick(trayKind) {
+  const trayStore = trayKind === KIND_IMAGE_TRAY ? imageTrayStore : upscaleTrayStore;
+
+  for (const image of imageStore.images.filter(i => i.selected && !i.separator))
+    await trayStore.addImage(toRaw(image));
+
+  flashTrayTab(TRAY_TAB_IDS[trayKind]);
+}
+
 async function onUpscaleSelectedClick() {
   const selectedImages = imageStream.value.getSelectedImages().filter(isStill);
 
@@ -412,6 +423,7 @@ function isComponentTray(kind) {
       @clear="onClearClick"
       @remove-selected="onRemoveSelectedClick"
       @compare-selected="onCompareSelectedClick"
+      @tray-selected="onTraySelectedClick"
       @unselect-all="imageStream.unselectAll()"
       @update:autoClear="value => config.automaticallyClearGeneratedImages = value"
       @preset-change="onConfigPresetChange"

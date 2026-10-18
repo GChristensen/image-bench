@@ -1,7 +1,7 @@
 <script setup>
   import GeneratedImage from "@/components/GeneratedImage.vue";
   import {computed, nextTick, ref, shallowRef, toRaw} from "vue";
-  import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
+  import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
   import {useImageSelection} from "@/composables/useImageSelection.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {dialog} from "@/dialogs/useDialog.js";
@@ -218,7 +218,7 @@
                        :kind="kind"
                        :displayed="shouldShowImage(image)"
                        :image="image"
-                       :selectable="isTray || kind === KIND_UPSCALED"
+                       selectable
                        :upscalable="isTray || kind === KIND_GENERATED"
                        :selected="image.selected"
                        :highlighted="isHighlighted(image)"
