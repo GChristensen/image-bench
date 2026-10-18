@@ -1,5 +1,5 @@
 import {defineStore} from "pinia";
-import {ref} from "vue";
+import {ref, watch} from "vue";
 import {isComfy} from "@/host.js";
 
 /**
@@ -9,6 +9,7 @@ import {isComfy} from "@/host.js";
 export const MANUAL_SECTIONS = [
   {id: "overview", title: "What it is for", icon: "help"},
   {id: "window", title: "The window", icon: "fit"},
+  {id: "images", title: "Working with images", icon: "layers"},
   {id: "generate", title: "Generate", icon: "generate"},
   {id: "controlnet", title: "ControlNet", icon: "controlnet"},
   {id: "explore", title: "Explore", icon: "flask"},
@@ -22,7 +23,6 @@ export const MANUAL_SECTIONS = [
     {id: "library-manual", title: "Manual", icon: "help"},
   ]},
   {id: "projects", title: "Projects", icon: "box"},
-  {id: "images", title: "Working with images", icon: "layers"},
   {id: "settings", title: "Settings & actions", icon: "settings"},
   {id: "editors", title: "Editors", icon: "layers", children: [
     {id: "editor-photoshop", title: "Photoshop", icon: "photoshop"},
@@ -43,6 +43,16 @@ export const MANUAL_SECTIONS = [
   {id: "shortcuts", title: "Keyboard & mouse", icon: "zap"},
 ];
 
+const SCROLL_KEY = "imageBench_manualScrollTop";
+
+function readScrollTop() {
+  try {
+    return Number(sessionStorage.getItem(SCROLL_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 /**
  * Manual section of the Library: the contents (ManualBrowser.vue) and the text (ManualViewer.vue) share the
  * chapter being read and the chapter to scroll to
@@ -52,8 +62,15 @@ export const useManualStore = defineStore("manual", () => {
   const active = ref(MANUAL_SECTIONS[0].id);
   // Chapter to scroll to, a new object per request
   const target = ref(null);
-  // Scroll position of the text, kept while another Library section is shown
-  const scrollTop = ref(0);
+  // Scroll position of the text, kept for the browser session (reloads of the window, not browser restarts)
+  const scrollTop = ref(readScrollTop());
+  watch(scrollTop, value => {
+    try {
+      sessionStorage.setItem(SCROLL_KEY, String(Math.round(value)));
+    } catch {
+      // Storage unavailable: the position is kept in memory only
+    }
+  });
   // The Library is asked to show the manual; cleared by the Library
   const revealed = ref(false);
   // The manual has been shown in this session
