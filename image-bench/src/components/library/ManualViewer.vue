@@ -295,7 +295,15 @@ const hostOrigin = location.origin;
           <code>ib:mask</code> as well, otherwise txt2img.</li>
         <li><b>Size</b>: preset sizes or width and height inputs. The
           <AppIcon name="list" :size="13" class="inline-icon"/> / <AppIcon name="ruler" :size="13" class="inline-icon"/>
-          button before it switches between them.</li>
+          button before it switches between them. The presets have the same aspect ratios in four grades, from
+          0.25 to 2 MP, followed by sizes for particular models. The rectangle before a size shows its shape, and
+          <b>≈</b> joins two neighbouring sizes of nearly the same ratio. The icons at the right show the medium a ratio comes from:
+          <AppIcon name="easel" :size="13" class="inline-icon"/> 4:3, the painting canvas;
+          <AppIcon name="photoCamera" :size="13" class="inline-icon"/> 3:2, 35 mm photography;
+          <AppIcon name="tv" :size="13" class="inline-icon"/> 16:9, television and video;
+          <AppIcon name="cinemaCamera" :size="13" class="inline-icon"/> 12:5, anamorphic cinema.
+          <AppIcon name="bucketOff" :size="13" class="inline-icon"/> marks A4, which is no training bucket of any
+          model.</li>
         <li><b>Result, Input and Mask</b>: upload, drop or paste the input image or mask onto its pane. Hold
           <span class="kbd">Ctrl</span> over the result, or click its <AppIcon name="rim" :size="13" class="inline-icon"/>
           button, to show its action rim. Drag the grips to resize the panes; double-click restores them.</li>

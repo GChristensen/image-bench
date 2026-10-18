@@ -85,4 +85,9 @@ export const ICON_PATHS = {
   rim: '<path d="M14.33 3.31A9 9 0 0 1 20.69 9.67M20.69 14.33A9 9 0 0 1 14.33 20.69M9.67 20.69A9 9 0 0 1 3.31 14.33M3.31 9.67A9 9 0 0 1 9.67 3.31"/><circle cx="12" cy="12" r="2"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   ruler: '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"/>',
+  photoCamera: '<path d="M9.5 4h5L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3z"/><circle cx="12" cy="13" r="3.5"/>',
+  tv: '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="m7 2 5 5 5-5"/>',
+  cinemaCamera: '<circle cx="6" cy="6" r="3.5"/><circle cx="14" cy="6" r="3.5"/><rect x="2" y="11" width="15" height="9" rx="1.5"/><path d="m17 14 5-2.5v8L17 17"/>',
+  easel: '<rect x="5" y="3" width="14" height="10.5" rx="1"/><path d="M5.5 12.5 9.5 8l3 3.5 2-2 4 3.5"/><circle cx="15" cy="6.25" r="0.75"/><path d="M8.5 13.5 6 21M15.5 13.5 18 21M12 13.5V21"/>',
+  bucketOff:'<path d="M7 9a5 5 0 0 1 10 0"/><path d="M4.5 9h15l-1.6 11.1a1 1 0 0 1-1 .9H7.1a1 1 0 0 1-1-.9z"/><path d="M3 3l18 18"/>',
 };
