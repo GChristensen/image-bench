@@ -11,7 +11,8 @@ import {isStill} from "@/media.js";
 /**
  * Dragging image cards onto the tray tabs and the Compare tab: images dragged from the other tray are moved,
  * from other views (and to the Compare tab) copied. The project chip takes them too (KIND_PROJECT), copying them
- * into the folder of the current project.
+ * into the folder of the current project. In the trays and the Upscaled tab, a card dropped on another card of the
+ * view moves before or after it.
  * The card keeps the native URL of its image, so it can also be dropped into the image inputs of the Generate
  * and ControlNet tabs.
  */
@@ -86,6 +87,26 @@ export function takeDraggedImages() {
   const images = dragged?.images ?? [];
   dragged = null;
   return images;
+}
+
+// Views whose cards are reordered by dragging them onto another card of the view
+const REORDERABLE_KINDS = new Set([KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED]);
+
+/**
+ * Whether the dragged cards come from this view and can be moved before or after the target image
+ */
+export function canReorderOn(e, kind, target) {
+  return !!dragged && REORDERABLE_KINDS.has(kind) && dragged.sourceKind === kind
+    && e.dataTransfer.types.includes(IMAGE_DRAG_TYPE) && !dragged.images.includes(toRaw(target));
+}
+
+export function reorderImages(kind, target, after) {
+  if (!dragged)
+    return;
+
+  const {images} = dragged;
+  dragged = null;
+  storeOfKind(kind).moveImages(images, target, after);
 }
 
 export async function dropImages(trayKind) {

@@ -541,7 +541,8 @@ const hostOrigin = location.origin;
       <p>
         You can also drag a thumbnail by its image onto the <b>Concept tray</b> or <b>Image tray</b> tab. Images
         dragged from any other view are copied; images dragged from one tray to the other are moved.
-        Dragging a selected thumbnail takes all selected images along.
+        Dragging a selected thumbnail takes all selected images along. To change the order of a tray, drag
+        thumbnails onto another thumbnail of the same tray: a bar shows whether they go before or after it.
       </p>
       <p>Both trays offer:</p>
       <ul>
@@ -601,7 +602,8 @@ const hostOrigin = location.origin;
       </p>
       <p>
         Like the trays, the tab keeps its images until you remove them.
-        A colored bar marks the images of one upscale run. <AppIcon name="download" :size="13" class="inline-icon"/> downloads
+        A colored bar marks the images of one upscale run. Drag thumbnails onto another one to reorder them, as in
+        the trays. <AppIcon name="download" :size="13" class="inline-icon"/> downloads
         them as a .zip, which can be imported into a tray.
       </p>
       <p>

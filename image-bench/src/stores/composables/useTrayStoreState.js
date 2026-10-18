@@ -1,4 +1,4 @@
-import { triggerRef } from 'vue';
+import { toRaw, triggerRef } from 'vue';
 import { useImageStoreState } from './useImageStoreState.js';
 import { pickTagColor } from './tagColors.js';
 import { onBackendReconnected } from '@/backendStatus.js';
@@ -157,12 +157,33 @@ export function useTrayStoreState(kind) {
     await persist();
   }
 
+  // Move images (dragged cards) before or after the target image, keeping their order
+  function moveImages(images, target, after) {
+    const moved = new Set(images.map(i => toRaw(i)));
+    target = toRaw(target);
+
+    if (moved.has(target))
+      return;
+
+    const all = baseStore.images.value;
+    const rest = all.filter(i => !moved.has(toRaw(i)));
+    const index = rest.findIndex(i => toRaw(i) === target);
+
+    if (index < 0)
+      return;
+
+    rest.splice(after ? index + 1 : index, 0, ...all.filter(i => moved.has(toRaw(i))));
+    baseStore.images.value = rest;
+    persist();
+  }
+
   return {
     ...baseStore,
-    
+
     // Tray-specific actions
     init,
     addImage,
+    moveImages,
     syncMarking,
     colorAndPersist,
     persist,

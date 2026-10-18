@@ -7,7 +7,7 @@
   import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
   import {rimActionGroups, runImageAction} from "@/imageActions.js";
   import {openImageMenu} from "@/contextMenu.js";
-  import {startImageDrag, endImageDrag} from "@/imageDrag.js";
+  import {startImageDrag, endImageDrag, canReorderOn} from "@/imageDrag.js";
   import {useAppConfigStore} from "@/stores/appConfig.js";
   import AppIcon from "@/components/AppIcon.vue";
   import ActionRim from "@/components/ActionRim.vue";
@@ -15,7 +15,7 @@
   import {KIND_IMAGE, KIND_VIDEO, mediaKind, previewUrl} from "@/media.js";
 
   const emit = defineEmits(['setMarking', 'filterMarking', 'imageClick', 'imageOpen', 'showParams',
-    'select', 'upscaleImage', 'addComment', 'deleteImage']);
+    'select', 'upscaleImage', 'addComment', 'deleteImage', 'reorder']);
 
   const props = defineProps({
     isTray: {
@@ -58,6 +58,11 @@
     },
     // The view removes the image on deleteImage (the rim shows Delete)
     deletable: {
+      type: Boolean,
+      default: false
+    },
+    // Cards of the view dropped on the card move before or after it (reorder)
+    reorderable: {
       type: Boolean,
       default: false
     }
@@ -199,6 +204,35 @@
     dragging.value = false;
   }
 
+  // Side of the card where dragged cards of the view would be inserted ("before" / "after"), shown by a bar
+  const dropSide = ref(null);
+
+  function onReorderDragOver(e) {
+    if (!props.reorderable || !canReorderOn(e, props.kind, props.image))
+      return;
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
+    const rect = rootElement.value.getBoundingClientRect();
+    dropSide.value = e.clientX < rect.left + rect.width / 2 ? "before" : "after";
+  }
+
+  function onReorderDragLeave(e) {
+    if (!rootElement.value?.contains(e.relatedTarget))
+      dropSide.value = null;
+  }
+
+  function onReorderDrop(e) {
+    const side = dropSide.value;
+    dropSide.value = null;
+
+    if (side) {
+      e.preventDefault();
+      emit("reorder", side === "after");
+    }
+  }
+
   function onImageAuxClick(e) {
     if (e.button === 1)
       emit("imageOpen");
@@ -233,7 +267,9 @@
 
 <template>
 <div v-if="displayed" ref="rootElement" class="selectable-image"
-     :class="{selected, highlighted, dragging, separator: image.separator}">
+     :class="{selected, highlighted, dragging, separator: image.separator,
+              'drop-before': dropSide === 'before', 'drop-after': dropSide === 'after'}"
+     @dragover="onReorderDragOver" @dragleave="onReorderDragLeave" @drop="onReorderDrop">
   <div class="image-separator" v-if="image.separator"></div>
   <div v-else ref="frameElement" class="image-frame" :class="{bare}" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
        @contextmenu="openImageMenu($event, image, actionContext)">
@@ -319,8 +355,30 @@
 /* The width cap lives here only: a percentage max-width on the img is ignored when sizing
    this flex item, so a separate vw cap there would leave the frame wider than the image */
 .selectable-image {
+  position: relative;
   max-width: min(30%, 27vw);
   height: max-content;
+}
+
+/* Insertion bar of a reorder drag, in the middle of the gap between the cards (ImageStream: 14px) */
+.selectable-image.drop-before::before,
+.selectable-image.drop-after::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--ib-accent);
+  pointer-events: none;
+}
+
+.selectable-image.drop-before::before {
+  left: -9px;
+}
+
+.selectable-image.drop-after::after {
+  right: -9px;
 }
 
 .image-frame {

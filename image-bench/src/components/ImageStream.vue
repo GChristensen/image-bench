@@ -1,7 +1,8 @@
 <script setup>
   import GeneratedImage from "@/components/GeneratedImage.vue";
   import {computed, nextTick, ref, shallowRef, toRaw} from "vue";
-  import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+  import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
+  import {reorderImages} from "@/imageDrag.js";
   import {useImageSelection} from "@/composables/useImageSelection.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {dialog} from "@/dialogs/useDialog.js";
@@ -30,6 +31,8 @@
   const emit = defineEmits(['imageClick', 'imageOpen', 'showParams', 'upscaleImage', 'markingFilter']);
 
   const isTray = props.kind === KIND_IMAGE_TRAY || props.kind === KIND_CONCEPT_TRAY;
+  // The saved views are ordered by dragging their cards
+  const reorderable = isTray || props.kind === KIND_UPSCALED;
   const images = computed(() => props.imageStore.images);
 
   const imageStreamElement = ref();
@@ -225,6 +228,8 @@
                        :is-tray="isTray"
                        :marking-filter="markingFilter"
                        deletable
+                       :reorderable="reorderable"
+                       @reorder="after => reorderImages(kind, image, after)"
                        @image-click="$emit('imageClick', image)"
                        @image-open="$emit('imageOpen', image)"
                        @show-params="$emit('showParams', image)"
