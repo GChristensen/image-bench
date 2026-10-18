@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image Bench: local image generation, minus the busywork</title>
+<meta name="description" content="Image Bench is an extension for Forge Neo and ComfyUI that cuts the corners of the standard Stable Diffusion WebUI workflow: batches, model comparisons, trays, upscales and edits in one window.">
+<meta property="og:title" content="Image Bench">
+<meta property="og:description" content="Local image generation, minus the busywork. An extension for Forge Neo and ComfyUI.">
+<meta name="theme-color" content="#fbfaf8">
+<link rel="icon" type="image/svg+xml" href="img/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script defer src="main.js"></script>
+</head>
+<body>
+
+<!-- ================= header ================= -->
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="brand" href="#top">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><use href="#logo"/></svg>
+      <span class="disp">Image Bench</span>
+    </a>
+    <nav class="nav hidesm" aria-label="Sections">
+      <a class="navlink" href="#tour">Tour</a>
+      <a class="navlink" href="#workflow">Workflow</a>
+      <a class="navlink" href="#editors">Editors</a>
+      <a class="navlink" href="#compare">Compare</a>
+      <a class="navlink" href="#edit">Editing</a>
+      <a class="navlink" href="#screens">Screens</a>
+      <a class="navlink" href="#install">Install</a>
+      <a class="navlink" href="#demo">Demo</a>
+    </nav>
+    <a class="btn btn-sec btn-small" href="https://github.com/GChristensen/sd-webui-image-bench">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<!-- the logo, drawn in the header and the hero -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 32 32">
+    <path d="M21 27C28 22 26 12 17 10" fill="none" stroke="var(--logo)" stroke-width="3.5" stroke-linecap="round"/>
+    <rect x="5" y="26" width="22" height="4" rx="2" fill="var(--logo)"/>
+    <rect x="5" y="19.5" width="14" height="2.5" rx="1.25" fill="var(--logo)"/>
+    <g transform="rotate(25 15 10)">
+      <rect x="12" y="3" width="6" height="12" rx="1" fill="#f97316"/>
+      <rect x="11" y="0.5" width="8" height="3.5" rx="1" fill="#c2410c"/>
+      <rect x="13.25" y="14.5" width="3.5" height="3.5" rx="0.75" fill="#c2410c"/>
+    </g>
+  </symbol>
+</svg>
+
+<main>
+
+<!-- ================= hero ================= -->
+<section id="top" class="hero">
+  <div class="wrap hero-row">
+    <div class="hero-text">
+      <div class="kicker">An extension for Forge Neo and ComfyUI</div>
+      <h1 class="disp"><span class="nowrap">Local image generation,</span><br><span class="accent">minus the busywork.</span></h1>
+      <p class="hero-lead">Image Bench cuts the corners of the standard Stable Diffusion WebUI workflow. Batches, model comparisons, picking the best images, upscales and edits all happen in one window built around your images, and the whole process gets an order of magnitude more fun.</p>
+      <div class="row">
+        <a class="btn btn-pri" href="#install">Install
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        </a>
+        <a class="btn btn-sec" href="#tour">Take the tour</a>
+      </div>
+      <div class="row row-tight">
+        <span class="muted small">Runs on</span>
+        <span class="chip">Forge Neo</span>
+        <span class="chip">ComfyUI</span>
+      </div>
+    </div>
+    <div class="hero-art">
+      <div class="hero-disc">
+        <svg class="fill" viewBox="0 0 400 400" aria-hidden="true">
+          <circle cx="200" cy="200" r="196" fill="var(--disc)"/>
+          <circle cx="200" cy="200" r="160" fill="none" stroke="#fdd9bd" stroke-width="22" stroke-dasharray="58 8"/>
+          <circle cx="200" cy="200" r="122" fill="#ffffff"/>
+        </svg>
+        <svg class="hero-logo" viewBox="0 0 32 32" role="img" aria-label="Image Bench logo"><use href="#logo"/></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= tour ================= -->
+<section id="tour" class="sec band">
+  <div class="wrap stack-40">
+    <div class="intro">
+      <div class="kicker">01 — Tour</div>
+      <h2 class="disp">Twelve tabs, one window.</h2>
+      <p class="lead">Image Bench is the window you work in. It runs Forge Neo or ComfyUI in the background, in a tab of its own, and drives it for you. Click through the tabs.</p>
+    </div>
+
+    <div class="tour-stage">
+      <button class="navbtn hidesm" type="button" aria-label="Previous screenshot" data-tour="prev">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="window tour-window">
+        <div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — <span data-tour="title">Generate</span></span></div>
+        <!-- the slides: data-title / data-desc feed the caption; only the shown one loads (hidden + lazy) -->
+        <div class="tour-shots">
+          <img src="img/screenshots/01-generate.webp" alt="Image Bench Generate tab" width="1194" height="667" data-title="Generate" data-desc="The controls you touch most, in one compact screen and synced both ways with Forge Neo or ComfyUI: prompt, model, LoRAs, sampling, size and Hires. fix. Switch between txt2img, img2img and Inpaint, and follow a batch on the session filmstrip.">
+          <img src="img/screenshots/02-controlnet.webp" alt="Image Bench ControlNet tab" width="1194" height="667" loading="lazy" hidden data-title="ControlNet" data-desc="One ControlNet unit at a time, with its preprocessor preview, sliders and the OpenPose editor. Your graphics editor can send control images and masks straight to it.">
+          <img src="img/screenshots/03-explore.webp" alt="Image Bench Explore tab" width="1194" height="667" loading="lazy" hidden data-title="Explore" data-desc="One prompt across many checkpoints or LoRAs, laid out side by side. Find the model that suits the idea before you commit to it.">
+          <img src="img/screenshots/04-generated.webp" alt="Image Bench Generated tab" width="1194" height="667" loading="lazy" hidden data-title="Generated" data-desc="The stream: every image of the session with its parameters, filterable by color markings. The action rim opens on any card.">
+          <img src="img/screenshots/05-compare.webp" alt="Image Bench Compare tab" width="1194" height="667" loading="lazy" hidden data-title="Compare" data-desc="Images side by side with shared zoom and one crop region, for the fine differences between samplers, seeds and weights.">
+          <img src="img/screenshots/06-concept-tray.webp" alt="Image Bench Concept tray tab" width="1194" height="667" loading="lazy" hidden data-title="Concept tray" data-desc="A persistent board for ideas worth keeping: compositions, styles, happy accidents. Marked, commented and saved with the project.">
+          <img src="img/screenshots/07-image-tray.webp" alt="Image Bench Image tray tab" width="1194" height="667" loading="lazy" hidden data-title="Image tray" data-desc="Your best images, ready to upscale, to send on, or to become the final image of the project.">
+          <img src="img/screenshots/08-upscaled.webp" alt="Image Bench Upscaled tab" width="1194" height="667" loading="lazy" hidden data-title="Upscaled" data-desc="Hires. fix and upscale results of the images you chose, regenerated from their own parameters.">
+          <img src="img/screenshots/09-docs.webp" alt="Image Bench Docs section of the Library tab" width="1194" height="667" loading="lazy" hidden data-title="Docs" data-desc="Your model notes and tag lists, readable and searchable right next to the prompt.">
+          <img src="img/screenshots/10-snippets.webp" alt="Image Bench Snippets section of the Library tab" width="1194" height="667" loading="lazy" hidden data-title="Snippets" data-desc="Prompt fragments and styles in a tree, inserted at the cursor and undone with Ctrl+Z.">
+          <img src="img/screenshots/11-manual.webp" alt="Image Bench Manual section of the Library tab" width="1194" height="667" loading="lazy" hidden data-title="Manual" data-desc="The complete manual, built in, with downloads of the Photoshop, Krita and GIMP plugins.">
+          <img src="img/screenshots/12-projects.webp" alt="Image Bench Projects tab" width="1194" height="667" loading="lazy" hidden data-title="Projects" data-desc="Folders that hold your trays, parameters, ControlNet inputs and the final image. Save, reopen, and pick up where you left off.">
+        </div>
+      </div>
+      <button class="navbtn hidesm" type="button" aria-label="Next screenshot" data-tour="next">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+
+    <!-- filled by main.js, one button per slide -->
+    <div class="pills" data-tour="pills" role="group" aria-label="Screenshots"></div>
+
+    <div class="tour-caption" aria-live="polite">
+      <div class="tour-name"><span class="mono tour-num" data-tour="num">01</span><span class="disp" data-tour="name">Generate</span></div>
+      <p data-tour="desc">The controls you touch most, in one compact screen and synced both ways with Forge Neo or ComfyUI: prompt, model, LoRAs, sampling, size and Hires. fix. Switch between txt2img, img2img and Inpaint, and follow a batch on the session filmstrip.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= workflow ================= -->
+<section id="workflow" class="sec">
+  <div class="wrap stack-56">
+    <div class="intro">
+      <div class="kicker">02 — Workflow</div>
+      <h2 class="disp">One gallery, two trays and a ring of actions.</h2>
+    </div>
+
+    <div class="flow">
+      <!-- generated tab + trays -->
+      <div class="flow-gallery">
+        <div class="gen-panel">
+          <div class="gen-tabs">
+            <span class="on">Generated <span class="count">15</span></span>
+            <span>Concept tray <span class="count">3</span></span>
+            <span>Image tray <span class="count">2</span></span>
+            <span class="hidesm">Upscaled</span>
+          </div>
+          <div class="gen-grid">
+            <div><img src="img/generations/image01.jpg" alt=""></div>
+            <div class="picked"><img src="img/generations/image02.jpg" alt=""></div>
+            <div><img src="img/generations/image03.jpg" alt=""></div>
+            <div><img src="img/generations/image04.jpg" alt=""></div>
+            <div><img src="img/generations/image05.jpg" alt=""></div>
+            <div class="dim"><img src="img/generations/image01.jpg" alt=""></div>
+          </div>
+        </div>
+        <span class="mono hint">drag a card onto a tray tab, or press Y / T on it</span>
+        <svg class="drop-arrows" viewBox="0 0 600 56" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <path d="M300 2 C300 30, 150 26, 150 44" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="5 5"/>
+          <path d="M142 42 L150 54 L158 42 Z" fill="#f97316"/>
+          <path d="M300 2 C300 30, 450 26, 450 44" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="5 5"/>
+          <path d="M442 42 L450 54 L458 42 Z" fill="#f97316"/>
+        </svg>
+        <div class="trays">
+          <div class="card tray">
+            <div class="tray-head"><b>Concept tray</b><span class="mono">ideas worth keeping</span></div>
+            <div class="tray-images">
+              <img src="img/generations/image03.jpg" alt="">
+              <img src="img/generations/image04.jpg" alt="">
+              <img src="img/generations/image02.jpg" alt="">
+            </div>
+          </div>
+          <div class="card tray">
+            <div class="tray-head"><b>Image tray</b><span class="mono">your best images</span></div>
+            <div class="tray-images">
+              <img src="img/generations/image05.jpg" alt="">
+              <img src="img/generations/image02.jpg" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- action rim: the sectors are drawn by main.js -->
+      <div class="flow-rim">
+        <div class="rim-box">
+          <div class="rim-card"><img src="img/generations/image05.jpg" alt="A generated still life on an image card"></div>
+          <svg class="fill" viewBox="0 0 340 340" role="img" aria-label="The action rim: a ring of actions around an image card" data-rim="big"></svg>
+          <div class="rim-label" hidden><span data-rim-label></span><kbd class="mono" data-rim-key></kbd></div>
+          <div class="rim-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r=".5" fill="#ffffff"/></svg>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i style="background: #7aa2ff"></i>parameters</span>
+          <span><i style="background: #c084fc"></i>send</span>
+          <span><i style="background: #34d399"></i>trays</span>
+          <span><i style="background: #ef4444"></i>delete</span>
+          <span><i style="background: #ffb547"></i>generate</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div class="col">
+        <h3 class="disp">The Generated tab</h3>
+        <p>Every image you generate lands here, grouped by batch, with its prompt, seed and model attached. Explorations and upscales get tabs of their own, and every image remembers how it was made. While a batch runs, a filmstrip in the Generate tab follows it too.</p>
+      </div>
+      <div class="col">
+        <h3 class="disp">The trays</h3>
+        <p>Drag the ones that matter into the Concept tray or the Image tray. Trays persist, take color markings and comments, and are saved with your project.</p>
+      </div>
+      <div class="col">
+        <h3 class="disp">The action rim</h3>
+        <p>Hold Ctrl over any image and a ring of actions opens around it. Reuse its parameters, upscale it, send it to img2img, ControlNet or your editor. One gesture, every action.</p>
+      </div>
+    </div>
+
+    <p class="disp claim">No file manager. <span class="accent-light">No clipboard.</span></p>
+
+    <!-- before / after -->
+    <div class="ba">
+      <div class="ba-head">
+        <h2 class="disp">Six steps <span class="accent">→</span> one key.</h2>
+        <p class="muted">Upscaling one image. Now multiply by every image you keep.</p>
+      </div>
+      <div class="ba-row">
+        <div class="ba-before">
+          <div class="mono label">In the WebUI</div>
+          <ol class="steps">
+            <li><span class="mono">01</span>Find the image in the file system</li>
+            <li><span class="mono">02</span>Copy its seed and prompt back into the UI</li>
+            <li><span class="mono">03</span>Enable Hires. fix</li>
+            <li><span class="mono">04</span>Generate</li>
+            <li><span class="mono">05</span>Disable Hires. fix</li>
+            <li><span class="mono">06</span>Randomize the seed again</li>
+          </ol>
+        </div>
+        <div class="ba-after">
+          <div class="ba-after-text">
+            <div class="mono label">In Image Bench</div>
+            <div class="ba-key"><kbd class="mono">U</kbd><span class="disp">on the image in a tray.</span></div>
+            <p>Or click Upscale on its action rim. Seed, prompt and Hires. fix are handled for you, and the result lands in the Upscaled tab.</p>
+          </div>
+          <div class="mini-rim">
+            <img src="img/generations/image05.jpg" alt="">
+            <svg class="fill" viewBox="0 0 150 150" role="img" aria-label="The action rim with the Upscale sector highlighted" data-rim="mini"></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= editors ================= -->
+<section id="editors" class="sec grey clip">
+  <div class="wrap stack-48">
+    <div class="intro intro-wide">
+      <div class="kicker">03 — Editors</div>
+      <h2 class="disp">Built for precision. Your editor draws the masks.</h2>
+      <p class="lead">Image Bench has no brush, on purpose. Masks come only from a real graphics editor: make a selection in Photoshop, Krita or GIMP and send it. The image, mask or reference goes straight into Forge Neo or ComfyUI, and the result comes back as a new layer.</p>
+      <p class="note">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v6M12 22v-6M4.9 4.9l4.2 4.2M19.1 19.1l-4.2-4.2M2 12h6M22 12h-6"/></svg>
+        <span>This needs the Image Bench plugin for your editor. Download it from the built-in manual (Library › Manual › Editors) and install it in Photoshop, Krita or GIMP.</span>
+      </p>
+    </div>
+
+    <div class="iso">
+      <!-- editor slab -->
+      <div class="iso-side">
+        <div class="slab slab-editor">
+          <div class="ed-bar"><i style="width: 30px"></i><i style="width: 24px"></i><i style="width: 36px"></i></div>
+          <div class="ed-body">
+            <div class="ed-tools"><i class="sel"></i><i></i><i></i><i></i></div>
+            <div class="ed-canvas">
+              <div class="ed-image">
+                <img src="img/still-life.jpg" alt="">
+                <svg class="fill" viewBox="0 0 214 154" aria-hidden="true"><ellipse class="ants" cx="88" cy="58" rx="60" ry="40" fill="rgba(249,115,22,0.18)" stroke="#ffffff" stroke-width="1.6" stroke-dasharray="6 6"/></svg>
+              </div>
+            </div>
+            <div class="ed-layers"><i class="sel"></i><i></i><i></i></div>
+          </div>
+        </div>
+        <div class="chips"><span class="chip">Photoshop</span><span class="chip">Krita</span><span class="chip">GIMP 3</span></div>
+      </div>
+
+      <!-- arrows -->
+      <div class="iso-arrows">
+        <span class="mono to">image · mask · reference</span>
+        <svg viewBox="0 0 220 150" width="220" height="150" aria-hidden="true">
+          <path d="M14 72 Q 14 26 60 26 H 186" fill="none" stroke="#f97316" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M184 13 L 210 26 L 184 39 Z" fill="#f97316"/>
+          <path d="M206 78 Q 206 124 160 124 H 36" fill="none" stroke="#18181b" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M36 111 L 10 124 L 36 137 Z" fill="#18181b"/>
+        </svg>
+        <span class="mono back">result as a new layer</span>
+      </div>
+
+      <!-- image bench slab -->
+      <div class="iso-side">
+        <div class="slab slab-bench"><img src="img/screenshots/edit.webp" alt=""></div>
+        <div class="chips"><span class="chip">Image Bench</span><span class="chip">Forge Neo · ComfyUI</span></div>
+      </div>
+    </div>
+
+    <div class="points">
+      <div><h3>Selections become masks</h3><p>Feather and refine with real tools, at full resolution, and send the selection as the inpaint mask.</p></div>
+      <div><h3>Any target</h3><p>Send to the input image, a reference, a ControlNet unit (preprocessed or as is) or the Compare tab.</p></div>
+      <div><h3>Back as layers</h3><p>Send to Photoshop, Krita or GIMP from any image. Results arrive as layers, ready to blend.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= compare ================= -->
+<section id="compare" class="sec">
+  <div class="wrap split">
+    <div class="split-text">
+      <div class="kicker">04 — Compare</div>
+      <h2 class="disp">One region, every image.</h2>
+      <p class="lead">Draw a region once and it applies to every image in the Compare tab. Zoom and pan stay in sync, even across different resolutions. The crops line up in a grid you can reorder and export as one PNG, so you can tell two samplers or ten LoRA weights apart at a glance.</p>
+    </div>
+    <!-- one crop region over four variations, then the crop grid; the variations are filters of one image -->
+    <div class="card cmp">
+      <div class="cmp-images">
+        <div><img src="img/still-life.jpg" alt=""><i class="region"></i></div>
+        <div><img src="img/still-life.jpg" alt="" class="v2"><i class="region"></i></div>
+        <div><img src="img/still-life.jpg" alt="" class="v3"><i class="region"></i></div>
+        <div><img src="img/still-life.jpg" alt="" class="v4"><i class="region"></i></div>
+      </div>
+      <svg width="40" height="24" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 12h32M26 4l8 8-8 8" fill="none" stroke="#f97316" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="cmp-grid">
+        <div><img src="img/still-life.jpg" alt=""><span class="mono">euler</span></div>
+        <div><img src="img/still-life.jpg" alt="" class="v2"><span class="mono">dpm++ 2m</span></div>
+        <div><img src="img/still-life.jpg" alt="" class="v3"><span class="mono">lora 0.6</span></div>
+        <div><img src="img/still-life.jpg" alt="" class="v4"><span class="mono">lora 1.0</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= edit ================= -->
+<section id="edit" class="sec band">
+  <div class="wrap stack-44">
+    <div class="edit-head">
+      <div class="intro">
+        <div class="kicker">05 — Editing</div>
+        <h2 class="disp">Edit images by saying what to change.</h2>
+      </div>
+      <p class="lead">Edit models like Flux Klein, Kontext and Qwen Edit take reference images and a sentence. Image Bench gives them a proper home: references by drag and drop, one switch for edit mode, and the result next to its input.</p>
+    </div>
+    <div class="edit-figure">
+      <div class="window">
+        <img src="img/screenshots/edit.webp" width="1194" height="667" alt="The Generate tab in edit mode: a reference image of a milk pack, the prompt to add it to the table, and the result">
+      </div>
+      <span class="mono badge" style="left: 3%; top: 40%">1</span>
+      <span class="mono badge" style="left: 66%; top: 35%">2</span>
+      <span class="mono badge" style="left: 71%; top: 64%">3</span>
+    </div>
+    <div class="numbered">
+      <div><span class="mono">1</span><p><strong>Say what to change.</strong> "Add the milk pack from the first image on the table, right of the vase."</p></div>
+      <div><span class="mono">2</span><p><strong>Drop the references.</strong> Drop, paste or drag them from the stream and the trays. Your editor can send them too.</p></div>
+      <div><span class="mono">3</span><p><strong>Compare and iterate.</strong> The result sits next to its input. Keep it, send it back as the next input, or edit it further.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= screens ================= -->
+<section id="screens" class="sec grey clip">
+  <div class="wrap split">
+    <div class="split-text">
+      <div class="kicker">06 — Screens</div>
+      <h2 class="disp">Made for a small second screen.</h2>
+      <p class="lead">Image Bench fits its whole UI into 1200×800. Put it on a small display above your main monitor and give the big screen to your graphics editor. Generate, pick and send images up there, and paint down here.</p>
+      <div class="specs">
+        <div><span class="mono">1200 × 800</span><span>is all it needs. Dense controls, no wasted space, nothing hidden behind scrolling.</span></div>
+        <div><span class="mono">1920 × 1080</span><span>stays free for Photoshop, Krita or GIMP, where the precision work happens.</span></div>
+        <div><span class="mono">one screen?</span><span>Keep Image Bench in a window next to the editor. It works the same.</span></div>
+      </div>
+    </div>
+    <div class="screens-art">
+      <span class="mono muted caption">Image Bench · 1200 × 800</span>
+      <!-- 3D scene: main monitor on a square stand, a small display mounted right above it, tilted toward the viewer -->
+      <div class="scene-wrap">
+        <div class="scene">
+          <!-- stand: neck and square base -->
+          <div style="position: absolute; left: 230px; top: 400px; width: 60px; height: 200px; background: linear-gradient(90deg, #3f3f46, #52525b); transform: translateZ(-46px)"></div>
+          <div style="position: absolute; left: 290px; top: 400px; width: 18px; height: 200px; background: #2a2a2e; transform-origin: 0 50%; transform: translateZ(-46px) rotateY(90deg)"></div>
+          <div style="position: absolute; left: 160px; top: 600px; width: 200px; height: 200px; background: linear-gradient(135deg, #52525b, #3f3f46); border-radius: 6px; transform-origin: 50% 0; transform: translateZ(-155px) rotateX(90deg); box-shadow: 0 0 40px rgba(24,24,27,0.25)"></div>
+          <div style="position: absolute; left: 160px; top: 600px; width: 200px; height: 10px; background: #27272a; transform: translateZ(45px)"></div>
+          <div style="position: absolute; left: 360px; top: 600px; width: 200px; height: 10px; background: #1f1f23; transform-origin: 0 50%; transform: translateZ(45px) rotateY(90deg)"></div>
+          <!-- main monitor -->
+          <div style="position: absolute; left: 0; top: 210px; width: 520px; height: 310px; transform-style: preserve-3d">
+            <div style="position: absolute; left: 520px; top: 0; width: 26px; height: 310px; background: linear-gradient(#2e2e33, #232327); transform-origin: 0 50%; transform: rotateY(90deg)"></div>
+            <div style="position: absolute; left: 0; top: 0; width: 520px; height: 26px; background: #3a3a40; transform-origin: 50% 0; transform: rotateX(-90deg)"></div>
+            <div class="monitor">
+              <div class="monitor-screen">
+                <div class="ed-bar"><i style="width: 34px"></i><i style="width: 26px"></i><i style="width: 40px"></i></div>
+                <div class="ed-body">
+                  <div class="ed-tools ed-tools-rel"><i class="sel"></i><i></i><i></i><i></i></div>
+                  <div class="ed-canvas" style="padding: 3%">
+                    <div class="monitor-image">
+                      <img src="img/generations/image02.jpg" alt="A still life open in a graphics editor">
+                      <svg class="fill" viewBox="0 0 100 68" preserveAspectRatio="none" aria-hidden="true"><ellipse class="ants" cx="50" cy="20" rx="20" ry="15" fill="rgba(249,115,22,0.16)" stroke="#ffffff" stroke-width="0.5" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/></svg>
+                    </div>
+                  </div>
+                  <div class="ed-layers ed-layers-rel"><i class="sel"></i><i></i><i></i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- mount between the displays -->
+          <div style="position: absolute; left: 236px; top: 200px; width: 48px; height: 12px; background: #52525b; transform: translateZ(-16px)"></div>
+          <!-- small display, tilted toward the viewer by its upper side -->
+          <div style="position: absolute; left: 125px; top: 20px; width: 270px; height: 184px; transform-style: preserve-3d; transform-origin: 50% 100%; transform: translateZ(-6px) rotateX(-16deg)">
+            <div style="position: absolute; left: 270px; top: 0; width: 12px; height: 184px; background: #26262a; transform-origin: 0 50%; transform: rotateY(90deg)"></div>
+            <div style="position: absolute; left: 0; top: 0; width: 270px; height: 12px; background: #3a3a40; transform-origin: 50% 0; transform: rotateX(-90deg)"></div>
+            <div class="small-display"><img src="img/screenshots/01-generate.webp" alt="Image Bench on the small display"></div>
+          </div>
+        </div>
+      </div>
+      <span class="mono muted caption">your editor · 24″ · 1920 × 1080</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= install ================= -->
+<section id="install" class="sec install">
+  <div class="wrap stack-36">
+    <div class="intro">
+      <div class="kicker">07 — Install</div>
+      <h2 class="disp">Two minutes to set up.</h2>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Host">
+      <button class="tab" type="button" role="tab" id="tab-neo" aria-controls="host-neo" aria-selected="true" data-host="neo">Forge Neo</button>
+      <button class="tab" type="button" role="tab" id="tab-comfy" aria-controls="host-comfy" aria-selected="false" tabindex="-1" data-host="comfy">ComfyUI</button>
+    </div>
+
+    <div class="host" id="host-neo" role="tabpanel" aria-labelledby="tab-neo">
+      <div class="card inst">
+        <div class="inst-title"><span class="mono tag">recommended</span><h3>Install from URL</h3></div>
+        <ol>
+          <li>In Forge Neo, open Extensions › Install from URL.</li>
+          <li>Paste the repository URL:</li>
+        </ol>
+        <div class="code"><code class="mono">https://github.com/GChristensen/sd-webui-image-bench</code><button class="copy" type="button">Copy</button></div>
+        <ol start="3"><li>Press Install, then Extensions › Installed › Apply and restart UI.</li></ol>
+        <p class="fine">Updates come through Extensions › Installed › Check for updates.</p>
+      </div>
+      <div class="card inst">
+        <h3>Manual clone</h3>
+        <p>Clone it into the extensions folder of Forge Neo and restart it.</p>
+        <div class="code"><pre class="mono"><span class="prompt">$ </span>cd &lt;forge-neo&gt;/extensions
+<span class="prompt">$ </span>git clone https://github.com/GChristensen/sd-webui-image-bench</pre><button class="copy" type="button">Copy</button></div>
+        <p class="fine">Update later with <code class="mono">git pull</code> in the extension folder. Your settings, trays and presets live in <code class="mono">store/</code> and survive updates.</p>
+      </div>
+    </div>
+
+    <div class="host" id="host-comfy" role="tabpanel" aria-labelledby="tab-comfy" hidden>
+      <div class="card inst">
+        <div class="inst-title"><span class="mono tag">recommended</span><h3>Install via Git URL</h3></div>
+        <ol>
+          <li>In ComfyUI, open Manager › Install via Git URL.</li>
+          <li>Paste the repository URL:</li>
+        </ol>
+        <div class="code"><code class="mono">https://github.com/GChristensen/comfyui-image-bench</code><button class="copy" type="button">Copy</button></div>
+        <ol start="3"><li>Restart ComfyUI. It loads extensions and the Image Bench Prompt node at startup.</li></ol>
+        <p class="fine">Manager accepts Git URLs with <code class="mono">allow_git_url_install = true</code> in its config.ini. Image Bench is also on the Comfy Registry.</p>
+      </div>
+      <div class="card inst">
+        <h3>Manual clone</h3>
+        <p>Clone it into the custom_nodes folder of ComfyUI and restart it.</p>
+        <div class="code"><pre class="mono"><span class="prompt">$ </span>cd &lt;ComfyUI&gt;/custom_nodes
+<span class="prompt">$ </span>git clone https://github.com/GChristensen/comfyui-image-bench</pre><button class="copy" type="button">Copy</button></div>
+        <p class="fine">Update later with <code class="mono">git pull</code> in the extension folder. Your settings, trays and presets live in <code class="mono">store/</code> and survive updates.</p>
+      </div>
+    </div>
+
+    <p class="then">Then open it with the 🔬 Image Bench button, or go straight to <code class="mono">http://&lt;host&gt;/image-bench/app</code>. The full manual is built in under Library › Manual.</p>
+  </div>
+</section>
+
+<!-- ================= demo ================= -->
+<section id="demo" class="sec grey demo">
+  <div class="wrap stack-40">
+    <div class="intro">
+      <div class="kicker">08 — In action</div>
+      <h2 class="disp">See it in action.</h2>
+      <p class="lead">A batch of five, the best ones moved to a tray, upscaled and compared. A minute and a half, and the window never changes.</p>
+    </div>
+    <div class="window demo-window">
+      <div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — demo · 1:26</span></div>
+      <video src="img/demo.mp4" poster="img/demo-poster.jpg" width="1194" height="674" controls muted playsinline preload="metadata"></video>
+    </div>
+  </div>
+</section>
+
+<!-- ================= status ================= -->
+<section id="experiment" class="status">
+  <div class="wrap">
+    <div class="status-card">
+      <div class="status-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6.5L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9.5V3"/><path d="M7.5 15h9"/></svg>
+      </div>
+      <div class="status-text">
+        <div class="kicker">09 — Status</div>
+        <h2 class="disp">Still an experiment.</h2>
+        <p>Image Bench is a work in progress. Features change, the hosts it drives change under it, and things will break now and then. Try it, keep your projects backed up, and report what you run into on GitHub.</p>
+      </div>
+      <a class="btn btn-sec" href="https://github.com/GChristensen/sd-webui-image-bench/issues">Report an issue</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ================= footer ================= -->
+<footer class="site-footer">
+  <div class="wrap footer-row">
+    <span><span class="disp brand-name">Image Bench</span> for Forge Neo and ComfyUI</span>
+    <span class="footer-links">
+      <a href="https://github.com/GChristensen/sd-webui-image-bench">Forge Neo extension</a>
+      <a href="https://github.com/GChristensen/comfyui-image-bench">ComfyUI extension</a>
+      <a href="#top">Back to top</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>

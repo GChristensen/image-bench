@@ -16,3 +16,5 @@ CLAUDE.md
 /.env
 /.local/
 __pycache__/
+/landing/node_modules/
+/landing/video/

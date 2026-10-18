@@ -5,7 +5,13 @@ import {APP_TITLE} from "@/host.js";
 // Labels of the mounted indicators (kept-alive tabs included), the latest one is shown in the window title
 const activeLabels = reactive(new Map());
 
+// Off for now: misbehaves, the progress label (e.g. "[100%]") stays in the title after the run has finished
+const UPDATE_WINDOW_TITLE = false;
+
 watchEffect(() => {
+  if (!UPDATE_WINDOW_TITLE)
+    return;
+
   const labels = [...activeLabels.values()];
   document.title = labels.length ? `[${labels[labels.length - 1]}] ${APP_TITLE}` : APP_TITLE;
 });

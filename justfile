@@ -51,6 +51,17 @@ _require name value:
 _deploy src dest files:
     powershell.exe -NoProfile -Command 'robocopy {{src}} ("{{dest}}".Replace([char]47, [char]92)) {{files}} /S /XD store __pycache__ /NJH /NDL /NP; exit [int]($LASTEXITCODE -ge 8)'
 
+# The GitHub Pages landing page (landing/): minified into the repo-root index.html; `npm install` in landing/ once.
+# landing-media remakes landing/img from the sources in landing/images and landing/video (needs ffmpeg)
+landing:
+    cd landing; node build.mjs
+
+landing-plain:
+    cd landing; node build.mjs --plain
+
+landing-media:
+    cd landing; node media.mjs
+
 test-webui:
     cd D:/ai/sd/webui; cmd //c start _start_webui
 
