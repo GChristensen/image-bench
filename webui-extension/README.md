@@ -9,22 +9,28 @@ image with its parameters.
   the units of ControlNet Integrated
 - Model and LoRA exploration, batches, variations, parameter sweeps, upscaling of chosen images
 - Compare tab, image and concept trays, projects
-- Photoshop plugins (supplied with the extension, installed from the manual)
+- Photoshop, Krita and GIMP plugins (supplied with the extension, downloaded from the manual)
 
 The full manual is built in: **Library › Manual** in the Image Bench window.
 
 ## Installation
 
-Build the extension from the repository root (needs Node.js, npm and [just](https://github.com/casey/just)):
+From the WebUI page:
+
+1. Open **Extensions › Install from URL**.
+2. Enter `https://github.com/GChristensen/sd-webui-image-bench` as the URL and press **Install**.
+3. Restart WebUI.
+
+Or clone it by hand into WebUI's `extensions` folder:
 
 ```bash
-cd image-bench && npm install && cd ..
-just webui
+cd <webui>/extensions
+git clone https://github.com/GChristensen/sd-webui-image-bench
 ```
 
-Then put `webui-extension` into WebUI's `extensions` folder as `image-bench`: symlink it, or copy it with the
-symlinks followed (`shared` and `javascript/shared` link into `common-extension`). `just deploy-webui` copies it to
-the directory set as `WEBUI_DEST` in `.env` (see `.env.example`). Restart WebUI.
+Then restart WebUI. Updates come from **Extensions › Installed › Check for updates**, or `git pull` in the
+extension folder. They keep your settings (`config.json`) and the trays and presets in `store/`, which are not
+part of the repository.
 
 Optional extensions: [sd-webui-openpose-editor](https://github.com/fabiencomte/sd-webui-openpose-editor) for editing
 poses from the ControlNet tab, and Config Presets, whose dropdown Image Bench can move to the results area.

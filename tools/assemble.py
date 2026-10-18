@@ -24,7 +24,7 @@ COMMON_FILES = ["LICENSE", "THIRD_PARTY_LICENSES"]
 
 # Editor plugins, supplied for installing them from the manual: folder and file patterns (_deploy_editors)
 EDITOR_PLUGINS = {
-    "photoshop": ["index.js", "index.html", "manifest.json", "uxp.ps1"],
+    "photoshop": ["index.js", "index.html", "manifest.json"],
     "photoshop-canny": ["*.js", "index.html", "manifest.json"],
     "krita": ["*.py", "*.desktop", "manifest.json"],
     "gimp": ["*.py", "manifest.json"],

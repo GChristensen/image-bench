@@ -925,15 +925,6 @@ async def download_editor_plugin(request):
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
-# Install an editor plugin on the server computer (see editor_plugins.install_or_elevate)
-@PromptServer.instance.routes.post(BASE_PATH + "/editor/plugin/install")
-async def install_editor_plugin(request):
-    try:
-        return web.json_response(editor_plugins.install_or_elevate(_editor_plugin_name(request)))
-    except (editor_plugins.PluginError, OSError) as e:
-        return web.json_response({"detail": str(e)}, status=500)
-
-
 # Close all WebSocket connections
 @PromptServer.instance.routes.get(BASE_PATH + "/close_websocket")
 async def close_websocket(request):

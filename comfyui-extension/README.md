@@ -9,23 +9,31 @@ image with its parameters.
   images, references and ControlNet units of the workflow
 - Model and LoRA exploration, batches, parameter sweeps, upscaling of chosen images
 - Compare tab, image and concept trays, projects
-- Photoshop plugins (supplied with the extension, installed from the manual)
+- Photoshop, Krita and GIMP plugins (supplied with the extension, downloaded from the manual)
 
 The full manual is built in: **Library › Manual** in the Image Bench window.
 
 ## Installation
 
-Build the extension from the repository root (needs Node.js, npm and [just](https://github.com/casey/just)):
+With ComfyUI-Manager:
+
+1. Open **Manager › Install via Git URL**.
+2. Enter `https://github.com/GChristensen/comfyui-image-bench`.
+3. Restart ComfyUI.
+
+Manager accepts a Git URL only with `allow_git_url_install = true` in the `[default]` section of its `config.ini`
+and ComfyUI listening on a loopback address (`--listen 127.0.0.1`, the default).
+
+Or clone it by hand into ComfyUI's `custom_nodes` folder:
 
 ```bash
-cd image-bench && npm install && cd ..
-just comfy
+cd <ComfyUI>/custom_nodes
+git clone https://github.com/GChristensen/comfyui-image-bench
 ```
 
-Then put `comfyui-extension` into ComfyUI's `custom_nodes` as `image-bench`: symlink it, or copy it with the
-symlinks followed (`shared` links to `common-extension/shared_backend`). `just deploy-comfy` copies it to the
-directory set as `COMFY_DEST` in `.env` (see `.env.example`). Restart ComfyUI: it loads extensions and the
-**Image Bench Prompt** node only at startup.
+Then restart ComfyUI: it loads extensions and the **Image Bench Prompt** node only at startup. Updates come from
+Manager (**Update**), or `git pull` in the extension folder. They keep your settings (`config.json`), the trays and
+presets in `store/` and your node additions in `store/node_config.json`, which are not part of the repository.
 
 Optional node packs:
 
@@ -52,4 +60,4 @@ Image or Preview Image node.
 
 Example workflows with every node marked are copied into the *Image Bench* folder of the saved workflows. The
 manual's *ComfyUI setup* chapter describes the markers in full; [NODE_CONFIG.md](NODE_CONFIG.md) describes how
-to add custom nodes to `node_config.json`.
+to add custom nodes in `store/node_config.json`.

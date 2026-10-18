@@ -56,7 +56,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => manual.scrollTop = content.value?.scrollTop ?? 0);
 
-// The plugin cards install on the computer running the host; the manual names its address
+// The plugins connect to the host at this address
 const hostOrigin = location.origin;
 </script>
 
@@ -808,14 +808,33 @@ const hostOrigin = location.origin;
         The <b>Image Bench</b> plugin for Photoshop (2024 / version 25.0 or newer) links Photoshop to {{ HOST_NAME }}.
       </p>
 
-      <PluginCard plugin="image-bench" title="Image Bench plugin" menu="Plugins › Image Bench">
-        <li><b>Install</b> copies the plugin into the folder where the Creative Cloud app keeps plugins
-          (<code>Common Files\Adobe\UXP\Plugins\External</code> on Windows) and registers it with Photoshop.
-          Windows will ask for administrator rights. The plugin is installed on the computer that runs
-          {{ HOST_NAME }}.</li>
-        <li><b>Download .ccx</b> is for any other computer: double-click the file there to install it with the
-          Creative Cloud app.</li>
-        <li>Either way, restart Photoshop afterwards.</li>
+      <PluginCard plugin="image-bench" title="Image Bench plugin">
+        <li><b>Download .ccx</b> and double-click the file to install it with the Creative Cloud app, then restart
+          Photoshop.</li>
+        <li>Without the Creative Cloud app, install it by hand (as an administrator on Windows):
+          <ol>
+            <li>The .ccx file is a zip archive. Unpack it into a new folder named like the file without
+              <code>.ccx</code> (<code>image-bench.photoshop_&lt;version&gt;</code>) in
+              <code>C:\Program Files\Common Files\Adobe\UXP\Plugins\External</code>, so that the folder holds
+              <code>manifest.json</code>. On macOS the folder is
+              <code>/Library/Application Support/Adobe/UXP/Plugins/External</code>.</li>
+            <li>Register it for Photoshop: add this entry to the <code>plugins</code> list of
+              <code>%APPDATA%\Adobe\UXP\PluginsInfo\v1\PS.json</code> (on macOS
+              <code>~/Library/Application Support/Adobe/UXP/PluginsInfo/v1/PS.json</code>, with <code>/</code> in
+              <code>path</code>), creating the file as <code>{"plugins": [ … ]}</code> if it does not exist:
+              <pre v-pre>{
+  "hostMinVersion": "25.0.0",
+  "name": "Image Bench",
+  "path": "$localPlugins\\External\\image-bench.photoshop_&lt;version&gt;",
+  "pluginId": "image-bench.photoshop",
+  "status": "enabled",
+  "type": "uxp",
+  "versionString": "&lt;version&gt;"
+}</pre></li>
+            <li>Restart Photoshop. To update, replace the folder with that of the new version and change both
+              versions in the entry.</li>
+          </ol>
+        </li>
         <li>The plugin is not signed by Adobe. If it is missing from the <b>Plugins</b> menu after the restart,
           turn on <b>Preferences › Plugins › Enable Developer Mode</b> in Photoshop and restart it once more.</li>
       </PluginCard>
@@ -878,10 +897,12 @@ const hostOrigin = location.origin;
         <code>cv2.Canny</code> of ControlNet's canny preprocessor, and needs no connection to {{ HOST_NAME }}.
         Use it to make a control image you can touch up: compute the edges, paint out or add lines on the layer,
         then send it with <b>ControlNet: image</b> of the Image Bench plugin. Install it like the Image Bench plugin
-        (the notes above apply), then open <b>Plugins › Canny Edges</b>.
+        (the notes above apply; by hand, its folder is <code>image-bench.canny_&lt;version&gt;</code> and its entry
+        has <code>"name": "Canny Edges"</code> and <code>"pluginId": "image-bench.canny"</code>), then open
+        <b>Plugins › Canny Edges</b>.
       </p>
 
-      <PluginCard plugin="canny" title="Canny Edges plugin" menu="Plugins › Canny Edges"/>
+      <PluginCard plugin="canny" title="Canny Edges plugin"/>
 
       <ul>
         <li><b>Threshold 1</b> and <b>Threshold 2</b> — the hysteresis thresholds: lines start at edges stronger
@@ -903,14 +924,10 @@ const hostOrigin = location.origin;
         The <b>Image Bench</b> plugin for Krita (5.2 or newer) does what the Photoshop plugin does.
       </p>
 
-      <PluginCard plugin="krita" title="Image Bench plugin for Krita" editor="Krita" badge="Kr"
-                  menu="Settings › Dockers › Image Bench">
-        <li><b>Install</b> copies the plugin into Krita's Python plugin folder (<code>%APPDATA%\krita\pykrita</code>
-          on Windows) and enables it. Close Krita first: it rewrites its settings when it exits. The plugin is
-          installed on the computer that runs {{ HOST_NAME }}.</li>
-        <li><b>Download .zip</b> is for any other computer: in Krita, choose <b>Tools › Scripts › Import Python
-          Plugin from File</b> and pick the file.</li>
-        <li>Either way, restart Krita afterwards. If the docker is missing, enable <b>Image Bench</b> in
+      <PluginCard plugin="krita" title="Image Bench plugin for Krita" badge="Kr">
+        <li><b>Download .zip</b>, then in Krita choose <b>Tools › Scripts › Import Python Plugin from File</b> and
+          pick the file.</li>
+        <li>Restart Krita afterwards. If the docker is missing, enable <b>Image Bench</b> in
           <b>Settings › Configure Krita › Python Plugin Manager</b> and restart Krita once more.</li>
       </PluginCard>
 
@@ -944,17 +961,12 @@ const hostOrigin = location.origin;
         cannot add docked panels, so its panel is a separate window.
       </p>
 
-      <PluginCard plugin="gimp" title="Image Bench plugin for GIMP" editor="GIMP" badge="Gi"
-                  menu="Tools › Image Bench › Panel">
-        <li><b>Install</b> copies the plugin into the <code>plug-ins</code> folder of the newest GIMP 3 settings
-          folder (<code>%APPDATA%\GIMP\3.x\plug-ins</code> on Windows). GIMP must have run once, so that this
-          folder exists. The plugin is installed on the computer that runs {{ HOST_NAME }}.</li>
-        <li><b>Download .zip</b> is for any other computer: unpack it into the <code>plug-ins</code> folder shown
-          in GIMP under <b>Edit › Preferences › Folders › Plug-ins</b>, so that it holds an
-          <code>image_bench</code> folder. Use it also for GIMP Portable, which keeps its settings in its own
-          <code>Data\GimpAppData</code> folder, unless {{ HOST_NAME }} was started with <code>GIMP3_DIRECTORY</code>
-          set to that folder.</li>
-        <li>Either way, restart GIMP afterwards: the <b>Tools › Image Bench</b> menu appears in the image window.</li>
+      <PluginCard plugin="gimp" title="Image Bench plugin for GIMP" badge="Gi">
+        <li><b>Download .zip</b> and unpack it into the <code>plug-ins</code> folder shown in GIMP under
+          <b>Edit › Preferences › Folders › Plug-ins</b> (<code>%APPDATA%\GIMP\3.x\plug-ins</code> on Windows;
+          GIMP Portable keeps it in its own <code>Data\GimpAppData</code> folder), so that it holds an
+          <code>image_bench</code> folder.</li>
+        <li>Restart GIMP afterwards: the <b>Tools › Image Bench</b> menu appears in the image window.</li>
       </PluginCard>
 
       <h4>Connecting</h4>
@@ -1326,6 +1338,17 @@ code {
   border-radius: 3px;
   background: var(--ib-elev);
   color: var(--ib-accent);
+}
+
+pre {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--ib-elev);
+  font-family: var(--ib-mono);
+  font-size: 12px;
+  white-space: pre;
+  overflow-x: auto;
 }
 
 .kbd {

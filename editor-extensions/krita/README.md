@@ -28,8 +28,7 @@ The image sent is the merged document converted to 8-bit sRGB, whatever the docu
 
 ## Installation
 
-- From Image Bench: the Editors chapter of the manual (Library tab) has **Install** (on the computer the host runs on;
-  Krita must be closed, since it rewrites its settings when it exits) and **Download .zip**.
+- From Image Bench: the Editors chapter of the manual (Library tab) has **Download .zip**.
 - From the .zip: Krita › Tools › Scripts › Import Python Plugin from File, then restart Krita.
 - From this folder: `just krita-deploy` (copies into `%APPDATA%\krita\pykrita` and sets `enable_image_bench=true` in
   `[python]` of `%LOCALAPPDATA%\kritarc`), `just krita-undeploy`, `just krita-package` (`dist/*.zip`).

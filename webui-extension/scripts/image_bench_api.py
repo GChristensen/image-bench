@@ -127,7 +127,6 @@ class ImageBenchApi():
         self.add_api_route("/editor/status", self.get_editor_status, methods=["GET"])
         self.add_api_route("/editor/plugin", self.get_editor_plugin_status, methods=["GET"])
         self.add_api_route("/editor/plugin/package", self.download_editor_plugin, methods=["GET"])
-        self.add_api_route("/editor/plugin/install", self.install_editor_plugin, methods=["POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/editor/host-websocket", self.handle_editor_host_websocket)
         self.app.add_websocket_route(self.BASE_PATH + "/editor/websocket", self.handle_editor_websocket)
         # The routes of the Photoshop plugins installed before the editor bridge
@@ -454,14 +453,6 @@ class ImageBenchApi():
 
         return Response(content, media_type="application/octet-stream",
                         headers={"Content-Disposition": f'attachment; filename="{name}"'})
-
-    @staticmethod
-    def install_editor_plugin(plugin: str = editor_plugins.DEFAULT_PLUGIN):
-        """Install an editor plugin on the server computer (see editor_plugins.install_or_elevate)"""
-        try:
-            return JSONResponse(editor_plugins.install_or_elevate(plugin))
-        except (editor_plugins.PluginError, OSError) as e:
-            raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
     def get_controlnet_choices(type: str = "All", all_models: bool = False):

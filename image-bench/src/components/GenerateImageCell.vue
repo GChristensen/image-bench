@@ -234,8 +234,6 @@ async function onUseSize() {
       <span v-else class="empty">The generated image appears here</span>
       <span v-if="liveProgress !== null" class="live-progress"><i :style="{width: `${liveProgress}%`}"></i></span>
     </button>
-    <MediaPlayback v-if="shownView === 'result' && resultMedia && liveProgress === null" :key="resultMedia.src"
-                   :src="resultMedia.src" :kind="resultMedia.kind" @open="emit('result-click')"/>
 
     <div v-else-if="shownView === 'input'" class="view">
       <template v-if="inputImage">
@@ -249,6 +247,10 @@ async function onUseSize() {
       <img v-if="inputMask" :src="inputMask" alt="Mask">
       <span v-else class="empty">No mask<br><small>Upload, drop or paste one, or send it from the editor</small></span>
     </div>
+
+    <!-- Outside the v-if chain of the views above -->
+    <MediaPlayback v-if="shownView === 'result' && resultMedia && liveProgress === null" :key="resultMedia.src"
+                   :src="resultMedia.src" :kind="resultMedia.kind" @open="emit('result-click')"/>
 
     <!-- The views of img2img and inpaint -->
     <div v-if="hasInput" class="top-left">

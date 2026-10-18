@@ -42,8 +42,7 @@ The image sent is the visible layers merged, converted by babl to 8-bit sRGB RGB
 
 ## Installation
 
-- From Image Bench: the Editors chapter of the manual (Library tab) has **Install** (on the computer the host runs on)
-  and **Download .zip**.
+- From Image Bench: the Editors chapter of the manual (Library tab) has **Download .zip**.
 - From the .zip: unpack it into the plug-ins folder (Edit › Preferences › Folders › Plug-ins), so that it holds
   `image_bench/image_bench.py`.
 - From this folder: `just gimp-deploy` (copies `image_bench/` into the plug-ins folder of the newest `GIMP/3.x`
