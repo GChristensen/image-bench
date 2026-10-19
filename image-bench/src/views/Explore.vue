@@ -18,6 +18,7 @@ import ExploreListPanel from "@/components/ExploreListPanel.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
+import ScrollTopButton from "@/components/ScrollTopButton.vue";
 import {createLoraPrompt, getLoraDefaults, getLoraWeight} from "@/loras.js";
 
 const TAB_CHECKPOINTS = "checkpoints";
@@ -126,13 +127,15 @@ const exploreSummary = computed(() => {
   return parts.join(" · ");
 });
 
+const imageCount = computed(() => modelImages.value.reduce((n, model) => n + model.images.length, 0));
+
 const progressLabel = computed(() => {
   const percent = `${Math.round(exploreImagesStore.generationProgress)}%`;
 
   if (exploreImagesStore.generationTotal > 0)
     return `${exploreImagesStore.generationCompleted}/${exploreImagesStore.generationTotal} · ${percent}`;
 
-  const images = modelImages.value.reduce((n, model) => n + model.images.length, 0);
+  const images = imageCount.value;
   return `${percent} · ${images} image${images === 1 ? "" : "s"}`;
 });
 
@@ -549,6 +552,7 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
            @pointerdown="listWidth.onPointerDown" @keydown="listWidth.onKeydown"
            @dblclick="listWidth.reset"><i></i></div>
       <div class="generated-images-wrapper">
+        <ScrollTopButton :target="generatedImagesElement" :content="imageCount"/>
         <div class="generated-images scrollable" ref="generatedImagesElement">
           <div v-if="matrixRows" class="matrix" :style="{'--columns': exploreImagesStore.matrixColumns.length}">
             <div class="matrix-corner"></div>

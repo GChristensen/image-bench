@@ -1,7 +1,7 @@
 <script setup>
   import GeneratedImage from "@/components/GeneratedImage.vue";
-  import {computed, nextTick, ref, shallowRef, toRaw, watch} from "vue";
-  import AppIcon from "@/components/AppIcon.vue";
+  import {computed, nextTick, ref, shallowRef, toRaw} from "vue";
+  import ScrollTopButton from "@/components/ScrollTopButton.vue";
   import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
   import {reorderImages} from "@/imageDrag.js";
   import {useImageSelection} from "@/composables/useImageSelection.js";
@@ -82,24 +82,6 @@
       setTimeout(() => is.scrollTop = is.scrollHeight, 333);
     }
   }
-
-  // Generated: a button below the toolbar scrolls back to the top while the stream is scrolled to the bottom
-  const BOTTOM_SLACK = 4;
-  const atBottom = ref(false);
-
-  function updateAtBottom() {
-    const is = imageStreamElement.value;
-
-    atBottom.value = !!is && is.scrollHeight > is.clientHeight
-      && is.scrollTop + is.clientHeight >= is.scrollHeight - BOTTOM_SLACK;
-  }
-
-  function scrollToTop() {
-    imageStreamElement.value.scrollTo({top: 0, behavior: "smooth"});
-  }
-
-  // Added, removed and filtered images change the height without a scroll event
-  watch(() => filteredImages.value.length, () => nextTick(updateAtBottom));
 
   function getImageLink(index) {
     return imageOps.getImageLink(images.value[index]);
@@ -234,10 +216,9 @@
 
 <template>
   <div class="image-stream-container">
-    <button v-if="kind === KIND_GENERATED && atBottom" class="ib scroll-top" title="Scroll to the top"
-            aria-label="Scroll to the top" @click="scrollToTop"><AppIcon name="toTop"/></button>
-    <div class="image-stream scrollable" ref="imageStreamElement"
-         @scroll.passive="updateAtBottom" @load.capture="updateAtBottom">
+    <ScrollTopButton v-if="kind === KIND_GENERATED" :target="imageStreamElement"
+                     :content="filteredImages.length"/>
+    <div class="image-stream scrollable" ref="imageStreamElement">
       <GeneratedImage v-for="(image, index) in images"
                        :key="image.imagePath || index"
                        :kind="kind"
@@ -286,20 +267,5 @@
     align-items: center;
     gap: 14px;
     padding: 16px 22px;
-  }
-
-  /* Floats below the toolbar, clear of the scrollbar */
-  .scroll-top {
-    position: absolute;
-    top: 8px;
-    right: 22px;
-    z-index: 5;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: rgba(17, 19, 23, 0.85);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: var(--ib-text);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   }
 </style>
