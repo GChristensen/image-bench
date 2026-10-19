@@ -138,9 +138,6 @@ const hostOrigin = location.origin;
         page. If the
         page is reloaded in that tab, or {{ HOST_NAME }} restarts, Image Bench shows <span class="kbd warn"><AppIcon name="alert" :size="12" class="inline-icon"/>
         Connecting to {{ HOST_NAME }}</span> until the page is back, and then continues.
-        Dragging an image card onto the <AppIcon name="appWindow" :size="13" class="inline-icon"/>
-        tab and holding it there shows the page, so that the image can be dropped into an image input of
-        {{ HOST_NAME }}.
       </p>
       <p>
         The <b>🔬 Image Bench</b> button {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}
@@ -870,6 +867,18 @@ const hostOrigin = location.origin;
         <b>Reconnect</b> with a grey dot and stays disconnected until you click it, so that
         two running editors do not take the connection from each other.
       </p>
+      <div class="note warn">
+        <AppIcon name="alert" :size="15"/>
+        <div>
+          <b>If {{ HOST_NAME }} uses https, the editor has to trust its certificate.</b> An exception accepted in the
+          browser does not count, because the plugins check the certificate on their own. With a self-signed
+          certificate, add it to the trusted root certificates of the computer where the editor runs (on Windows, run
+          <code>certutil -addstore Root &lt;certificate&gt;.crt</code> as an administrator, or import it into
+          <b>Trusted Root Certification Authorities</b> with <code>certmgr.msc</code>), then restart the editor. The
+          certificate must be issued for the name or address you enter in the plugin; otherwise the connection still
+          fails.
+        </div>
+      </div>
 
       <h3 id="manual-editor-photoshop">Photoshop</h3>
       <p>

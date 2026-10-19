@@ -53,7 +53,7 @@ export async function sendToInpaint(image) {
     flashTrayTab("generate-tab");
 }
 
-async function sendToImg2Img(image) {
+export async function sendToImg2Img(image) {
   const error = await useImageOperations().sendToImg2Img(image);
 
   if (error)

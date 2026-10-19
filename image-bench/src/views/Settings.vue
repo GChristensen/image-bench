@@ -202,7 +202,16 @@ function setGenerateUiPreset(index, value) {
         <template v-else>{{ docsCheck.error || "Not found" }}</template>
       </span>
     </div>
-    <h3>Host restart</h3>
+    <h3 class="with-help">Host restart
+      <span class="help" tabindex="0" role="note"
+            :aria-label="`The restart button of the console restarts a hung or crashed ${HOST_NAME}. It kills the process with its console window and runs the start script, which is set only by hand in the config file as {&quot;command&quot;: &quot;path of the script&quot;}. Changes to the file take effect without a restart. The restart helper listens where ${HOST_NAME} does, on its port + 100 (&quot;port&quot; in the file sets another), with its certificate. A self-signed certificate has to be accepted for the helper once too.`"
+        >?<span class="help-text" aria-hidden="true">The restart button of the console restarts a hung or crashed
+          {{ HOST_NAME }}. It kills the process with its console window and runs the start script.<br><br>
+          The script is set only by hand in the config file, as
+          <code>{"command": "path of the script"}</code>. Changes to the file take effect without a restart.<br><br>
+          The restart helper listens where {{ HOST_NAME }} does, on its port + 100 (<code>"port"</code> in the file
+          sets another), with its certificate. A self-signed certificate has to be accepted for the helper once
+          too.</span></span></h3>
     <div v-if="restartInfo" class="setting-label restart-info">
       <span>Start script</span>
       <code v-if="restartInfo.configured">{{ restartInfo.command }}</code>
@@ -225,13 +234,6 @@ function setGenerateUiPreset(index, value) {
               >Accept the certificate</a></template>
           <template v-else>Not running (see host_supervisor.log in the store folder)</template></span>
       </template>
-    </div>
-    <div class="setting-label root-help">
-      The restart button of the console restarts a hung or crashed {{ HOST_NAME }}: it kills the process with its
-      console window and runs the start script. The script is set only in the config file, as
-      <code>{"command": "path of the script"}</code>; edit it by hand, it is read without restarting. The restart
-      helper listens where {{ HOST_NAME }} does, on its port + 100 (<code>"port"</code> sets another) and with its
-      certificate: with a self-signed one, accept it for the helper once too.
     </div>
     <h3>SD WebUI Interface</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.addModelInfoButton"
@@ -298,7 +300,8 @@ a:hover {
   min-width: 200px;
 }
 
-.generate-setting .help {
+.generate-setting .help,
+h3 .help {
   position: relative;
   min-width: 0;
   width: 16px;
@@ -316,13 +319,16 @@ a:hover {
 }
 
 .generate-setting .help:hover,
-.generate-setting .help:focus-visible {
+.generate-setting .help:focus-visible,
+h3 .help:hover,
+h3 .help:focus-visible {
   outline: none;
   border-color: var(--ib-accent-border);
   color: var(--ib-accent);
 }
 
-.generate-setting .help-text {
+.generate-setting .help-text,
+h3 .help-text {
   position: absolute;
   left: 22px;
   top: 50%;
@@ -343,7 +349,9 @@ a:hover {
 }
 
 .generate-setting .help:hover .help-text,
-.generate-setting .help:focus .help-text {
+.generate-setting .help:focus .help-text,
+h3 .help:hover .help-text,
+h3 .help:focus .help-text {
   visibility: visible;
 }
 
@@ -381,6 +389,12 @@ a:hover {
   border-color: var(--ib-accent-border);
 }
 
+h3.with-help {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .restart-info {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -388,8 +402,7 @@ a:hover {
   align-items: baseline;
 }
 
-.restart-info code,
-.root-help code {
+.restart-info code {
   font-family: var(--ib-mono);
   font-size: 11.5px;
   overflow-wrap: anywhere;

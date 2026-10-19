@@ -9,10 +9,11 @@
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE, MARKINGS} from "@/consts.js";
   import {dialog} from "@/dialogs/useDialog.js";
-  import {HOST_NAME, hostHas} from "@/host.js";
+  import {HOST_NAME, hostHas, isWebUI} from "@/host.js";
   import {openImageMenu} from "@/contextMenu.js";
-  import {INPAINT_LABEL, canReuseParameters, reuseParameters, sendToInpaint} from "@/imageActions.js";
+  import {INPAINT_LABEL, canReuseParameters, reuseParameters, sendToImg2Img, sendToInpaint} from "@/imageActions.js";
   import {setOverlayImageTarget, clearOverlayImageTarget} from "@/composables/useImageActionKeys.js";
+  import {useCtrlKey} from "@/composables/useCtrlKey.js";
   import {toast} from "@/toast.js";
   import {editorIcon, editorName} from "@/editor.js";
   import AppIcon from "@/components/AppIcon.vue";
@@ -329,6 +330,9 @@
     }
   }
 
+  // Holding Ctrl hides all chrome, so the image is seen unobstructed
+  const ctrlDown = useCtrlKey();
+
   onMounted(() => setOverlayImageTarget(keyTarget));
   onBeforeUnmount(() => clearOverlayImageTarget(keyTarget));
 
@@ -338,7 +342,7 @@
   <!-- Using Teleport to render overlay at body level for better z-index control -->
   <Teleport to="body">
     <Transition name="fade">
-      <div class="image-overlay-container" >
+      <div class="image-overlay-container" :class="{'chrome-hidden': ctrlDown}">
         <div class="image-overlay" @click="$emit('hideOverlay')">
         </div>
         <button class="ib close-button" title="Close" aria-label="Close"
@@ -395,6 +399,8 @@
             <span class="actions-separator"></span>
           </template>
           <template v-if="still">
+          <button v-if="isWebUI" class="ib" title="Send to img2img" aria-label="Send to img2img"
+                  @click="sendToImg2Img(image)"><AppIcon name="imageIn" :size="20"/></button>
           <button class="ib" :title="INPAINT_LABEL" :aria-label="INPAINT_LABEL"
                   @click="sendToInpaint(image)"><AppIcon name="brush" :size="20"/></button>
           <button v-if="canSendToControlNet" class="ib" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
@@ -423,6 +429,11 @@
   left: 0;
   right: 0;
   z-index: 1000;
+}
+
+/* Everything but the dimmed background and the image */
+.chrome-hidden > :not(.image-overlay):not(.overlay-image-container) {
+  visibility: hidden;
 }
 
 .close-button {

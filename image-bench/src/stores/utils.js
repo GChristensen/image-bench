@@ -4,7 +4,8 @@ export function addImage(eventData, images) {
     if (eventData.type === "SAVED_IMAGE") {
         insertImage(eventData, images);
     } else if (eventData.type === "BEGIN_PROCESSING") {
-        let isInsertSeparator = !!images.value.length;
+        // An interrupted run leaves its separator without images: reuse it
+        let isInsertSeparator = !!images.value.length && !images.value.at(-1).separator;
 
         if (import.meta.env.MODE === "comfy")
             isInsertSeparator &&= !eventData.isBatchGeneration;
