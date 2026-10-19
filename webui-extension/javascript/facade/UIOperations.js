@@ -63,12 +63,22 @@ const withoutUnremembered = params => params && Object.fromEntries(Object.entrie
 
 const isSet = value => value !== undefined && value !== null;
 
+// Controls Forge sets for a UI preset; it has applied the preset when they stop changing
+const UI_PRESET_DEPENDENT_KEYS = ['MODEL_CHECKPOINT', 'TXT2IMG_STEPS', 'TXT2IMG_SAMPLING', 'TXT2IMG_SCHEDULER',
+    'IMG2IMG_STEPS', 'IMG2IMG_SAMPLING', 'IMG2IMG_SCHEDULER'];
+// Waiting for the preset: time without changes that ends it, time for the first change, and the limit
+const UI_PRESET_SETTLE_TIME = 700;
+const UI_PRESET_FIRST_CHANGE_TIME = 1500;
+const UI_PRESET_TIMEOUT = 30000;
+
 export class UIOperations {
     /**
      * @param {Object} adapter - DOM adapter instance
      */
     constructor(adapter) {
         this.adapter = adapter;
+        // UI preset switches in progress
+        this.uiPresetSwitches = 0;
     }
 
     // ==================== HIGH-LEVEL OPERATIONS ====================
@@ -512,8 +522,48 @@ export class UIOperations {
             return;
         }
 
-        await this.adapter.setDropdownValue('FORGE_UI_PRESET', preset);
-        await this.adapter.sleep(333);
+        this.uiPresetSwitches++;
+
+        try {
+            await this.adapter.setDropdownValue('FORGE_UI_PRESET', preset);
+            await this.waitForUiPresetApplied();
+        }
+        finally {
+            this.uiPresetSwitches--;
+        }
+    }
+
+    /**
+     * Whether a UI preset is being switched
+     * @returns {boolean}
+     */
+    isSwitchingUiPreset() {
+        return this.uiPresetSwitches > 0;
+    }
+
+    /**
+     * Wait until Forge has set the controls of a newly selected UI preset: they changed and stayed unchanged
+     * for a while, or did not change at all in the first moments (the presets share the values)
+     * @returns {Promise<void>}
+     */
+    async waitForUiPresetApplied() {
+        const signature = () => UI_PRESET_DEPENDENT_KEYS.map(key => this.adapter.getInputValue(key)).join('\n');
+        const start = Date.now();
+        let last = signature();
+        let changedAt = null;
+
+        while (Date.now() - start < UI_PRESET_TIMEOUT) {
+            await this.adapter.sleep(100);
+            const current = signature();
+
+            if (current !== last) {
+                last = current;
+                changedAt = Date.now();
+            }
+            else if (changedAt ? Date.now() - changedAt >= UI_PRESET_SETTLE_TIME
+                    : Date.now() - start >= UI_PRESET_FIRST_CHANGE_TIME)
+                return;
+        }
     }
 
     /**

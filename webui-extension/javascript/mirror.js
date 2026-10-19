@@ -204,6 +204,7 @@ export function createWebUIMirror(uiOperations, adapter, popup) {
             options,
             references: references.captureState(tab.toLowerCase(), params.uiPreset),
             busy: !uiOperations.isReadyToGenerate(),
+            switchingUiPreset: uiOperations.isSwitchingUiPreset(),
             locked
         };
     }

@@ -51,11 +51,14 @@ defineExpose({textarea});
   <label class="prompt-field">
     <span class="prompt-label">{{ label }}<span v-if="tokens" class="tokens" title="Tokens">{{ tokens }}</span></span>
     <textarea ref="textarea" v-model="model" :disabled="disabled" spellcheck="false" @keydown="onKeydown"></textarea>
+    <!-- Shown centered in the label row above the textarea, e.g. a waiting badge -->
+    <span class="overlay"><slot/></span>
   </label>
 </template>
 
 <style scoped>
 .prompt-field {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -78,6 +81,18 @@ defineExpose({textarea});
   color: var(--ib-text-2);
   font-family: var(--ib-mono);
   font-size: 10.5px;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 textarea {

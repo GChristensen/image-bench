@@ -195,6 +195,30 @@ function setParam(name, value) {
   setParams({[name]: value});
 }
 
+// A UI preset chosen here counts as switching until WebUI reports it applied (or the time runs out),
+// since the first report may come before WebUI starts the switch
+const UI_PRESET_REQUEST_TIMEOUT = 30000;
+const requestedUiPreset = ref(null);
+let uiPresetRequestTimeout = null;
+const switchingUiPreset = computed(() => sdWebUI.switchingUiPreset || requestedUiPreset.value !== null);
+
+function selectUiPreset(value) {
+  if (value !== sdWebUI.params?.uiPreset) {
+    requestedUiPreset.value = value;
+    clearTimeout(uiPresetRequestTimeout);
+    uiPresetRequestTimeout = setTimeout(() => requestedUiPreset.value = null, UI_PRESET_REQUEST_TIMEOUT);
+  }
+
+  setParam("uiPreset", value);
+}
+
+watch(() => [sdWebUI.params?.uiPreset, sdWebUI.switchingUiPreset], ([preset, switching]) => {
+  if (!switching && preset === requestedUiPreset.value) {
+    requestedUiPreset.value = null;
+    clearTimeout(uiPresetRequestTimeout);
+  }
+});
+
 function flushParams() {
   clearTimeout(sendTimeout);
 
@@ -1101,7 +1125,7 @@ const gridStyle = computed(() => ({
         <UiPresetSelect v-if="has('uiPreset') && form.uiPreset !== null && form.uiPreset !== undefined"
                         :model-value="form.uiPreset" :presets="config.generateUiPresets"
                         :choices="sdWebUI.options.uiPresets"
-                        @update:model-value="v => setParam('uiPreset', v)"/>
+                        @update:model-value="selectUiPreset"/>
         <button v-if="hasModules" type="button" class="ib flat slot-switch"
                 :title="shownModelSlot === 'modules'
                   ? 'VAE / Text Encoder. Click to show the checkpoint'
@@ -1172,7 +1196,13 @@ const gridStyle = computed(() => ({
       <!-- Prompt and LoRAs -->
       <PromptField ref="promptField" class="prompt" label="Prompt" :tokens="has('tokens') ? sdWebUI.tokens?.prompt : null"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"
-                   @dragover="onPromptDragOver" @drop="onPromptDrop" @focusin="snippetTarget = 'prompt'"/>
+                   @dragover="onPromptDragOver" @drop="onPromptDrop" @focusin="snippetTarget = 'prompt'">
+        <Transition name="switching">
+          <span v-if="switchingUiPreset" class="switching-badge" role="status">
+            <span class="spinner"></span>Switching UI preset…
+          </span>
+        </Transition>
+      </PromptField>
 
       <!-- LoRAs or references with the image below them; wide, the image is in a column of its own -->
       <div class="side">
@@ -1403,6 +1433,37 @@ const gridStyle = computed(() => ({
 
 .ib.busy:disabled {
   opacity: 1;
+}
+
+/* ---------- UI preset switch ---------- */
+
+.switching-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border: 1px solid var(--ib-accent-border);
+  border-radius: 10px;
+  background: var(--ib-elev-2);
+  color: var(--ib-accent);
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.switching-badge .spinner {
+  width: 10px;
+  height: 10px;
+}
+
+.switching-enter-active,
+.switching-leave-active {
+  transition: opacity 0.15s;
+}
+
+.switching-enter-from,
+.switching-leave-to {
+  opacity: 0;
 }
 
 /* ---------- LoRAs ---------- */
