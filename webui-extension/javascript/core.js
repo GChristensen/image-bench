@@ -86,7 +86,7 @@ export async function init() {
 
     // Only user clicks fire mousedown, strategies click the buttons programmatically
     for (const id of [SELECTORS.TXT2IMG_GENERATE, SELECTORS.IMG2IMG_GENERATE])
-        document.getElementById(id)?.addEventListener("mousedown", onGenerateStarted);
+        document.getElementById(id)?.addEventListener("mousedown", saveGenerationParams);
 
     // Every generation clicks Generate (users, strategies, the popup and Generate Forever); the capture phase runs
     // before Gradio reads the inputs. The recorder only reads the DOM here and uploads in the background
@@ -115,10 +115,10 @@ export async function init() {
 }
 
 /**
- * Save txt2img and img2img prompts and parameters when the user starts a generation
+ * Save txt2img and img2img prompts and parameters when the user starts a generation or opens a project
  * The config is reloaded, since the setting may be changed in the popup
  */
-async function onGenerateStarted() {
+async function saveGenerationParams() {
     const params = uiOperations.captureUiParams();
     appConfig = await loadAppConfig() || appConfig;
 
@@ -384,6 +384,10 @@ async function restoreProject({mode, params, controlnet}) {
     const tab = mode === 'txt2img' ? 'txt2img' : 'img2img';
     const missingUnits = controlnet ? await controlNet.restoreUnits(tab, controlnet.units || []) : [];
 
+    // A reload before the next generation restores the parameters of the project, not those of the last one
+    await mirror.settled();
+    await saveGenerationParams();
+
     return {missingUnits};
 }
 
@@ -500,7 +504,7 @@ async function handleGenerateImage(mode) {
     await prepareMode(mode);
     setGenerationState("BATCH_GENERATION");
     await uiOperations.setBatchCount(1);
-    await onGenerateStarted();
+    await saveGenerationParams();
     sendPopupMessage({type: "BEGIN_PROCESSING", single: true});
 
     if (!await uiOperations.clickGenerate())
