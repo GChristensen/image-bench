@@ -245,8 +245,53 @@ body {
   color: var(--ib-muted);
 }
 
+/* Drawn here: a native checkbox draws its rounded border in a darker shade of the accent, which shows as dark corners */
 input[type=checkbox] {
-  accent-color: var(--ib-accent);
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 13px;
+  height: 13px;
+  margin: 3px 3px 3px 4px;
+  border: 1px solid var(--ib-muted);
+  border-radius: 3px;
+  background: var(--ib-elev) center / 11px 11px no-repeat;
+  vertical-align: -2px;
+  cursor: pointer;
+}
+
+input[type=checkbox]:hover {
+  border-color: var(--ib-text-2);
+}
+
+input[type=checkbox]:checked,
+input[type=checkbox]:indeterminate {
+  border-color: var(--ib-accent);
+  background-color: var(--ib-accent);
+}
+
+input[type=checkbox]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6 9.6 3.6' fill='none' stroke='%231a0b00' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+input[type=checkbox]:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6h6' stroke='%231a0b00' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+input[type=checkbox]:checked:hover,
+input[type=checkbox]:indeterminate:hover {
+  border-color: var(--ib-accent-hover);
+  background-color: var(--ib-accent-hover);
+}
+
+input[type=checkbox]:focus-visible {
+  outline: 2px solid var(--ib-accent-border);
+  outline-offset: 1px;
+}
+
+input[type=checkbox]:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* ---------- Menu ---------- */
