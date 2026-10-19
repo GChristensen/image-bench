@@ -34,6 +34,7 @@ import {getGenerationState} from "@/sdwebui.js";
 import HostFrame from "@/components/HostFrame.vue";
 import {HOST_NAME} from "@/host.js";
 import {backendConnected, onBackendReconnected, startBackendMonitor} from "@/backendStatus.js";
+import {backendDownTitle, canRestart, restartHost, restarting, startHostRestart} from "@/hostRestart.js";
 import {resyncHost} from "@/hostResync.js";
 import {toast} from "@/toast.js";
 
@@ -244,6 +245,7 @@ function onSaveKey(e) {
 onMounted(() => {
   window.onSDEvent = onSDEvent;
   startBackendMonitor();
+  startHostRestart();
   if (EMBEDDED)
     window.imageBenchShowApp = showAppTabs;
   initManualHint();
@@ -343,8 +345,10 @@ async function switchTabAccordingToGenerationMode(e, state) {
                   @drop.prevent="onTrayDrop(KIND_IMAGE_TRAY)" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
       <RouterLink to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <RouterLink to="/library" class="tab" id="library-tab"><AppIcon name="library" :size="14"/>Library</RouterLink>
-      <span v-if="!backendConnected" class="backend-down" role="status"
-            :title="`${HOST_NAME} is not running (the connection to its server was lost). Waiting for it to start…`"
+      <button v-if="!backendConnected && canRestart" type="button" class="backend-down restartable"
+              :class="{restarting}" :title="backendDownTitle" :aria-label="backendDownTitle" :disabled="restarting"
+              @click="restartHost"><AppIcon :name="restarting ? 'power' : 'unplug'" :size="15"/></button>
+      <span v-else-if="!backendConnected" class="backend-down" role="status" :title="backendDownTitle"
             :aria-label="`${HOST_NAME} is not running`"><AppIcon name="unplug" :size="15"/></span>
       <div class="tab-spacer"></div>
       <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
@@ -470,6 +474,26 @@ async function switchTabAccordingToGenerationMode(e, state) {
     padding: 0 6px;
     color: var(--ib-warn);
     cursor: default;
+  }
+
+  .backend-down.restartable {
+    border: none;
+    border-radius: 4px;
+    background: none;
+    cursor: pointer;
+  }
+
+  .backend-down.restartable:hover {
+    background: var(--ib-accent-soft);
+  }
+
+  .backend-down.restarting {
+    cursor: progress;
+    animation: backend-restarting 1.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes backend-restarting {
+    to { opacity: 0.35; }
   }
 
   .window-warning {

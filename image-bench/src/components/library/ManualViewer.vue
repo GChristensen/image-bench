@@ -365,7 +365,23 @@ const hostOrigin = location.origin;
           image chosen, pasted or dropped there (or on the prompt). <b>Apply</b> sets the checked groups and lists
           the values that {{ HOST_NAME }} does not have.</li>
         <li><b><AppIcon name="terminal" :size="13" class="inline-icon"/> Console</b> opens a drawer with the terminal
-          output of {{ HOST_NAME }}.</li>
+          output of {{ HOST_NAME }}. Use its <AppIcon name="power" :size="13" class="inline-icon"/> button to restart
+          {{ HOST_NAME }} when it hangs or crashes, for example after running out of memory. The restart kills the
+          {{ HOST_NAME }} process and its console window, then runs the script that starts {{ HOST_NAME }}. While the
+          connection to {{ HOST_NAME }} is lost, the <AppIcon name="unplug" :size="13" class="inline-icon"/> icon
+          after the Library tab shows whether the process is still running, and clicking the icon restarts
+          {{ HOST_NAME }} as well. To enable restarts, create <code>host_restart.json</code> in the
+          <code>store</code> folder of the extension with the path of your start script, for example
+          <code>{"command": "D:\\sd\\run.bat"}</code>. Until the file exists, the button tells you where to create it
+          and which script started {{ HOST_NAME }}; <b>Settings › Host restart</b> shows the same information. The
+          file can only be edited by hand, so nobody who reaches {{ HOST_NAME }} over the network can change the
+          command. If {{ HOST_NAME }} still responds, the restart request goes through it. If it hangs, the browser
+          contacts a small helper process that runs alongside {{ HOST_NAME }}. The helper listens on the same
+          addresses as {{ HOST_NAME }} (including the network with <code>--listen</code>), on the
+          {{ HOST_NAME }} port plus 100; set <code>"port"</code> in the file to use a different port. When
+          {{ HOST_NAME }} uses https, the helper uses the same certificate. If the certificate is self-signed, your
+          browser has to accept it once for the helper's port too; <b>Settings › Host restart</b> has a link for
+          this.</li>
       </ul>
       <p v-if="isComfy" class="muted">
         A control whose node cannot be found in the workflow is hidden, so a missing control usually means a

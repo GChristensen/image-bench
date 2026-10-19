@@ -7,6 +7,9 @@ import {checkDocsRoot, useDocsStore} from "@/stores/docs.js";
 import {ACCENT_COLORS, KNOWN_UI_PRESETS} from "@/consts.js";
 import {HOST_NAME} from "@/host.js";
 import AppIcon from "@/components/AppIcon.vue";
+import {loadRestartInfo, restartInfo, sidecarUrl} from "@/hostRestart.js";
+import {copyText} from "@/clipboard.js";
+import {toast} from "@/toast.js";
 
 const appConfigStore = useAppConfigStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
@@ -92,6 +95,17 @@ onMounted(async () => {
     // Shown without the default path
   }
 });
+
+// ---------- Host restart (read-only: store/host_restart.json is edited by hand) ----------
+
+onMounted(loadRestartInfo);
+
+async function copyRestartConfig() {
+  const config = JSON.stringify({command: restartInfo.value.detected}, null, 2);
+
+  if (await copyText(config))
+    toast("The file content is copied");
+}
 
 // The presets reported by WebUI once the Generate tab was shown, the known ones until then
 const uiPresetChoices = computed(() => {
@@ -187,6 +201,37 @@ function setGenerateUiPreset(index, value) {
         <template v-if="docsCheck.exists">Exists · {{ docsCheck.docs }} documents</template>
         <template v-else>{{ docsCheck.error || "Not found" }}</template>
       </span>
+    </div>
+    <h3>Host restart</h3>
+    <div v-if="restartInfo" class="setting-label restart-info">
+      <span>Start script</span>
+      <code v-if="restartInfo.configured">{{ restartInfo.command }}</code>
+      <span v-else class="muted">Not set</span>
+      <span>Config file</span>
+      <code>{{ restartInfo.configPath }}</code>
+      <template v-if="restartInfo.detected">
+        <span>Detected</span>
+        <span><code>{{ restartInfo.detected }}</code>
+          <button v-if="!restartInfo.configured" class="btn outline copy-config" @click="copyRestartConfig"
+            >Copy file content</button></span>
+      </template>
+      <template v-if="restartInfo.configured">
+        <span>Helper</span>
+        <span class="root-status" :class="{ok: restartInfo.running}">
+          <AppIcon :name="restartInfo.running ? 'check' : 'alert'" :size="13"/>
+          <template v-if="restartInfo.running">Running at <code>{{ sidecarUrl }}</code>
+            <a v-if="restartInfo.scheme === 'https'" :href="`${sidecarUrl}/`" target="_blank" rel="noopener"
+               title="With a self-signed certificate, accept it here once, so that a hung host can be restarted"
+              >Accept the certificate</a></template>
+          <template v-else>Not running (see host_supervisor.log in the store folder)</template></span>
+      </template>
+    </div>
+    <div class="setting-label root-help">
+      The restart button of the console restarts a hung or crashed {{ HOST_NAME }}: it kills the process with its
+      console window and runs the start script. The script is set only in the config file, as
+      <code>{"command": "path of the script"}</code>; edit it by hand, it is read without restarting. The restart
+      helper listens where {{ HOST_NAME }} does, on its port + 100 (<code>"port"</code> sets another) and with its
+      certificate: with a self-signed one, accept it for the helper once too.
     </div>
     <h3>SD WebUI Interface</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.addModelInfoButton"
@@ -334,6 +379,32 @@ a:hover {
 .root-setting input:focus {
   outline: none;
   border-color: var(--ib-accent-border);
+}
+
+.restart-info {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
+.restart-info code,
+.root-help code {
+  font-family: var(--ib-mono);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.restart-info .muted {
+  color: var(--ib-muted);
+}
+
+.restart-info .root-status {
+  margin-left: 0;
+}
+
+.copy-config {
+  margin-left: 8px;
 }
 
 .root-help {

@@ -12,6 +12,7 @@ import {openConsoleSocket} from "@/consoleSocket.js";
 import {copyText} from "@/clipboard.js";
 import {toast} from "@/toast.js";
 import {HOST_NAME} from "@/host.js";
+import {canRestart, restartHost, restarting} from "@/hostRestart.js";
 
 const HEIGHT_KEY = "imageBench_consoleHeight";
 const HEIGHT = {min: 80, default: 260, topReserve: 40};
@@ -130,6 +131,11 @@ onBeforeUnmount(() => {
       <span class="state" :class="{on: connected}"
             :title="connected ? `Connected to ${HOST_NAME}` : `Waiting for ${HOST_NAME}…`"></span>
       <span class="spacer"></span>
+      <button type="button" class="ib sm flat restart" :class="{off: !canRestart}" :disabled="restarting"
+              :title="restarting ? `${HOST_NAME} is restarting…` : canRestart
+                ? `Restart ${HOST_NAME}: kill its process with its console window and run its start script`
+                : `Restart ${HOST_NAME}: not set up yet; click to see how`"
+              :aria-label="`Restart ${HOST_NAME}`" @click="restartHost"><AppIcon name="power" :size="13"/></button>
       <button type="button" class="ib sm flat" title="Copy the output" aria-label="Copy the output"
               @click="copy"><AppIcon name="copy" :size="13"/></button>
       <button type="button" class="ib sm flat" title="Clear the shown output (the host keeps its output)"
@@ -241,6 +247,10 @@ header {
 
 .spacer {
   flex: 1;
+}
+
+.restart.off {
+  opacity: 0.5;
 }
 
 .output {

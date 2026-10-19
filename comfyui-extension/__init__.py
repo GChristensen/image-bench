@@ -15,7 +15,7 @@ from server import PromptServer
 import folder_paths
 
 from .image_bench_shared import (civitai, console, controlnet_inputs, editor, editor_plugins, explore_export,
-                                 launcher, loras, media, persist, pnginfo, projects)
+                                 host_restart, launcher, loras, media, persist, pnginfo, projects)
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from .image_bench_shared.tray import (TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler,
                                       save_tray_images)
@@ -674,6 +674,39 @@ async def heartbeat_handler(request):
             await ws.send_str("pong")
 
     return ws
+
+
+def get_host_server():
+    """Port, network listening and TLS files of ComfyUI, which the restart sidecar takes over"""
+    try:
+        from comfy.cli_args import args
+    except Exception:
+        return host_restart.host_server(8188)
+
+    addresses = [address.strip() for address in str(args.listen or "").split(",") if address.strip()]
+    network = any(address not in ("127.0.0.1", "localhost", "::1") for address in addresses)
+    return host_restart.host_server(args.port, network, getattr(args, "tls_certfile", None),
+                                    getattr(args, "tls_keyfile", None))
+
+
+# Restart of a hung or dead ComfyUI by the sidecar of shared_backend/host_supervisor.py, if store/host_restart.json
+# names the start script
+host_restart.ensure_in_background(os.path.join(get_extension_root(), "store"), get_host_server())
+
+
+@PromptServer.instance.routes.get(BASE_PATH + "/host_restart")
+async def host_restart_handler(request):
+    store_dir = os.path.join(get_extension_root(), "store")
+    return web.json_response(await asyncio.to_thread(host_restart.info, store_dir, get_host_server()),
+                             headers={"Cache-Control": "no-store"})
+
+
+# A restart asked by a window that does not reach the sidecar itself (another computer, a certificate not accepted)
+@PromptServer.instance.routes.post(BASE_PATH + "/host_restart")
+async def host_restart_post_handler(request):
+    store_dir = os.path.join(get_extension_root(), "store")
+    status, body = await asyncio.to_thread(host_restart.restart, store_dir, get_host_server())
+    return web.json_response(body, status=status)
 
 
 # The terminal output for the console drawer of the Image Bench window, while it is open
