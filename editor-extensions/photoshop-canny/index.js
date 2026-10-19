@@ -13,6 +13,10 @@ const DEFAULT_SETTINGS = {threshold1: 100, threshold2: 200, blur: 1, source: "me
 const PREVIEW_SIZE = 640;
 const PREVIEW_DELAY = 50;
 const REFRESH_DELAY = 200;
+const MODAL_RETRIES = 10;
+const MODAL_RETRY_DELAY = 300;
+// Box width changes (CSS pixels) below this, e.g. a scroll bar shown or hidden, keep the rendered preview
+const RESIZE_THRESHOLD = 24;
 const HISTORY_NAME = "Canny Edges";
 
 function loadSettings() {
@@ -195,7 +199,7 @@ function getFullEdges(params) {
 /**
  * Re-read the source if the document, the source layer or the source mode has changed, or if forced
  */
-async function refreshSource(force = false) {
+async function refreshSource(force = false, retry = 0) {
     const doc = app.activeDocument;
 
     if (!doc) {
@@ -219,6 +223,13 @@ async function refreshSource(force = false) {
     } catch (error) {
         console.error(error);
         source = null;
+
+        // Another plugin is still in its modal scope (e.g. Image Bench opening or placing an image)
+        if (isModalBusy(error) && retry < MODAL_RETRIES) {
+            setTimeout(() => refreshSource(force, retry + 1), MODAL_RETRY_DELAY);
+            return;
+        }
+
         showPreview(null);
         setStatus(error.message, true);
     } finally {
@@ -226,11 +237,19 @@ async function refreshSource(force = false) {
     }
 }
 
+function isModalBusy(error) {
+    return error?.number === 9 || /modal/i.test(error?.message ?? "");
+}
+
 // ==================== PREVIEW ====================
 
 let previewTimer = null;
 let rendering = false;
 let renderPending = false;
+// Width of the preview box (CSS pixels) the shown preview was rendered for, 0 if it was not laid out
+let renderedBoxWidth = 0;
+// Whether a resize has come since the panel was shown
+let previewSettled = false;
 
 function schedulePreview(delay = PREVIEW_DELAY) {
     clearTimeout(previewTimer);
@@ -261,7 +280,18 @@ async function renderPreview() {
 }
 
 async function drawPreview() {
-    if (!source || !panelVisible)
+    if (!panelVisible)
+        return;
+
+    // A document opened or closed without a notification reaching the panel (e.g. by another plugin): the source
+    // is read first, which renders the preview again
+    const doc = app.activeDocument;
+    if (doc ? !isCurrentSource(doc) : source) {
+        await refreshSource();
+        return;
+    }
+
+    if (!source)
         return;
 
     const params = getParams();
@@ -292,6 +322,10 @@ async function drawPreview() {
     } finally {
         imageData.dispose();
     }
+
+    // Drawn before the panel was laid out: again once it is
+    if (!renderedBoxWidth)
+        schedulePreview(REFRESH_DELAY);
 }
 
 /**
@@ -299,9 +333,17 @@ async function drawPreview() {
  * so that the panel shows it unscaled
  */
 function getPreviewSize(imageWidth, imageHeight) {
-    const boxWidth = document.getElementById("preview-box").clientWidth || PREVIEW_SIZE;
+    renderedBoxWidth = getBoxWidth();
+    const boxWidth = renderedBoxWidth || PREVIEW_SIZE;
     const width = Math.min(imageWidth, Math.round(boxWidth * (window.devicePixelRatio || 1)));
     return {width, height: Math.max(1, Math.round(imageHeight * width / imageWidth))};
+}
+
+/**
+ * Width of the preview box in CSS pixels, 0 while the panel is not laid out
+ */
+function getBoxWidth() {
+    return document.getElementById("preview-box").clientWidth;
 }
 
 function showPreview(url) {
@@ -581,17 +623,33 @@ function initPanel() {
     document.getElementById("apply-layer").addEventListener("click", () => run(applyAsLayer));
     document.getElementById("apply-document").addEventListener("click", () => run(applyAsDocument));
 
-    // Another document or layer selected: the source changes (the panel's own layer selection is ignored)
+    // Another document or layer selected: the source changes (the panel's own layer selection is ignored).
+    // A placed image (Image Bench sends images so) changes the pixels of the same source
     let refreshTimer = null;
-    action.addNotificationListener(["select", "open", "close"], () => {
+    let refreshForced = false;
+    action.addNotificationListener(["select", "open", "close", "placeEvent"], event => {
         if (!panelVisible || applying)
             return;
+        if (event === "placeEvent")
+            refreshForced = true;
         clearTimeout(refreshTimer);
-        refreshTimer = setTimeout(() => refreshSource(), REFRESH_DELAY);
+        refreshTimer = setTimeout(() => {
+            const force = refreshForced;
+            refreshForced = false;
+            refreshSource(force);
+        }, REFRESH_DELAY);
     });
 
-    // The preview is rendered at the device pixels of its box
-    window.addEventListener("resize", () => schedulePreview(REFRESH_DELAY));
+    // The preview is rendered at the device pixels of its box. A new preview changes the panel height, which may
+    // show or hide its scroll bar and so change the box width: small changes are ignored, or the two would
+    // keep triggering each other. The first resize after showing the panel always renders: the preview drawn
+    // from show() comes before the panel is laid out and may not be displayed
+    window.addEventListener("resize", () => {
+        const settled = previewSettled;
+        previewSettled = true;
+        if (!settled || !renderedBoxWidth || Math.abs(getBoxWidth() - renderedBoxWidth) >= RESIZE_THRESHOLD)
+            schedulePreview(REFRESH_DELAY);
+    });
 
     panelReady = true;
 }
@@ -602,6 +660,7 @@ entrypoints.setup({
             show() {
                 initPanel();
                 panelVisible = true;
+                previewSettled = false;
                 // The image may have changed while the panel was hidden
                 refreshSource(true);
             },

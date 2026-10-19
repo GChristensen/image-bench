@@ -91,4 +91,5 @@ export const ICON_PATHS = {
   cinemaCamera: '<circle cx="6" cy="6" r="3.5"/><circle cx="14" cy="6" r="3.5"/><rect x="2" y="11" width="15" height="9" rx="1.5"/><path d="m17 14 5-2.5v8L17 17"/>',
   easel: '<rect x="5" y="3" width="14" height="10.5" rx="1"/><path d="M5.5 12.5 9.5 8l3 3.5 2-2 4 3.5"/><circle cx="15" cy="6.25" r="0.75"/><path d="M8.5 13.5 6 21M15.5 13.5 18 21M12 13.5V21"/>',
   bucketOff:'<path d="M7 9a5 5 0 0 1 10 0"/><path d="M4.5 9h15l-1.6 11.1a1 1 0 0 1-1 .9H7.1a1 1 0 0 1-1-.9z"/><path d="M3 3l18 18"/>',
+  toTop: '<path d="M5 3h14M18 13l-6-6-6 6M12 7v14"/>',
 };
