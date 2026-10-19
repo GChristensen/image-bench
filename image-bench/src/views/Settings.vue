@@ -150,6 +150,8 @@ function setGenerateUiPreset(index, value) {
     <h3>Generate Tab</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.keepSessionStrip"
     >Keep the session filmstrip shown when a batch ends</label>
+    <label class="setting-label"><input type="checkbox" v-model="appConfigStore.commonSizesOnly"
+    >Show only common sizes in the size picker (1:1, A4, canvas, photo, video, cinema)</label>
     <template v-if="isWebUI">
       <div class="setting-label generate-setting">
         <span>UI preset buttons</span>
@@ -204,9 +206,9 @@ function setGenerateUiPreset(index, value) {
     </div>
     <h3 class="with-help">Host restart
       <span class="help" tabindex="0" role="note"
-            :aria-label="`The restart button of the console restarts a hung or crashed ${HOST_NAME}. It kills the process with its console window and runs the start script, which is set only by hand in the config file as {&quot;command&quot;: &quot;path of the script&quot;}. Changes to the file take effect without a restart. The restart helper listens where ${HOST_NAME} does, on its port + 100 (&quot;port&quot; in the file sets another), with its certificate. A self-signed certificate has to be accepted for the helper once too.`"
+            :aria-label="`The restart button of the console restarts a hung or crashed ${HOST_NAME}. It kills the process along with its console window and runs the start script, which is set only by hand in the config file as {&quot;command&quot;: &quot;path of the script&quot;}. Changes to the file take effect without a restart. The restart helper listens where ${HOST_NAME} does, on its port + 100 (&quot;port&quot; in the file sets another), with its certificate. A self-signed certificate has to be accepted for the helper once too.`"
         >?<span class="help-text" aria-hidden="true">The restart button of the console restarts a hung or crashed
-          {{ HOST_NAME }}. It kills the process with its console window and runs the start script.<br><br>
+          {{ HOST_NAME }}. It kills the process along with its console window and runs the start script.<br><br>
           The script is set only by hand in the config file, as
           <code>{"command": "path of the script"}</code>. Changes to the file take effect without a restart.<br><br>
           The restart helper listens where {{ HOST_NAME }} does, on its port + 100 (<code>"port"</code> in the file

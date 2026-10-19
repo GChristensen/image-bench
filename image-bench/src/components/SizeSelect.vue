@@ -5,11 +5,13 @@
  * a size that matches no preset is shown as custom. The list is a popover (up to 75% of the viewport high),
  * since a native select is cut to a few rows, in two columns (the `column` of the groups): the megapixel grades,
  * then the model groups. Each size starts with a rectangle of its aspect ratio.
- * The arrow keys move between the neighbouring rows and columns.
+ * The arrow keys move between the neighbouring rows and columns. With the commonSizesOnly setting, only 1:1, A4
+ * and the ratios of a medium are listed (groups left empty are hidden); the other presets still name the current size.
  */
 import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import {SIZE_PRESET_GROUPS} from "@/consts.js";
+import {useAppConfigStore} from "@/stores/appConfig.js";
 
 const props = defineProps({
   width: {
@@ -43,6 +45,16 @@ const MEDIA_ICONS = {
   "12:5": {icon: "cinemaCamera", title: "Anamorphic widescreen cinema (2.39:1)"}
 };
 
+// Ratios listed with the commonSizesOnly setting, besides those of MEDIA_ICONS
+const COMMON_RATIOS = ["1:1", "A4"];
+
+function isCommon(note) {
+  const ratio = note.split(" ")[0];
+  return COMMON_RATIOS.includes(ratio) || !!MEDIA_ICONS[ratio];
+}
+
+const config = useAppConfigStore();
+
 const open = ref(false);
 const alignRight = ref(false);
 const element = ref(null);
@@ -73,9 +85,15 @@ function similarRatios(a, b) {
 }
 
 // Presets turned to the current orientation, e.g. 1216x832 (19:13) -> 832x1216 (13:19);
-// linkNext marks the first of two adjacent presets of nearly the same ratio (pairs only, so brackets never overlap)
-const groups = computed(() => SIZE_PRESET_GROUPS.map(group => {
-  const sizes = group.sizes.map(({width: w, height: h, note, noBucket}) => {
+// linkNext marks the first of two adjacent presets of nearly the same ratio (pairs only, so brackets never overlap);
+// with commonOnly, the uncommon presets are left out before the brackets are placed
+function buildGroups(commonOnly) {
+  return SIZE_PRESET_GROUPS.map(group => buildGroup(group, commonOnly)).filter(group => group.sizes.length);
+}
+
+function buildGroup(group, commonOnly) {
+  const presets = commonOnly ? group.sizes.filter(size => isCommon(size.note)) : group.sizes;
+  const sizes = presets.map(({width: w, height: h, note, noBucket}) => {
     const flip = isPortrait.value && w > h;
     const [sw, sh] = flip ? [h, w] : [w, h];
     const shownNote = flip ? note.replace(/^(\d+):(\d+)/, "$2:$1") : note;
@@ -92,7 +110,10 @@ const groups = computed(() => SIZE_PRESET_GROUPS.map(group => {
       sizes[i].linkNext = sizes[i + 1].size;
 
   return {name: group.name, grade: !!group.grade, column: group.column ?? 0, sizes};
-}));
+}
+
+const allGroups = computed(() => buildGroups(false));
+const groups = computed(() => config.commonSizesOnly ? buildGroups(true) : allGroups.value);
 
 // The cells of the two-column grid, row by row: the grades, then the model groups. The notes of a cell have the
 // width of its longest one (in characters of the monospace font), so the brackets follow the text and stay in line
@@ -103,8 +124,9 @@ const cells = computed(() => [true, false].flatMap(grade => [0, 1].map(column =>
   return {groups: cellGroups, style: {"--note-width": `${chars}ch`}};
 })));
 
+// Found among all presets, so a size the list leaves out is still named
 const current = computed(() => {
-  for (const group of groups.value) {
+  for (const group of allGroups.value) {
     const size = group.sizes.find(size => size.value === currentValue.value);
 
     if (size)

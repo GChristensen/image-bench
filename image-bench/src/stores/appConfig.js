@@ -103,6 +103,18 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Show only the common sizes in the size picker of the Generate tab: 1:1, A4 and the ratios of a medium
+    // (enabled unless set to false)
+    const commonSizesOnly = computed({
+        get() {
+            return _config.commonSizesOnly ?? true;
+        },
+        set(v) {
+            _config.commonSizesOnly = v;
+            return persist();
+        }
+    });
+
     // Show the action rim of an image on hover, not only while Ctrl is held (disabled unless set to true)
     const rimOnHover = computed({
         get() {
@@ -221,6 +233,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         exploreLoraFreeImages,
         flashGeneratedTab,
         keepSessionStrip,
+        commonSizesOnly,
         rimOnHover,
         persistGenerationParams,
         generateUiPresets,
