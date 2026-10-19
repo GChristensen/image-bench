@@ -7,6 +7,7 @@
 import {onBeforeUnmount, onMounted, ref} from "vue";
 import {setHostFrameWindow} from "@/hostWindow.js";
 import {HOST_NAME} from "@/host.js";
+import {onConsoleKey} from "@/consoleDrawer.js";
 
 defineProps({
   active: {
@@ -37,6 +38,16 @@ function saveGeometry() {
   }
 }
 
+// The keys of the host page never reach this window: Ctrl+` is caught in the frame too, before the host page's
+// own handlers. Each load of the host page is a new window, which has no listeners yet
+function onFrameLoad() {
+  try {
+    frame.value.contentWindow.addEventListener("keydown", onConsoleKey, true);
+  } catch {
+    // The frame shows a page of another origin (an error page)
+  }
+}
+
 function onResize() {
   clearTimeout(geometryTimer);
   geometryTimer = setTimeout(saveGeometry, 500);
@@ -59,7 +70,7 @@ onBeforeUnmount(() => {
 
 <template>
   <iframe ref="frame" class="host-frame" :class="{active}" :src="HOST_URL" :title="HOST_NAME"
-          :aria-hidden="!active" :tabindex="active ? 0 : -1"></iframe>
+          :aria-hidden="!active" :tabindex="active ? 0 : -1" @load="onFrameLoad"></iframe>
 </template>
 
 <style scoped>

@@ -31,7 +31,7 @@ import SessionStrip from "@/components/generate/SessionStrip.vue";
 import PngInfoDialog from "@/components/generate/PngInfoDialog.vue";
 import WorkflowSelect from "@/components/generate/WorkflowSelect.vue";
 import SnippetsPanel from "@/components/generate/SnippetsPanel.vue";
-import ConsoleDrawer from "@/components/generate/ConsoleDrawer.vue";
+import {consoleOpen, toggleConsole} from "@/consoleDrawer.js";
 import {withCurrent} from "@/components/generate/choices.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
@@ -593,11 +593,6 @@ async function onPromptDrop(e) {
     openPngInfo(file);
 }
 
-// ---------- Console ----------
-
-// Not remembered: the socket of the drawer opens only when it is asked for
-const consoleOpen = ref(false);
-
 // ---------- Snippets ----------
 
 const router = useRouter();
@@ -1082,8 +1077,8 @@ const gridStyle = computed(() => ({
         ><AppIcon :name="sdWebUI.promptsLocked ? 'lock' : 'unlock'" :size="14"/></button>
       <span class="toolbar-divider"></span>
       <button class="ib" :class="{on: consoleOpen}" :aria-pressed="consoleOpen"
-              :title="`Console: the terminal output of ${HOST_NAME}`" aria-label="Console"
-              @click="consoleOpen = !consoleOpen"><AppIcon name="terminal" :size="14"/></button>
+              :title="`Console: the terminal output of ${HOST_NAME} (Ctrl+\`, in any tab)`" aria-label="Console"
+              @click="toggleConsole"><AppIcon name="terminal" :size="14"/></button>
       <template v-if="has('workflowSelect')">
         <span class="toolbar-divider"></span>
         <WorkflowSelect class="workflow-select" :workflows="sdWebUI.workflows" :active="sdWebUI.workflow"
@@ -1299,8 +1294,6 @@ const gridStyle = computed(() => ({
         </template>
       </div>
     </fieldset>
-
-    <ConsoleDrawer v-if="consoleOpen" @close="consoleOpen = false"/>
   </div>
 </template>
 

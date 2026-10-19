@@ -37,6 +37,9 @@ import {backendConnected, onBackendReconnected, startBackendMonitor} from "@/bac
 import {backendDownTitle, canRestart, restartHost, restarting, startHostRestart} from "@/hostRestart.js";
 import {resyncHost} from "@/hostResync.js";
 import {toast} from "@/toast.js";
+import ConsoleDrawer from "@/components/ConsoleDrawer.vue";
+import {consoleOpen, onConsoleKey, toggleConsole} from "@/consoleDrawer.js";
+import {useShiftKey} from "@/composables/useShiftKey.js";
 
 // Messages too frequent to log
 const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS", "INPUT_IMAGES", "CONTROLNET_STATE", "CONTROLNET_IMAGES"];
@@ -157,6 +160,26 @@ function onHostTabDragLeave(e) {
     clearTimeout(hostTabDragTimer);
 }
 
+// A middle click or Shift+click on the host tab toggles the console instead; its icon shows that only while the tab
+// is hovered with Shift held, since Shift is held all the time while typing
+const shiftDown = useShiftKey();
+const hostTabHovered = ref(false);
+
+function onHostTabClick(e) {
+  // RouterLink leaves a Shift+click to the browser, which would open the host UI in a new window
+  if (e.shiftKey) {
+    e.preventDefault();
+    toggleConsole();
+  }
+}
+
+function onHostTabAuxClick(e) {
+  if (e.button === 1) {
+    e.preventDefault();
+    toggleConsole();
+  }
+}
+
 // ---------- Backend restart ----------
 
 // Whether a run of the host page has begun and not finished: a restart of the backend ends it without a word
@@ -251,10 +274,12 @@ onMounted(() => {
   initManualHint();
   installImageActionKeys();
   window.addEventListener("keydown", onSaveKey);
+  window.addEventListener("keydown", onConsoleKey);
 });
 
 onUnmounted(() => {
   window.removeEventListener("keydown", onSaveKey);
+  window.removeEventListener("keydown", onConsoleKey);
   clearTimeout(manualHintTimer);
   clearTimeout(hostTabDragTimer);
   // Clean up window event handler
@@ -362,9 +387,11 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <ProjectChip/>
       <RouterLink to="/settings" class="tab icon-tab" ref="settingsTab" title="Settings" aria-label="Settings"
         ><AppIcon name="settings" :size="15"/></RouterLink>
-      <RouterLink v-if="EMBEDDED" :to="HOST_ROUTE" class="tab icon-tab" id="host-tab" :title="HOST_NAME"
+      <RouterLink v-if="EMBEDDED" :to="HOST_ROUTE" class="tab icon-tab" id="host-tab"                  :title="`${HOST_NAME}\nMiddle-click or Shift+click: console (Ctrl+\`)`"
                   :aria-label="HOST_NAME" @dragenter="onHostTabDragEnter" @dragleave="onHostTabDragLeave"
-        ><AppIcon name="appWindow" :size="15"/></RouterLink>
+                  @click="onHostTabClick" @auxclick="onHostTabAuxClick" @mousedown.middle.prevent
+                  @mouseenter="hostTabHovered = true" @mouseleave="hostTabHovered = false"
+        ><AppIcon :name="hostTabHovered && shiftDown ? 'terminal' : 'appWindow'" :size="15"/></RouterLink>
       <button class="ib flat actions-button" @click="showActionsModal = true"
               title="Clean up (clear images, delete outputs, reset parameters)" aria-label="Clean up"
         ><AppIcon name="broom" :size="16"/></button>
@@ -376,6 +403,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
         </KeepAlive>
       </RouterView>
       <HostFrame v-if="EMBEDDED" :active="hostTabActive"/>
+      <ConsoleDrawer v-if="consoleOpen" @close="toggleConsole"/>
     </div>
   <ActionsModal :show="showActionsModal" @close="showActionsModal = false" />
   <ImageContextMenu />

@@ -1,10 +1,9 @@
 <script setup>
 /**
- * The terminal output of the host over the lower part of the Generate tab, resized by its top edge.
- * The socket is open while the drawer is mounted and the tab is shown (the views are kept alive).
+ * The terminal output of the host over the lower part of the tab content (any tab, the host tab included), resized
+ * by its top edge. The socket is open while the drawer is mounted (consoleDrawer.js).
  */
-import {nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, shallowRef, triggerRef}
-  from "vue";
+import {nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, triggerRef} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {createConsoleText} from "@/consoleText.js";
@@ -38,7 +37,7 @@ const height = reactive(useDragSize(HEIGHT_KEY, {
   fallback: HEIGHT.default
 }));
 
-// The drawer may take the height of the tab but its toolbar
+// The drawer may take the height of the tab content but a strip at the top
 const containerObserver = new ResizeObserver(([entry]) => {
   if (entry.contentRect.height)
     containerHeight.value = entry.contentRect.height;
@@ -108,9 +107,6 @@ onMounted(() => {
   start();
 });
 
-onActivated(start);
-onDeactivated(stop);
-
 onBeforeUnmount(() => {
   stop();
   containerObserver.disconnect();
@@ -140,7 +136,7 @@ onBeforeUnmount(() => {
               @click="copy"><AppIcon name="copy" :size="13"/></button>
       <button type="button" class="ib sm flat" title="Clear the shown output (the host keeps its output)"
               aria-label="Clear the output" @click="clear"><AppIcon name="eraser" :size="13"/></button>
-      <button type="button" class="ib sm flat" title="Close the console" aria-label="Close the console"
+      <button type="button" class="ib sm flat" title="Close the console (Ctrl+`)" aria-label="Close the console"
               @click="emit('close')"><AppIcon name="close" :size="13"/></button>
     </header>
 

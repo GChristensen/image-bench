@@ -6,6 +6,7 @@ import {nextTick, onActivated, onMounted, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import PluginCard from "@/components/library/PluginCard.vue";
 import {HOST_NAME, isComfy, isWebUI} from "@/host.js";
+import {EMBEDDED} from "@/hostWindow.js";
 import {MANUAL_SECTIONS, useManualStore} from "@/stores/manual.js";
 
 // Chapters and their subchapters in the order of the text
@@ -362,7 +363,9 @@ const hostOrigin = location.origin;
           image chosen, pasted or dropped there (or on the prompt). <b>Apply</b> sets the checked groups and lists
           the values that {{ HOST_NAME }} does not have.</li>
         <li><b><AppIcon name="terminal" :size="13" class="inline-icon"/> Console</b> opens a drawer with the terminal
-          output of {{ HOST_NAME }}. Use its <AppIcon name="power" :size="13" class="inline-icon"/> button to restart
+          output of {{ HOST_NAME }}. It stays open across the tabs; Ctrl+` opens and closes it
+          in any tab<template v-if="EMBEDDED">, as does a middle click or Shift+click on the
+          <AppIcon name="appWindow" :size="13" class="inline-icon"/> {{ HOST_NAME }} tab</template>. Use its <AppIcon name="power" :size="13" class="inline-icon"/> button to restart
           {{ HOST_NAME }} when it hangs or crashes, for example after running out of memory. The restart kills the
           {{ HOST_NAME }} process and its console window, then runs the script that starts {{ HOST_NAME }}. While the
           connection to {{ HOST_NAME }} is lost, the <AppIcon name="unplug" :size="13" class="inline-icon"/> icon
