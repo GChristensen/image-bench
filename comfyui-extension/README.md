@@ -1,10 +1,14 @@
 # Image Bench for ComfyUI
 
-Image Bench automates the repetitive micro-tasks of working with ComfyUI: generating batches, comparing models
-and LoRAs, collecting the best images, upscaling them, moving images to and from Photoshop. It works from one
-window that drives the workflow open in ComfyUI, mirrors its marked nodes both ways and receives every generated
-image with its parameters. It also offers seamless graphics editors integration (send images forth and back with one click). 
-See more at the [extension site](https://github.com/GChristensen/image-bench).
+Image Bench automates the repetitive micro-tasks of working with ComfyUI. 
+Basically, it is an image generation UI that works on top of ComfyUI by driving it. 
+It is built so that you never have to touch the file manager or image browser during 
+the whole process. Generated images are captured from ComfyUI, and you save 
+the best ones into trays that allow you to perform common operations on them. 
+For example, to upscale an image, you just click one button, without needing 
+to manually extract image generation parameters, such as the generation seed.
+You can also send images to and from graphics editor with a single click,
+skipping copy-and-paste operations entirely. See more at the [extension site](https://github.com/GChristensen/image-bench).
 
 The full manual is built in: **Library › Manual** in the Image Bench window.
 
@@ -41,6 +45,9 @@ Optional node packs:
 | [ComfyUI-Advanced-ControlNet](https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet) | ControlNet masks; without it *Use Mask* is hidden |
 
 ## Opening Image Bench
+
+Image Bench could run in a standalone mode which loads ComfyUI in background, or be
+launched from ComfyUI and work along it.
 
 - `http://<comfyui address>/image-bench/app` opens it without a ComfyUI tab: the window loads ComfyUI itself in
   a tab of its own.
