@@ -72,9 +72,17 @@ function onOpenMenu(e) {
     {icon: "tray", label: "Trays only", run: () => store.open(path, {params: false})},
     {icon: "sliders", label: "Parameters only", run: () => store.open(path, {trays: false})},
     {separator: true},
-    {icon: "plus", label: "Merge trays into the workspace", run: () => store.open(path, {params: false, merge: true})},
-    {separator: true},
-    {icon: "save", label: isCurrent.value ? "Save" : "Save workspace here…", run: () => store.saveInto(path)}
+    {icon: "plus", label: "Merge trays into the workspace", run: () => store.open(path, {params: false, merge: true})}
+  ]);
+}
+
+function onSaveMenu(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const position = {preventDefault() {}, clientX: rect.right - 220, clientY: rect.bottom + 4};
+  const path = project.value.path;
+
+  openContextMenu(position, [
+    {icon: "save", label: "Save as new project…", run: () => store.saveAs(path)}
   ]);
 }
 
@@ -458,11 +466,16 @@ const unitDetails = unit => [
                     :title="isCurrent ? 'Restore the saved trays and parameters' : 'Restore the trays and parameters of the project'"
                     @click="store.open(project.path)"><AppIcon name="upload" :size="14"/>{{ isCurrent ? "Revert" : "Open" }}</button>
             <button class="btn" :class="isCurrent ? 'outline' : 'primary'" :disabled="!!store.busy" aria-label="Open options"
-                    title="Open the trays or the parameters only, merge the trays, or save the workspace here"
+                    title="Open the trays or the parameters only, or merge the trays"
                     @click="onOpenMenu"><AppIcon name="chevron" :size="14"/></button>
           </div>
-          <button v-if="isCurrent" class="btn primary" :disabled="!!store.busy" title="Save the workspace into the project (Ctrl+S)"
-                  @click="store.save(project.path)"><AppIcon name="save" :size="14"/>Save</button>
+          <div class="split">
+            <button class="btn" :class="isCurrent ? 'primary' : 'outline'" :disabled="!!store.busy"
+                    :title="isCurrent ? 'Save the workspace into the project (Ctrl+S)' : 'Save the workspace into this project'"
+                    @click="store.saveInto(project.path)"><AppIcon name="save" :size="14"/>{{ isCurrent ? "Save" : "Save here" }}</button>
+            <button class="btn" :class="isCurrent ? 'primary' : 'outline'" :disabled="!!store.busy" aria-label="Save options"
+                    title="Save the workspace as a new project" @click="onSaveMenu"><AppIcon name="chevron" :size="14"/></button>
+          </div>
           <button class="ib" aria-label="More project actions" @click="onMoreMenu"><AppIcon name="more" :size="14"/></button>
         </div>
         <div class="saved">

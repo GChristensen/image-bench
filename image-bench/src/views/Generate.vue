@@ -27,6 +27,8 @@ import SamplingGroup from "@/components/generate/SamplingGroup.vue";
 import SeedGroup from "@/components/generate/SeedGroup.vue";
 import HiresGroup from "@/components/generate/HiresGroup.vue";
 import Img2ImgGroup from "@/components/generate/Img2ImgGroup.vue";
+import ControlNetGroup from "@/components/generate/ControlNetGroup.vue";
+import GroupTabs from "@/components/generate/GroupTabs.vue";
 import SessionStrip from "@/components/generate/SessionStrip.vue";
 import PngInfoDialog from "@/components/generate/PngInfoDialog.vue";
 import WorkflowSelect from "@/components/generate/WorkflowSelect.vue";
@@ -41,8 +43,11 @@ import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {useFeatures} from "@/composables/useFeatures.js";
-import {HOST_NAME} from "@/host.js";
-import {createImageLink, ensureGenerationIdle} from "@/sdwebui.js";
+import {useControlNetUnit} from "@/composables/useControlNetUnit.js";
+import {useControlNetStore} from "@/stores/controlnet.js";
+import {HOST_NAME, isComfy} from "@/host.js";
+import {createImageLink, ensureGenerationIdle, isGenerationActive} from "@/sdwebui.js";
+import {useCtrlKey} from "@/composables/useCtrlKey.js";
 import {fetchModelInfo} from "@/civitai.js";
 import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
@@ -84,6 +89,8 @@ const SIDE_WIDTH_KEY = "imageBench_generateSideWidth";
 const IMAGE_WIDTH_KEY = "imageBench_generateImageWidth";
 const IMAGE_HEIGHT_KEY = "imageBench_generateImageHeight";
 const LOWER_HEIGHT_KEY = "imageBench_generateLowerHeight";
+// Hires. fix / img2img ("main") or ControlNet in the third parameter group
+const GROUP_TAB_KEY = "imageBench_generateGroupTab";
 const NEGATIVE_HEIGHT = {min: 40, max: 320, default: 62};
 // Parameters or filmstrip: the parameter groups at their own height unless resized; the prompts keep the reserve
 const LOWER_HEIGHT = {min: 80, default: 150, promptReserve: 260};
@@ -527,6 +534,41 @@ function onInterrupt() {
   webUI.stopGeneration();
 }
 
+// Ctrl+click or middle click on Stop: stop, then generate again once the host is idle
+const ctrlDown = useCtrlKey();
+const restarting = ref(false);
+
+async function onRestart() {
+  if (restarting.value)
+    return;
+
+  restarting.value = true;
+  try {
+    webUI.stopGeneration();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    for (let waited = 0; (generating.value || isGenerationActive()) && waited < 10000; waited += 100)
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+    await onGenerate();
+  }
+  finally {
+    restarting.value = false;
+  }
+}
+
+function onGenerateButton(e) {
+  if (restarting.value)
+    return;
+
+  if (!generating.value)
+    onGenerate();
+  else if (e.ctrlKey)
+    onRestart();
+  else
+    onInterrupt();
+}
+
 watch(() => sdWebUI.busy, (busy, wasBusy) => {
   if (wasBusy && !busy)
     singleInProgress.value = false;
@@ -852,6 +894,73 @@ function setEditorTarget(target) {
 // The host page forgets the target when WebUI is reloaded
 onActivated(() => webUI.setEditorTarget(editorTarget.value));
 
+// ---------- ControlNet ----------
+
+// The unit chosen in the ControlNet tab is mirrored while this tab is shown, without the defaults that the
+// ControlNet tab applies to a unit used for the first time; a tab beside Hires. fix or img2img shows it
+// while any unit is enabled
+const cn = useControlNetStore();
+const hasControlNet = useFeatures("controlnet", () => cn.features);
+const controlNetUnit = computed(() => cn.selectedUnit);
+const controlNet = useControlNetUnit({unit: controlNetUnit, tab: computed(() => cn.tab), has: hasControlNet});
+
+// The reported units are those of the generation tab of the mode (ComfyUI has one)
+const controlNetTabMatches = computed(() => isComfy || cn.tab === (isTxt2Img.value ? "txt2img" : "img2img"));
+const enabledUnits = computed(() => controlNetTabMatches.value
+  ? cn.units.flatMap((unit, index) => unit.enabled ? [index] : [])
+  : []);
+
+// Without the Hires. fix group (a ComfyUI workflow without ib:smp:1) ControlNet has the place alone
+const hasMainGroup = computed(() => !isTxt2Img.value || has("hires"));
+const groupTab = ref(storage.getItem(GROUP_TAB_KEY) === "controlnet" ? "controlnet" : "main");
+const shownGroupTab = computed(() => !enabledUnits.value.length ? "main"
+  : hasMainGroup.value ? groupTab.value : "controlnet");
+
+watch(groupTab, tab => storage.setItem(GROUP_TAB_KEY, tab));
+
+const groupTabs = computed(() => [
+  ...hasMainGroup.value
+    ? [{value: "main", label: isTxt2Img.value ? "Hires. fix" : mode.value === "inpaint" ? "Inpaint" : "img2img"}]
+    : [],
+  {value: "controlnet", label: "ControlNet"}
+]);
+
+function subscribeControlNet() {
+  webUI.subscribeControlNet(true, controlNetUnit.value, {defaults: false});
+}
+
+onActivated(subscribeControlNet);
+onHostReady(() => activated && subscribeControlNet());
+
+onDeactivated(() => {
+  controlNet.flushParams();
+  webUI.subscribeControlNet(false, controlNetUnit.value);
+});
+
+function selectControlNetUnit(index) {
+  if (index === controlNetUnit.value)
+    return;
+
+  controlNet.flushParams();
+  cn.selectUnit(index);
+  subscribeControlNet();
+}
+
+// A selected unit that is not enabled gives way to the first enabled one (only here: the ControlNet tab
+// shows disabled units too)
+watch(enabledUnits, units => {
+  if (activated && units.length && !units.includes(controlNetUnit.value))
+    selectControlNetUnit(units[0]);
+});
+
+// The preview, or the control image without one; in WebUI img2img the unit may use the img2img image
+const controlNetImage = computed(() => controlNet.images.value.preview ?? controlNet.images.value.image);
+const controlNetImageLabel = computed(() => controlNet.images.value.preview
+  ? controlNet.form.preprocessor || "Preview"
+  : "Control image");
+const controlNetEmptyText = computed(() => !isTxt2Img.value && hasControlNet("independent")
+  && !controlNet.form.independent ? "Uses the img2img image" : "No control image");
+
 // ---------- Model info ----------
 
 const modelInfoBusy = ref(false);
@@ -1061,9 +1170,12 @@ const gridStyle = computed(() => ({
     <div class="toolbar">
       <div class="toolbar-group">
         <button class="btn swap" :class="generating ? 'stop' : 'primary'" :disabled="!generating && !connected"
-                @click="generating ? onInterrupt() : onGenerate()">
+                :title="generating ? 'Stop; Ctrl+click or middle click: stop and generate again' : undefined"
+                @click="onGenerateButton" @mousedown.middle.prevent
+                @auxclick="e => e.button === 1 && generating && onRestart()">
           <span :class="{off: generating}"><AppIcon name="play" :size="13"/>Generate</span>
-          <span :class="{off: !generating}"><AppIcon name="stop" :size="13"/>Stop</span>
+          <span :class="{off: !generating || ctrlDown || restarting}"><AppIcon name="stop" :size="13"/>Stop</span>
+          <span :class="{off: !generating || !(ctrlDown || restarting)}"><AppIcon name="refresh" :size="13"/>Restart</span>
         </button>
         <button class="btn outline" :disabled="!generating" title="Skip the image being generated"
                 @click="webUI.skipGeneration()"><AppIcon name="skip" :size="13"/>Skip</button>
@@ -1292,11 +1404,29 @@ const gridStyle = computed(() => ({
                 <SamplingGroup :form="form" :samplers="samplerChoices" :schedulers="schedulerChoices"
                                :slider-kind="sdWebUI.sliderKind" :has="has" @set="setParam"/>
                 <SeedGroup :form="form" :has="has" @set="setParam" @reuse="onReuseSeed"/>
-                <HiresGroup v-if="isTxt2Img && has('hires')" :form="form" :upscalers="sdWebUI.options.upscalers ?? []"
-                            :has="has" @set="setParam"/>
+                <ControlNetGroup v-if="shownGroupTab === 'controlnet'" :form="controlNet.form" :units="enabledUnits"
+                                 :unit="controlNetUnit" :models="controlNet.modelChoices.value"
+                                 :image="controlNetImage" :image-label="controlNetImageLabel"
+                                 :empty-text="controlNetEmptyText" :stale="controlNet.previewStale.value"
+                                 :disabled="!controlNet.connected.value"
+                                 @set="controlNet.setParam" @guidance="controlNet.setGuidance"
+                                 @select-unit="selectControlNetUnit" @open="router.push('/controlnet')">
+                  <template #tabs>
+                    <input v-if="isTxt2Img && has('hires') && has('hiresFix')" type="checkbox" class="group-check"
+                           :checked="!!form.hiresFix" aria-label="Hires. fix" title="Hires. fix"
+                           @change="e => setParam('hiresFix', e.target.checked)">
+                    <GroupTabs v-model="groupTab" :tabs="groupTabs"/>
+                  </template>
+                </ControlNetGroup>
+                <HiresGroup v-else-if="isTxt2Img && has('hires')" :form="form" :upscalers="sdWebUI.options.upscalers ?? []"
+                            :has="has" @set="setParam">
+                  <template v-if="enabledUnits.length" #title><GroupTabs v-model="groupTab" :tabs="groupTabs"/></template>
+                </HiresGroup>
                 <Img2ImgGroup v-else-if="!isTxt2Img" :form="form" :options="sdWebUI.options" :has="has"
                               :title="mode === 'inpaint' ? 'Inpaint' : 'img2img'" :inpaint-params="hasInpaintParams"
-                              @set="setParam"/>
+                              @set="setParam">
+                  <template v-if="enabledUnits.length" #title><GroupTabs v-model="groupTab" :tabs="groupTabs"/></template>
+                </Img2ImgGroup>
               </div>
             </div>
 
@@ -1663,6 +1793,11 @@ const gridStyle = computed(() => ({
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+}
+
+/* Hires. fix checkbox before the tabs of the ControlNet group, as in the Hires. fix group */
+.group-check {
+  margin: 0;
 }
 
 /* Parameters or filmstrip, with their tabs at the right edge */

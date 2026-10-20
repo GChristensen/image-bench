@@ -63,9 +63,10 @@ export function useWebUIBridge() {
   };
 
   // Start or stop mirroring a ControlNet unit (CONTROLNET_STATE and CONTROLNET_IMAGES messages);
-  // the unit also receives the images sent to ControlNet from the editor
-  const subscribeControlNet = (active, unit) => {
-    sendWebUIMessage({ type: 'CONTROLNET_SUBSCRIBE', active, unit });
+  // the unit also receives the images sent to ControlNet from the editor; without defaults, WebUI does not check
+  // Pixel Perfect and Allow Preview of a unit seen for the first time (the Generate tab only shows the units)
+  const subscribeControlNet = (active, unit, { defaults = true } = {}) => {
+    sendWebUIMessage({ type: 'CONTROLNET_SUBSCRIBE', active, unit, defaults });
   };
 
   const setControlNetParams = (unit, params) => {

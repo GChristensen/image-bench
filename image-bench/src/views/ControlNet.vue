@@ -16,6 +16,7 @@ import NumberStepper from "@/components/NumberStepper.vue";
 import {useControlNetStore} from "@/stores/controlnet.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useFeatures} from "@/composables/useFeatures.js";
+import {useControlNetUnit} from "@/composables/useControlNetUnit.js";
 import {HOST_NAME, isComfy} from "@/host.js";
 import {copyImageToClipboard, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
@@ -24,10 +25,6 @@ import {useDragSize} from "@/composables/useDragSize.js";
 import {ensureOpenposeEditor} from "@/openposeEditor.js";
 import {onHostReady} from "@/hostWindow.js";
 
-// A value edited here is not overwritten by the polled WebUI value for this long,
-// which covers the send delay and the next poll
-const EDIT_HOLD = 2000;
-const SEND_DELAY = 250;
 // A tab switch that WebUI does not report within this time is given up
 const TAB_SWITCH_TIMEOUT = 3000;
 // The models are listed again after WebUI refreshes them
@@ -55,9 +52,10 @@ const requestedTab = ref(null);
 let requestTimeout = null;
 const tab = computed(() => requestedTab.value ?? cn.tab);
 
-// The state reported by WebUI is that of the unit and tab shown here
-const current = computed(() => cn.unit === unit.value && cn.tab === tab.value);
-const connected = computed(() => current.value && !!cn.params);
+const {
+  connected, form, setParams, setParam, flushParams, resetForm, setGuidance,
+  choices, allModels, loadChoices, modelChoices, images, preprocessorSliders, previewStale
+} = useControlNetUnit({unit, tab, has});
 
 function onUnitSelect(index) {
   if (index === unit.value)
@@ -104,69 +102,6 @@ onDeactivated(() => {
   webUI.subscribeControlNet(false, unit.value);
 });
 
-// ---------- Mirrored parameters ----------
-
-const form = reactive({});
-const editedAt = {};
-let pending = {};
-let sendTimeout = null;
-
-watch(() => cn.params, params => {
-  if (!current.value)
-    return;
-
-  const now = Date.now();
-
-  for (const [name, value] of Object.entries(params || {}))
-    if (!(name in pending) && now - (editedAt[name] || 0) > EDIT_HOLD)
-      form[name] = value;
-}, {immediate: true});
-
-// Another unit or tab: its values are shown as WebUI reports them
-function resetForm() {
-  for (const name of Object.keys(form))
-    delete form[name];
-
-  for (const name of Object.keys(editedAt))
-    delete editedAt[name];
-}
-
-function setParams(values) {
-  const now = Date.now();
-
-  for (const [name, value] of Object.entries(values)) {
-    form[name] = value;
-    editedAt[name] = now;
-    pending[name] = value;
-  }
-
-  clearTimeout(sendTimeout);
-  sendTimeout = setTimeout(flushParams, SEND_DELAY);
-}
-
-function setParam(name, value) {
-  setParams({[name]: value});
-}
-
-function flushParams() {
-  clearTimeout(sendTimeout);
-
-  if (Object.keys(pending).length)
-    webUI.setControlNetParams(unit.value, pending);
-
-  pending = {};
-}
-
-// The timestep range keeps its start before its end
-function setGuidance(name, value) {
-  const number = Number(value);
-
-  if (name === "guidanceStart")
-    setParams(number > form.guidanceEnd ? {guidanceStart: number, guidanceEnd: number} : {guidanceStart: number});
-  else
-    setParams(number < form.guidanceStart ? {guidanceStart: number, guidanceEnd: number} : {guidanceEnd: number});
-}
-
 // In img2img, the unit has its own image only with an independent image; WebUI hides its image options otherwise
 const ownImage = computed(() => tab.value === "txt2img" || !!form.independent);
 
@@ -176,55 +111,10 @@ const CONTROL_MODE_LABELS = {
   "ControlNet is more important": "ControlNet"
 };
 
-// ---------- Preprocessor sliders ----------
-
-const PREPROCESSOR_SLIDERS = ["processorRes", "thresholdA", "thresholdB"];
-
-// The sliders WebUI shows for the preprocessor (Resolution only without Pixel Perfect), with its labels and ranges
-const preprocessorSliders = computed(() => has("preprocessorParams") && current.value
-  ? PREPROCESSOR_SLIDERS.filter(name => cn.sliders[name]?.visible).map(name => ({name, ...cn.sliders[name]}))
-  : []);
-
 function setSliderParam(name, value) {
   if (value !== "" && Number.isFinite(Number(value)))
     setParam(name, Number(value));
 }
-
-// ---------- Choices ----------
-
-// Preprocessors and models of the control type, as WebUI offers them
-const choices = ref({preprocessors: [], models: []});
-// WebUI offers the models whose file names match the control type, all of them after they are refreshed
-// until the type is changed
-const allModels = ref(false);
-let choicesRequest = 0;
-
-async function loadChoices(type) {
-  const request = ++choicesRequest;
-  const query = `type=${encodeURIComponent(type || "All")}&all_models=${allModels.value}`;
-
-  try {
-    const response = await fetch(`/image-bench/controlnet/choices?${query}`);
-    const data = response.ok ? await response.json() : {preprocessors: [], models: []};
-
-    if (request === choicesRequest)
-      choices.value = data;
-  } catch (e) {
-    console.error("Unable to load the ControlNet choices:", e);
-  }
-}
-
-// Without control types (ComfyUI) all preprocessors and models are listed
-watch(() => form.controlType, (type, oldType) => {
-  if (oldType)
-    allModels.value = false;
-
-  if (type || !has("controlType"))
-    loadChoices(type);
-}, {immediate: true});
-
-// ComfyUI reports the models of the unit's loader node, which replace the list of the backend
-const modelChoices = computed(() => cn.options.models ?? choices.value.models);
 
 // The current value is offered even if the list does not contain it
 function withCurrent(list, value) {
@@ -236,30 +126,6 @@ function onRefreshModels() {
   allModels.value = true;
   setTimeout(() => loadChoices(form.controlType), REFRESH_DELAY);
 }
-
-// ---------- Images ----------
-
-const images = computed(() => cn.images.tab === tab.value && cn.images.unit === unit.value
-  ? cn.images : {image: null, mask: null, preview: null, pose: null});
-
-// The preprocessor and its slider values as WebUI reports them, taken when a preview arrives;
-// the preview is stale when they change after it was made (WebUI may keep it)
-const preprocessorSignature = computed(() => current.value && cn.params
-  ? JSON.stringify([cn.params.preprocessor, ...preprocessorSliders.value.map(slider => cn.params[slider.name])])
-  : null);
-const previewSignature = ref(null);
-
-watch(() => images.value.preview, preview => previewSignature.value = preview ? preprocessorSignature.value : null,
-  {immediate: true});
-
-// A preview reported before the parameters is taken as made with them
-watch(preprocessorSignature, signature => {
-  if (images.value.preview && previewSignature.value === null)
-    previewSignature.value = signature;
-});
-
-const previewStale = computed(() => !!images.value.preview && previewSignature.value !== null
-  && preprocessorSignature.value !== null && previewSignature.value !== preprocessorSignature.value);
 
 // Source pane: the control image or its mask (with Use Mask)
 const sourceView = ref("image");

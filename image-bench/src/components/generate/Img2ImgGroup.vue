@@ -38,7 +38,8 @@ const emit = defineEmits(['set']);
 
 <template>
   <div class="group">
-    <div class="group-header label-small">{{ title }}</div>
+    <!-- Tabs in place of the title (ControlNet in the same place) -->
+    <div class="group-header label-small"><slot name="title">{{ title }}</slot></div>
     <div class="pair">
       <label v-if="has('denoising')" class="field">Denoising strength
         <NumberStepper :model-value="form.denoising ?? ''" :min="0" :max="1" :step="0.01"

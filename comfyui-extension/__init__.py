@@ -92,6 +92,32 @@ async def serve_app(request):
     return web.FileResponse(launcher.LAUNCHER_PATH, headers={"Cache-Control": "no-cache"})
 
 
+# ComfyUI answers any request with "Sec-Fetch-Site: cross-site" with a bare 403 (server.py,
+# create_origin_only_middleware), which Firefox sends for a bookmark of an https host when it reached it by an
+# upgrade from http (HTTPS-First) or from a page of another site. The app pages are static, so their top-level
+# navigations pass: the header is dropped before ComfyUI's middleware sees it. Requests of the pages stay same-origin
+PAGE_PATHS = {BASE_PATH + "/app", BASE_PATH + "/window"}
+
+
+@web.middleware
+async def page_navigation_middleware(request, handler):
+    if (request.method == "GET" and request.path in PAGE_PATHS
+            and request.headers.get("Sec-Fetch-Site") == "cross-site"
+            and request.headers.get("Sec-Fetch-Mode") == "navigate"
+            and request.headers.get("Sec-Fetch-Dest") == "document"):
+        headers = request.headers.copy()
+        headers.popall("Sec-Fetch-Site")
+        request = request.clone(headers=headers)
+
+    return await handler(request)
+
+
+try:
+    PromptServer.instance.app.middlewares.insert(0, page_navigation_middleware)
+except Exception as e:
+    print(f"[Image Bench] Unable to install the page navigation middleware: {e}")
+
+
 # Serve config.json
 @PromptServer.instance.routes.get(BASE_PATH + "/config.json")
 async def get_config(request):

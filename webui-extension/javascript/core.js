@@ -327,7 +327,7 @@ async function onMessage(msg) {
     else if (payload.type === "SET_EDITOR_TARGET")
         editorTarget = payload.target
     else if (payload.type === "CONTROLNET_SUBSCRIBE")
-        controlNet.subscribe(payload.active, payload.unit)
+        controlNet.subscribe(payload.active, payload.unit, payload.defaults !== false)
     else if (payload.type === "SET_CONTROLNET_PARAMS")
         await controlNet.applyParams(payload.unit, payload.params)
     else if (payload.type === "CONTROLNET_ACTION")

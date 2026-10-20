@@ -333,6 +333,33 @@ export const useProjectsStore = defineStore("projects", () => {
     return save(path);
   }
 
+  /**
+   * Save the workspace into a new project next to a project, which becomes current
+   * @param {string} path
+   * @returns {Promise<boolean>} Whether it was saved
+   */
+  async function saveAs(path) {
+    const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+    const name = await dialog.prompt(`Save the workspace as a new project in ${folderLabel(parent)}:`, {
+      title: "Save as",
+      defaultValue: `${baseName(path)} copy`,
+      placeholder: "Project name",
+      okText: "Save"
+    });
+
+    if (!name)
+      return false;
+
+    const result = await run("Creating…", () => call("create_project", {path: parent, name}));
+
+    if (!result)
+      return false;
+
+    await loadTree();
+    await select(result.path);
+    return save(result.path);
+  }
+
   // ---------- Open ----------
 
   /**
@@ -642,7 +669,7 @@ export const useProjectsStore = defineStore("projects", () => {
     tree, treeLoading, treeError, current, selectedPath, project, projectError, busy, fileVersion, recent,
     hasCurrent, unsaved,
     init, loadTree, loadCurrent, loadProject, select, findNode, show,
-    save, saveInto, open, close,
+    save, saveInto, saveAs, open, close,
     createProject, createFolder, rename, move, remove, reveal,
     updateProject, setFinal, addFile, deleteFile
   };

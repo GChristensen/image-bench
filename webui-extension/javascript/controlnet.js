@@ -118,8 +118,9 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
      * Start or stop sending the state of a unit (the ControlNet tab is shown or hidden, or another unit is chosen)
      * @param {boolean} active
      * @param {number} unitIndex
+     * @param {boolean} defaults - Check Pixel Perfect and Allow Preview of a unit used for the first time
      */
-    function subscribe(active, unitIndex = unit) {
+    function subscribe(active, unitIndex = unit, defaults = true) {
         clearInterval(timer);
         timer = null;
         unit = unitIndex;
@@ -132,7 +133,7 @@ export function createControlNet(uiOperations, adapter, popup, showAlert) {
             enqueue(async () => {
                 const tab = getTab();
 
-                if (await showUnit(tab, unit))
+                if (await showUnit(tab, unit) && defaults)
                     await applyDefaults(tab, unit);
 
                 pollIfActive();

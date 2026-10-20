@@ -28,7 +28,13 @@ const emit = defineEmits(['set']);
 
 <template>
   <div class="group" :class="{off: has('hiresFix') && form.hiresFix === false}">
-    <label v-if="has('hiresFix')" class="group-header label-small toggle">
+    <!-- Tabs in place of the title (ControlNet in the same place) -->
+    <div v-if="$slots.title" class="group-header label-small toggle tabbed">
+      <input v-if="has('hiresFix')" type="checkbox" :checked="!!form.hiresFix" aria-label="Hires. fix" title="Hires. fix"
+             @change="e => emit('set', 'hiresFix', e.target.checked)">
+      <slot name="title"/>
+    </div>
+    <label v-else-if="has('hiresFix')" class="group-header label-small toggle">
       <input type="checkbox" :checked="!!form.hiresFix" @change="e => emit('set', 'hiresFix', e.target.checked)">
       Hires. fix
     </label>
@@ -71,6 +77,10 @@ const emit = defineEmits(['set']);
 
 .toggle input {
   margin: 0;
+}
+
+.toggle.tabbed {
+  cursor: default;
 }
 
 /* Parameters of a switched off Hires. fix stay editable, dimmed */

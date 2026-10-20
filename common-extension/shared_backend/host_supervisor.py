@@ -383,6 +383,27 @@ def remove_state(path):
         pass
 
 
+def open_console(title):
+    """The console window a detached sidecar may still get on Windows (a venv's python.exe is a launcher stub, whose
+    child, the real interpreter, gets a console of its own), titled; a stream writing into it, or None without one.
+    The standard streams are those of the backend (devnull), so the console is opened by name"""
+    if not host_process.IS_WINDOWS:
+        return None
+
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+
+        if not kernel32.GetConsoleWindow():
+            return None
+
+        kernel32.SetConsoleTitleW(title)
+        return open("CONOUT$", "w", encoding="utf-8", errors="replace", buffering=1)
+    except Exception:
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--store", required=True)
@@ -400,6 +421,18 @@ def main():
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     log.addHandler(handler)
     log.setLevel(logging.INFO)
+
+    console = open_console(f"Image Bench restart helper (host pid {options.host_pid}, port {options.host_port})")
+
+    if console:
+        console.write("Image Bench restart helper\n\n"
+                      "This sidecar watches the SD WebUI / ComfyUI host and restarts it from the Image Bench window\n"
+                      "when it hangs or has died. Closing this window ends it: a hung host then cannot be restarted\n"
+                      "until the backend, while it answers, starts the helper again. The helper exits by itself when\n"
+                      "the host is gone and no Image Bench window asks for it.\n\n")
+        console_handler = logging.StreamHandler(console)
+        console_handler.setFormatter(handler.formatter)
+        log.addHandler(console_handler)
 
     supervisor = Supervisor(options.store, options.host_pid, options.host_create_time, options.host_port)
 

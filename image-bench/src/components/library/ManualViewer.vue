@@ -330,6 +330,11 @@ const hostOrigin = location.origin;
         <li><b>Sampling, Seed and Hires. fix.</b> <AppIcon name="dice" :size="13" class="inline-icon"/> sets a
           random seed (−1), and <AppIcon name="recycle" :size="13" class="inline-icon"/> takes the seed of the Result
           image.</li>
+        <li><b>ControlNet</b> (a tab in the header of the Hires. fix or img2img group, shown while a ControlNet unit
+          is enabled): the model, weight and timestep range of an enabled unit, chosen by the numbers at the right
+          of the header, which also choose the unit that receives <b>Send to ControlNet</b>. The thumbnail shows the
+          preprocessor preview (dashed and marked <b>Stale</b> after its parameters changed), or the control image
+          without one; a click opens the ControlNet tab. The Hires. fix checkbox stays before the tabs.</li>
         <li v-if="isWebUI"><b>Mode switch</b> (right of the toolbar): txt2img, img2img or Inpaint. The parameters
           are remembered per mode. In img2img and Inpaint, the Hires. fix column holds the denoising, resize and
           mask options.</li>
@@ -355,7 +360,8 @@ const hostOrigin = location.origin;
         <li><b>Generate</b> makes one image with a live preview. With a count above 1 (or
           <AppIcon name="infinity" :size="13" class="inline-icon"/>), it runs a batch in the Generated tab.
           <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
-          skips the current image.</li>
+          skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click or a middle click
+          on Stop stops the generation and starts a new one a second later.</li>
         <li v-if="isWebUI"><b>UI preset buttons</b> switch the Forge UI preset.
           <AppIcon name="lock" :size="13" class="inline-icon"/> <b>Prompt lock</b> makes the prompts editable only
           here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
@@ -763,8 +769,10 @@ const hostOrigin = location.origin;
           current.</li>
         <li><b>Open</b> (or double-click) restores the trays and parameters of a project and makes it current.
           If the current project has unsaved changes, you are asked to save or discard them first. The menu next
-          to <b>Open</b> restores <b>Trays only</b> or <b>Parameters only</b>, offers <b>Merge trays into the
-          workspace</b>, or saves the workspace into the project shown. <b>Revert</b> restores the saved state of the
+          to <b>Open</b> restores <b>Trays only</b> or <b>Parameters only</b>, or offers <b>Merge trays into the
+          workspace</b>. <b>Save</b> (<b>Save here</b> on a project that is not current) saves the workspace into
+          the project shown; the menu next to it saves it as a new project in the same folder (<b>Save as new
+          project…</b>), which becomes current. <b>Revert</b> restores the saved state of the
           current project.</li>
         <li><b>Parameters</b> are those of the generation mode that was shown, as they were when the project was
           saved, with the enabled ControlNet units and their images and edited poses. Input and reference images
