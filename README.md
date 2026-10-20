@@ -1,6 +1,6 @@
 # Image Bench
 
-Image Bench automates the repetitive micro-tasks of working with ComfyUI. See more at the [extension site](https://github.com/GChristensen/image-bench).
+Image Bench automates the repetitive micro-tasks of working with ComfyUI. See more at the [extension site](https://gchristensen.github.io/image-bench).
 
 This is the development repository. Please do not try to install the extension from it.
 

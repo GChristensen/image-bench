@@ -8,7 +8,7 @@ the best ones into trays that allow you to perform common operations on them.
 For example, to upscale an image, you just click one button, without needing 
 to manually extract image generation parameters, such as the generation seed.
 You can also send images to and from graphics editor with a single click,
-skipping copy-and-paste operations entirely. See more at the [extension site](https://github.com/GChristensen/image-bench).
+skipping copy-and-paste operations entirely. See more at the [extension site](https://gchristensen.github.io/image-bench).
 
 The full manual is built in: **Library › Manual** in the Image Bench window.
 
