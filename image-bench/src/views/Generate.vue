@@ -547,7 +547,8 @@ async function onRestart() {
     webUI.stopGeneration();
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    for (let waited = 0; (generating.value || isGenerationActive()) && waited < 10000; waited += 100)
+    // There is no event of the stopped generation, so the busy state is polled
+    for (let waited = 0; (generating.value || isGenerationActive()) && waited < 30000; waited += 100)
       await new Promise(resolve => setTimeout(resolve, 100));
 
     await onGenerate();
@@ -1310,8 +1311,8 @@ const gridStyle = computed(() => ({
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"
                    @dragover="onPromptDragOver" @drop="onPromptDrop" @focusin="snippetTarget = 'prompt'">
         <Transition name="switching">
-          <span v-if="switchingUiPreset" class="switching-badge" role="status">
-            <span class="spinner"></span>Switching UI preset…
+          <span v-if="switchingUiPreset || restarting" class="switching-badge" role="status">
+            <span class="spinner"></span>{{ switchingUiPreset ? "Switching UI preset…" : "Restarting the generation…" }}
           </span>
         </Transition>
       </PromptField>
