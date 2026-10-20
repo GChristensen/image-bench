@@ -1,5 +1,20 @@
 // Image Bench landing: the tour carousel, the action rims, the install tabs and the copy buttons.
 
+// ---------------------------------------------------------------- links
+
+// Embedded in an iframe, links open in a new tab; standalone, they navigate in the same tab.
+// Anchors of this page stay in the frame and scroll it.
+(function links() {
+  let embedded;
+  try { embedded = window.self !== window.top; } catch { embedded = true; }   // a cross-origin parent throws
+  if (!embedded) return;
+  for (const a of document.querySelectorAll("a[href]")) {
+    if (a.getAttribute("href").startsWith("#")) continue;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+  }
+})();
+
 // ---------------------------------------------------------------- tour
 
 (function tour() {
