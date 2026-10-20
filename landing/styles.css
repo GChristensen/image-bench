@@ -463,3 +463,5 @@ kbd { font: inherit; }
   html { scroll-behavior: auto; }
   .ants { animation: none; }
 }
+
+.gc-credit a { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
