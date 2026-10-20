@@ -8,6 +8,7 @@ webui: (_docs "webui-extension")
 comfy: (_docs "comfyui-extension")
     cd image-bench; npm run build:comfy
     cp -f image-bench/dist/index.html comfyui-extension/js
+    mkdir -p comfyui-extension/js/shared
     cp -rf common-extension/shared_frontend/* comfyui-extension/js/shared/
 
 # The model docs of the Library tab, copied into the default docs folder of the extension (docs.py:DOCS_DIR)
