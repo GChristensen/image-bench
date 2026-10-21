@@ -4,7 +4,7 @@
  * the left, and the matrix of weights (rows) x ending steps (columns), both ascending from the top left. Apply under an image,
  * or a click on a row or column header, sets its values in the unit
  */
-import {nextTick, onActivated, onDeactivated, onMounted, onUnmounted, ref, shallowRef, toRaw} from "vue";
+import {computed, nextTick, onActivated, onDeactivated, onMounted, onUnmounted, ref, shallowRef, toRaw, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import GeneratedImage from "@/components/GeneratedImage.vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
@@ -27,6 +27,30 @@ const format = value => roundSweepValue(value).toFixed(2);
 
 const isCurrent = (weight, end) => roundSweepValue(props.current.weight) === roundSweepValue(weight)
   && roundSweepValue(props.current.end) === roundSweepValue(end);
+
+// ---------- Cell shape ----------
+
+// The images of a sweep share one size (only the ControlNet values change): the cells take the aspect ratio of the
+// first image, the pending ones too, so that the rows keep their height; square until it is known
+const aspect = ref(null);
+
+const firstImage = computed(() => sweep.reference?.image ?? Object.values(sweep.cells)[0] ?? null);
+
+watch(firstImage, image => {
+  aspect.value = null;
+
+  if (!image)
+    return;
+
+  const probe = new Image();
+  probe.onload = () => {
+    if (firstImage.value === image && probe.naturalWidth && probe.naturalHeight)
+      aspect.value = probe.naturalWidth / probe.naturalHeight;
+  };
+  probe.src = createImageLink(image);
+}, {immediate: true});
+
+const sweepStyle = computed(() => aspect.value ? {"--frame-aspect": aspect.value} : {});
 
 // ---------- Overlays ----------
 
@@ -74,7 +98,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
                 @show-params="paramsImage = overlayImage" @hide-overlay="closeOverlay"/>
   <ParametersOverlay v-if="paramsImage" :image="paramsImage" @hide-overlay="paramsImage = null"/>
 
-  <div class="sweep">
+  <div class="sweep" :style="sweepStyle">
     <div v-if="!sweep.hasSweep" class="empty-state">
       Set the axes at the right, then press <b>Sweep</b>.
     </div>
@@ -83,12 +107,14 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
       <aside class="reference">
         <div class="label-small">Current values</div>
         <div class="values">w {{ format(sweep.reference.weight) }} · end {{ format(sweep.reference.end) }}</div>
-        <GeneratedImage v-if="sweep.reference.image" kind="controlnet_sweep" :is-tray="false"
-                        :image="sweep.reference.image" :highlighted="isHighlighted(sweep.reference.image)"
-                        @show-params="paramsImage = sweep.reference.image"
-                        @image-click="onImageClick(sweep.reference.image)"
-                        @image-open="onImageOpen(sweep.reference.image)"/>
-        <div v-else class="pending"></div>
+        <div class="frame">
+          <GeneratedImage v-if="sweep.reference.image" kind="controlnet_sweep" :is-tray="false"
+                          :image="sweep.reference.image" :highlighted="isHighlighted(sweep.reference.image)"
+                          @show-params="paramsImage = sweep.reference.image"
+                          @image-click="onImageClick(sweep.reference.image)"
+                          @image-open="onImageOpen(sweep.reference.image)"/>
+          <div v-else class="pending"></div>
+        </div>
         <template v-if="controlImage">
           <div class="label-small">Control</div>
           <img class="control" :src="controlImage" alt="Control image">
@@ -107,16 +133,18 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
                     :title="`Set the control weight to ${format(weight)}`"
                     @click="emit('apply', {weight})">{{ format(weight) }}</button>
             <div v-for="end in sweep.ends" :key="end" class="cell" :class="{current: isCurrent(weight, end)}">
-              <template v-if="sweep.cellAt(weight, end)">
-                <GeneratedImage kind="controlnet_sweep" :is-tray="false" :image="sweep.cellAt(weight, end)"
+              <div class="frame">
+                <GeneratedImage v-if="sweep.cellAt(weight, end)" kind="controlnet_sweep" :is-tray="false"
+                                :image="sweep.cellAt(weight, end)"
                                 :highlighted="isHighlighted(sweep.cellAt(weight, end))"
                                 @show-params="paramsImage = sweep.cellAt(weight, end)"
                                 @image-click="onImageClick(sweep.cellAt(weight, end))"
                                 @image-open="onImageOpen(sweep.cellAt(weight, end))"/>
-                <button type="button" class="apply" :title="`Set weight ${format(weight)} and ending step ${format(end)}`"
+                <div v-else class="pending"></div>
+                <button v-if="sweep.cellAt(weight, end)" type="button" class="apply"
+                        :title="`Set weight ${format(weight)} and ending step ${format(end)}`"
                         @click="emit('apply', {weight, end})"><AppIcon name="check" :size="12"/>Apply</button>
-              </template>
-              <div v-else class="pending"></div>
+              </div>
             </div>
           </template>
         </div>
@@ -156,8 +184,27 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
   overflow-y: auto;
 }
 
-.reference :deep(.selectable-image) {
+/* A box of the cell width in the aspect ratio of the sweep's images (square until the first one is in), the image
+   centered in it; pending cells have the same box, so the rows keep their height while the matrix is filled in */
+.frame {
+  flex: none;
+  width: 100%;
+  aspect-ratio: var(--frame-aspect, 1);
+  container-type: size;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.frame :deep(.selectable-image) {
   max-width: 100%;
+  max-height: 100%;
+}
+
+.frame :deep(.selectable-image-preview) {
+  max-width: 100cqw;
+  max-height: 100cqh;
 }
 
 .values {
@@ -243,18 +290,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
-}
-
-/* The placeholder of a pending cell takes the cell width */
-.cell .pending {
-  align-self: stretch;
-}
-
-/* A cell holds a single card: it takes the cell width instead of the card's share of a row */
-.cell :deep(.selectable-image) {
-  max-width: 100%;
 }
 
 .cell.current :deep(.selectable-image) {
@@ -263,8 +299,12 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
   border-radius: 6px;
 }
 
+/* Over the top left corner of the image (the rim toggle is at the top right), so that it takes no row space */
 .apply {
-  align-self: center;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -272,7 +312,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
   padding: 0 8px;
   border: 1px solid var(--ib-border);
   border-radius: 4px;
-  background: var(--ib-surface);
+  background: color-mix(in srgb, var(--ib-surface) 85%, transparent);
   color: var(--ib-text-2);
   font: inherit;
   font-size: 11px;
@@ -291,7 +331,8 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 }
 
 .pending {
-  aspect-ratio: 1;
+  width: 100%;
+  height: 100%;
   border: 1px dashed var(--ib-border);
   border-radius: 6px;
 }

@@ -344,8 +344,10 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
 <template>
   <div class="view-container controlnet">
     <div class="toolbar">
-      <button v-if="has('preprocessor')" class="btn primary" :disabled="!connected || !ownImage || !images.image || cn.running"
-              :title="ownImage ? 'Run the preprocessor on the control image' : 'The unit uses the img2img image'"
+      <button v-if="has('preprocessor')" class="btn primary"
+              :disabled="panel === 'sweep' || !connected || !ownImage || !images.image || cn.running"
+              :title="panel === 'sweep' ? 'Switch to Parameters to run the preprocessor'
+                : ownImage ? 'Run the preprocessor on the control image' : 'The unit uses the img2img image'"
               @click="onRun">
         <span v-if="cn.running" class="spinner"></span><AppIcon v-else name="zap" :size="13"/>Run preprocessor</button>
       <button class="btn outline" :disabled="!connected" title="Refresh the list of ControlNet models"
