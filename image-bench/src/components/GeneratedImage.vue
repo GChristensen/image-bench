@@ -65,6 +65,11 @@
     reorderable: {
       type: Boolean,
       default: false
+    },
+    // The action rim and its corner toggle (the ControlNet sweep has none: its overlay navigates the matrix)
+    rim: {
+      type: Boolean,
+      default: true
     }
   });
 
@@ -147,8 +152,8 @@
   const rimSize = ref(0);
   let rimTimer = 0;
 
-  const rimShown = computed(() => hoverMode.value ? rimOpen.value && !bare.value
-    : hovered.value && !dragging.value && (ctrlDown.value || rimToggled.value));
+  const rimShown = computed(() => props.rim && (hoverMode.value ? rimOpen.value && !bare.value
+    : hovered.value && !dragging.value && (ctrlDown.value || rimToggled.value)));
 
   watch(rimShown, shown => {
     const frame = frameElement.value;
@@ -312,12 +317,12 @@
     </label>
 
     <!-- Rim on hover: visual anchor for viewing the image; it opens the overlay like a click on the image -->
-    <button v-if="hoverMode" type="button" class="corner-button" aria-label="View image"
+    <button v-if="rim && hoverMode" type="button" class="corner-button" aria-label="View image"
             @click="$emit('imageClick')" @mousedown.middle.prevent @auxclick="onImageAuxClick"
             @mouseenter="hoveredText = 'View'" @mouseleave="hoveredText = null"
       ><AppIcon name="eye" :size="20"/></button>
     <!-- Otherwise it shows and hides the action rim -->
-    <button v-else type="button" class="corner-button" :class="{on: rimToggled}" :aria-pressed="rimToggled"
+    <button v-else-if="rim" type="button" class="corner-button" :class="{on: rimToggled}" :aria-pressed="rimToggled"
             aria-label="Show actions" @click="rimToggled = !rimToggled"
             @mouseenter="hoveredText = rimToggleText" @mouseleave="hoveredText = null"
       ><AppIcon name="rim" :size="20"/></button>

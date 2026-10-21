@@ -466,8 +466,11 @@ const hostOrigin = location.origin;
         <li>The two diagonals come first: weak and short to strong and long (how much control), then strong and
           short to weak and long (which kind of control at about the same strength). Then the cells between them
           are filled in. You can stop once you have seen enough; the remaining cells stay empty.</li>
-        <li><b>Apply</b> under an image sets its weight and ending step in the unit, and a click on a row or column
-          header sets only that value. The cell with the unit's current values is outlined. After the sweep the
+        <li><b>Apply</b> on an image (shown on hover) sets its weight and ending step in the unit, and a click on a
+          row or column header sets only that value. The images have no action rim. Their overlay shows the values
+          and an <b>Apply</b> button at the top, and moves through the matrix, skipping cells without an image:
+          ←/→ to the previous or next image in reading order (on into the next row, so the first generated
+          diagonals can be walked while the matrix is filling in), ↑/↓ along the column. The cell with the unit's current values is outlined. After the sweep the
           unit gets back the values it had before.</li>
         <li>With <b>Use seed</b> checked, every image uses the seed entered next to it (the dice picks a random one).
           Unchecked, the sweep uses the seed of the generation tab, or one random seed for all images if it is -1.

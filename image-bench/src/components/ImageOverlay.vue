@@ -58,11 +58,20 @@
     hasNext: {
       type: Boolean,
       default: false
+    },
+    // Show the chevrons that emit navigateVertical(-1 / 1), as the up/down keys of the view do (a matrix)
+    hasUp: {
+      type: Boolean,
+      default: false
+    },
+    hasDown: {
+      type: Boolean,
+      default: false
     }
   });
 
   const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking', 'deleteImage',
-    'showParams', 'upscaleImage', 'addComment', 'filterMarking', 'navigate']);
+    'showParams', 'upscaleImage', 'addComment', 'filterMarking', 'navigate', 'navigateVertical']);
 
   const canSendToControlNet = hostHas("images", "sendToControlNet");
   const imageTrayStore = useImageTrayStore();
@@ -364,6 +373,12 @@
                 @click="$emit('navigate', -1)"><AppIcon name="chevronLeft" :size="36"/></button>
         <button v-if="hasNext" class="nav-button next" title="Next image (→)" aria-label="Next image"
                 @click="$emit('navigate', 1)"><AppIcon name="chevronRight" :size="36"/></button>
+        <button v-if="hasUp" class="nav-button up" title="Image above (↑)" aria-label="Image above"
+                @click="$emit('navigateVertical', -1)"><AppIcon name="chevron" :size="36"/></button>
+        <button v-if="hasDown" class="nav-button down" title="Image below (↓)" aria-label="Image below"
+                @click="$emit('navigateVertical', 1)"><AppIcon name="chevron" :size="36"/></button>
+        <!-- What the view tells about the image, at the top center (e.g. the values of a sweep cell) -->
+        <div v-if="$slots.info" class="overlay-info"><slot name="info"/></div>
         <button v-if="hasParameters" class="ib params-button" :class="{on: showParamsPanel}"
                 :title="showParamsPanel ? 'Hide generation parameters' : 'Show generation parameters'"
                 aria-label="Generation parameters" :aria-pressed="showParamsPanel"
@@ -559,6 +574,43 @@
 
 .nav-button.next {
   right: 12px;
+}
+
+.nav-button.up,
+.nav-button.down {
+  left: 50%;
+  top: auto;
+  width: 84px;
+  height: 44px;
+  transform: translateX(-50%);
+}
+
+.nav-button.up {
+  top: 64px;
+}
+
+.nav-button.up > svg {
+  transform: rotate(180deg);
+}
+
+.nav-button.down {
+  bottom: 76px;
+}
+
+.overlay-info {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1004;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(17, 19, 23, 0.75);
+  color: #fff;
+  white-space: nowrap;
 }
 
 .params-button {

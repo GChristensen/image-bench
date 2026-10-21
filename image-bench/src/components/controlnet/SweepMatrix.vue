@@ -1,8 +1,9 @@
 <script setup>
 /**
  * Images of the ControlNet sweep: the reference image with the unit's values when the sweep started, kept in view at
- * the left, and the matrix of weights (rows) x ending steps (columns), both ascending from the top left. Apply under an image,
- * or a click on a row or column header, sets its values in the unit
+ * the left, and the matrix of weights (rows) x ending steps (columns), both ascending from the top left. Apply on an image
+ * or in its overlay, or a click on a row or column header, sets its values in the unit. The cards have no action rim:
+ * the overlay of a cell moves along its row with ←/→ and along its column with ↑/↓, over the cells that have an image
  */
 import {computed, nextTick, onActivated, onDeactivated, onMounted, onUnmounted, ref, shallowRef, toRaw, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
@@ -54,20 +55,100 @@ const sweepStyle = computed(() => aspect.value ? {"--frame-aspect": aspect.value
 
 // ---------- Overlays ----------
 
-const overlayImage = ref(null);
+// The image shown in the overlay: {row, column} of a cell (indexes of sweep.weights / sweep.ends), or {reference: true}
+const overlayPosition = ref(null);
 const paramsImage = ref(null);
 const highlightedImage = shallowRef(null);
 
-function onImageClick(image) {
-  overlayImage.value = image;
+const imageAt = (row, column) => sweep.cellAt(sweep.weights[row], sweep.ends[column]);
+
+const overlayImage = computed(() => {
+  const position = overlayPosition.value;
+
+  if (!position)
+    return null;
+
+  return position.reference ? sweep.reference?.image ?? null : imageAt(position.row, position.column);
+});
+
+const overlayValues = computed(() => {
+  const position = overlayPosition.value;
+
+  if (!position)
+    return null;
+
+  return position.reference
+    ? {weight: sweep.reference.weight, end: sweep.reference.end}
+    : {weight: sweep.weights[position.row], end: sweep.ends[position.column]};
+});
+
+function openCell(row, column) {
+  overlayPosition.value = {row, column};
+}
+
+function openReference() {
+  overlayPosition.value = {reference: true};
+}
+
+/**
+ * The nearest cell with an image from the overlay's cell, null at the edge. Up and down stay in the column; left and
+ * right go on in the next or previous row (reading order), so that the diagonals generated first can be walked
+ * @param {number} rowStep
+ * @param {number} columnStep
+ * @returns {{row: number, column: number}|null}
+ */
+function neighbour(rowStep, columnStep) {
+  const position = overlayPosition.value;
+
+  if (!position || position.reference)
+    return null;
+
+  const columns = sweep.ends.length;
+  const rows = sweep.weights.length;
+  let {row, column} = position;
+
+  for (;;) {
+    if (columnStep) {
+      const index = row * columns + column + columnStep;
+      row = Math.floor(index / columns);
+      column = index - row * columns;
+    }
+    else
+      row += rowStep;
+
+    if (row < 0 || row >= rows)
+      return null;
+
+    if (imageAt(row, column))
+      return {row, column};
+  }
+}
+
+const hasLeft = computed(() => !!neighbour(0, -1));
+const hasRight = computed(() => !!neighbour(0, 1));
+const hasUp = computed(() => !!neighbour(-1, 0));
+const hasDown = computed(() => !!neighbour(1, 0));
+
+function step(rowStep, columnStep) {
+  const next = neighbour(rowStep, columnStep);
+
+  if (next)
+    overlayPosition.value = next;
+}
+
+function applyOverlay() {
+  if (overlayPosition.value && !overlayPosition.value.reference)
+    emit("apply", {...overlayValues.value});
 }
 
 async function closeOverlay() {
-  if (!overlayImage.value)
+  if (!overlayImage.value) {
+    overlayPosition.value = null;
     return;
+  }
 
   const image = toRaw(overlayImage.value);
-  overlayImage.value = null;
+  overlayPosition.value = null;
   highlightedImage.value = null;
   await nextTick();
   highlightedImage.value = image;
@@ -79,10 +160,16 @@ function onImageOpen(image) {
   window.open(createImageLink(image), "_blank");
 }
 
+const ARROW_STEPS = {ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0]};
+
 function onKeydown(e) {
   if (e.key === "Escape") {
     closeOverlay();
     paramsImage.value = null;
+  }
+  else if (overlayPosition.value && !paramsImage.value && ARROW_STEPS[e.key]) {
+    e.preventDefault();
+    step(...ARROW_STEPS[e.key]);
   }
 }
 
@@ -95,7 +182,20 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 
 <template>
   <ImageOverlay v-if="overlayImage" :image="overlayImage" kind="controlnet_sweep" markable
-                @show-params="paramsImage = overlayImage" @hide-overlay="closeOverlay"/>
+                :has-prev="hasLeft" :has-next="hasRight" :has-up="hasUp" :has-down="hasDown"
+                @navigate="columnStep => step(0, columnStep)" @navigate-vertical="rowStep => step(rowStep, 0)"
+                @show-params="paramsImage = overlayImage" @hide-overlay="closeOverlay">
+    <template #info>
+      <span class="overlay-values">
+        <template v-if="overlayPosition.reference">Current values · </template>w {{ format(overlayValues.weight) }} ·
+        end {{ format(overlayValues.end) }}</span>
+      <span v-if="!overlayPosition.reference && isCurrent(overlayValues.weight, overlayValues.end)"
+            class="overlay-current">in the unit</span>
+      <button v-else-if="!overlayPosition.reference" type="button" class="overlay-apply"
+              :title="`Set weight ${format(overlayValues.weight)} and ending step ${format(overlayValues.end)}`"
+              @click="applyOverlay"><AppIcon name="check" :size="14"/>Apply</button>
+    </template>
+  </ImageOverlay>
   <ParametersOverlay v-if="paramsImage" :image="paramsImage" @hide-overlay="paramsImage = null"/>
 
   <div class="sweep" :style="sweepStyle">
@@ -108,10 +208,10 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
         <div class="label-small">Current values</div>
         <div class="values">w {{ format(sweep.reference.weight) }} · end {{ format(sweep.reference.end) }}</div>
         <div class="frame">
-          <GeneratedImage v-if="sweep.reference.image" kind="controlnet_sweep" :is-tray="false"
+          <GeneratedImage v-if="sweep.reference.image" kind="controlnet_sweep" :is-tray="false" :rim="false"
                           :image="sweep.reference.image" :highlighted="isHighlighted(sweep.reference.image)"
                           @show-params="paramsImage = sweep.reference.image"
-                          @image-click="onImageClick(sweep.reference.image)"
+                          @image-click="openReference"
                           @image-open="onImageOpen(sweep.reference.image)"/>
           <div v-else class="pending"></div>
         </div>
@@ -128,17 +228,17 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
                   :class="{current: roundSweepValue(current.end) === end}"
                   :title="`Set the ending step to ${format(end)}`" @click="emit('apply', {end})">{{ format(end) }}</button>
 
-          <template v-for="weight in sweep.weights" :key="weight">
+          <template v-for="(weight, row) in sweep.weights" :key="weight">
             <button type="button" class="row-header" :class="{current: roundSweepValue(current.weight) === weight}"
                     :title="`Set the control weight to ${format(weight)}`"
                     @click="emit('apply', {weight})">{{ format(weight) }}</button>
-            <div v-for="end in sweep.ends" :key="end" class="cell" :class="{current: isCurrent(weight, end)}">
+            <div v-for="(end, column) in sweep.ends" :key="end" class="cell" :class="{current: isCurrent(weight, end)}">
               <div class="frame">
-                <GeneratedImage v-if="sweep.cellAt(weight, end)" kind="controlnet_sweep" :is-tray="false"
+                <GeneratedImage v-if="sweep.cellAt(weight, end)" kind="controlnet_sweep" :is-tray="false" :rim="false"
                                 :image="sweep.cellAt(weight, end)"
                                 :highlighted="isHighlighted(sweep.cellAt(weight, end))"
                                 @show-params="paramsImage = sweep.cellAt(weight, end)"
-                                @image-click="onImageClick(sweep.cellAt(weight, end))"
+                                @image-click="openCell(row, column)"
                                 @image-open="onImageOpen(sweep.cellAt(weight, end))"/>
                 <div v-else class="pending"></div>
                 <button v-if="sweep.cellAt(weight, end)" type="button" class="apply"
@@ -328,6 +428,36 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 .apply:hover {
   color: var(--ib-accent);
   border-color: var(--ib-accent-border);
+}
+
+.overlay-values {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.overlay-current {
+  font-size: 12px;
+  color: var(--ib-accent);
+}
+
+.overlay-apply {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--ib-accent-border);
+  border-radius: 5px;
+  background: var(--ib-accent-soft);
+  color: var(--ib-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.overlay-apply:hover {
+  background: var(--ib-accent);
+  color: var(--ib-accent-ink);
 }
 
 .pending {
