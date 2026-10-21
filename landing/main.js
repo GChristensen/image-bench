@@ -207,6 +207,49 @@ function drawRim(svg, { c, R, r, icon, grow, edge, iconStroke }) {
   drawRim(mini, { c: 75, R: 66, r: 42, icon: 12, grow: 4, edge: 3, iconStroke: 2.4 })(ACTIONS.findIndex((a) => a[3] === "upscale"));
 })();
 
+// ---------------------------------------------------------------- comfyui mapping
+
+// Lines from the nodes of the workflow drawing (data-map) to the controls of the Generate tab (data-spot).
+// Both sit on transformed planes, so the ends are taken from the projected boxes and redrawn on resize.
+(function comfyMap() {
+  const fig = document.querySelector("[data-cm]");
+  if (!fig) return;
+  const svg = fig.querySelector("[data-cm-lines]");
+  const NS = "http://www.w3.org/2000/svg";
+  const center = (el, box) => {
+    const r = el.getBoundingClientRect();
+    return [r.left + r.width / 2 - box.left, r.top + r.height / 2 - box.top];
+  };
+
+  function draw() {
+    svg.replaceChildren();
+    if (getComputedStyle(svg).display === "none") return;
+    const box = fig.getBoundingClientRect();
+    for (const spot of fig.querySelectorAll("[data-spot]")) {
+      const from = fig.querySelector(`[data-map="${spot.dataset.spot}"]`);
+      if (!from) continue;
+      // marked nodes: from under the marker; traced ones: from the title
+      const mk = from.querySelector(".mk");
+      let [x1, y1] = center(mk ?? from, box);
+      if (mk) y1 = mk.getBoundingClientRect().bottom - box.top + 2;
+      const [x2, y2] = center(spot, box);
+      const color = spot.style.getPropertyValue("--mk").trim();
+      const path = document.createElementNS(NS, "path");
+      const bend = (y2 - y1) * 0.45;
+      path.setAttribute("d", `M${x1} ${y1}C${x1} ${y1 + bend} ${x2} ${y2 - bend} ${x2} ${y2}`);
+      if (color) path.setAttribute("stroke", color);
+      else path.classList.add("traced");
+      const dot = document.createElementNS(NS, "circle");
+      dot.setAttribute("cx", x1); dot.setAttribute("cy", y1); dot.setAttribute("r", color ? 3 : 2.5);
+      dot.setAttribute("fill", color || "#71717a");
+      svg.append(path, dot);
+    }
+  }
+
+  new ResizeObserver(draw).observe(fig);
+  window.addEventListener("load", draw);
+})();
+
 // ---------------------------------------------------------------- install tabs, copy buttons
 
 (function install() {

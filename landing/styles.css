@@ -357,6 +357,79 @@ kbd { font: inherit; }
 .numbered p { font-size: 16px; line-height: 1.6; color: var(--text2); }
 .numbered strong { color: var(--text); }
 
+/* ---------------------------------------------------------------- comfyui */
+
+/* the workflow (a drawing of ComfyUI nodes, 1350×660) above the Generate tab, both on the same isometric plane;
+   main.js draws the lines between them from the projected positions */
+.cm-figure { --s: 1; position: relative; display: flex; flex-direction: column; align-items: center; }
+.cm-graph, .cm-tab { position: relative; width: 100%; }
+.cm-graph { height: calc(520px * var(--s)); }
+.cm-tab { height: calc(470px * var(--s)); margin-top: calc(-30px * var(--s)); }
+.cm-slab { position: absolute; left: 50%; top: 50%; transform-origin: 50% 50%; }
+.cm-slab-graph { transform: translate(-50%, -50%) rotateX(55deg) rotateZ(-30deg) scale(calc(0.74 * var(--s))); }
+.cm-slab-tab {
+  width: 820px; border-radius: 12px; overflow: hidden; background: var(--dark);
+  transform: translate(-50%, -50%) translateX(calc(90px * var(--s))) rotateX(55deg) rotateZ(-30deg) scale(var(--s));
+  box-shadow: 1px 1px 0 #3f3f46, 2px 2px 0 #3f3f46, 3px 3px 0 #3f3f46, 4px 4px 0 #27272a, 5px 5px 0 #27272a, 6px 6px 0 #27272a, 30px 34px 50px rgba(28, 25, 23, 0.3);
+}
+.cm-slab-tab img { display: block; width: 100%; height: auto; }
+.spot {
+  position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+  background: var(--mk, #a1a1aa); box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.45), 0 0 0 8px color-mix(in srgb, var(--mk, #a1a1aa) 45%, transparent);
+}
+.cm-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 2; }
+.cm-lines path { fill: none; stroke-width: 2; stroke-linecap: round; }
+.cm-lines .traced { stroke: #71717a; stroke-dasharray: 2 5; }
+.cm-lines circle { stroke: #ffffff; stroke-width: 1.5; }
+
+.wf-plane {
+  position: relative; border-radius: 16px; overflow: hidden;
+  background: radial-gradient(circle, #2e2e2e 1.2px, transparent 1.6px) 0 0 / 22px 22px, #1b1b1b;
+  box-shadow: -1px 1px 0 #3a3a3a, -2px 2px 0 #333333, -3px 3px 0 #2e2e2e, -4px 4px 0 #262626, -5px 5px 0 #222222, -6px 6px 0 #1c1c1c, -30px 36px 50px rgba(24, 24, 27, 0.3);
+  font: 11px 'Figtree', sans-serif; color: #b4b4b4;
+}
+.wf-wires { position: absolute; inset: 0; }
+.wf-wires path { fill: none; stroke-width: 2.6; opacity: 0.85; }
+.cn { position: absolute; border-radius: 8px; background: #353535; box-shadow: 0 0 0 1px #424242, 0 6px 14px rgba(0, 0, 0, 0.45); }
+.cn-title {
+  height: 26px; display: flex; align-items: center; gap: 7px; padding: 0 9px; border-radius: 8px 8px 0 0;
+  background: #2c2c2c; color: #d4d4d4; font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.cn-title > i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #777777; }
+.cn .mk {
+  padding: 1px 6px; border-radius: 6px; background: var(--mk); color: #111111;
+  font: 800 16px/21px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: -0.03em;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.5);
+}
+.cn.traced .cn-title > i { background: #a1a1aa; box-shadow: 0 0 0 2px #52525b; }
+.sl { position: absolute; left: 0; height: 16px; display: flex; align-items: center; gap: 6px; font-size: 10px; color: #a3a3a3; transform: translateX(-4px); }
+.sl.out { left: auto; right: 0; transform: translateX(4px); }
+.sl > i { width: 8px; height: 8px; border-radius: 50%; }
+.cw {
+  position: absolute; left: 9px; right: 9px; height: 16px; padding: 0 9px; border-radius: 8px;
+  display: flex; justify-content: space-between; gap: 8px; align-items: center;
+  background: #222222; font-size: 10px; color: #8a8a8a; white-space: nowrap; overflow: hidden;
+}
+.cw b { font-weight: 600; color: #dddddd; overflow: hidden; text-overflow: ellipsis; }
+.ct {
+  position: absolute; left: 9px; right: 9px; padding: 5px 7px; border-radius: 6px; overflow: hidden;
+  background: #222222; font-size: 10px; line-height: 1.35; color: #cfcfcf;
+}
+.cn > img { position: absolute; left: 9px; width: calc(100% - 18px); object-fit: cover; border-radius: 4px; }
+
+.cm-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 28px; font-size: 14px; color: var(--text2); margin-top: -12px; }
+.cm-legend span { display: inline-flex; align-items: center; gap: 10px; }
+.cm-legend i { width: 34px; height: 0; }
+.line-mk { border-top: 2.5px solid var(--accent); }
+.line-traced { border-top: 2.5px dotted #71717a; }
+.points code { font-size: 14px; color: #9a3412; }
+.markers { display: flex; flex-wrap: wrap; gap: 10px; }
+.markers > span {
+  display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 12px; border-radius: 10px;
+  font-size: 13px; color: var(--muted); background: #ffffff; box-shadow: inset 0 0 0 1px var(--card-line);
+}
+.markers b { font-weight: 700; color: var(--text); }
+
 /* ---------------------------------------------------------------- screens */
 
 .specs { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
@@ -440,6 +513,9 @@ kbd { font: inherit; }
 
 /* ---------------------------------------------------------------- small screens, reduced motion */
 
+@media (max-width: 1180px) { .cm-figure { --s: 0.82; } }
+@media (max-width: 960px) { .cm-figure { --s: 0.62; } }
+
 @media (max-width: 760px) {
   .wrap { padding: 0 16px; }
   .hidesm { display: none !important; }
@@ -457,6 +533,7 @@ kbd { font: inherit; }
   .scene-wrap { height: 400px; }
   .scene { scale: 0.6; transform-origin: 50% 0; }
   .badge { width: 26px; height: 26px; font-size: 13px; }
+  .cm-figure { --s: 0.42; }
 }
 
 @media (prefers-reduced-motion: reduce) {

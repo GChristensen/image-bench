@@ -30,6 +30,7 @@
       <a class="navlink" href="#editors">Editors</a>
       <a class="navlink" href="#compare">Compare</a>
       <a class="navlink" href="#edit">Editing</a>
+      <a class="navlink" href="#comfy">ComfyUI</a>
       <a class="navlink" href="#screens">Screens</a>
       <a class="navlink" href="#install">Install</a>
       <a class="navlink" href="#demo">Demo</a>
@@ -374,11 +375,95 @@
   </div>
 </section>
 
+<!-- ================= comfyui ================= -->
+<section id="comfy" class="sec clip">
+  <div class="wrap stack-48">
+    <div class="intro intro-wide">
+      <div class="kicker">06 — ComfyUI</div>
+      <h2 class="disp">Drive your ComfyUI workflow from the Generate tab.</h2>
+      <p class="lead">Image Bench works with the workflow you have open in ComfyUI. It finds the nodes it needs, sets their widgets and queues the workflow, the same way you would by hand. Where the graph has several candidates for a role, a marker in the node title tells it which one to use.</p>
+    </div>
+
+    <!-- the workflow and the Generate tab; main.js draws the lines from data-map to data-spot -->
+    <div class="cm-figure" data-cm>
+      <div class="cm-graph">
+        <div class="cm-slab cm-slab-graph">
+          <div class="wf-plane" style="width: 1350px; height: 660px">
+            <svg class="wf-wires" viewBox="0 0 1350 660" width="1350" height="660" aria-hidden="true"><path d="M230 60C270 60 250 60 290 60" stroke="#b39ddb"/><path d="M230 190C270 190 250 76 290 76" stroke="#ffd500"/><path d="M520 76C635 76 175 220 290 220" stroke="#ffd500"/><path d="M520 92C635 92 175 236 290 236" stroke="#9ccc65"/><path d="M520 76C635 76 175 310 290 310" stroke="#ffd500"/><path d="M520 60C560 60 540 190 580 190" stroke="#b39ddb"/><path d="M520 60C560 60 540 488 580 488" stroke="#b39ddb"/><path d="M520 60C690 60 690 176 860 176" stroke="#b39ddb"/><path d="M520 220C560 220 540 310 580 310" stroke="#ffa931"/><path d="M800 310C910 310 470 206 580 206" stroke="#ffa931"/><path d="M800 310C840 310 820 192 860 192" stroke="#ffa931"/><path d="M520 310C560 310 540 222 580 222" stroke="#ffa931"/><path d="M520 310C690 310 690 208 860 208" stroke="#ffa931"/><path d="M130 420C210 420 210 426 290 426" stroke="#64b5f6"/><path d="M246 420C286 420 250 442 290 442" stroke="#64b5f6"/><path d="M520 426C635 426 175 526 290 526" stroke="#64b5f6"/><path d="M230 320C270 320 250 542 290 542" stroke="#ff6e6e"/><path d="M520 526C560 526 540 326 580 326" stroke="#ff9cf9"/><path d="M800 400C910 400 470 60 580 60" stroke="#cfcfcf"/><path d="M800 190C910 190 470 76 580 76" stroke="#66ffff"/><path d="M520 608C560 608 540 92 580 92" stroke="#ecb4b4"/><path d="M800 488C910 488 470 108 580 108" stroke="#cdffcd"/><path d="M230 570C405 570 405 124 580 124" stroke="#ff9cf9"/><path d="M800 60C840 60 820 60 860 60" stroke="#ff9cf9"/><path d="M800 60C840 60 820 460 860 460" stroke="#ff9cf9"/><path d="M1070 60C1175 60 755 224 860 224" stroke="#ff9cf9"/><path d="M1070 176C1175 176 755 370 860 370" stroke="#ff9cf9"/><path d="M230 320C545 320 545 386 860 386" stroke="#ff6e6e"/><path d="M230 320C545 320 545 476 860 476" stroke="#ff6e6e"/><path d="M1070 370C1110 370 1090 180 1130 180" stroke="#64b5f6"/><path d="M1070 460C1110 460 1090 196 1130 196" stroke="#64b5f6"/><path d="M1330 180C1430 180 1030 300 1130 300" stroke="#64b5f6"/></svg>
+            <div class="cn" style="left: 20px; top: 20px; width: 210px; height: 96px"><div class="cn-title" data-map="cp"><i></i>Load Diffusion Model <b class="mk" style="--mk: #7aa2ff">ib:cp</b></div><span class="sl out" style="top: 32px">MODEL<i style="background: #b39ddb"></i></span><div class="cw" style="top: 48px"><span>unet_name</span><b>krea2_dev.safetensors</b></div><div class="cw" style="top: 68px"><span>weight_dtype</span><b>default</b></div></div>
+            <div class="cn" style="left: 20px; top: 150px; width: 210px; height: 96px"><div class="cn-title"><i></i>Load CLIP</div><span class="sl out" style="top: 32px">CLIP<i style="background: #ffd500"></i></span><div class="cw" style="top: 48px"><span>clip_name</span><b>qwen_3_4b.safetensors</b></div><div class="cw" style="top: 68px"><span>type</span><b>flux2</b></div></div>
+            <div class="cn" style="left: 20px; top: 280px; width: 210px; height: 76px"><div class="cn-title"><i></i>Load VAE</div><span class="sl out" style="top: 32px">VAE<i style="background: #ff6e6e"></i></span><div class="cw" style="top: 48px"><span>vae_name</span><b>flux2-vae.safetensors</b></div></div>
+            <div class="cn" style="left: 20px; top: 380px; width: 110px; height: 138px"><div class="cn-title" data-map="ref0"><i></i> <b class="mk" style="--mk: #22d3ee">ib:ref:0</b></div><span class="sl out" style="top: 32px">IMAGE<i style="background: #64b5f6"></i></span><span class="sl out" style="top: 48px">MASK<i style="background: #81c784"></i></span><img src="img/generations/image03.jpg" alt="" style="top: 64px; height: 60px"></div>
+            <div class="cn" style="left: 136px; top: 380px; width: 110px; height: 138px"><div class="cn-title" data-map="ref1"><i></i> <b class="mk" style="--mk: #22d3ee">ib:ref:1</b></div><span class="sl out" style="top: 32px">IMAGE<i style="background: #64b5f6"></i></span><span class="sl out" style="top: 48px">MASK<i style="background: #81c784"></i></span><img src="img/generations/image04.jpg" alt="" style="top: 64px; height: 60px"></div>
+            <div class="cn traced" style="left: 20px; top: 530px; width: 210px; height: 116px"><div class="cn-title" data-map="size"><i></i>Empty Latent</div><span class="sl out" style="top: 32px">LATENT<i style="background: #ff9cf9"></i></span><div class="cw" style="top: 48px"><span>width</span><b>1216</b></div><div class="cw" style="top: 68px"><span>height</span><b>832</b></div><div class="cw" style="top: 88px"><span>batch_size</span><b>1</b></div></div>
+            <div class="cn" style="left: 290px; top: 20px; width: 230px; height: 146px"><div class="cn-title" data-map="pp"><i></i>Prompt <b class="mk" style="--mk: #34d399">ib:pp</b></div><span class="sl" style="top: 32px"><i style="background: #b39ddb"></i>model</span><span class="sl" style="top: 48px"><i style="background: #ffd500"></i>clip</span><span class="sl out" style="top: 32px">MODEL<i style="background: #b39ddb"></i></span><span class="sl out" style="top: 48px">CLIP<i style="background: #ffd500"></i></span><span class="sl out" style="top: 64px">text<i style="background: #9ccc65"></i></span><div class="ct" style="top: 80px; height: 52px">A magazine-quality still life photograph, a glass vase with peonies, oranges and a cut apple on a walnut table…</div></div>
+            <div class="cn" style="left: 290px; top: 180px; width: 230px; height: 72px"><div class="cn-title"><i></i>CLIP Text Encode</div><span class="sl" style="top: 32px"><i style="background: #ffd500"></i>clip</span><span class="sl" style="top: 48px"><i style="background: #9ccc65"></i>text</span><span class="sl out" style="top: 32px">CONDITIONING<i style="background: #ffa931"></i></span></div>
+            <div class="cn" style="left: 290px; top: 270px; width: 230px; height: 92px"><div class="cn-title" data-map="np"><i></i>Negative <b class="mk" style="--mk: #fb7185">ib:np</b></div><span class="sl" style="top: 32px"><i style="background: #ffd500"></i>clip</span><span class="sl out" style="top: 32px">CONDITIONING<i style="background: #ffa931"></i></span><div class="ct" style="top: 48px; height: 30px">blurry, lowres, watermark</div></div>
+            <div class="cn" style="left: 290px; top: 386px; width: 230px; height: 92px"><div class="cn-title"><i></i>Image Stitch</div><span class="sl" style="top: 32px"><i style="background: #64b5f6"></i>image1</span><span class="sl" style="top: 48px"><i style="background: #64b5f6"></i>image2</span><span class="sl out" style="top: 32px">IMAGE<i style="background: #64b5f6"></i></span><div class="cw" style="top: 64px"><span>direction</span><b>right</b></div></div>
+            <div class="cn" style="left: 290px; top: 486px; width: 230px; height: 72px"><div class="cn-title"><i></i>VAE Encode</div><span class="sl" style="top: 32px"><i style="background: #64b5f6"></i>pixels</span><span class="sl" style="top: 48px"><i style="background: #ff6e6e"></i>vae</span><span class="sl out" style="top: 32px">LATENT<i style="background: #ff9cf9"></i></span></div>
+            <div class="cn" style="left: 290px; top: 568px; width: 230px; height: 76px"><div class="cn-title"><i></i>KSamplerSelect</div><span class="sl out" style="top: 32px">SAMPLER<i style="background: #ecb4b4"></i></span><div class="cw" style="top: 48px"><span>sampler_name</span><b>euler</b></div></div>
+            <div class="cn" style="left: 580px; top: 20px; width: 220px; height: 120px"><div class="cn-title" data-map="smp"><i></i>Sampler <b class="mk" style="--mk: #ffb547">ib:smp</b></div><span class="sl" style="top: 32px"><i style="background: #cfcfcf"></i>noise</span><span class="sl" style="top: 48px"><i style="background: #66ffff"></i>guider</span><span class="sl" style="top: 64px"><i style="background: #ecb4b4"></i>sampler</span><span class="sl" style="top: 80px"><i style="background: #cdffcd"></i>sigmas</span><span class="sl" style="top: 96px"><i style="background: #ff9cf9"></i>latent_image</span><span class="sl out" style="top: 32px">output<i style="background: #ff9cf9"></i></span><span class="sl out" style="top: 48px">denoised<i style="background: #ff9cf9"></i></span></div>
+            <div class="cn" style="left: 580px; top: 150px; width: 220px; height: 108px"><div class="cn-title"><i></i>CFGGuider</div><span class="sl" style="top: 32px"><i style="background: #b39ddb"></i>model</span><span class="sl" style="top: 48px"><i style="background: #ffa931"></i>positive</span><span class="sl" style="top: 64px"><i style="background: #ffa931"></i>negative</span><span class="sl out" style="top: 32px">GUIDER<i style="background: #66ffff"></i></span><div class="cw" style="top: 80px"><span>cfg</span><b>1.0</b></div></div>
+            <div class="cn" style="left: 580px; top: 270px; width: 220px; height: 72px"><div class="cn-title"><i></i>Reference Latent</div><span class="sl" style="top: 32px"><i style="background: #ffa931"></i>conditioning</span><span class="sl" style="top: 48px"><i style="background: #ff9cf9"></i>latent</span><span class="sl out" style="top: 32px">CONDITIONING<i style="background: #ffa931"></i></span></div>
+            <div class="cn traced" style="left: 580px; top: 360px; width: 220px; height: 76px"><div class="cn-title" data-map="seed"><i></i>RandomNoise</div><span class="sl out" style="top: 32px">NOISE<i style="background: #cfcfcf"></i></span><div class="cw" style="top: 48px"><span>noise_seed</span><b>1048213</b></div></div>
+            <div class="cn traced" style="left: 580px; top: 448px; width: 220px; height: 116px"><div class="cn-title" data-map="steps"><i></i>BasicScheduler</div><span class="sl" style="top: 32px"><i style="background: #b39ddb"></i>model</span><span class="sl out" style="top: 32px">SIGMAS<i style="background: #cdffcd"></i></span><div class="cw" style="top: 48px"><span>scheduler</span><b>simple</b></div><div class="cw" style="top: 68px"><span>steps</span><b>8</b></div><div class="cw" style="top: 88px"><span>denoise</span><b>1.00</b></div></div>
+            <div class="cn" style="left: 860px; top: 20px; width: 210px; height: 96px"><div class="cn-title"><i></i>Upscale Latent By</div><span class="sl" style="top: 32px"><i style="background: #ff9cf9"></i>samples</span><span class="sl out" style="top: 32px">LATENT<i style="background: #ff9cf9"></i></span><div class="cw" style="top: 48px"><span>upscale_method</span><b>nearest-exact</b></div><div class="cw" style="top: 68px"><span>scale_by</span><b>1.50</b></div></div>
+            <div class="cn" style="left: 860px; top: 136px; width: 210px; height: 164px"><div class="cn-title" data-map="smp1"><i></i>Hires. fix sampler <b class="mk" style="--mk: #c084fc">ib:smp:1</b></div><span class="sl" style="top: 32px"><i style="background: #b39ddb"></i>model</span><span class="sl" style="top: 48px"><i style="background: #ffa931"></i>positive</span><span class="sl" style="top: 64px"><i style="background: #ffa931"></i>negative</span><span class="sl" style="top: 80px"><i style="background: #ff9cf9"></i>latent_image</span><span class="sl out" style="top: 32px">LATENT<i style="background: #ff9cf9"></i></span><div class="cw" style="top: 96px"><span>steps</span><b>8</b></div><div class="cw" style="top: 116px"><span>cfg</span><b>1.0</b></div><div class="cw" style="top: 136px"><span>denoise</span><b>0.40</b></div></div>
+            <div class="cn" style="left: 860px; top: 330px; width: 210px; height: 72px"><div class="cn-title"><i></i>VAE Decode</div><span class="sl" style="top: 32px"><i style="background: #ff9cf9"></i>samples</span><span class="sl" style="top: 48px"><i style="background: #ff6e6e"></i>vae</span><span class="sl out" style="top: 32px">IMAGE<i style="background: #64b5f6"></i></span></div>
+            <div class="cn" style="left: 860px; top: 420px; width: 210px; height: 72px"><div class="cn-title"><i></i>VAE Decode</div><span class="sl" style="top: 32px"><i style="background: #ff9cf9"></i>samples</span><span class="sl" style="top: 48px"><i style="background: #ff6e6e"></i>vae</span><span class="sl out" style="top: 32px">IMAGE<i style="background: #64b5f6"></i></span></div>
+            <div class="cn" style="left: 1130px; top: 140px; width: 200px; height: 92px"><div class="cn-title" data-map="hr"><i></i>Hires. fix <b class="mk" style="--mk: #c084fc">ib:hr</b></div><span class="sl" style="top: 32px"><i style="background: #64b5f6"></i>on_true</span><span class="sl" style="top: 48px"><i style="background: #64b5f6"></i>on_false</span><span class="sl out" style="top: 32px">IMAGE<i style="background: #64b5f6"></i></span><div class="cw" style="top: 64px"><span>switch</span><b>true</b></div></div>
+            <div class="cn" style="left: 1130px; top: 260px; width: 200px; height: 206px"><div class="cn-title"><i></i>Save Image</div><span class="sl" style="top: 32px"><i style="background: #64b5f6"></i>images</span><img src="img/generations/image05.jpg" alt="" style="top: 48px; height: 124px"><div class="cw" style="top: 178px"><span>filename_prefix</span><b>ComfyUI</b></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cm-tab">
+        <div class="cm-slab cm-slab-tab">
+          <img src="img/screenshots/01-generate.webp" alt="The Generate tab, its controls mapped to the marked nodes of the workflow" width="1194" height="667">
+          <i class="spot" data-spot="cp" style="left: 27%; top: 15.6%; --mk: #7aa2ff"></i>
+          <i class="spot" data-spot="size" style="left: 48%; top: 15.6%"></i>
+          <i class="spot" data-spot="steps" style="left: 64.9%; top: 15.6%"></i>
+          <i class="spot" data-spot="ref0" style="left: 76.5%; top: 15.6%; --mk: #22d3ee"></i>
+          <i class="spot" data-spot="ref1" style="left: 79.5%; top: 15.6%; --mk: #22d3ee"></i>
+          <i class="spot" data-spot="pp" style="left: 33.5%; top: 39%; --mk: #34d399"></i>
+          <i class="spot" data-spot="np" style="left: 33.5%; top: 65.5%; --mk: #fb7185"></i>
+          <i class="spot" data-spot="smp" style="left: 3.6%; top: 73.6%; --mk: #ffb547"></i>
+          <i class="spot" data-spot="seed" style="left: 30.6%; top: 81.7%"></i>
+          <i class="spot" data-spot="hr" style="left: 45.4%; top: 73.6%; --mk: #c084fc"></i>
+          <i class="spot" data-spot="smp1" style="left: 54.9%; top: 89.7%; --mk: #c084fc"></i>
+        </div>
+      </div>
+      <svg class="cm-lines" aria-hidden="true" data-cm-lines></svg>
+    </div>
+
+    <div class="cm-legend">
+      <span><i class="line-mk"></i>node found by the marker in its title</span>
+      <span><i class="line-traced"></i>node found by following the sampler's inputs</span>
+    </div>
+
+    <div class="points">
+      <div><h3>Works without markers</h3><p>A plain txt2img workflow needs no setup. Image Bench uses the first KSampler and the first two text encoders in the graph, then follows the sampler's inputs to the seed, steps, CFG, sampler, schedule and size. This works in KSampler and SamplerCustomAdvanced graphs, and the search passes through Reroutes and subgraphs.</p></div>
+      <div><h3>When you need markers</h3><p>With two samplers or several Load Image nodes in a graph, Image Bench can't tell them apart, so you add a marker such as <code class="mono">ib:smp:1</code> or <code class="mono">ib:ref:0</code> to the node title. The checkpoint list, Hires. fix, img2img and inpaint, references, ControlNet units and LoRA exploration always need their marker. If the workflow has no node for a control, the Generate tab hides that control.</p></div>
+      <div><h3>Your graph stays as you built it</h3><p>Image Bench changes the widget values you would change by hand. It doesn't add nodes or rewire links. Support for a custom loader or sampler goes into <code class="mono">node_config.json</code>, and the extension ships example workflows with every node already marked.</p></div>
+    </div>
+
+    <div class="markers">
+      <span class="mono"><b style="color: #4f6fd6">ib:cp</b>checkpoint</span>
+      <span class="mono"><b style="color: #0f9a6c">ib:pp</b> <b style="color: #e1405e">ib:np</b>prompts</span>
+      <span class="mono"><b style="color: #c2410c">ib:smp</b>sampler</span>
+      <span class="mono"><b style="color: #9333ea">ib:smp:1</b> <b style="color: #9333ea">ib:hr</b>Hires. fix</span>
+      <span class="mono"><b>ib:img</b> <b>ib:mask</b>img2img, inpaint</span>
+      <span class="mono"><b style="color: #0e8aa3">ib:ref:N</b>references</span>
+      <span class="mono"><b>ib:cn:N</b>ControlNet units</span>
+      <span class="mono"><b>ib:lora</b>LoRA exploration</span>
+    </div>
+  </div>
+</section>
+
 <!-- ================= screens ================= -->
 <section id="screens" class="sec grey clip">
   <div class="wrap split">
     <div class="split-text">
-      <div class="kicker">06 — Screens</div>
+      <div class="kicker">07 — Screens</div>
       <h2 class="disp">Made for a small second screen.</h2>
       <p class="lead">Image Bench fits its whole UI into 1200×800. Put it on a small display above your main monitor and give the big screen to your graphics editor. Generate, pick and send images up there, and paint down here.</p>
       <div class="specs">
@@ -437,7 +522,7 @@
 <section id="install" class="sec install">
   <div class="wrap stack-36">
     <div class="intro">
-      <div class="kicker">07 — Install</div>
+      <div class="kicker">08 — Install</div>
       <h2 class="disp">Two minutes to set up.</h2>
     </div>
     <div class="tabs" role="tablist" aria-label="Host">
@@ -493,7 +578,7 @@
 <section id="demo" class="sec grey demo">
   <div class="wrap stack-40">
     <div class="intro">
-      <div class="kicker">08 — In action</div>
+      <div class="kicker">09 — In action</div>
       <h2 class="disp">See it in action.</h2>
       <p class="lead">Image generation, use of ControlNet, model exploration, image comparison, inpainting, editing — and the window never switches.</p>
     </div>
@@ -512,7 +597,7 @@
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6.5L4.5 19a1.5 1.5 0 0 0 1.3 2h12.4a1.5 1.5 0 0 0 1.3-2L14 9.5V3"/><path d="M7.5 15h9"/></svg>
       </div>
       <div class="status-text">
-        <div class="kicker">09 — Status</div>
+        <div class="kicker">10 — Status</div>
         <h2 class="disp">Still an experiment.</h2>
         <p>Image Bench is a work in progress. Features change, the hosts it drives change under it, and things will break now and then. Try it, keep your projects backed up, and stick to the backend version that still works.</p>
       </div>
