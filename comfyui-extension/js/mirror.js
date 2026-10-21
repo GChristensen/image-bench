@@ -89,7 +89,7 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
             options,
             features,
             references: references.captureState(),
-            busy: progress.isBusy(),
+            busy: progress.takeBusy(),
             locked: false,
             // The workflow dropdown: the saved workflows and the active one, which follows the tabs of ComfyUI
             ...captureWorkflows(app)

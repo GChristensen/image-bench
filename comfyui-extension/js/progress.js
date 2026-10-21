@@ -14,6 +14,8 @@ export function createProgress({api, popup}) {
     let preview = null;
     let subscribed = false;
     let lastLive = null;
+    // A run started since the mirror last read the busy state: a cached run may end between two polls
+    let unreported = false;
 
     api.addEventListener('status', e => {
         queueRemaining = e.detail?.exec_info?.queue_remaining ?? 0;
@@ -22,6 +24,7 @@ export function createProgress({api, popup}) {
 
     api.addEventListener('execution_start', () => {
         running = true;
+        unreported = true;
         progress = 0;
         setPreview(null);
         send();
@@ -61,6 +64,17 @@ export function createProgress({api, popup}) {
 
     function isBusy() {
         return running || queueRemaining > 0;
+    }
+
+    /**
+     * The busy state for the mirror, which polls it: busy at least once for each run, so that the Generate tab sees a
+     * run that ended between two polls end (it ends a single generation when the host goes from busy to idle)
+     * @returns {boolean}
+     */
+    function takeBusy() {
+        const busy = isBusy() || unreported;
+        unreported = false;
+        return busy;
     }
 
     /**
@@ -111,5 +125,5 @@ export function createProgress({api, popup}) {
         }
     }
 
-    return {isBusy, getProgress, subscribe};
+    return {isBusy, takeBusy, getProgress, subscribe};
 }

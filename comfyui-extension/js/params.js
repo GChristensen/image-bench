@@ -9,6 +9,9 @@
 import {getTargetWidget, setTargetWidgetValue} from './workflow.js';
 import {findUpstream} from './graph.js';
 
+// ComfyUI's randomize picks seeds below 2^50
+const RANDOM_SEED_MAX = 1125899906842624;
+
 // Located parameters, in the order of the generation_params section
 const LOCATED_PARAMS = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'denoise', 'guidance', 'shift',
     'width', 'height', 'hiresSteps', 'hiresDenoise', 'hiresScale', 'hiresUpscaler'];
@@ -209,16 +212,18 @@ export function createParamRegistry(ops) {
 
     /**
      * A seed of -1 randomizes the seed after each generation, as -1 generates with a random seed in WebUI;
-     * any other seed is kept
+     * any other seed is kept. ComfyUI randomizes after queueing, so a random seed is set at once too: the next
+     * prompt would repeat the previous seed (and be cached whole) otherwise
      */
     function applySeed(located, seed) {
         const control = getControlWidget(located);
 
         if (seed < 0) {
+            // The range of ComfyUI's own randomize
+            setLocated(located, Math.floor(Math.random() * RANDOM_SEED_MAX));
+
             if (control)
                 control.value = 'randomize';
-            else
-                setLocated(located, Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
             return;
         }
 
