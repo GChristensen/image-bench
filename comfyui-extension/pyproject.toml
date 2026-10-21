@@ -1,6 +1,6 @@
 [project]
 name = "image-bench"
-description = "Systematic Stable Diffusion experimentation: batch generation, model exploration, parameter variation, image trays and editor plugins (Photoshop, Krita, GIMP)."
+description = "A generation and curation workspace for ComfyUI: every generated image arrives with its parameters in one window, so you can sort them into persistent trays, compare models or crops side by side and upscale with one click, with no digging through output folders and image viewers. Exchanges layers and masks with Photoshop, Krita and GIMP."
 version = "0.1.0"
 license = { file = "LICENSE" }
 dependencies = []
@@ -9,6 +9,6 @@ dependencies = []
 Repository = "https://github.com/GChristensen/comfyui-image-bench"
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "gchristnsn"
 DisplayName = "Image Bench"
-Icon = ""
+Icon = "https://raw.githubusercontent.com/GChristensen/image-bench/master/landing/img/logo.svg"
