@@ -27,7 +27,7 @@ deploy and editor plugin recipes.
 A: No. This software is distributed in the hope that it will be useful, but is provided 'as is' without warranty of any kind. You know.
 
 **Q: There is an annoying bug!**<br>
-A: Unfortunately, the author currently does not have the resources to provide free tech support. Please fix any issues using your favorite coding agent.
+A: Unfortunately, the author currently does not have the resources to fix. Please fix any issues using your favorite coding agent or wait while it will be fixed.
 
 **Q: The host backend prints something about tensor shape in the console, nothing is working!**<br>
 A: Something may have gotten messed up in the host UI (e.g., an incorrect VAE, text encoder, or image dimensions). 
