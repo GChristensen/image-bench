@@ -25,7 +25,7 @@
     kind: {
       type: String,
       required: true,
-      validator: (value) => ['generated', 'image-tray', 'concept-tray', 'upscaled', 'explore'].includes(value)
+      validator: (value) => ['generated', 'image-tray', 'concept-tray', 'upscaled', 'explore', 'controlnet_sweep'].includes(value)
     },
     image: {
       type: Object,
@@ -105,8 +105,8 @@
       upscale: image => emit("upscaleImage", image),
       addComment: image => emit("addComment", image),
       openImage: () => emit("imageOpen"),
-      // Explore has no marking filter
-      get filterMarking() { return props.kind === "explore" ? null : marking => emit("filterMarking", marking); },
+      // Explore and the ControlNet sweep have no marking filter
+      get filterMarking() { return filterable.value ? marking => emit("filterMarking", marking) : null; },
       setMarking: (image, marking) => setMarking(marking),
       removeMarking: () => removeMarking(),
       deleteImage: () => emit("deleteImage"),
@@ -115,8 +115,8 @@
   };
 
   const rimGroups = computed(() => rimActionGroups(props.image, actionContext));
-  // Explore shows no marking filter
-  const filterable = computed(() => props.kind !== "explore");
+  // Explore and the ControlNet sweep show no marking filter
+  const filterable = computed(() => props.kind !== "explore" && props.kind !== "controlnet_sweep");
 
   // Shift over the card shows the alternative actions of the sectors that have one
   const hovered = ref(false);
@@ -327,8 +327,8 @@
 
     <!-- One row, so that the hint never covers the badges; it wraps upwards if narrow -->
     <div class="image-bottom-bar">
-      <!-- Explore images compare models, so they show no badges (markings set in the overlay are shown) -->
-      <div v-if="kind !== 'explore'" class="image-badges">
+      <!-- Explore and sweep images compare models or values, so they show no badges (markings set in the overlay are shown) -->
+      <div v-if="filterable" class="image-badges">
         <span v-if="image.parameters['hires upscale']" class="badge hr"
               @mouseenter="hoveredText = 'Upscaled'" @mouseleave="hoveredText = null">HR</span>
         <span v-if="image.img2img" class="badge i2i"

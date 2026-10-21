@@ -452,6 +452,28 @@ const hostOrigin = location.origin;
         <li v-if="isWebUI"><b>Upload independent control image</b>: in img2img, this is checked automatically as
           soon as you set an image, because otherwise WebUI uses the img2img image.</li>
       </ul>
+      <h3>Sweep</h3>
+      <p>
+        The <b>Parameters</b> / <b>Sweep</b> switch at the top of the right column shows the sweep of the selected
+        unit: the same prompt and seed for each combination of control weight and ending step. Set the
+        <b>From</b>, <b>To</b> and <b>Step</b> of both axes (0.5 to 1 in steps of 0.1 by default) and press
+        <b>Sweep</b>. The matrix takes the place of the image panes: weights in the rows and ending steps in the columns,
+        both from the lowest value at the top left.
+      </p>
+      <ul>
+        <li>The first image uses the unit's current values. It stays at the left of the matrix with the control
+          image, so that you can compare each cell with what you have now.</li>
+        <li>The two diagonals come first: weak and short to strong and long (how much control), then strong and
+          short to weak and long (which kind of control at about the same strength). Then the cells between them
+          are filled in. You can stop once you have seen enough; the remaining cells stay empty.</li>
+        <li><b>Apply</b> under an image sets its weight and ending step in the unit, and a click on a row or column
+          header sets only that value. The cell with the unit's current values is outlined. After the sweep the
+          unit gets back the values it had before.</li>
+        <li>With <b>Use seed</b> checked, every image uses the seed entered next to it (the dice picks a random one).
+          Unchecked, the sweep uses the seed of the generation tab, or one random seed for all images if it is -1.
+          The seed of the generation tab is restored afterwards.</li>
+        <li>A disabled unit is enabled for the sweep. The images keep the ControlNet values in their parameters.</li>
+      </ul>
     </section>
 
     <section id="manual-explore">

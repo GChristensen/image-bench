@@ -345,6 +345,16 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
     }
 
     /**
+     * Parameters of a unit
+     * @param {number} index
+     * @returns {Object|null} As in CONTROLNET_STATE, null if no node is marked for the unit
+     */
+    function readParams(index) {
+        const resolved = resolveUnit(index);
+        return resolved ? readUnit(resolved, index).params : null;
+    }
+
+    /**
      * Run an action of a unit
      * @param {number} index
      * @param {'run'|'refresh'|'clearImage'|'clearMask'|'clearPreview'} action
@@ -635,5 +645,5 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         SET_CONTROLNET_TAB: () => {}
     };
 
-    return {handlers, ownsPrompt, onEditorImage, captureUnits, restoreUnits};
+    return {handlers, ownsPrompt, onEditorImage, captureUnits, restoreUnits, readParams, applyParams};
 }

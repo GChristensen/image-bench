@@ -7,6 +7,8 @@
  * In WebUI img2img a unit uses the img2img image unless it has an independent image, which an image set here turns on.
  * ComfyUI reports which parts the workflow has (features, see src/host.js).
  * In WebUI the pose of an openpose preview is edited in sd-webui-openpose-editor (OpenposeEditorModal).
+ * The switch at the top of the parameters column shows the sweep of the unit instead (weight x ending step matrix,
+ * ControlNetSweepStrategy of the host page; SweepSettings in the column, SweepMatrix in place of the images).
  */
 import {computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
@@ -24,6 +26,12 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {ensureOpenposeEditor} from "@/openposeEditor.js";
 import {onHostReady} from "@/hostWindow.js";
+import SweepSettings from "@/components/controlnet/SweepSettings.vue";
+import SweepMatrix from "@/components/controlnet/SweepMatrix.vue";
+import ProgressIndicator from "@/components/ProgressIndicator.vue";
+import {useControlNetSweepStore} from "@/stores/controlnetSweep.js";
+import {useLocalStorage} from "@/composables/useLocalStorage.js";
+import {ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
 
 // A tab switch that WebUI does not report within this time is given up
 const TAB_SWITCH_TIMEOUT = 3000;
@@ -243,6 +251,62 @@ function onPoseEdited(pose) {
   poseEdit.value = null;
 }
 
+// ---------- Sweep ----------
+
+const PANEL_KEY = "imageBench_controlnetPanel";
+const PANELS = [
+  {value: "params", label: "Parameters"},
+  {value: "sweep", label: "Sweep"}
+];
+
+const storage = useLocalStorage();
+const panel = ref(storage.getItem(PANEL_KEY, "params") === "sweep" ? "sweep" : "params");
+
+watch(panel, value => storage.setItem(PANEL_KEY, value));
+
+const sweep = useControlNetSweepStore();
+const sweepCurrent = computed(() => ({weight: form.weight, end: form.guidanceEnd}));
+
+const sweepProgressLabel = computed(() => sweep.generationTotal > 0
+  ? `${sweep.generationCompleted}/${sweep.generationTotal} · ${Math.round(sweep.generationProgress)}%`
+  : `${Math.round(sweep.generationProgress)}%`);
+
+async function onSweepStart({weights, ends, seed}) {
+  flushParams();
+
+  if (ownImage.value && !images.value.image) {
+    await dialog.alert(`ControlNet unit ${unit.value + 1} has no control image.`, {title: "Sweep"});
+    return;
+  }
+
+  if (!await ensureGenerationIdle())
+    return;
+
+  const options = {
+    unit: unit.value,
+    weights,
+    ends,
+    seed,
+    reference: {weight: Number(form.weight ?? 1), end: Number(form.guidanceEnd ?? 1)}
+  };
+
+  sweep.begin(options);
+  sendWebUIMessage({type: "CONTROLNET_SWEEP", ...options});
+}
+
+function onSweepStop() {
+  sendWebUIMessage({type: "STOP_GENERATION"});
+}
+
+// A cell sets both values, a row or column header one of them
+function onSweepApply({weight, end}) {
+  if (weight !== undefined)
+    setParam("weight", weight);
+
+  if (end !== undefined)
+    setGuidance("guidanceEnd", end);
+}
+
 // ---------- Layout ----------
 
 const CONTROLS_WIDTH_KEY = "imageBench_controlnetControlsWidth";
@@ -295,6 +359,9 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
                 @click="onUnitSelect(index - 1)">Unit {{ index }}<i v-if="cn.units[index - 1]?.enabled" class="dot"></i></button>
       </div>
 
+      <ProgressIndicator v-if="sweep.generationInProgress" class="sweep-progress" :value="sweep.generationProgress"
+                         :label="sweepProgressLabel"/>
+
       <div class="toolbar-spacer"></div>
 
       <span v-if="cn.available === false" class="chip warn">{{ NOT_FOUND_TEXT }}</span>
@@ -308,7 +375,10 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
     </div>
 
     <div ref="gridElement" class="controlnet-grid" :style="gridStyle">
-      <div class="images" :class="{single: !has('preprocessor')}">
+      <SweepMatrix v-if="panel === 'sweep'" :current="sweepCurrent" :control-image="images.preview || images.image"
+                   @apply="onSweepApply"/>
+
+      <div v-else class="images" :class="{single: !has('preprocessor')}">
         <!-- Control image or its mask -->
         <ControlNetImagePane :image="sourceImage"
                              :dark="shownSourceView === 'mask'" :droppable="connected"
@@ -381,96 +451,106 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
         </ControlNetImagePane>
       </div>
 
-      <fieldset class="controls" :disabled="!connected">
-        <div class="checks">
-          <label class="check enable"><input type="checkbox" :checked="!!form.enabled"
-                                             @change="e => setParam('enabled', e.target.checked)">Enable</label>
-          <label v-if="has('pixelPerfect')" class="check"><input type="checkbox" :checked="!!form.pixelPerfect"
-                                      @change="e => setParam('pixelPerfect', e.target.checked)">Pixel Perfect</label>
-          <label v-if="has('allowPreview')" class="check" :class="{off: !ownImage}"><input type="checkbox" :checked="!!form.allowPreview"
-                 :disabled="!ownImage" @change="e => setParam('allowPreview', e.target.checked)">Allow Preview</label>
-          <label v-if="has('mask')" class="check" :class="{off: !ownImage}"><input type="checkbox" :checked="!!form.useMask"
-                 :disabled="!ownImage" @change="e => setParam('useMask', e.target.checked)">Use Mask</label>
-          <label v-if="tab === 'img2img' && has('independent')" class="check wide"
-                 title="The unit uses its own image instead of the img2img image"><input type="checkbox"
-                 :checked="!!form.independent" @change="e => setParam('independent', e.target.checked)"
-                 >Upload independent control image</label>
+      <div class="side">
+        <div class="seg panels" role="radiogroup" aria-label="Parameters or sweep">
+          <button v-for="item in PANELS" :key="item.value" type="button" role="radio" :class="{on: panel === item.value}"
+                  :aria-checked="panel === item.value" @click="panel = item.value">{{ item.label }}</button>
         </div>
 
-        <label v-if="has('controlType')" class="field">Control type
-          <span class="select-wrap">
-            <select :value="form.controlType" @change="e => setParam('controlType', e.target.value)">
-              <option v-for="name in withCurrent(cn.options.controlType, form.controlType)" :key="name"
-                      :value="name">{{ name }}</option>
-            </select>
-            <AppIcon name="chevron" :size="14"/>
-          </span>
-        </label>
-        <label v-if="has('preprocessor')" class="field">Preprocessor
-          <span class="select-wrap">
-            <select :value="form.preprocessor" @change="e => setParam('preprocessor', e.target.value)">
-              <option v-for="name in withCurrent(choices.preprocessors, form.preprocessor)" :key="name"
-                      :value="name">{{ name }}</option>
-            </select>
-            <AppIcon name="chevron" :size="14"/>
-          </span>
-        </label>
-        <div v-if="preprocessorSliders.length" class="preprocessor-params">
-          <label v-for="slider in preprocessorSliders" :key="slider.name" class="slider">
-            <span class="slider-label" :title="slider.label">{{ slider.label }}</span>
-            <input type="range" :min="slider.min" :max="slider.max" :step="slider.step"
-                   :value="form[slider.name] ?? slider.min"
-                   @input="e => setSliderParam(slider.name, e.target.value)">
-            <NumberStepper :model-value="form[slider.name] ?? ''" :min="slider.min" :max="slider.max" :step="slider.step"
-                           :label="slider.label" @update:model-value="v => setSliderParam(slider.name, v)"/>
-          </label>
-        </div>
-        <label class="field">Model
-          <span class="select-wrap">
-            <select :value="form.model" :title="form.model" @change="e => setParam('model', e.target.value)">
-              <option v-for="name in withCurrent(modelChoices, form.model)" :key="name" :value="name">{{ name }}</option>
-            </select>
-            <AppIcon name="chevron" :size="14"/>
-          </span>
-        </label>
+        <SweepSettings v-if="panel === 'sweep'" :unit="unit" :running="sweep.generationInProgress"
+                       :disabled="!connected || cn.available === false" @start="onSweepStart" @stop="onSweepStop"/>
 
-        <label class="slider">Control weight
-          <input type="range" min="0" max="2" step="0.05" :value="form.weight ?? 1"
-                 @input="e => setParam('weight', Number(e.target.value))">
-          <NumberStepper :model-value="form.weight ?? ''" :min="0" :max="2" :step="0.05" label="Control weight"
-                         @update:model-value="v => setParam('weight', Number(v))"/>
-        </label>
-        <label class="slider">Starting step
-          <input type="range" min="0" max="1" step="0.01" :value="form.guidanceStart ?? 0"
-                 @input="e => setGuidance('guidanceStart', e.target.value)">
-          <NumberStepper :model-value="form.guidanceStart ?? ''" :min="0" :max="1" :step="0.01"
-                         label="Starting control step" @update:model-value="v => setGuidance('guidanceStart', v)"/>
-        </label>
-        <label class="slider">Ending step
-          <input type="range" min="0" max="1" step="0.01" :value="form.guidanceEnd ?? 1"
-                 @input="e => setGuidance('guidanceEnd', e.target.value)">
-          <NumberStepper :model-value="form.guidanceEnd ?? ''" :min="0" :max="1" :step="0.01"
-                         label="Ending control step" @update:model-value="v => setGuidance('guidanceEnd', v)"/>
-        </label>
-
-        <div v-if="has('controlMode') || has('resizeMode')" class="group-header label-small">Mode</div>
-        <div v-if="has('controlMode')" class="field">Control mode
-          <div class="seg control-mode" role="radiogroup" aria-label="Control mode">
-            <button v-for="name in cn.options.controlMode" :key="name" type="button" role="radio"
-                    :class="{on: form.controlMode === name}" :aria-checked="form.controlMode === name" :title="name"
-                    @click="setParam('controlMode', name)">{{ CONTROL_MODE_LABELS[name] ?? name }}</button>
+        <fieldset v-else class="controls" :disabled="!connected">
+          <div class="checks">
+            <label class="check enable"><input type="checkbox" :checked="!!form.enabled"
+                                               @change="e => setParam('enabled', e.target.checked)">Enable</label>
+            <label v-if="has('pixelPerfect')" class="check"><input type="checkbox" :checked="!!form.pixelPerfect"
+                                        @change="e => setParam('pixelPerfect', e.target.checked)">Pixel Perfect</label>
+            <label v-if="has('allowPreview')" class="check" :class="{off: !ownImage}"><input type="checkbox" :checked="!!form.allowPreview"
+                   :disabled="!ownImage" @change="e => setParam('allowPreview', e.target.checked)">Allow Preview</label>
+            <label v-if="has('mask')" class="check" :class="{off: !ownImage}"><input type="checkbox" :checked="!!form.useMask"
+                   :disabled="!ownImage" @change="e => setParam('useMask', e.target.checked)">Use Mask</label>
+            <label v-if="tab === 'img2img' && has('independent')" class="check wide"
+                   title="The unit uses its own image instead of the img2img image"><input type="checkbox"
+                   :checked="!!form.independent" @change="e => setParam('independent', e.target.checked)"
+                   >Upload independent control image</label>
           </div>
-        </div>
-        <label v-if="has('resizeMode')" class="field" :class="{off: !ownImage}">Resize mode
-          <span class="select-wrap">
-            <select :value="form.resizeMode" :disabled="!ownImage" @change="e => setParam('resizeMode', e.target.value)">
-              <option v-for="name in withCurrent(cn.options.resizeMode, form.resizeMode)" :key="name"
-                      :value="name">{{ name }}</option>
-            </select>
-            <AppIcon name="chevron" :size="14"/>
-          </span>
-        </label>
-      </fieldset>
+
+          <label v-if="has('controlType')" class="field">Control type
+            <span class="select-wrap">
+              <select :value="form.controlType" @change="e => setParam('controlType', e.target.value)">
+                <option v-for="name in withCurrent(cn.options.controlType, form.controlType)" :key="name"
+                        :value="name">{{ name }}</option>
+              </select>
+              <AppIcon name="chevron" :size="14"/>
+            </span>
+          </label>
+          <label v-if="has('preprocessor')" class="field">Preprocessor
+            <span class="select-wrap">
+              <select :value="form.preprocessor" @change="e => setParam('preprocessor', e.target.value)">
+                <option v-for="name in withCurrent(choices.preprocessors, form.preprocessor)" :key="name"
+                        :value="name">{{ name }}</option>
+              </select>
+              <AppIcon name="chevron" :size="14"/>
+            </span>
+          </label>
+          <div v-if="preprocessorSliders.length" class="preprocessor-params">
+            <label v-for="slider in preprocessorSliders" :key="slider.name" class="slider">
+              <span class="slider-label" :title="slider.label">{{ slider.label }}</span>
+              <input type="range" :min="slider.min" :max="slider.max" :step="slider.step"
+                     :value="form[slider.name] ?? slider.min"
+                     @input="e => setSliderParam(slider.name, e.target.value)">
+              <NumberStepper :model-value="form[slider.name] ?? ''" :min="slider.min" :max="slider.max" :step="slider.step"
+                             :label="slider.label" @update:model-value="v => setSliderParam(slider.name, v)"/>
+            </label>
+          </div>
+          <label class="field">Model
+            <span class="select-wrap">
+              <select :value="form.model" :title="form.model" @change="e => setParam('model', e.target.value)">
+                <option v-for="name in withCurrent(modelChoices, form.model)" :key="name" :value="name">{{ name }}</option>
+              </select>
+              <AppIcon name="chevron" :size="14"/>
+            </span>
+          </label>
+
+          <label class="slider">Control weight
+            <input type="range" min="0" max="2" step="0.05" :value="form.weight ?? 1"
+                   @input="e => setParam('weight', Number(e.target.value))">
+            <NumberStepper :model-value="form.weight ?? ''" :min="0" :max="2" :step="0.05" label="Control weight"
+                           @update:model-value="v => setParam('weight', Number(v))"/>
+          </label>
+          <label class="slider">Starting step
+            <input type="range" min="0" max="1" step="0.01" :value="form.guidanceStart ?? 0"
+                   @input="e => setGuidance('guidanceStart', e.target.value)">
+            <NumberStepper :model-value="form.guidanceStart ?? ''" :min="0" :max="1" :step="0.01"
+                           label="Starting control step" @update:model-value="v => setGuidance('guidanceStart', v)"/>
+          </label>
+          <label class="slider">Ending step
+            <input type="range" min="0" max="1" step="0.01" :value="form.guidanceEnd ?? 1"
+                   @input="e => setGuidance('guidanceEnd', e.target.value)">
+            <NumberStepper :model-value="form.guidanceEnd ?? ''" :min="0" :max="1" :step="0.01"
+                           label="Ending control step" @update:model-value="v => setGuidance('guidanceEnd', v)"/>
+          </label>
+
+          <div v-if="has('controlMode') || has('resizeMode')" class="group-header label-small">Mode</div>
+          <div v-if="has('controlMode')" class="field">Control mode
+            <div class="seg control-mode" role="radiogroup" aria-label="Control mode">
+              <button v-for="name in cn.options.controlMode" :key="name" type="button" role="radio"
+                      :class="{on: form.controlMode === name}" :aria-checked="form.controlMode === name" :title="name"
+                      @click="setParam('controlMode', name)">{{ CONTROL_MODE_LABELS[name] ?? name }}</button>
+            </div>
+          </div>
+          <label v-if="has('resizeMode')" class="field" :class="{off: !ownImage}">Resize mode
+            <span class="select-wrap">
+              <select :value="form.resizeMode" :disabled="!ownImage" @change="e => setParam('resizeMode', e.target.value)">
+                <option v-for="name in withCurrent(cn.options.resizeMode, form.resizeMode)" :key="name"
+                        :value="name">{{ name }}</option>
+              </select>
+              <AppIcon name="chevron" :size="14"/>
+            </span>
+          </label>
+        </fieldset>
+      </div>
 
       <div class="column-grip" :class="{active: controlsWidth.resizing}" role="separator"
            aria-orientation="vertical" aria-label="Resize the parameters column" :aria-valuenow="controlsWidth.size"
@@ -508,9 +588,22 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
   grid-template-columns: minmax(0, 1fr);
 }
 
-.controls {
+.side {
   grid-column: 2;
   grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.panels {
+  flex: none;
+}
+
+.controls {
+  flex: 1;
   min-width: 0;
   min-height: 0;
   margin: 0;
@@ -585,6 +678,10 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
 
 .chip.warn {
   color: var(--ib-warn);
+}
+
+.sweep-progress {
+  margin-left: 6px;
 }
 
 /* ---------- Images ---------- */

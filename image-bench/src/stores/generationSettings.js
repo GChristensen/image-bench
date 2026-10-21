@@ -11,7 +11,10 @@ const DEFAULTS = {
   // File names of the text encoders checked last in "Generate with text encoders"
   varyingTextEncoders: [],
   // Config preset by image kind
-  configPresets: {}
+  configPresets: {},
+  // Axes of the ControlNet sweep (weight x ending step), and its own seed when seedEnabled
+  controlNetSweep: {weightFrom: 0.5, weightTo: 1, weightStep: 0.1, endFrom: 0.5, endTo: 1, endStep: 0.1,
+                    seedEnabled: false, seed: 0}
 };
 
 // Where the settings were kept before store/generation_settings.json; taken over once

@@ -6,6 +6,8 @@ export const KIND_CONCEPT_TRAY = "concept_tray";
 export const KIND_COMPARE = "compare";
 // The session filmstrip of the Generate tab
 export const KIND_SESSION = "session";
+// The weight x ending step matrix of the ControlNet tab
+export const KIND_CONTROLNET_SWEEP = "controlnet_sweep";
 
 export const MARKINGS = ["👍", "👎", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "🏁"];
 
@@ -18,6 +20,8 @@ export function generationStateToKind(generationState) {
             return KIND_UPSCALED;
         case "EXPLORE_MODELS":
             return KIND_EXPLORE;
+        case "CONTROLNET_SWEEP":
+            return KIND_CONTROLNET_SWEEP;
     }
 }
 // Selectable accent colors: base, hover, text on accent background, and RGB triplet for translucent variants

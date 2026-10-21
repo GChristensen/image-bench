@@ -461,7 +461,7 @@ async function handleEditorImage(event) {
 
 // Popup messages that start a generation, refused while one is active
 const GENERATION_MESSAGES = new Set(["GENERATE_IMAGE", "EXPLORE_MODELS", "BATCH_GENERATE", "GENERATE_VARIATIONS",
-    "UPSCALE_IMAGES", "GENERATE_VARYING_STEPS", "UPSCALE_VARYING_DENOISING"]);
+    "UPSCALE_IMAGES", "GENERATE_VARYING_STEPS", "UPSCALE_VARYING_DENOISING", "CONTROLNET_SWEEP"]);
 // Those whose images go to the Upscaled tab
 const UPSCALE_MESSAGES = new Set(["UPSCALE_IMAGES", "UPSCALE_VARYING_DENOISING"]);
 
@@ -527,6 +527,8 @@ function handlePostMessage(event) {
         handleGenerateVaryingSteps(payload);
     else if (type === "UPSCALE_VARYING_DENOISING")
         handleUpscaleVaryingDenoising(payload);
+    else if (type === "CONTROLNET_SWEEP")
+        handleControlNetSweep(payload);
     else if (type === "REFRESH_MODELS")
         app.refreshComboInNodes();  // As ComfyUI's own Refresh, the loader nodes list the new models
 }
@@ -637,9 +639,9 @@ async function handleGenerateVariations(options) {
 }
 
 /**
- * Generate images again from their parameters with a strategy of ImageProcessingStrategy
- * @param {string} name - Key of the strategy in strategies (processing or varying)
- * @param {string} state - Generation state: HIRES_FIX (upscaled images) or SEQUENTIAL_GENERATION
+ * Generate images again from their parameters with a strategy of ImageProcessingStrategy, or start the ControlNet sweep
+ * @param {string} name - Key of the strategy in strategies (processing, varying or controlNetSweep)
+ * @param {string} state - Generation state: HIRES_FIX (upscaled images), SEQUENTIAL_GENERATION or CONTROLNET_SWEEP
  * @param {Object} options - Options of the strategy
  */
 async function startImageStrategy(name, state, options) {
@@ -694,6 +696,20 @@ async function handleGenerateVaryingSteps(options) {
  */
 async function handleUpscaleVaryingDenoising(options) {
     await startImageStrategy("varying", "HIRES_FIX", options);
+}
+
+/**
+ * Generate the matrix of ControlNet weights x ending steps of the unit marked ib:cn:<unit>
+ * @param {Object} options - {unit, weights, ends, reference: {weight, end}}
+ */
+async function handleControlNetSweep(options) {
+    if (!controlNet.readParams(options.unit)) {
+        sendPopupMessage({type: "GENERATION_FINISHED"});
+        showAlert(`No ControlNet node is marked "ib:cn:${options.unit}".`);
+        return;
+    }
+
+    await startImageStrategy("controlNetSweep", "CONTROLNET_SWEEP", {...options, controlNet});
 }
 
 /**

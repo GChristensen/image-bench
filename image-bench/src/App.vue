@@ -16,6 +16,7 @@ import {useControlNetStore} from "@/stores/controlnet.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useCompareStore} from "@/stores/compare.js";
+import {useControlNetSweepStore} from "@/stores/controlnetSweep.js";
 import {useSessionImagesStore} from "@/stores/session.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import ActionsModal from "@/components/ActionsModal.vue";
@@ -59,6 +60,7 @@ const generatedCount = computed(() => generatedImagesStore.images.filter(i => !i
 const imageTrayStore = useImageTrayStore();
 const conceptTrayStore = useConceptTrayStore();
 const compareStore = useCompareStore();
+const controlNetSweepStore = useControlNetSweepStore();
 const sessionImagesStore = useSessionImagesStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
@@ -105,6 +107,7 @@ const viewStores = {
   [generatedImagesStore.kind]: generatedImagesStore,
   [imageTrayStore.kind]: imageTrayStore,
   [upscaledImageStore.kind]: upscaledImageStore,
+  [controlNetSweepStore.kind]: controlNetSweepStore,
 }
 
 onBeforeMount(async () => {

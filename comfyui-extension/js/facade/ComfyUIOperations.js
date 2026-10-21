@@ -488,6 +488,35 @@ export class ComfyUIOperations {
     }
 
     /**
+     * Keep a seed for the following prompts (control_after_generate "fixed"): the given one, else the current one
+     * @param {number|null} value - Seed to use, null keeps the current seed
+     * @returns {Promise<{control: string|null, seed?: number|null}>} The state before, for restoreSeed()
+     */
+    async pinSeed(value = null) {
+        const backup = {control: this.getControlAfterGenerate()};
+
+        if (value !== null) {
+            backup.seed = this.getSeed();
+            this.setSeed(value);
+        }
+
+        this.setControlAfterGenerate('fixed');
+        return backup;
+    }
+
+    /**
+     * @param {{control: string|null, seed?: number|null}|null} backup - Returned by pinSeed()
+     * @returns {Promise<void>}
+     */
+    async restoreSeed(backup) {
+        if (backup?.seed !== undefined && backup.seed !== null)
+            this.setSeed(backup.seed);
+
+        if (backup?.control)
+            this.setControlAfterGenerate(backup.control);
+    }
+
+    /**
      * Set the steps value
      * Uses marker-based discovery (ib:smp) or falls back to KSampler
      * @param {number} steps - Number of steps
