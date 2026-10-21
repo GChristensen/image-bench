@@ -6,7 +6,7 @@ import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useCompareStore} from "@/stores/compare.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
-import {useLocalStorage} from "@/composables/useLocalStorage.js";
+import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
@@ -15,8 +15,6 @@ import {ensureGenerationIdle} from "@/sdwebui.js";
 import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
 import {editorIcon, editorName} from "@/editor.js";
 import {KIND_AUDIO, isStill, mediaKind} from "@/media.js";
-
-const VARYING_TEXT_ENCODERS_KEY = "imageBench_varyingTextEncoders";
 
 /**
  * Actions on a single image, defined once for the image card, its context menu and the keys on a hovered card.
@@ -73,9 +71,9 @@ async function generateVaryingSteps(image) {
   if (!await ensureGenerationIdle())
     return;
 
-  const storage = useLocalStorage();
+  const settings = useGenerationSettingsStore();
   const steps = await dialog.prompt("Apply step values:",
-    {defaultValue: storage.getVaryingSteps(), storageKey: "varyingSteps", dropdown: true, historySize: 5});
+    {defaultValue: settings.settings.varyingSteps, storageKey: "varyingSteps", dropdown: true, historySize: 5});
 
   if (steps) {
     const generatedImagesStore = useGeneratedImagesStore();
@@ -85,7 +83,7 @@ async function generateVaryingSteps(image) {
 
     generatedImagesStore.startingGeneration();
 
-    storage.setVaryingSteps(steps);
+    settings.set("varyingSteps", steps);
     useWebUIBridge().generateVaryingSteps(useImageOperations().cloneImage(image), steps);
   }
 }
@@ -111,8 +109,8 @@ async function generateVaryingTextEncoders(image) {
   const filter = imageEncoders.length ? (/^[a-z0-9]+/i.exec(stripExtension(imageEncoders[0]))?.[0] ?? "").toLowerCase() : "";
 
   // The encoders checked last time, of the same kind as the image's
-  const storage = useLocalStorage();
-  const remembered = storage.getJsonItem(VARYING_TEXT_ENCODERS_KEY, [])
+  const settings = useGenerationSettingsStore();
+  const remembered = (settings.settings.varyingTextEncoders ?? [])
     .filter(name => encoders.includes(name) && name.toLowerCase().includes(filter));
 
   const chosen = await dialog.checklist(
@@ -128,7 +126,7 @@ async function generateVaryingTextEncoders(image) {
   if (!chosen)
     return;
 
-  storage.setJsonItem(VARYING_TEXT_ENCODERS_KEY, chosen);
+  settings.set("varyingTextEncoders", chosen);
 
   const generatedImagesStore = useGeneratedImagesStore();
 
@@ -145,14 +143,14 @@ async function upscaleVaryingDenoising(image) {
   if (!await ensureGenerationIdle())
     return;
 
-  const storage = useLocalStorage();
+  const settings = useGenerationSettingsStore();
   const denoising = await dialog.prompt("Apply denoising values:",
-    {defaultValue: storage.getVaryingDenoising(), storageKey: "varyingDenoising", dropdown: true, historySize: 5});
+    {defaultValue: settings.settings.varyingDenoising, storageKey: "varyingDenoising", dropdown: true, historySize: 5});
 
   if (denoising) {
     useUpscaledImagesStore().startingGeneration();
 
-    storage.setVaryingDenoising(denoising);
+    settings.set("varyingDenoising", denoising);
     useWebUIBridge().upscaleVaryingDenoising(useImageOperations().cloneImage(image), denoising);
   }
 }

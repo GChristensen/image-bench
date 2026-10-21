@@ -10,6 +10,7 @@ import {onTrayPersisted} from "@/stores/composables/useTrayStoreState.js";
 import {useImageTrayStore} from "@/stores/imageTray.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useCompareStore} from "@/stores/compare.js";
+import {usePromptHistoryStore} from "@/stores/promptHistory.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 
 // Trays saved into a project (projects.TRAY_KINDS of the backend)
@@ -299,6 +300,7 @@ export const useProjectsStore = defineStore("projects", () => {
 
     const result = await run("Saving…", async () => {
       await flushTrays();
+      await usePromptHistoryStore().flush();
 
       const snapshot = await requestHost({type: "PROJECT_CAPTURE"}, CAPTURE_TIMEOUT);
       const {parameters, workflow, files} = snapshotToSave(snapshot);
@@ -421,6 +423,11 @@ export const useProjectsStore = defineStore("projects", () => {
       if (trays) {
         const result = await call("open", {path, trays: true, merge});
         await Promise.all(trayStores().map(store => store.init()));
+
+        // The project's prompt history replaces the workspace's
+        if (!merge)
+          await usePromptHistoryStore().load();
+
         current.value = result.current;
         info = result.project;
       }

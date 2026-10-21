@@ -9,7 +9,7 @@
  * One image is generated in place with a live preview; more images are a batch shown in the Generated tab
  * and, while it runs, in the session filmstrip, which takes the place of the parameter groups.
  */
-import {computed, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch} from "vue";
+import {computed, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import CheckTree from "@/components/CheckTree.vue";
 import GenerateImageCell from "@/components/GenerateImageCell.vue";
@@ -33,12 +33,16 @@ import SessionStrip from "@/components/generate/SessionStrip.vue";
 import PngInfoDialog from "@/components/generate/PngInfoDialog.vue";
 import WorkflowSelect from "@/components/generate/WorkflowSelect.vue";
 import SnippetsPanel from "@/components/generate/SnippetsPanel.vue";
+import PromptHistoryBar from "@/components/generate/PromptHistoryBar.vue";
+import PromptDiff from "@/components/generate/PromptDiff.vue";
 import {consoleOpen, toggleConsole} from "@/consoleDrawer.js";
 import {withCurrent} from "@/components/generate/choices.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useSessionImagesStore} from "@/stores/session.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
+import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
+import {formatHistoryTime, usePromptHistoryStore} from "@/stores/promptHistory.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useDragSize} from "@/composables/useDragSize.js";
@@ -111,6 +115,7 @@ const sdWebUI = useSDWebUIStateStore();
 const generatedImagesStore = useGeneratedImagesStore();
 const sessionImagesStore = useSessionImagesStore();
 const config = useAppConfigStore();
+const generationSettings = useGenerationSettingsStore();
 const webUI = useWebUIBridge();
 const storage = useLocalStorage();
 const has = useFeatures("generate", () => sdWebUI.features);
@@ -187,6 +192,9 @@ function onModeSelect(value) {
 
 function setParams(values) {
   const now = Date.now();
+
+  if ("prompt" in values || "negativePrompt" in values)
+    historyIndex.value = null;
 
   for (const [name, value] of Object.entries(values)) {
     form[name] = value;
@@ -442,6 +450,36 @@ async function refreshModels() {
   }
 }
 
+// ---------- Prompt history ----------
+
+const promptHistory = usePromptHistoryStore();
+// Entry of the prompt history shown (read-only) in the prompts, null for the current prompts
+const historyIndex = ref(null);
+const historyEntry = computed(() => historyIndex.value === null ? null : promptHistory.entries[historyIndex.value] ?? null);
+// The entry shown as it is instead of compared with the current prompts
+const historyPlain = ref(false);
+
+watch(() => promptHistory.entries, () => historyIndex.value = null);
+
+// Clicked again, an entry gives way to the current prompts
+function selectHistoryEntry(index) {
+  historyIndex.value = index === historyIndex.value ? null : index;
+}
+
+function useHistoryEntry(index = historyIndex.value) {
+  const entry = promptHistory.entries[index];
+
+  if (entry)
+    setParams(has("negativePrompt") ? {prompt: entry.prompt, negativePrompt: entry.negativePrompt}
+                                    : {prompt: entry.prompt});
+}
+
+// The current prompts are generated, whatever is shown
+function recordPrompts() {
+  historyIndex.value = null;
+  promptHistory.record(form.prompt, has("negativePrompt") ? form.negativePrompt : "");
+}
+
 // ---------- Generation ----------
 
 const generateImagesNumber = ref(1);
@@ -480,6 +518,7 @@ async function onGenerate() {
     return;
 
   flushParams();
+  recordPrompts();
 
   const nImages = Number(generateImagesNumber.value);
 
@@ -510,12 +549,13 @@ async function onGenerateVariations() {
     return;
 
   const strength = await dialog.prompt("Variation strength:",
-    {defaultValue: storage.getVariationStrength(), storageKey: "variationStrength"});
+    {defaultValue: generationSettings.settings.variationStrength, storageKey: "variationStrength"});
 
   if (!strength)
     return;
 
   flushParams();
+  recordPrompts();
 
   if (config.automaticallyClearGeneratedImages)
     generatedImagesStore.clear();
@@ -526,7 +566,7 @@ async function onGenerateVariations() {
   generatedImagesStore.startingGeneration();
   selectedImage.value = null;
   autoShowStrip();
-  storage.setVariationStrength(strength);
+  generationSettings.set("variationStrength", strength);
   webUI.generateVariations(strength, nImages, {mode: generationMode.value});
 }
 
@@ -679,7 +719,12 @@ const promptTextarea = name => (name === "negativePrompt" ? negativeField : prom
  * @param {Object} snippet - {prompt, negative}
  * @param {'click'|'middle'|'wrap'} mode
  */
-function onSnippetInsert(snippet, mode) {
+async function onSnippetInsert(snippet, mode) {
+  if (historyEntry.value) {
+    historyIndex.value = null;
+    await nextTick();
+  }
+
   const target = has("negativePrompt") ? snippetTarget.value : "prompt";
   const other = target === "prompt" ? "negativePrompt" : "prompt";
   const own = target === "prompt" ? snippet.prompt : snippet.negative;
@@ -696,7 +741,9 @@ function onSnippetInsert(snippet, mode) {
 async function onSnippetFromSelection(folderId) {
   const target = has("negativePrompt") ? snippetTarget.value : "prompt";
   const textarea = promptTextarea(target);
-  const text = textarea?.value.slice(textarea.selectionStart, textarea.selectionEnd).trim();
+  // A prompt of the history is not a textarea: its selection is that of the page
+  const text = (textarea ? textarea.value.slice(textarea.selectionStart, textarea.selectionEnd)
+                         : historyEntry.value ? String(window.getSelection() ?? "") : "").trim();
 
   if (!text) {
     await dialog.alert("Select the text of the snippet in a prompt first.", {title: "Snippets"});
@@ -1310,6 +1357,21 @@ const gridStyle = computed(() => ({
       <PromptField ref="promptField" class="prompt" label="Prompt" :tokens="has('tokens') ? sdWebUI.tokens?.prompt : null"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"
                    @dragover="onPromptDragOver" @drop="onPromptDrop" @focusin="snippetTarget = 'prompt'">
+        <template v-if="promptHistory.entries.length" #after-label>
+          <PromptHistoryBar :entries="promptHistory.entries" :selected="historyIndex"
+                            @select="selectHistoryEntry" @use="useHistoryEntry"/>
+          <template v-if="historyEntry">
+            <span class="history-info">#{{ historyIndex + 1 }} · {{ formatHistoryTime(historyEntry.time) }}</span>
+            <button type="button" class="history-btn" :class="{on: !historyPlain}" :aria-pressed="!historyPlain"
+                    title="Compare with the current prompt" @click="historyPlain = !historyPlain">
+              <AppIcon name="compare" :size="11"/>Diff</button>
+            <button type="button" class="history-btn use" title="Replace the current prompts with these"
+                    @click="useHistoryEntry()"><AppIcon name="check" :size="11"/>Use</button>
+          </template>
+        </template>
+        <template v-if="historyEntry" #view>
+          <PromptDiff :text="historyEntry.prompt" :base="form.prompt ?? ''" :plain="historyPlain"/>
+        </template>
         <Transition name="switching">
           <span v-if="switchingUiPreset || restarting" class="switching-badge" role="status">
             <span class="spinner"></span>{{ switchingUiPreset ? "Switching UI preset…" : "Restarting the generation…" }}
@@ -1377,7 +1439,11 @@ const gridStyle = computed(() => ({
                        :tokens="has('tokens') ? sdWebUI.tokens?.negativePrompt : null"
                        :style="{height: `${negative.size + 20}px`}"
                        :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"
-                       @focusin="snippetTarget = 'negativePrompt'"/>
+                       @focusin="snippetTarget = 'negativePrompt'">
+            <template v-if="historyEntry" #view>
+              <PromptDiff :text="historyEntry.negativePrompt" :base="form.negativePrompt ?? ''" :plain="historyPlain"/>
+            </template>
+          </PromptField>
         </template>
 
         <div v-if="lowerCollapsed" class="groups-collapsed">
@@ -1564,6 +1630,52 @@ const gridStyle = computed(() => ({
 
 .ib.busy:disabled {
   opacity: 1;
+}
+
+/* ---------- Prompt history ---------- */
+
+.history-info {
+  color: var(--ib-muted);
+  font-family: var(--ib-mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 16px;
+  padding: 0 5px;
+  border: 1px solid var(--ib-border);
+  border-radius: 3px;
+  background: var(--ib-surface);
+  color: var(--ib-text-2);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.history-btn:hover {
+  border-color: var(--ib-border-2);
+  color: var(--ib-text);
+}
+
+.history-btn.on {
+  border-color: var(--ib-accent-border);
+  color: var(--ib-accent);
+}
+
+.history-btn.use {
+  border-color: var(--ib-accent);
+  background: var(--ib-accent);
+  color: var(--ib-accent-ink);
+  font-weight: 600;
+}
+
+.history-btn.use:hover {
+  border-color: var(--ib-accent-hover);
+  background: var(--ib-accent-hover);
+  color: var(--ib-accent-ink);
 }
 
 /* ---------- UI preset switch ---------- */

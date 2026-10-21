@@ -5,6 +5,7 @@ import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useCompareStore} from "@/stores/compare.js";
 import {useProjectsStore} from "@/stores/projects.js";
+import {usePromptHistoryStore} from "@/stores/promptHistory.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
 import {dialog} from "@/dialogs/useDialog.js";
@@ -47,7 +48,7 @@ export async function startBlankWorkspace() {
     : ` The current project "${name}" is closed (its saved state is kept).`;
 
   const answer = await dialog.confirm(`Removes all images from the ${VIEWS}, empties the image and concept trays and `
-      + `the Compare tab, clears the prompts and sets a random seed in ${HOST_NAME}.${project} No files are deleted from disk.`,
+      + `the Compare tab, clears the prompts and their history and sets a random seed in ${HOST_NAME}.${project} No files are deleted from disk.`,
     {title: projects.hasCurrent ? `Close ${name}` : "Start a blank workspace", okText: "Clear", danger: true,
      actions: projects.hasCurrent && projects.unsaved ? [{id: "save", label: "Save and clear"}] : []});
 
@@ -58,6 +59,7 @@ export async function startBlankWorkspace() {
     return false;
 
   clearViewsAndTrays();
+  usePromptHistoryStore().clear();
   useWebUIBridge().setWebUIParams({prompt: "", negativePrompt: "", seed: -1,
                                    ...(isWebUI ? {subseed: -1, subseedStrength: 0} : {})});
 

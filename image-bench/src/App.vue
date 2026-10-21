@@ -6,6 +6,8 @@ import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
+import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
+import {usePromptHistoryStore} from "@/stores/promptHistory.js";
 import {generationStateToKind, KIND_GENERATED, KIND_UPSCALED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {canDropOn, isMoveTo, dropImages} from "@/imageDrag.js";
 import {flashTrayTab} from "@/components/utils.js";
@@ -112,6 +114,8 @@ onBeforeMount(async () => {
   await compareStore.init();
   await upscaledImageStore.init();
   await configPresetsStore.init();
+  await useGenerationSettingsStore().init();
+  await usePromptHistoryStore().load();
   await projectsStore.init();
 
   // The host page of the embedded mode is initialized when it attaches (HOST_READY)

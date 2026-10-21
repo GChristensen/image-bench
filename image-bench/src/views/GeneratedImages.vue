@@ -1,6 +1,6 @@
 <script setup>
 
-import {computed, onBeforeMount, ref, toRaw, watch} from "vue";
+import {computed, ref, toRaw, watch} from "vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ImageStream from "@/components/ImageStream.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
@@ -10,6 +10,7 @@ import {useImageTrayStore} from "@/stores/imageTray.js";
 import {generationStateToKind, KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
+import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
 import {createImageLink, ensureGenerationIdle, getGenerationState} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
@@ -17,7 +18,6 @@ import {useCompareStore} from "@/stores/compare.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
-import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useKeyboardShortcuts} from "@/composables/useKeyboardShortcuts.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {isStill} from "@/media.js";
@@ -38,6 +38,7 @@ const imageTrayStore = useImageTrayStore();
 const upscaleTrayStore = useConceptTrayStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
+const generationSettings = useGenerationSettingsStore();
 const imageStore = getImageStore();
 
 const imageToolbar = ref();
@@ -59,7 +60,6 @@ const openFileInput = ref()
 // Composables
 const webUI = useWebUIBridge();
 const imageOps = useImageOperations();
-const storage = useLocalStorage();
 
 function getImageStore() {
   switch (props.kind) {
@@ -152,9 +152,8 @@ async function onGenerateVariationsClick() {
   if (!await ensureGenerationIdle())
     return;
 
-  const variationStrength = storage.getVariationStrength();
   const strength = await dialog.prompt("Variation strength:",
-    {defaultValue: variationStrength, storageKey: "variationStrength"});
+    {defaultValue: generationSettings.settings.variationStrength, storageKey: "variationStrength"});
 
   if (strength) {
     if (config.automaticallyClearGeneratedImages)
@@ -164,7 +163,7 @@ async function onGenerateVariationsClick() {
 
     const nImagesToGenerate = imageToolbar.value.generateImagesNumber;
 
-    storage.setVariationStrength(strength);
+    generationSettings.set("variationStrength", strength);
     webUI.generateVariations(strength, nImagesToGenerate);
   }
 }
@@ -225,7 +224,7 @@ async function onDeleteImageOverlay(image) {
 
 function onConfigPresetChange(preset) {
   imageStore.applyPreset = preset;
-  storage.setConfigPreset(props.kind, preset);
+  generationSettings.setConfigPreset(props.kind, preset);
 }
 
 function onBeforeSDEvent(e) {
@@ -243,9 +242,11 @@ function onAfterSDEvent(e) {
   }
 }
 
-onBeforeMount(() => {
-  imageStore.applyPreset = lastConfigPreset.value = storage.getConfigPreset(props.kind);
-});
+// The settings may arrive after the view is mounted
+watch(() => generationSettings.loaded, loaded => {
+  if (loaded)
+    imageStore.applyPreset = lastConfigPreset.value = generationSettings.configPreset(props.kind);
+}, {immediate: true});
 
 // Keyboard shortcuts
 useKeyboardShortcuts({

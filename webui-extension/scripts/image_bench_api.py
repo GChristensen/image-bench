@@ -118,6 +118,10 @@ class ImageBenchApi():
         self.add_api_route("/snippets", self.get_snippets, methods=["GET"])
         self.add_api_route("/snippets", self.write_snippets, methods=["POST"])
         self.add_api_route("/snippets/webui_styles", self.get_webui_styles, methods=["GET"])
+        self.add_api_route("/prompt_history", self.get_prompt_history, methods=["GET"])
+        self.add_api_route("/prompt_history", self.write_prompt_history, methods=["POST"])
+        self.add_api_route("/generation_settings", self.get_generation_settings, methods=["GET"])
+        self.add_api_route("/generation_settings", self.write_generation_settings, methods=["POST"])
         self.add_api_route("/projects/{action}", self.projects_action, methods=["GET", "POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/websocket", self.handle_websocket)
         self.add_api_route("/close_websocket", self.close_websocket, methods=["GET"])
@@ -530,6 +534,22 @@ class ImageBenchApi():
     async def write_snippets(self, request: Request):
         base_dir = self.get_file_path("", upper=True)
         await persist.write_store_file_from_request(base_dir, SNIPPETS_FILE, request)
+        return Response("", media_type="application/json")
+
+    def get_prompt_history(self):
+        return self.serve_store_file(persist.PROMPT_HISTORY_FILE)
+
+    async def write_prompt_history(self, request: Request):
+        base_dir = self.get_file_path("", upper=True)
+        await persist.write_store_file_from_request(base_dir, persist.PROMPT_HISTORY_FILE, request)
+        return Response("", media_type="application/json")
+
+    def get_generation_settings(self):
+        return self.serve_store_file(persist.GENERATION_SETTINGS_FILE)
+
+    async def write_generation_settings(self, request: Request):
+        base_dir = self.get_file_path("", upper=True)
+        await persist.write_store_file_from_request(base_dir, persist.GENERATION_SETTINGS_FILE, request)
         return Response("", media_type="application/json")
 
     @staticmethod

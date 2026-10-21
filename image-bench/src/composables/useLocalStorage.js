@@ -81,54 +81,12 @@ export function useLocalStorage() {
     }
   };
 
-  // App-specific helpers
-  const getConfigPreset = (kind) => {
-    return getItem(`imageBench_${kind}_configPreset`);
-  };
-
-  const setConfigPreset = (kind, preset) => {
-    return setItem(`imageBench_${kind}_configPreset`, preset);
-  };
-
-  const getVariationStrength = () => {
-    return getItem('imageBench_variationStrength', '0.12');
-  };
-
-  const setVariationStrength = (strength) => {
-    return setItem('imageBench_variationStrength', strength);
-  };
-
-  const getVaryingSteps = () => {
-    return getItem('imageBench_varyingSteps', '24, 26, 28, 30, 32');
-  };
-
-  const setVaryingSteps = (steps) => {
-    return setItem('imageBench_varyingSteps', steps);
-  };
-
-  const getVaryingDenoising = () => {
-    return getItem('imageBench_varyingDenoising', '0.42, 0.46, 0.5, 0.54, 0.6');
-  };
-
-  const setVaryingDenoising = (denoising) => {
-    return setItem('imageBench_varyingDenoising', denoising);
-  };
-
   return {
     getItem,
     setItem,
     getJsonItem,
     setJsonItem,
     removeItem,
-    clear,
-    // App-specific
-    getConfigPreset,
-    setConfigPreset,
-    getVariationStrength,
-    setVariationStrength,
-    getVaryingSteps,
-    setVaryingSteps,
-    getVaryingDenoising,
-    setVaryingDenoising
+    clear
   };
 }

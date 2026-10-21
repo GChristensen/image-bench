@@ -272,6 +272,27 @@ async def update_snippets(request):
         return web.Response(text=str(e), status=500)
 
 
+# Prompts of the Generate tab and values of the generation dialogs, kept in store/
+def add_store_file_routes(path, filename):
+    async def get_file(request):
+        content = persist.serve_store_file_content(get_extension_root(), filename)
+        return web.Response(text=content, content_type="application/json")
+
+    async def update_file(request):
+        try:
+            await persist.write_store_file_from_request(get_extension_root(), filename, request)
+            return web.Response(text="", content_type="application/json")
+        except Exception as e:
+            return web.Response(text=str(e), status=500)
+
+    PromptServer.instance.routes.get(BASE_PATH + path)(get_file)
+    PromptServer.instance.routes.post(BASE_PATH + path)(update_file)
+
+
+add_store_file_routes("/prompt_history", persist.PROMPT_HISTORY_FILE)
+add_store_file_routes("/generation_settings", persist.GENERATION_SETTINGS_FILE)
+
+
 # Projects of the Library tab (see projects.dispatch)
 async def projects_action(request):
     files = {}
