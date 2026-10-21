@@ -71,7 +71,7 @@ const COMFY_FEATURES = {
     controlMode: false,
     resizeMode: false,
     allowPreview: false,
-    clearImage: false,
+    clearImage: true,
     preprocessorParams: false,
     openposeEditor: false
   },

@@ -352,6 +352,8 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
     async function runAction(index, action) {
         if (action === 'run')
             await runPreprocessor(index);
+        else if (action === 'clearImage')
+            clearUnitImage(index);
         else if (action === 'clearMask')
             applyParams(index, {useMask: false});
         else if (action === 'clearPreview')
@@ -392,6 +394,25 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
 
         app.graph.setDirtyCanvas(true, true);
         return true;
+    }
+
+    /**
+     * Empty the LoadImage node of a unit and disable the unit, which cannot run without an image
+     * (as Forge skips a unit without one); the widget is set without its callback, which would load the empty file
+     * @param {number} index
+     */
+    function clearUnitImage(index) {
+        const resolved = resolveUnit(index);
+        const widget = widgetOf(resolved?.image);
+
+        if (!widget)
+            return;
+
+        widget.value = '';
+        resolved.image.target.source.imgs = undefined;
+        setEnabled(resolved.target, false);
+        previews.delete(index);
+        app.graph.setDirtyCanvas(true, true);
     }
 
     async function setUnitImage(index, kind, file) {
