@@ -34,6 +34,7 @@ import PngInfoDialog from "@/components/generate/PngInfoDialog.vue";
 import WorkflowSelect from "@/components/generate/WorkflowSelect.vue";
 import SnippetsPanel from "@/components/generate/SnippetsPanel.vue";
 import PromptHistoryBar from "@/components/generate/PromptHistoryBar.vue";
+import PromptVariantsSelect from "@/components/generate/PromptVariantsSelect.vue";
 import PromptDiff from "@/components/generate/PromptDiff.vue";
 import {consoleOpen, toggleConsole} from "@/consoleDrawer.js";
 import {withCurrent} from "@/components/generate/choices.js";
@@ -194,7 +195,7 @@ function setParams(values) {
   const now = Date.now();
 
   if ("prompt" in values || "negativePrompt" in values)
-    historyIndex.value = null;
+    shown.value = null;
 
   for (const [name, value] of Object.entries(values)) {
     form[name] = value;
@@ -453,30 +454,71 @@ async function refreshModels() {
 // ---------- Prompt history ----------
 
 const promptHistory = usePromptHistoryStore();
-// Entry of the prompt history shown (read-only) in the prompts, null for the current prompts
-const historyIndex = ref(null);
-const historyEntry = computed(() => historyIndex.value === null ? null : promptHistory.entries[historyIndex.value] ?? null);
+// The prompts shown (read-only) instead of the current ones, {variant, index} of a history entry or a prompt variant,
+// null for the current prompts
+const shown = ref(null);
+const historyIndex = computed(() => shown.value && !shown.value.variant ? shown.value.index : null);
+const variantIndex = computed(() => shown.value?.variant ? shown.value.index : null);
+const historyEntry = computed(() => !shown.value ? null
+  : (shown.value.variant ? promptHistory.variants : promptHistory.entries)[shown.value.index] ?? null);
 // The entry shown as it is instead of compared with the current prompts
 const historyPlain = ref(false);
 
-watch(() => promptHistory.entries, () => historyIndex.value = null);
+watch(() => promptHistory.entries, () => shown.value = null);
+watch(() => promptHistory.variants, variants => {
+  if (variantIndex.value !== null && variantIndex.value >= variants.length)
+    shown.value = null;
+});
 
 // Clicked again, an entry gives way to the current prompts
 function selectHistoryEntry(index) {
-  historyIndex.value = index === historyIndex.value ? null : index;
+  shown.value = index === null || index === historyIndex.value ? null : {variant: false, index};
 }
 
-function useHistoryEntry(index = historyIndex.value) {
-  const entry = promptHistory.entries[index];
+function selectVariant(index) {
+  shown.value = index === null ? null : {variant: true, index};
+}
 
+function usePrompts(entry) {
   if (entry)
     setParams(has("negativePrompt") ? {prompt: entry.prompt, negativePrompt: entry.negativePrompt}
                                     : {prompt: entry.prompt});
 }
 
+// The history entry shown becomes a variant under a name
+async function forkHistoryEntry() {
+  const entry = historyEntry.value;
+  const name = entry && await dialog.prompt("Name of the variant:", {title: "Fork a prompt variant", okText: "Fork"});
+
+  if (name)
+    promptHistory.fork(name.trim(), entry);
+}
+
+async function renameVariant(index) {
+  const variant = promptHistory.variants[index];
+  const name = variant && await dialog.prompt("Name of the variant:", {title: "Rename the prompt variant",
+                                                                       defaultValue: variant.name, okText: "Rename"});
+
+  if (name)
+    promptHistory.renameVariant(index, name.trim());
+}
+
+async function removeVariant(index) {
+  const variant = promptHistory.variants[index];
+
+  if (!variant || !await dialog.confirm(`Remove the prompt variant "${variant.name}"?`,
+                                        {title: "Prompt variants", okText: "Remove", danger: true}))
+    return;
+
+  if (variantIndex.value !== null && variantIndex.value >= index)
+    shown.value = variantIndex.value === index ? null : {variant: true, index: variantIndex.value - 1};
+
+  promptHistory.removeVariant(index);
+}
+
 // The current prompts are generated, whatever is shown
 function recordPrompts() {
-  historyIndex.value = null;
+  shown.value = null;
   promptHistory.record(form.prompt, has("negativePrompt") ? form.negativePrompt : "");
 }
 
@@ -721,7 +763,7 @@ const promptTextarea = name => (name === "negativePrompt" ? negativeField : prom
  */
 async function onSnippetInsert(snippet, mode) {
   if (historyEntry.value) {
-    historyIndex.value = null;
+    shown.value = null;
     await nextTick();
   }
 
@@ -1354,19 +1396,29 @@ const gridStyle = computed(() => ({
       </div>
 
       <!-- Prompt and LoRAs -->
-      <PromptField ref="promptField" class="prompt" label="Prompt" :tokens="has('tokens') ? sdWebUI.tokens?.prompt : null"
+      <!-- The token count is that of the current prompt: hidden while another one is shown, which makes room -->
+      <PromptField ref="promptField" class="prompt" label="Prompt"
+                   :tokens="has('tokens') && !historyEntry ? sdWebUI.tokens?.prompt : null"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"
                    @dragover="onPromptDragOver" @drop="onPromptDrop" @focusin="snippetTarget = 'prompt'">
-        <template v-if="promptHistory.entries.length" #after-label>
+        <template v-if="promptHistory.entries.length || promptHistory.variants.length" #after-label>
           <PromptHistoryBar :entries="promptHistory.entries" :selected="historyIndex"
-                            @select="selectHistoryEntry" @use="useHistoryEntry"/>
+                            @select="selectHistoryEntry" @use="index => usePrompts(promptHistory.entries[index])"/>
+          <PromptVariantsSelect v-if="promptHistory.variants.length" :variants="promptHistory.variants"
+                                :selected="variantIndex" @select="selectVariant"
+                                @use="index => usePrompts(promptHistory.variants[index])"
+                                @rename="renameVariant" @remove="removeVariant"/>
           <template v-if="historyEntry">
-            <span class="history-info">#{{ historyIndex + 1 }} · {{ formatHistoryTime(historyEntry.time) }}</span>
+            <template v-if="historyIndex !== null">
+              <span class="history-info">#{{ historyIndex + 1 }} · {{ formatHistoryTime(historyEntry.time) }}</span>
+              <button type="button" class="history-btn icon" title="Fork: keep these prompts as a named variant"
+                      aria-label="Fork a prompt variant" @click="forkHistoryEntry"><AppIcon name="fork" :size="11"/></button>
+            </template>
             <button type="button" class="history-btn" :class="{on: !historyPlain}" :aria-pressed="!historyPlain"
                     title="Compare with the current prompt" @click="historyPlain = !historyPlain">
               <AppIcon name="compare" :size="11"/>Diff</button>
             <button type="button" class="history-btn use" title="Replace the current prompts with these"
-                    @click="useHistoryEntry()"><AppIcon name="check" :size="11"/>Use</button>
+                    @click="usePrompts(historyEntry)"><AppIcon name="check" :size="11"/>Use</button>
           </template>
         </template>
         <template v-if="historyEntry" #view>
@@ -1658,6 +1710,12 @@ const gridStyle = computed(() => ({
 .history-btn:hover {
   border-color: var(--ib-border-2);
   color: var(--ib-text);
+}
+
+.history-btn.icon {
+  width: 16px;
+  padding: 0;
+  justify-content: center;
 }
 
 .history-btn.on {

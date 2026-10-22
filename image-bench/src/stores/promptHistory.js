@@ -18,11 +18,13 @@ export function formatHistoryTime(time) {
 
 /**
  * The prompts generated from the Generate tab, the latest first: {prompt, negativePrompt, time} entries kept in
- * store/prompt_history.json as {version, entries}. A prompt pair generated again moves to the front.
- * Saved into a project and restored from it, but not part of its unsaved changes
+ * store/prompt_history.json as {version, entries, variants}. A prompt pair generated again moves to the front.
+ * Variants are history prompts forked under a name ({name, prompt, negativePrompt, time}, in the order of forking),
+ * kept until the history is cleared. Saved into a project and restored from it, but not part of its unsaved changes
  */
 export const usePromptHistoryStore = defineStore("promptHistory", () => {
   const entries = ref([]);
+  const variants = ref([]);
   let saving = Promise.resolve();
 
   async function load() {
@@ -32,13 +34,14 @@ export const usePromptHistoryStore = defineStore("promptHistory", () => {
       const data = text.trim() ? JSON.parse(text) : null;
 
       entries.value = Array.isArray(data?.entries) ? data.entries.slice(0, MAX_ENTRIES) : [];
+      variants.value = Array.isArray(data?.variants) ? data.variants : [];
     } catch (error) {
       console.error("[Image Bench] Unable to load the prompt history:", error);
     }
   }
 
   function persist() {
-    const body = JSON.stringify({version: 1, entries: entries.value});
+    const body = JSON.stringify({version: 1, entries: entries.value, variants: variants.value});
 
     saving = saving
       .then(() => fetch(URL, {method: "post", body}))
@@ -67,16 +70,36 @@ export const usePromptHistoryStore = defineStore("promptHistory", () => {
     persist();
   }
 
+  /**
+   * @param {string} name
+   * @param {{prompt: string, negativePrompt: string}} entry - The forked prompts
+   */
+  function fork(name, {prompt, negativePrompt}) {
+    variants.value = [...variants.value, {name, prompt, negativePrompt, time: Date.now()}];
+    persist();
+  }
+
+  function renameVariant(index, name) {
+    variants.value = variants.value.map((variant, i) => i === index ? {...variant, name} : variant);
+    persist();
+  }
+
+  function removeVariant(index) {
+    variants.value = variants.value.filter((_, i) => i !== index);
+    persist();
+  }
+
   function clear() {
-    if (!entries.value.length)
+    if (!entries.value.length && !variants.value.length)
       return;
 
     entries.value = [];
+    variants.value = [];
     persist();
   }
 
   // Before a project is saved
   const flush = () => saving;
 
-  return {entries, load, record, clear, flush};
+  return {entries, variants, load, record, fork, renameVariant, removeVariant, clear, flush};
 });

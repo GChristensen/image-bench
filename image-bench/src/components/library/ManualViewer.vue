@@ -371,8 +371,12 @@ const hostOrigin = location.origin;
           negative read-only, compared with the current ones: green is what it would add, struck out what it would
           remove, amber a changed weight. <b>Diff</b> switches to the plain text, and <b>Use</b> or a double click on
           the number replaces the current prompts with it. <AppIcon name="pencil" :size="13" class="inline-icon"/>
-          is the current prompt, the only editable one, and starting a generation returns to it. The history is
-          saved with the projects and restored when one is opened.</li>
+          is the current prompt, the only editable one, and starting a generation returns to it.
+          <AppIcon name="fork" :size="13" class="inline-icon"/> <b>Fork</b>, before <b>Diff</b>, keeps the prompts
+          shown as a named variant of the experiment; once there are variants, the <b>Variants</b> dropdown after the
+          numbers lists them by name with the beginning of their prompt, and shows, uses (double click), renames or
+          removes them like the history entries. The history and its variants are saved with the projects and
+          restored when one is opened; <b>Start a blank workspace</b> clears both.</li>
         <li><b><AppIcon name="fileSearch" :size="13" class="inline-icon"/> PNG Info</b> shows the parameters of an
           image chosen, pasted or dropped there (or on the prompt). <b>Apply</b> sets the checked groups and lists
           the values that {{ HOST_NAME }} does not have.</li>
