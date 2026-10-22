@@ -27,6 +27,11 @@ deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension
 # (symlinked shared code included)
 deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md default_snippets.json") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_docs comfy_dest) (_deploy_editors comfy_dest)
 
+# The Host Restart addon (addons/image-bench-host-restart, installed by hand and never released), next to the
+# extension of the remote install; its store/ (host_restart.json) is kept
+deploy-restart-webui: (_require "WEBUI_DEST" webui_dest) (_deploy "addons/image-bench-host-restart" (webui_dest + "/../image-bench-host-restart") "*.py README.md")
+deploy-restart-comfy: (_require "COMFY_DEST" comfy_dest) (_deploy "addons/image-bench-host-restart" (comfy_dest + "/../image-bench-host-restart") "*.py README.md")
+
 # The model docs, into the default docs folder of the remote install
 _deploy_docs dest: (_deploy "model-docs/docs" (dest + "/model_docs") "*")
 

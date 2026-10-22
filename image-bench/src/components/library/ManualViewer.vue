@@ -6,6 +6,7 @@ import {nextTick, onActivated, onMounted, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import PluginCard from "@/components/library/PluginCard.vue";
 import {HOST_NAME, isComfy, isWebUI} from "@/host.js";
+import {ADDON_URL} from "@/hostRestart.js";
 import {EMBEDDED} from "@/hostWindow.js";
 import {MANUAL_SECTIONS, useManualStore} from "@/stores/manual.js";
 
@@ -383,9 +384,15 @@ const hostOrigin = location.origin;
           {{ HOST_NAME }} process and its console window, then runs the script that starts {{ HOST_NAME }}. While the
           connection to {{ HOST_NAME }} is lost, the <AppIcon name="unplug" :size="13" class="inline-icon"/> icon
           after the Library tab shows whether the process is still running, and clicking the icon restarts
-          {{ HOST_NAME }} as well. To enable restarts, create <code>host_restart.json</code> in the
-          <code>store</code> folder of the extension with the path of your start script, for example
-          <code>{"command": "D:\\sd\\run.bat"}</code>. Until the file exists, the button tells you where to create it
+          {{ HOST_NAME }} as well. Restarts need the
+          <a :href="ADDON_URL" target="_blank" rel="noopener">Host Restart addon</a>, which is not a part of Image
+          Bench: it kills and starts processes and runs a helper that listens on a port of its own, which security
+          software may flag, so it is installed by hand. Copy its folder next to Image Bench in the
+          <code>{{ isComfy ? "custom_nodes" : "extensions" }}</code> folder of {{ HOST_NAME }} and restart
+          {{ HOST_NAME }}; until then, the button tells you where to get it. To enable restarts, create
+          <code>host_restart.json</code> in the <code>store</code> folder of the addon with the path of your start
+          script, for example <code>{"command": "D:\\sd\\run.bat"}</code>. Until the file exists, the button tells
+          you where to create it
           and which script started {{ HOST_NAME }}; <b>Settings › Host restart</b> shows the same information. The
           file can only be edited by hand, so nobody who reaches {{ HOST_NAME }} over the network can change the
           command. If {{ HOST_NAME }} still responds, the restart request goes through it. If it hangs, the browser

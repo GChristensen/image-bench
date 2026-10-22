@@ -11,7 +11,7 @@ import {openConsoleSocket} from "@/consoleSocket.js";
 import {copyText} from "@/clipboard.js";
 import {toast} from "@/toast.js";
 import {HOST_NAME} from "@/host.js";
-import {canRestart, restartHost, restarting} from "@/hostRestart.js";
+import {addonMissing, canRestart, restartHost, restarting} from "@/hostRestart.js";
 
 const HEIGHT_KEY = "imageBench_consoleHeight";
 const HEIGHT = {min: 80, default: 260, topReserve: 40};
@@ -130,6 +130,7 @@ onBeforeUnmount(() => {
       <button type="button" class="ib sm flat restart" :class="{off: !canRestart}" :disabled="restarting"
               :title="restarting ? `${HOST_NAME} is restarting…` : canRestart
                 ? `Restart ${HOST_NAME}: kill its process with its console window and run its start script`
+                : addonMissing ? `Restart ${HOST_NAME}: needs the Host Restart addon; click to see how`
                 : `Restart ${HOST_NAME}: not set up yet; click to see how`"
               :aria-label="`Restart ${HOST_NAME}`" @click="restartHost"><AppIcon name="power" :size="13"/></button>
       <button type="button" class="ib sm flat" title="Copy the output" aria-label="Copy the output"

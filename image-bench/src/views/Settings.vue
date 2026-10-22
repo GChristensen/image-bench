@@ -7,7 +7,7 @@ import {checkDocsRoot, useDocsStore} from "@/stores/docs.js";
 import {ACCENT_COLORS, KNOWN_UI_PRESETS} from "@/consts.js";
 import {HOST_NAME} from "@/host.js";
 import AppIcon from "@/components/AppIcon.vue";
-import {loadRestartInfo, restartInfo, sidecarUrl} from "@/hostRestart.js";
+import {ADDON_URL, loadRestartInfo, restartInfo, sidecarUrl} from "@/hostRestart.js";
 import {copyText} from "@/clipboard.js";
 import {toast} from "@/toast.js";
 
@@ -96,7 +96,7 @@ onMounted(async () => {
   }
 });
 
-// ---------- Host restart (read-only: store/host_restart.json is edited by hand) ----------
+// ---------- Host restart (the Host Restart addon; its store/host_restart.json is edited by hand) ----------
 
 onMounted(loadRestartInfo);
 
@@ -206,15 +206,22 @@ function setGenerateUiPreset(index, value) {
     </div>
     <h3 class="with-help">Host restart
       <span class="help" tabindex="0" role="note"
-            :aria-label="`The restart button of the console restarts a hung or crashed ${HOST_NAME}. It kills the process along with its console window and runs the start script, which is set only by hand in the config file as {&quot;command&quot;: &quot;path of the script&quot;}. Changes to the file take effect without a restart. The restart helper listens where ${HOST_NAME} does, on its port + 100 (&quot;port&quot; in the file sets another), with its certificate. A self-signed certificate has to be accepted for the helper once too.`"
+            :aria-label="`The restart button of the console restarts a hung or crashed ${HOST_NAME}. It needs the Host Restart addon, which is installed by hand, since security software may flag its process control. It kills the process along with its console window and runs the start script, which is set only by hand in the config file as {&quot;command&quot;: &quot;path of the script&quot;}. Changes to the file take effect without a restart. The restart helper listens where ${HOST_NAME} does, on its port + 100 (&quot;port&quot; in the file sets another), with its certificate. A self-signed certificate has to be accepted for the helper once too.`"
         >?<span class="help-text" aria-hidden="true">The restart button of the console restarts a hung or crashed
-          {{ HOST_NAME }}. It kills the process along with its console window and runs the start script.<br><br>
+          {{ HOST_NAME }}. It needs the Host Restart addon, which is installed by hand, since security software may
+          flag its process control. It kills the process along with its console window and runs the start
+          script.<br><br>
           The script is set only by hand in the config file, as
           <code>{"command": "path of the script"}</code>. Changes to the file take effect without a restart.<br><br>
           The restart helper listens where {{ HOST_NAME }} does, on its port + 100 (<code>"port"</code> in the file
           sets another), with its certificate. A self-signed certificate has to be accepted for the helper once
           too.</span></span></h3>
-    <div v-if="restartInfo" class="setting-label restart-info">
+    <div v-if="restartInfo?.installed === false" class="setting-label restart-info">
+      <span>Addon</span>
+      <span class="root-status"><AppIcon name="alert" :size="13"/>Not installed ·
+        <a :href="ADDON_URL" target="_blank" rel="noopener">Get the Host Restart addon</a></span>
+    </div>
+    <div v-else-if="restartInfo" class="setting-label restart-info">
       <span>Start script</span>
       <code v-if="restartInfo.configured">{{ restartInfo.command }}</code>
       <span v-else class="muted">Not set</span>
@@ -234,7 +241,7 @@ function setGenerateUiPreset(index, value) {
             <a v-if="restartInfo.scheme === 'https'" :href="`${sidecarUrl}/`" target="_blank" rel="noopener"
                title="With a self-signed certificate, accept it here once, so that a hung host can be restarted"
               >Accept the certificate</a></template>
-          <template v-else>Not running (see host_supervisor.log in the store folder)</template></span>
+          <template v-else>Not running (see host_supervisor.log in the store folder of the addon)</template></span>
       </template>
     </div>
     <h3>SD WebUI Interface</h3>

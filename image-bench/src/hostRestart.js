@@ -2,13 +2,16 @@ import {computed, ref, watch} from "vue";
 import {backendConnected, onBackendReconnected} from "@/backendStatus.js";
 import {copyText} from "@/clipboard.js";
 import {dialog} from "@/dialogs/useDialog.js";
-import {HOST_NAME} from "@/host.js";
+import {HOST_NAME, isComfy} from "@/host.js";
 import {toast} from "@/toast.js";
 
 /**
  * Restart of a hung or dead host from the popup (console drawer, the plug icon of the tab bar).
- * A hung host cannot restart itself: the backend starts a sidecar process (shared_backend/host_supervisor.py) that
- * kills the host's process tree and runs the start script named in store/host_restart.json, a file edited by hand.
+ * The backend side is not a part of Image Bench but the Host Restart addon (addons/image-bench-host-restart of the
+ * repository), installed by hand next to the extension, since security software may flag its process control;
+ * without it, /image-bench/host_restart answers 404 and the buttons explain where to get it.
+ * A hung host cannot restart itself: the addon starts a sidecar process (host_supervisor.py) that
+ * kills the host's process tree and runs the start script named in its store/host_restart.json, a file edited by hand.
  * While the host answers, a restart goes through it (POST /image-bench/host_restart). Otherwise the popup asks the
  * sidecar itself: /image-bench/host_restart tells its port, scheme and token while the host runs, and the popup keeps
  * them. The sidecar listens where the host does (on the network with --listen) with the host's TLS certificate, so it
@@ -16,10 +19,12 @@ import {toast} from "@/toast.js";
  */
 
 const ENDPOINT = "/image-bench/host_restart";
+export const ADDON_URL = "https://github.com/GChristensen/image-bench/tree/master/addons/image-bench-host-restart";
 const TOKEN_HEADER = "X-Image-Bench-Token";
 const STATUS_INTERVAL = 5000;
 
-// {configured, command, cwd, configPath, detected, port, scheme, network, token, running} of the backend, null until read
+// {installed, configured, command, cwd, configPath, detected, port, scheme, network, token, running} of the addon,
+// {installed: false} without it, null until read
 export const restartInfo = ref(null);
 // {state, error, hostAlive, memory, configured} of the sidecar, polled while the host is lost
 export const sidecarStatus = ref(null);
@@ -38,6 +43,8 @@ export const sidecarUrl = computed(() => {
 
 export const canRestart = computed(() => !!(restartInfo.value?.configured && restartInfo.value?.port));
 
+export const addonMissing = computed(() => restartInfo.value?.installed === false);
+
 export const restarting = computed(() =>
   sidecarStatus.value?.state === "restarting" || (restartRequested.value && !sidecarStatus.value));
 
@@ -52,7 +59,9 @@ export async function loadRestartInfo() {
     const response = await fetch(ENDPOINT, {cache: "no-store"});
 
     if (response.ok)
-      restartInfo.value = await response.json();
+      restartInfo.value = {...await response.json(), installed: true};
+    else if (response.status === 404)
+      restartInfo.value = {installed: false};
   } catch {
     // The host is down: the settings read before stay
   }
@@ -149,6 +158,18 @@ export const backendDownTitle = computed(() => {
   return `${HOST_NAME} has exited. Click to start it again`;
 });
 
+async function explainAddon() {
+  const message = `Restarting ${HOST_NAME} from Image Bench needs the Host Restart addon, which is not a part of `
+    + `Image Bench: it kills the ${HOST_NAME} process and starts it again through a small helper process that `
+    + "listens on its own port, and security software may flag that.\n\n"
+    + "Install it by hand from the Image Bench repository, next to Image Bench in the "
+    + `${isComfy ? "custom_nodes" : "extensions"} folder of ${HOST_NAME}, then restart ${HOST_NAME}. `
+    + "Its page tells what it does in detail.";
+
+  if (await dialog.confirm(message, {title: `Restart ${HOST_NAME}`, okText: "Open the addon page"}))
+    window.open(ADDON_URL, "_blank", "noopener");
+}
+
 async function explainSetup(info) {
   const config = JSON.stringify({command: info.detected || "<the start script>"}, null, 2);
   const message = `To restart ${HOST_NAME} from Image Bench, create this file:\n\n${info.configPath}\n\n`
@@ -216,11 +237,15 @@ export async function restartHost() {
     return;
   }
 
+  if (!info.installed)
+    return explainAddon();
+
   if (!info.configured)
     return explainSetup(info);
 
   if (!info.port) {
-    toast("The restart helper is not running. See the log in the store folder of the extension", {kind: "error"});
+    toast("The restart helper is not running. See the log in the store folder of the Host Restart addon",
+      {kind: "error"});
     return;
   }
 

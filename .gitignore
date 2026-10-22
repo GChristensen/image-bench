@@ -19,3 +19,4 @@ __pycache__/
 /landing/node_modules/
 /landing/video/
 
+/addons/*/store/
