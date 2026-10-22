@@ -640,6 +640,20 @@ async function onRestart() {
   }
 }
 
+// What the status slot of the toolbar shows, one at a time; null if nothing
+const toolbarStatus = computed(() => {
+  if (!connected.value)
+    return {text: `Waiting for ${HOST_NAME}…`, waiting: true};
+  if (restarting.value)
+    return {text: "Restarting the generation…"};
+  // The restore may switch the UI preset itself
+  if (sdWebUI.restoringParams)
+    return {text: "Restoring parameters…"};
+  if (switchingUiPreset.value)
+    return {text: "Switching UI preset…"};
+  return null;
+});
+
 function onGenerateButton(e) {
   if (restarting.value)
     return;
@@ -1259,7 +1273,8 @@ const gridStyle = computed(() => ({
   <div class="view-container generate">
     <div class="toolbar">
       <div class="toolbar-group">
-        <button class="btn swap" :class="generating ? 'stop' : 'primary'" :disabled="!generating && !connected"
+        <button class="btn swap" :class="generating ? 'stop' : 'primary'"
+                :disabled="!generating && (!connected || sdWebUI.restoringParams)"
                 :title="generating ? 'Stop; Ctrl+click or middle click: stop and generate again' : undefined"
                 @click="onGenerateButton" @mousedown.middle.prevent
                 @auxclick="e => e.button === 1 && generating && onRestart()">
@@ -1285,9 +1300,17 @@ const gridStyle = computed(() => ({
       <ProgressIndicator v-if="generating" :value="progress.value" :label="progress.label"
                          :completed="progress.completed || 0" :total="progress.total || 0"/>
 
-      <div class="toolbar-spacer"></div>
+      <!-- The free space of the toolbar, with the status centered in it -->
+      <div class="status-slot">
+        <Transition name="status" mode="out-in">
+          <span v-if="toolbarStatus" :key="toolbarStatus.text" class="status-pill" :class="{waiting: toolbarStatus.waiting}"
+                role="status" :title="toolbarStatus.text">
+            <span v-if="toolbarStatus.waiting" class="dot"></span><span v-else class="spinner"></span>
+            <span class="status-text">{{ toolbarStatus.text }}</span>
+          </span>
+        </Transition>
+      </div>
 
-      <span v-if="!connected" class="chip">Waiting for {{ HOST_NAME }}…</span>
       <button class="ib" :class="{on: snippetsOpen}" :aria-pressed="snippetsOpen"
               title="Snippets: insert prompt text of the Library at the caret" aria-label="Snippets"
               @mousedown.prevent @click="snippetsOpen = !snippetsOpen"><AppIcon name="snippet" :size="14"/></button>
@@ -1424,11 +1447,6 @@ const gridStyle = computed(() => ({
         <template v-if="historyEntry" #view>
           <PromptDiff :text="historyEntry.prompt" :base="form.prompt ?? ''" :plain="historyPlain"/>
         </template>
-        <Transition name="switching">
-          <span v-if="switchingUiPreset || restarting" class="switching-badge" role="status">
-            <span class="spinner"></span>{{ switchingUiPreset ? "Switching UI preset…" : "Restarting the generation…" }}
-          </span>
-        </Transition>
       </PromptField>
 
       <!-- LoRAs or references with the image below them; wide, the image is in a column of its own -->
@@ -1738,32 +1756,71 @@ const gridStyle = computed(() => ({
 
 /* ---------- UI preset switch ---------- */
 
-.switching-badge {
+/* Shrinks before the buttons around it; the status label then ellipsizes, the spinner stays */
+.status-slot {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 10px;
-  border: 1px solid var(--ib-accent-border);
-  border-radius: 10px;
-  background: var(--ib-elev-2);
-  color: var(--ib-accent);
-  font-size: 11px;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  justify-content: center;
 }
 
-.switching-badge .spinner {
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+  height: 22px;
+  padding: 0 10px;
+  border: 1px solid var(--ib-accent-border);
+  border-radius: 11px;
+  background: var(--ib-accent-soft);
+  color: var(--ib-accent);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.status-pill.waiting {
+  border-color: var(--ib-border-2);
+  background: var(--ib-elev-2);
+  color: var(--ib-text-2);
+}
+
+.status-pill .spinner {
+  flex: none;
   width: 10px;
   height: 10px;
 }
 
-.switching-enter-active,
-.switching-leave-active {
+.status-pill .dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ib-muted);
+  animation: status-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-enter-active,
+.status-leave-active {
   transition: opacity 0.15s;
 }
 
-.switching-enter-from,
-.switching-leave-to {
+.status-enter-from,
+.status-leave-to {
   opacity: 0;
 }
 

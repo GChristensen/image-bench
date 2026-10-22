@@ -31,6 +31,8 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
     const busy = ref(false)
     // WebUI is switching the UI preset, which may take a while
     const switchingUiPreset = ref(false)
+    // WebUI is restoring the parameters saved before it was reloaded (the persistGenerationParams setting)
+    const restoringParams = ref(false)
     // ComfyUI: the active workflow {path, name, modified} (null in WebUI or if unknown) and the saved workflows
     // [{path, name}] of the Workflows sidebar (name: the path below the workflows folder, without .json)
     const workflow = ref(null)
@@ -57,6 +59,7 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
             features.value = e.features ?? null;
             busy.value = e.busy;
             switchingUiPreset.value = !!e.switchingUiPreset;
+            restoringParams.value = !!e.restoringParams;
             promptsLocked.value = e.locked;
             workflow.value = e.workflow ?? null;
             workflows.value = e.workflows ?? [];
@@ -80,7 +83,7 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
         storage.setItem(PROMPTS_LOCK_KEY, String(lock));
     }
 
-    return {prompt, negativePrompt, mode, params, sliderKind, tokens, options, features, references, inputs, busy, switchingUiPreset, workflow, workflows, promptsLocked,
+    return {prompt, negativePrompt, mode, params, sliderKind, tokens, options, features, references, inputs, busy, switchingUiPreset, restoringParams, workflow, workflows, promptsLocked,
             live, onSDEvent,
             isPromptsLockRemembered, setPromptsLockRemembered};
 })

@@ -63,8 +63,6 @@ defineExpose({textarea});
       <textarea :id="id" ref="textarea" v-model="model" :disabled="disabled" spellcheck="false"
                 @keydown="onKeydown"></textarea>
     </slot>
-    <!-- Shown centered in the label row above the textarea, e.g. a waiting badge -->
-    <span class="overlay"><slot/></span>
   </div>
 </template>
 
@@ -94,18 +92,6 @@ defineExpose({textarea});
   color: var(--ib-text-2);
   font-family: var(--ib-mono);
   font-size: 10.5px;
-}
-
-.overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
 }
 
 textarea {
