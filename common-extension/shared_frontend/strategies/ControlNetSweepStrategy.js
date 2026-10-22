@@ -77,10 +77,17 @@ export class ControlNetSweepStrategy extends QueueProcessor {
     initialize(options) {
         const {weights, ends, reference} = options;
 
+        // The cell with the reference values is the reference image, which the popup also shows in that cell:
+        // generated again, its prompt would be the same, and ComfyUI, serving it from cache, would send no image
+        const round = value => Math.round(Number(value) * 1000) / 1000;
+        const isReference = cell => round(cell.weight) === round(reference.weight) && round(cell.end) === round(reference.end);
+
         this.controlNet = options.controlNet;
         this.unit = options.unit;
         this.queue = [{...reference, reference: true},
-            ...sweepOrder(weights.length, ends.length).map(([row, column]) => ({weight: weights[row], end: ends[column]}))];
+            ...sweepOrder(weights.length, ends.length)
+                .map(([row, column]) => ({weight: weights[row], end: ends[column]}))
+                .filter(cell => !isReference(cell))];
         this.totalItems = this.queue.length;
         this.generationId = this.createGenerationId();
     }
@@ -109,18 +116,21 @@ export class ControlNetSweepStrategy extends QueueProcessor {
         this.queue = [];
         this.currentItem = null;
 
-        if (this.paramsBefore) {
-            const {weight, guidanceEnd, enabled} = this.paramsBefore;
-            await this.controlNet.applyParams(this.unit, {weight, guidanceEnd, enabled});
+        // GENERATION_FINISHED resets the generation state, which would otherwise route all later images to the sweep
+        try {
+            if (this.paramsBefore) {
+                const {weight, guidanceEnd, enabled} = this.paramsBefore;
+                await this.controlNet.applyParams(this.unit, {weight, guidanceEnd, enabled});
+            }
+
+            await this.uiOperations.restoreSeed(this.seedBefore);
+            await this.uiOperations.setBatchCount(1);
+        } finally {
             this.paramsBefore = null;
+            this.seedBefore = null;
+            this.generationId = null;
+            this.messageBus.publish('GENERATION_FINISHED', {});
         }
-
-        await this.uiOperations.restoreSeed(this.seedBefore);
-        this.seedBefore = null;
-        await this.uiOperations.setBatchCount(1);
-
-        this.generationId = null;
-        this.messageBus.publish('GENERATION_FINISHED', {});
     }
 
     getMessageParams() {

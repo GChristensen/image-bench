@@ -73,6 +73,9 @@ export const useControlNetSweepStore = defineStore("controlNetSweep", () => {
 
       if (e.sweepCell.reference) {
         reference.value = {...reference.value, image};
+        // The strategy does not generate the cell with the reference values again
+        cells.value[sweepCellKey(reference.value.weight, reference.value.end)] = image;
+        triggerRef(cells);
       }
       else {
         cells.value[sweepCellKey(e.sweepCell.weight, e.sweepCell.end)] = image;

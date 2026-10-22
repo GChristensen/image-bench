@@ -17,7 +17,8 @@ import {createMirror} from "./mirror.js";
 import {createControlNet} from "./controlnet.js";
 import {createProjects} from "./projects.js";
 import {createWorkflows} from "./workflows.js";
-import {messageBus} from "./shared/messaging/messageBus.js";
+// The same URL as strategy-factory.js imports: a differently cased one is another module with a bus of its own
+import {messageBus} from "./shared/messaging/MessageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
 import {createPopupManager, getEmbeddingWindow} from "./shared/popup.js";
 import {showAppLinkDialog} from "./shared/appLink.js";
@@ -74,6 +75,7 @@ app.registerExtension({
         api.addEventListener("executed", handleExecuted);
         api.addEventListener("execution_start", handleExecutionStart);
         api.addEventListener("execution_error", handleExecutionError);
+        api.addEventListener("execution_success", handleExecutionSuccess);
         api.addEventListener("image-bench.editor", handleEditorImage);
 
         // Listen for postMessage from popup window
@@ -299,6 +301,11 @@ function addToolbarButton() {
     console.log('[Image Bench] Toolbar button added successfully using app.menu API');
 }
 
+// Outputs read by workflow.js:extractImageInfo()
+const MEDIA_OUTPUTS = ["images", "gifs", "video", "audio"];
+// Prompts that sent images, until their execution_success
+const promptsWithMedia = new Set();
+
 /**
  * Handle execution completion event
  */
@@ -308,6 +315,10 @@ async function handleExecuted(event) {
     // A preprocessor run of the ControlNet tab
     if (controlNet?.ownsPrompt(prompt_id))
         return;
+
+    // Before any await: execution_success may arrive meanwhile
+    if (MEDIA_OUTPUTS.some(key => output?.[key]?.length))
+        promptsWithMedia.add(prompt_id);
 
     console.log('[Image Bench] Image generated:', { node, output, prompt_id });
 
@@ -411,12 +422,38 @@ function handleExecutionError(event) {
         return;
 
     console.error('[Image Bench] Execution error:', exception_message);
+    promptsWithMedia.delete(prompt_id);
 
     sendPopupMessage({
         type: "GENERATION_ERROR",
         prompt_id: prompt_id,
         error: exception_message
     });
+
+    // The strategy would wait forever for the image, and its generation state would route all later images
+    if (currentStrategy && currentStrategy.isProcessing()) {
+        console.log('[Image Bench] Ending the active strategy after the error');
+        messageBus.publish('STRATEGY_FINISH_REQUEST');
+        messageBus.publish('GENERATION_FINISHED', {});
+    }
+}
+
+/**
+ * Handle the end of a prompt. A prompt that ComfyUI served entirely from its cache (the same prompt as an earlier one)
+ * sends no executed event for its output nodes: a strategy waiting for its image continues with the next item
+ */
+function handleExecutionSuccess(event) {
+    const {prompt_id} = event.detail;
+
+    if (controlNet?.ownsPrompt(prompt_id))
+        return;
+
+    const sentMedia = promptsWithMedia.delete(prompt_id);
+
+    if (!sentMedia && currentStrategy && currentStrategy.isProcessing()) {
+        console.log('[Image Bench] Prompt served from cache, no image:', prompt_id);
+        currentStrategy.processNext();
+    }
 }
 
 /**
@@ -671,6 +708,11 @@ async function startImageStrategy(name, state, options) {
         await currentStrategy.process(options);
     } catch (error) {
         console.error(`[Image Bench] Failed to start the ${name} strategy:`, error);
+        // A state left as it is would route all later images to the strategy's view
+        currentStrategy?.stop();
+        currentStrategy = null;
+        setGenerationState("BATCH_GENERATION");
+        sendPopupMessage({type: "GENERATION_FINISHED"});
     }
 }
 

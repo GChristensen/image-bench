@@ -73,8 +73,8 @@ function onStart() {
 
 <template>
   <div class="sweep-settings">
-    <p class="intro">Unit {{ unit + 1 }} with the same seed for each weight and ending step. The first image uses the
-      current values, to compare the matrix with.</p>
+    <p class="intro">Renders unit {{ unit + 1 }} once for each weight and ending step, all with the same seed. The first
+      image uses the current values, so you have a reference to compare the matrix against.</p>
 
     <div v-for="axis in AXES" :key="axis.prefix" class="axis">
       <div class="group-header label-small">{{ axis.label }}</div>
@@ -106,8 +106,8 @@ function onStart() {
       <button type="button" class="seed-random" title="Random seed" aria-label="Random seed"
               :disabled="running || !axes.seedEnabled" @click="onRandomSeed"><AppIcon name="dice" :size="14"/></button>
     </div>
-    <p class="seed-note">{{ axes.seedEnabled ? "Every image uses this seed."
-      : "Unchecked: the seed of the generation tab, a random one for all images if it is -1." }}</p>
+    <p class="seed-note">{{ axes.seedEnabled ? "All images use this seed."
+      : "When unchecked, the sweep uses the seed from the Generate tab. If that is -1, it picks one random seed for all images." }}</p>
 
     <div class="summary" :class="{error}">{{ summary }}</div>
 
@@ -117,9 +117,9 @@ function onStart() {
       <span :class="{off: !running}"><AppIcon name="stop" :size="13"/>Stop</span>
     </button>
 
-    <p class="hint">The diagonals of the matrix come first (weak and short to strong and long, strong and short to weak
-      and long), then the cells between them: you may stop once the matrix tells enough.
-      <b>Apply</b> under an image sets its values in the unit.</p>
+    <p class="hint">The sweep renders both diagonals of the matrix first (weak and short to strong and long, then strong
+      and short to weak and long) and fills in the cells between them afterwards, so you can stop it once you have seen
+      enough. <b>Apply</b> under an image sets the unit to that image's values.</p>
   </div>
 </template>
 
