@@ -73,6 +73,9 @@ connection from each other in turn); it shows that another editor is connected a
 
 1. A folder here with the plugin and a `manifest.json` holding at least `id`, `name` and `version`.
 2. An installer module in `common-extension/shared_backend/` (see `uxp_install.py`, `krita_install.py`, `gimp_install.py`) and an entry in
-   `editor_plugins.PLUGINS`, which gives the `/image-bench/editor/plugin*` routes and the manual's install card.
+   `editor_plugins.PLUGINS`, which gives the `/image-bench/editor/plugin*` routes and the manual's install card. The module
+   only tells the installed version: code that installs the plugin belongs in the plugin folder's development script
+   (`krita.py`, `gimp.py`), which is not shipped.
 3. Its icon and short name in `image-bench/src/editor.js` (`EDITORS`) and `components/icons.js`.
-4. The deploy line in `justfile` (`_deploy_editors`) and a chapter of the manual.
+4. The deploy line in `justfile` (`_deploy_editors`) and the file patterns in `tools/assemble.py` (`EDITOR_PLUGINS`), both
+   without the development script, and a chapter of the manual.

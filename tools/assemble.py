@@ -22,12 +22,13 @@ SKIPPED_FILES = {"config.json", ".gitkeep"}
 # Files of all add-ons (repository root -> tree root)
 COMMON_FILES = ["LICENSE", "THIRD_PARTY_LICENSES"]
 
-# Editor plugins, supplied for installing them from the manual: folder and file patterns (_deploy_editors)
+# Editor plugins, supplied for installing them from the manual: folder and file patterns (_deploy_editors), without
+# their development scripts (krita.py, gimp.py, uxp.ps1)
 EDITOR_PLUGINS = {
     "photoshop": ["index.js", "index.html", "manifest.json"],
     "photoshop-canny": ["*.js", "index.html", "manifest.json"],
-    "krita": ["*.py", "*.desktop", "manifest.json"],
-    "gimp": ["*.py", "manifest.json"],
+    "krita": ["image_bench/*.py", "image_bench/manifest.json", "*.desktop"],
+    "gimp": ["image_bench/*.py", "image_bench/manifest.json"],
 }
 
 HOSTS = {

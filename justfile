@@ -30,8 +30,9 @@ deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extensi
 # The model docs, into the default docs folder of the remote install
 _deploy_docs dest: (_deploy "model-docs/docs" (dest + "/model_docs") "*")
 
-# The editor plugins, supplied with the extension for installing them from the manual (Library tab)
-_deploy_editors dest: (_deploy "editor-extensions/photoshop" (dest + "/image_bench_shared/editor-extensions/photoshop") "index.js index.html manifest.json") (_deploy "editor-extensions/photoshop-canny" (dest + "/image_bench_shared/editor-extensions/photoshop-canny") "*.js index.html manifest.json") (_deploy "editor-extensions/krita" (dest + "/image_bench_shared/editor-extensions/krita") "*.py *.desktop manifest.json") (_deploy "editor-extensions/gimp" (dest + "/image_bench_shared/editor-extensions/gimp") "*.py manifest.json")
+# The editor plugins, supplied with the extension for installing them from the manual (Library tab);
+# without their development scripts (krita.py, gimp.py, uxp.ps1)
+_deploy_editors dest: (_deploy "editor-extensions/photoshop" (dest + "/image_bench_shared/editor-extensions/photoshop") "index.js index.html manifest.json") (_deploy "editor-extensions/photoshop-canny" (dest + "/image_bench_shared/editor-extensions/photoshop-canny") "*.js index.html manifest.json") (_deploy "editor-extensions/krita" (dest + "/image_bench_shared/editor-extensions/krita") "*.desktop") (_deploy "editor-extensions/krita/image_bench" (dest + "/image_bench_shared/editor-extensions/krita/image_bench") "*.py manifest.json") (_deploy "editor-extensions/gimp/image_bench" (dest + "/image_bench_shared/editor-extensions/gimp/image_bench") "*.py manifest.json")
 
 # Checkouts of the build repositories (sd-webui-image-bench, comfyui-image-bench), set in .env
 webui_release := env("WEBUI_RELEASE_REPO", "")
