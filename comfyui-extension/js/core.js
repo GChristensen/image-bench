@@ -788,6 +788,16 @@ async function finishStrategy() {
 }
 
 /**
+ * Set the seed of an image and keep it: with control_after_generate left at "randomize" the Generate tab shows -1
+ * and ComfyUI replaces the seed after the next queueing
+ * @param {number|string} seed
+ */
+function applyFixedSeed(seed) {
+    uiOperations.setSeed(Number(seed));
+    uiOperations.setControlAfterGenerate('fixed');
+}
+
+/**
  * Set image seed
  * @param {Object} payload - Seed payload with payload.parameters.seed
  */
@@ -799,14 +809,14 @@ function setImageSeed(payload) {
         return;
     }
 
-    if (!payload?.parameters?.seed) {
+    if (payload?.parameters?.seed === undefined || payload.parameters.seed === null) {
         console.warn('[Image Bench] No seed found in payload parameters');
         return;
     }
 
     try {
         const seed = payload.parameters.seed;
-        uiOperations.setSeed(seed);
+        applyFixedSeed(seed);
         console.log('[Image Bench] Seed set to:', seed);
     } catch (error) {
         console.error('[Image Bench] Failed to set seed:', error);
@@ -835,7 +845,7 @@ function setImageParams(payload) {
     try {
         // Set seed
         if (params.seed !== undefined) {
-            uiOperations.setSeed(params.seed);
+            applyFixedSeed(params.seed);
             console.log('[Image Bench] Seed set to:', params.seed);
         }
 

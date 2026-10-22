@@ -22,6 +22,7 @@
   const shots = [...root.querySelectorAll(".tour-shots img")];
   const part = (name) => root.querySelector(`[data-tour="${name}"]`);
   const pills = part("pills");
+  const caption = root.querySelector(".tour-caption");
   const num = (i) => String(i + 1).padStart(2, "0");
   let current = 0;
 
@@ -45,10 +46,24 @@
     part("title").textContent = part("name").textContent = img.dataset.title;
     part("num").textContent = num(current);
     part("desc").textContent = img.dataset.desc;
+    pointNotch();
+    if (user) {
+      caption.classList.remove("flash");
+      void caption.offsetWidth;  // restarts the animation
+      caption.classList.add("flash");
+    }
     // the neighbours load ahead, so stepping through never waits
     for (const k of [current + 1, current - 1]) shots[(k + shots.length) % shots.length].loading = "eager";
     if (user) history.replaceState(null, "", `#tour-${num(current)}`);
   }
+
+  // the caption's notch points at the selected pill
+  function pointNotch() {
+    const b = buttons[current].getBoundingClientRect();
+    caption.style.setProperty("--notch-x", `${b.left + b.width / 2 - caption.getBoundingClientRect().left}px`);
+  }
+  addEventListener("resize", pointNotch);
+  document.fonts.ready.then(pointNotch);  // the pills move once the mono font is in
 
   part("prev").addEventListener("click", () => show(current - 1, true));
   part("next").addEventListener("click", () => show(current + 1, true));
