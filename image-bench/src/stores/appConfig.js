@@ -126,10 +126,10 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
-    // Remember txt2img prompts and parameters across WebUI reloads (disabled unless set to true)
+    // Remember txt2img prompts and parameters across WebUI reloads (enabled unless set to false)
     const persistGenerationParams = computed({
         get() {
-            return _config.persistGenerationParams ?? false;
+            return _config.persistGenerationParams ?? true;
         },
         set(v) {
             _config.persistGenerationParams = v;
