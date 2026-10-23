@@ -82,6 +82,10 @@ const MODES = [
 // Parameters common to all modes, not remembered per mode
 const GLOBAL_PARAMS = ["uiPreset", "checkpoint", "modules"];
 
+// Not reapplied by a mode switch: WebUI keeps the size per tab itself, and img2img and Inpaint share theirs, so
+// reapplying the size remembered for img2img would overwrite the inpaint size
+const SWITCH_KEPT_PARAMS = ["width", "height"];
+
 const NEGATIVE_HEIGHT_KEY = "imageBench_generateNegativeHeight";
 const SIDE_TAB_KEY = "imageBench_generateSideTab";
 const MODEL_SLOT_KEY = "imageBench_generateModelSlot";
@@ -127,7 +131,8 @@ const has = useFeatures("generate", () => sdWebUI.features);
 // subseedStrength, sampler, scheduler, denoising, uiPreset, checkpoint, modules (VAE / Text Encoder file names,
 // null without the Forge Neo dropdown); txt2img: hiresFix (the checkbox; null without the ComfyUI ib:hr switch),
 // hiresUpscaler, hiresScale, hiresSteps (denoising is that of hires. fix); img2img and inpaint: resizeMode,
-// maskMode, inpaintArea, maskedContent.
+// maskMode, inpaintArea, maskedContent, maskBlur, inpaintPadding (choice labels and pixels as in WebUI; in ComfyUI
+// those of the Inpaint Crop node).
 const form = reactive({});
 const editedAt = {};
 let pending = {};
@@ -173,7 +178,8 @@ function onModeSelect(value) {
   flushParams();
 
   if (mode.value !== "other")
-    modeParams[mode.value] = Object.fromEntries(Object.entries(form).filter(([name]) => !GLOBAL_PARAMS.includes(name)));
+    modeParams[mode.value] = Object.fromEntries(Object.entries(form)
+      .filter(([name]) => !GLOBAL_PARAMS.includes(name) && !SWITCH_KEPT_PARAMS.includes(name)));
 
   // Shown at once and held until WebUI reports them for the new mode
   const params = modeParams[value] ?? null;

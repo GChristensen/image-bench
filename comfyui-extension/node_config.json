@@ -354,6 +354,10 @@
           "EmptyCosmosLatentVideo"
         ],
         "widget": "width"
+      },
+      {
+        "from": "inpaintCrop",
+        "widget": "output_target_width"
       }
     ],
     "height": [
@@ -384,6 +388,68 @@
           "EmptyCosmosLatentVideo"
         ],
         "widget": "height"
+      },
+      {
+        "from": "inpaintCrop",
+        "widget": "output_target_height"
+      }
+    ],
+    "_inpaint": "Inpaint Crop (ComfyUI-Inpaint-CropAndStitch) of the inpaint workflows: inpaintCrop is an anchor without a widget, the start (from) of the inpaint parameters. values maps the choice labels of the Generate tab to widget values.",
+    "inpaintCrop": [
+      {
+        "via": [
+          "latent_image"
+        ],
+        "deep": true,
+        "types": [
+          "InpaintCropImproved"
+        ]
+      }
+    ],
+    "maskBlur": [
+      {
+        "from": "inpaintCrop",
+        "widget": "mask_blend_pixels"
+      }
+    ],
+    "maskMode": [
+      {
+        "from": "inpaintCrop",
+        "widget": "mask_invert",
+        "values": {
+          "Inpaint masked": false,
+          "Inpaint not masked": true
+        }
+      }
+    ],
+    "inpaintArea": [
+      {
+        "from": "inpaintCrop",
+        "via": [
+          "optional_context_mask"
+        ],
+        "deep": true,
+        "types": [
+          "SolidMask"
+        ],
+        "widget": "value",
+        "values": {
+          "Whole picture": 1,
+          "Only masked": 0
+        }
+      }
+    ],
+    "inpaintPadding": [
+      {
+        "from": "inpaintCrop",
+        "via": [
+          "optional_context_mask"
+        ],
+        "deep": true,
+        "types": [
+          "GrowMask"
+        ],
+        "widget": "expand"
       }
     ],
     "hiresSteps": [

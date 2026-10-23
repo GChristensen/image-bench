@@ -27,6 +27,8 @@ const WEBUI_FEATURES = {
     tokens: true,
     promptLock: true,
     img2imgOptions: true,
+    // Hidden for now: "Inpaint masked" prevails; Masked content takes its place
+    maskMode: false,
     referencesEnabled: true,
     referenceMaxSize: true,
     // Dropdown of the workflows of the extension (ComfyUI)

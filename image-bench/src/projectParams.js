@@ -18,8 +18,6 @@ const WEBUI_ONLY = {
   subseed: "Variation seed",
   subseedStrength: "Variation strength",
   resizeMode: "Resize mode",
-  maskMode: "Mask mode",
-  inpaintArea: "Inpaint area",
   maskedContent: "Masked content",
   hiresFix: "Hires. fix checkbox"
 };

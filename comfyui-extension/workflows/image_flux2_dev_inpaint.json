@@ -1,8 +1,8 @@
 {
   "id": "62e389b9-f559-57c5-a759-e7abc34ffb41",
   "revision": 0,
-  "last_node_id": 40,
-  "last_link_id": 49,
+  "last_node_id": 46,
+  "last_link_id": 64,
   "nodes": [
     {
       "id": 1,
@@ -238,7 +238,7 @@
       "id": 6,
       "type": "CLIPTextEncode",
       "pos": [
-        960,
+        1720,
         0
       ],
       "size": [
@@ -367,7 +367,7 @@
       "id": 9,
       "type": "LoadImage",
       "pos": [
-        1020,
+        1780,
         1500
       ],
       "size": [
@@ -407,7 +407,7 @@
       "id": 10,
       "type": "LoadImage",
       "pos": [
-        1310,
+        2070,
         1500
       ],
       "size": [
@@ -703,7 +703,7 @@
       "id": 17,
       "type": "ImageScaleToTotalPixels",
       "pos": [
-        1020,
+        1780,
         1860
       ],
       "size": [
@@ -744,7 +744,7 @@
       "id": 18,
       "type": "VAEEncode",
       "pos": [
-        1020,
+        1780,
         2010
       ],
       "size": [
@@ -787,7 +787,7 @@
       "id": 19,
       "type": "ReferenceLatent",
       "pos": [
-        1020,
+        1780,
         2100
       ],
       "size": [
@@ -831,7 +831,7 @@
       "id": 20,
       "type": "ImageScaleToTotalPixels",
       "pos": [
-        1310,
+        2070,
         1860
       ],
       "size": [
@@ -872,7 +872,7 @@
       "id": 21,
       "type": "VAEEncode",
       "pos": [
-        1310,
+        2070,
         2010
       ],
       "size": [
@@ -915,7 +915,7 @@
       "id": 22,
       "type": "ReferenceLatent",
       "pos": [
-        1310,
+        2070,
         2100
       ],
       "size": [
@@ -959,7 +959,7 @@
       "id": 23,
       "type": "FluxGuidance",
       "pos": [
-        1310,
+        2070,
         0
       ],
       "size": [
@@ -998,7 +998,7 @@
       "id": 24,
       "type": "RandomNoise",
       "pos": [
-        960,
+        1720,
         120
       ],
       "size": [
@@ -1031,7 +1031,7 @@
       "id": 25,
       "type": "KSamplerSelect",
       "pos": [
-        960,
+        1720,
         250
       ],
       "size": [
@@ -1102,7 +1102,7 @@
       "id": 27,
       "type": "BasicGuider",
       "pos": [
-        1310,
+        2070,
         120
       ],
       "size": [
@@ -1162,9 +1162,8 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            31,
-            35,
-            46
+            51,
+            56
           ]
         },
         {
@@ -1204,8 +1203,8 @@
           "name": "MASK",
           "type": "MASK",
           "links": [
-            30,
-            48
+            50,
+            57
           ]
         }
       ],
@@ -1220,51 +1219,11 @@
       "title": "Load Image Mask ib:mask"
     },
     {
-      "id": 30,
-      "type": "GrowMask",
-      "pos": [
-        790,
-        940
-      ],
-      "size": [
-        270,
-        82
-      ],
-      "flags": {},
-      "order": 29,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "mask",
-          "name": "mask",
-          "type": "MASK",
-          "link": 30
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "MASK",
-          "name": "MASK",
-          "type": "MASK",
-          "links": [
-            38
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GrowMask"
-      },
-      "widgets_values": [
-        8,
-        true
-      ]
-    },
-    {
       "id": 31,
       "type": "GetImageSize",
       "pos": [
-        790,
-        560
+        1500,
+        750
       ],
       "size": [
         270,
@@ -1278,7 +1237,7 @@
           "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
-          "link": 31
+          "link": 61
         }
       ],
       "outputs": [
@@ -1308,13 +1267,14 @@
       "properties": {
         "Node name for S&R": "GetImageSize"
       },
-      "widgets_values": []
+      "widgets_values": [],
+      "title": "Crop size"
     },
     {
       "id": 32,
       "type": "Flux2Scheduler",
       "pos": [
-        960,
+        1720,
         360
       ],
       "size": [
@@ -1367,7 +1327,7 @@
       "id": 33,
       "type": "SplitSigmasDenoise",
       "pos": [
-        1310,
+        2070,
         360
       ],
       "size": [
@@ -1413,8 +1373,8 @@
       "id": 34,
       "type": "VAEEncode",
       "pos": [
-        1310,
-        520
+        1500,
+        560
       ],
       "size": [
         210,
@@ -1428,7 +1388,7 @@
           "localized_name": "pixels",
           "name": "pixels",
           "type": "IMAGE",
-          "link": 35
+          "link": 59
         },
         {
           "localized_name": "vae",
@@ -1456,8 +1416,8 @@
       "id": 35,
       "type": "SetLatentNoiseMask",
       "pos": [
-        1310,
-        610
+        1500,
+        650
       ],
       "size": [
         230,
@@ -1477,7 +1437,7 @@
           "localized_name": "mask",
           "name": "mask",
           "type": "MASK",
-          "link": 38
+          "link": 60
         }
       ],
       "outputs": [
@@ -1499,7 +1459,7 @@
       "id": 36,
       "type": "SamplerCustomAdvanced",
       "pos": [
-        1660,
+        2420,
         0
       ],
       "size": [
@@ -1567,7 +1527,7 @@
       "id": 37,
       "type": "VAEDecode",
       "pos": [
-        2010,
+        2770,
         0
       ],
       "size": [
@@ -1597,7 +1557,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            47
+            63
           ]
         }
       ],
@@ -1607,64 +1567,10 @@
       "widgets_values": []
     },
     {
-      "id": 38,
-      "type": "ImageCompositeMasked",
-      "pos": [
-        2010,
-        120
-      ],
-      "size": [
-        270,
-        146
-      ],
-      "flags": {},
-      "order": 37,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "destination",
-          "name": "destination",
-          "type": "IMAGE",
-          "link": 46
-        },
-        {
-          "localized_name": "source",
-          "name": "source",
-          "type": "IMAGE",
-          "link": 47
-        },
-        {
-          "localized_name": "mask",
-          "name": "mask",
-          "type": "MASK",
-          "link": 48,
-          "shape": 7
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "IMAGE",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            49
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageCompositeMasked"
-      },
-      "widgets_values": [
-        0,
-        0,
-        false
-      ]
-    },
-    {
       "id": 39,
       "type": "SaveImage",
       "pos": [
-        2330,
+        3090,
         120
       ],
       "size": [
@@ -1679,7 +1585,7 @@
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 49
+          "link": 64
         }
       ],
       "outputs": [],
@@ -1710,11 +1616,342 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "## FLUX.2 [dev]: inpainting, references\n\nRepaints the masked area of an image with FLUX.2 [dev] (not an inpaint model: the masked latent is re-noised and\nsampled with the rest of the image as context). **Differential Diffusion** makes a soft (feathered) mask blend\ngradually; the result is pasted back through the original mask, so nothing outside it changes.\n\n## Image Bench\n\nThe Generate tab is in **Inpaint** mode while this workflow is loaded.\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:img` | Load Image | Input cell; \"Send image\" from Photoshop |\n| `ib:mask` | Load Image Mask | Mask cell; the Photoshop selection |\n| `ib:cp`, `ib:pp`, `ib:lora` | as in the other workflows | model, prompt, LoRAs |\n| `ib:smp` | SamplerCustomAdvanced | seed, steps, sampling method, Distilled CFG, denoising (Denoise) |\n| `ib:ref:0-3` | Reference 1-4 (bypassed) | References panel |\n\nThe loaders refer to the files the Photoshop plugin writes (`image_bench_photoshop_*.png`); send an image and a\nmask, or set them in the Input / Mask cells of the Generate tab, before the first queue.\n\n- Describe the **whole image**, including the new content of the masked area.\n- Denoising 0.85-1.0 replaces the content, 0.4-0.7 keeps its colors and shapes.\n- The image keeps its size (the scheduler reads it); keep the sides multiples of 16 and within 0.5-4 MP.\n- A reference (for instance the object to put into the masked area) is used as in text-to-image.\n\n**References** (up to 4; FLUX.2 [dev] takes up to 10, add slots by copying a column and numbering its\nloader `ib:ref:4`, ...): add images in the References panel of the Generate tab (a tab next to LoRA), by\n\"Ps sends to: reference\" from Photoshop, or by dropping them there. An empty slot is bypassed together with its\nscale and encode nodes; its **Reference Latent** stays and passes the conditioning on unchanged. Refer to the\nreferences by order in the prompt (*\"the woman from image 1 wearing the jacket from image 2\"*). Each is scaled\nto 1 MP first.\n\n## Model Links\n\n**diffusion_models**: [flux2_dev_fp8mixed.safetensors](https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/diffusion_models/flux2_dev_fp8mixed.safetensors)\n**text_encoders**: [mistral_3_small_flux2_bf16.safetensors](https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/text_encoders/mistral_3_small_flux2_bf16.safetensors)\n**vae**: [full_encoder_small_decoder.safetensors](https://huggingface.co/black-forest-labs/FLUX.2-small-decoder/resolve/main/full_encoder_small_decoder.safetensors)\n"
+        "## FLUX.2 [dev]: inpainting, references\n\nRepaints the masked area of an image with FLUX.2 [dev] the way Forge's \"Inpaint upload\" does. **Inpaint Crop** cuts\nthe masked area with some context out of the image and scales it to the generation size, so that even a small area\nis sampled at full resolution; **Inpaint Stitch** scales the result back and blends it into the original through\nthe blurred mask. **Differential Diffusion** makes the soft mask edge blend gradually.\n\nRequires [ComfyUI-Inpaint-CropAndStitch](https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch) (install it with\nthe ComfyUI Manager).\n\n## Image Bench\n\nThe Generate tab is in **Inpaint** mode while this workflow is loaded.\n\n| Marker / node | Generate tab |\n|---------------|--------------|\n| `ib:img` Load Image | Input cell; \"Send image\" from Photoshop |\n| `ib:mask` Load Image Mask | Mask cell; the Photoshop selection |\n| `ib:cp`, `ib:pp`, `ib:lora` | model, prompt, LoRAs (as in the other workflows) |\n| `ib:smp` SamplerCustomAdvanced | seed, steps, sampling method, Distilled CFG, denoising (Denoise) |\n| Inpaint Crop | Resize to (`output_target_width/height`), Mask blur (`mask_blend_pixels`), Mask mode (`mask_invert`) |\n| Only masked padding (Grow Mask) | Only masked padding, pixels |\n| Whole picture (Solid Mask) | Inpaint area: value 0 = Only masked, 1 = Whole picture |\n| `ib:ref:0-3` Reference 1-4 (bypassed) | References panel |\n\nThe loaders refer to the files the Photoshop plugin writes (`image_bench_photoshop_*.png`); send an image and a\nmask, or set them in the Input / Mask cells of the Generate tab, before the first queue.\n\n- **Only masked**: the model sees only the crop (the mask's bounding box plus the padding, widened to the aspect\n  ratio of the size). Describe what the crop shows, the new content of the masked area and its surroundings.\n- **Whole picture**: the whole image is scaled to the size and sampled; describe the whole image.\n- Denoising 0.85-1.0 replaces the content, 0.4-0.7 keeps its colors and shapes.\n- Mask blur widens the mask by that many pixels and blurs it; the pixels outside the mask within that distance are\n  blended too. Keep the size within 0.5-4 MP with sides multiples of 16 (the scheduler reads the crop size).\n- A reference (for instance the object to put into the masked area) is used as in text-to-image.\n\n**References** (up to 4; FLUX.2 [dev] takes up to 10, add slots by copying a column and numbering its\nloader `ib:ref:4`, ...): add images in the References panel of the Generate tab (a tab next to LoRA), by\n\"Ps sends to: reference\" from Photoshop, or by dropping them there. An empty slot is bypassed together with its\nscale and encode nodes; its **Reference Latent** stays and passes the conditioning on unchanged. Refer to the\nreferences by order in the prompt (*\"the woman from image 1 wearing the jacket from image 2\"*). Each is scaled\nto 1 MP first.\n\n## Model Links\n\n**diffusion_models**: [flux2_dev_fp8mixed.safetensors](https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/diffusion_models/flux2_dev_fp8mixed.safetensors)\n**text_encoders**: [mistral_3_small_flux2_bf16.safetensors](https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/text_encoders/mistral_3_small_flux2_bf16.safetensors)\n**vae**: [full_encoder_small_decoder.safetensors](https://huggingface.co/black-forest-labs/FLUX.2-small-decoder/resolve/main/full_encoder_small_decoder.safetensors)\n"
       ],
       "title": "Note: FLUX.2 [dev] inpainting (Image Bench)",
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 41,
+      "type": "GrowMask",
+      "pos": [
+        790,
+        940
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 38,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 50
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            54
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GrowMask"
+      },
+      "widgets_values": [
+        32,
+        true
+      ],
+      "title": "Only masked padding"
+    },
+    {
+      "id": 42,
+      "type": "GetImageSize",
+      "pos": [
+        790,
+        1070
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 39,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 51
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "links": [
+            52
+          ]
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "links": [
+            53
+          ]
+        },
+        {
+          "localized_name": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GetImageSize"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 43,
+      "type": "SolidMask",
+      "pos": [
+        790,
+        1220
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "link": 52,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "link": 53,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            55
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SolidMask"
+      },
+      "widgets_values": [
+        0,
+        1024,
+        1024
+      ],
+      "title": "Whole picture (value 1)"
+    },
+    {
+      "id": 44,
+      "type": "MaskComposite",
+      "pos": [
+        790,
+        1370
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 41,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "destination",
+          "name": "destination",
+          "type": "MASK",
+          "link": 54
+        },
+        {
+          "localized_name": "source",
+          "name": "source",
+          "type": "MASK",
+          "link": 55
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            58
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MaskComposite"
+      },
+      "widgets_values": [
+        0,
+        0,
+        "add"
+      ],
+      "title": "Context mask"
+    },
+    {
+      "id": 45,
+      "type": "InpaintCropImproved",
+      "pos": [
+        1120,
+        560
+      ],
+      "size": [
+        340,
+        720
+      ],
+      "flags": {},
+      "order": 42,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 56
+        },
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 57,
+          "shape": 7
+        },
+        {
+          "localized_name": "optional_context_mask",
+          "name": "optional_context_mask",
+          "type": "MASK",
+          "link": 58,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "stitcher",
+          "name": "stitcher",
+          "type": "STITCHER",
+          "links": [
+            62
+          ]
+        },
+        {
+          "localized_name": "cropped_image",
+          "name": "cropped_image",
+          "type": "IMAGE",
+          "links": [
+            59,
+            61
+          ]
+        },
+        {
+          "localized_name": "cropped_mask",
+          "name": "cropped_mask",
+          "type": "MASK",
+          "links": [
+            60
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "InpaintCropImproved"
+      },
+      "widgets_values": [
+        "bilinear",
+        "bicubic",
+        false,
+        "ensure minimum resolution",
+        1024,
+        1024,
+        16384,
+        16384,
+        false,
+        0,
+        false,
+        8,
+        0.1,
+        false,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        true,
+        1024,
+        1024,
+        "16",
+        "gpu (much faster)"
+      ],
+      "title": "Inpaint Crop (Generate tab: size, mask blur, mask mode)"
+    },
+    {
+      "id": 46,
+      "type": "InpaintStitchImproved",
+      "pos": [
+        2770,
+        120
+      ],
+      "size": [
+        270,
+        46
+      ],
+      "flags": {},
+      "order": 43,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "stitcher",
+          "name": "stitcher",
+          "type": "STITCHER",
+          "link": 62
+        },
+        {
+          "localized_name": "inpainted_image",
+          "name": "inpainted_image",
+          "type": "IMAGE",
+          "link": 63
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            64
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "InpaintStitchImproved"
+      },
+      "widgets_values": []
     }
   ],
   "links": [
@@ -1951,22 +2188,6 @@
       "CONDITIONING"
     ],
     [
-      30,
-      29,
-      0,
-      30,
-      0,
-      "MASK"
-    ],
-    [
-      31,
-      28,
-      0,
-      31,
-      0,
-      "IMAGE"
-    ],
-    [
       32,
       31,
       0,
@@ -1991,14 +2212,6 @@
       "SIGMAS"
     ],
     [
-      35,
-      28,
-      0,
-      34,
-      0,
-      "IMAGE"
-    ],
-    [
       36,
       3,
       0,
@@ -2013,14 +2226,6 @@
       35,
       0,
       "LATENT"
-    ],
-    [
-      38,
-      30,
-      0,
-      35,
-      1,
-      "MASK"
     ],
     [
       39,
@@ -2079,32 +2284,120 @@
       "VAE"
     ],
     [
-      46,
-      28,
-      0,
-      38,
-      0,
-      "IMAGE"
-    ],
-    [
-      47,
-      37,
-      0,
-      38,
-      1,
-      "IMAGE"
-    ],
-    [
-      48,
+      50,
       29,
       0,
-      38,
+      41,
+      0,
+      "MASK"
+    ],
+    [
+      51,
+      28,
+      0,
+      42,
+      0,
+      "IMAGE"
+    ],
+    [
+      52,
+      42,
+      0,
+      43,
+      0,
+      "INT"
+    ],
+    [
+      53,
+      42,
+      1,
+      43,
+      1,
+      "INT"
+    ],
+    [
+      54,
+      41,
+      0,
+      44,
+      0,
+      "MASK"
+    ],
+    [
+      55,
+      43,
+      0,
+      44,
+      1,
+      "MASK"
+    ],
+    [
+      56,
+      28,
+      0,
+      45,
+      0,
+      "IMAGE"
+    ],
+    [
+      57,
+      29,
+      0,
+      45,
+      1,
+      "MASK"
+    ],
+    [
+      58,
+      44,
+      0,
+      45,
       2,
       "MASK"
     ],
     [
-      49,
-      38,
+      59,
+      45,
+      1,
+      34,
+      0,
+      "IMAGE"
+    ],
+    [
+      60,
+      45,
+      2,
+      35,
+      1,
+      "MASK"
+    ],
+    [
+      61,
+      45,
+      1,
+      31,
+      0,
+      "IMAGE"
+    ],
+    [
+      62,
+      45,
+      0,
+      46,
+      0,
+      "STITCHER"
+    ],
+    [
+      63,
+      37,
+      0,
+      46,
+      1,
+      "IMAGE"
+    ],
+    [
+      64,
+      46,
       0,
       39,
       0,
@@ -2131,10 +2424,23 @@
       "bounding": [
         420,
         510,
-        680,
+        350,
         800
       ],
       "color": "#8a6f3f",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "Inpaint area (Generate tab: Inpaint area, padding)",
+      "bounding": [
+        770,
+        890,
+        310,
+        620
+      ],
+      "color": "#3f8a52",
       "font_size": 24,
       "flags": {}
     }

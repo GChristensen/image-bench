@@ -882,7 +882,15 @@ export class ComfyUIOperations {
             width: parameters['width'] ?? (sizeWidth || undefined),
             height: parameters['height'] ?? (sizeHeight || undefined),
             // The Generate tab's shift field: Distilled CFG (FluxGuidance) or Shift, whichever the workflow has
-            shift: parameters['guidance'] ?? parameters['distilled cfg scale'] ?? parameters['shift']
+            shift: parameters['guidance'] ?? parameters['distilled cfg scale'] ?? parameters['shift'],
+            // Inpaint options by their infotext keys, where the workflow has an Inpaint Crop; WebUI writes the area
+            // and the mask mode only if they are not the defaults
+            maskBlur: parameters['mask blur'],
+            inpaintPadding: parameters['masked area padding'],
+            ...('mask blur' in parameters && {
+                maskMode: parameters['mask mode'] ?? 'Inpaint masked',
+                inpaintArea: parameters['inpaint area'] ?? 'Whole picture'
+            })
         }, 'txt2img');
 
         // The denoising strength of the parameters is that of Hires. fix (as in WebUI txt2img), if the workflow has it

@@ -338,9 +338,12 @@ const hostOrigin = location.origin;
           without one; a click opens the ControlNet tab. The Hires. fix checkbox stays before the tabs.</li>
         <li v-if="isWebUI"><b>Mode switch</b> (right of the toolbar): txt2img, img2img or Inpaint. The parameters
           are remembered per mode. In img2img and Inpaint, the Hires. fix column holds the denoising, resize and
-          mask options.</li>
+          mask options: masked content, inpaint area, mask blur and the padding of Only masked (shown dimmed for
+          Whole picture). The mask mode stays at WebUI's choice, usually Inpaint masked.</li>
         <li v-else><b>Mode</b> is set by the workflow: img2img with a node marked <code>ib:img</code>, inpaint with
-          <code>ib:mask</code> as well, otherwise txt2img.</li>
+          <code>ib:mask</code> as well, otherwise txt2img. In img2img and Inpaint, the Hires. fix column holds the
+          denoising and the inpaint options the workflow has (see
+          <a href="#" @click.prevent="scrollTo('comfy-images')">Input images and inpainting</a>).</li>
         <li><b>Size</b>: preset sizes or width and height inputs. The
           <AppIcon name="list" :size="13" class="inline-icon"/> / <AppIcon name="ruler" :size="13" class="inline-icon"/>
           button before it switches between them. The presets have the same aspect ratios in four grades, from
@@ -1296,6 +1299,22 @@ const hostOrigin = location.origin;
         <li>Other loaders that select a file of the <code>input</code> folder by name can be added to
           <code>store/node_config.json</code>.</li>
       </ul>
+      <p>
+        The bundled inpaint workflows (<code>Image Bench/image_*_inpaint</code>) need
+        <a href="https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch" target="_blank" rel="noopener">ComfyUI-Inpaint-CropAndStitch</a>
+        (install it with the ComfyUI Manager). They inpaint like WebUI's Inpaint upload: <b>Inpaint Crop</b> cuts
+        the masked area with its padding out of the image and scales it to the size of the Generate tab,
+        <b>Inpaint Stitch</b> blends the result back through the blurred mask. The Generate tab sets them through
+        the Inpaint group, which shows the options a workflow has:
+      </p>
+      <table>
+        <tr><th>Generate tab</th><th>Node</th></tr>
+        <tr><td>Size</td><td>Inpaint Crop: <code>output_target_width</code> / <code>output_target_height</code></td></tr>
+        <tr><td>Mask blur</td><td>Inpaint Crop: <code>mask_blend_pixels</code> (widens the mask and blurs it)</td></tr>
+        <tr><td>Mask mode</td><td>Inpaint Crop: <code>mask_invert</code></td></tr>
+        <tr><td>Inpaint area</td><td>The Solid Mask of the context mask: 0 Only masked, 1 Whole picture</td></tr>
+        <tr><td>Padding</td><td>The Grow Mask of the context mask (only masked padding, pixels)</td></tr>
+      </table>
 
       <h3 id="manual-comfy-references">References</h3>
       <p>

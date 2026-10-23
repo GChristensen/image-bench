@@ -589,13 +589,17 @@ function extractSamplerFromHistory(historyPrompt, nodeConfig, executionIds) {
     }
 
     // Parameters located outside the sampler (e.g. the seed of RandomNoise for SamplerCustomAdvanced)
-    for (const name of HISTORY_PARAMS) {
+    for (const name of [...HISTORY_PARAMS, ...Object.keys(HISTORY_INPAINT_PARAMS)]) {
         const located = executionIds?.params?.[name];
         const value = located && historyPrompt[located.executionId]?.inputs?.[located.widget];
 
         // A linked input is [node id, slot]
-        if (value !== undefined && !Array.isArray(value))
-            params[name] = value;
+        if (value === undefined || Array.isArray(value))
+            continue;
+
+        // The choice label of a values map (mask_invert false: "Inpaint masked")
+        const label = located.values && Object.keys(located.values).find(key => located.values[key] == value);
+        params[HISTORY_INPAINT_PARAMS[name] ?? name] = label ?? value;
     }
 
     return params;
@@ -605,6 +609,14 @@ function extractSamplerFromHistory(historyPrompt, nodeConfig, executionIds) {
 // the size and the guidance / shift let an image be generated again as it was
 const HISTORY_PARAMS = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'denoise', 'width', 'height',
     'guidance', 'shift'];
+
+// Inpaint parameters, by the infotext keys of WebUI
+const HISTORY_INPAINT_PARAMS = {
+    maskBlur: 'mask blur',
+    maskMode: 'mask mode',
+    inpaintArea: 'inpaint area',
+    inpaintPadding: 'masked area padding'
+};
 
 /**
  * Extract checkpoint/model from history prompt

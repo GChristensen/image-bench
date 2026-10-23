@@ -15,7 +15,8 @@ export const PNG_INFO_GROUPS = [
   {id: "sampling", label: "Sampling"},
   {id: "size", label: "Size"},
   {id: "seed", label: "Seed"},
-  {id: "hires", label: "Hires. fix"}
+  {id: "hires", label: "Hires. fix"},
+  {id: "inpaint", label: "Inpaint"}
 ];
 
 /**
@@ -186,6 +187,15 @@ export function infotextToForm(parameters, ctx) {
   }
   else
     set("hires", "denoising", parameters["denoising strength"]);
+
+  // Inpaint options of an inpainted image (WebUI writes the mask blur always, the area and the mask mode only if
+  // they are not the defaults)
+  if (ctx.mode !== "txt2img" && "mask blur" in parameters) {
+    set("inpaint", "maskBlur", parameters["mask blur"]);
+    set("inpaint", "maskMode", parameters["mask mode"] ?? "Inpaint masked");
+    set("inpaint", "inpaintArea", parameters["inpaint area"] ?? "Whole picture");
+    set("inpaint", "inpaintPadding", parameters["masked area padding"]);
+  }
 
   return groups;
 }

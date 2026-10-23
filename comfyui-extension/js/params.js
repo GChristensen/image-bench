@@ -14,7 +14,11 @@ const RANDOM_SEED_MAX = 1125899906842624;
 
 // Located parameters, in the order of the generation_params section
 const LOCATED_PARAMS = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'denoise', 'guidance', 'shift',
-    'width', 'height', 'hiresSteps', 'hiresDenoise', 'hiresScale', 'hiresUpscaler'];
+    'width', 'height', 'hiresSteps', 'hiresDenoise', 'hiresScale', 'hiresUpscaler',
+    'maskBlur', 'maskMode', 'inpaintArea', 'inpaintPadding'];
+
+// Inpaint parameters of the Generate tab (Inpaint Crop of the inpaint workflows)
+const INPAINT_PARAMS = ['maskBlur', 'maskMode', 'inpaintArea', 'inpaintPadding'];
 
 const CONTROL_WIDGET = 'control_after_generate';
 
@@ -40,21 +44,39 @@ export function createParamRegistry(ops) {
     }
 
     /**
-     * Locate a parameter by its generation_params locators
+     * Locate a parameter by its generation_params locators. A locator starts at the sampler of its role, or at the
+     * node of another located name (`from`); a locator without a widget is an anchor, only such a start
      * @param {string} name
-     * @returns {{target: Object, widget: Object, widgetName: string}|null}
+     * @returns {{target: Object, widget: Object, widgetName: string, values: Object|null}|null}
      */
     function locate(name) {
         for (const locator of getConfig()[name] ?? []) {
-            const start = getRoleTarget(locator.role);
+            const start = locator.from ? locate(locator.from)?.target : getRoleTarget(locator.role);
             const target = start && findUpstream(start, {...locator, stopTypes: getStopTypes()});
+
+            if (target && !locator.widget)
+                return {target};
+
             const widget = target && getTargetWidget(target, locator.widget);
 
             if (widget)
-                return {target, widget, widgetName: locator.widget};
+                return {target, widget, widgetName: locator.widget, values: locator.values ?? null};
         }
 
         return null;
+    }
+
+    /**
+     * The value of a located parameter, as the choice label of its values map if it has one
+     * (compared loosely, a SolidMask value of 1.0 is "Whole picture"); null if it is not located
+     */
+    function valueOf(located) {
+        if (!located)
+            return null;
+
+        const value = located.widget.value;
+        const label = located.values && Object.keys(located.values).find(key => located.values[key] == value);
+        return label ?? value ?? null;
     }
 
     function locateAll() {
@@ -72,6 +94,10 @@ export function createParamRegistry(ops) {
     function setLocated(located, value) {
         if (!located)
             return false;
+
+        // A choice label of the values map
+        if (located.values && Object.hasOwn(located.values, value))
+            value = located.values[value];
 
         // Number widgets keep numbers, the popup may send strings
         if (typeof located.widget.value === 'number' && value !== '' && !isNaN(Number(value)))
@@ -139,8 +165,8 @@ export function createParamRegistry(ops) {
         const params = {};
 
         for (const name of ['steps', 'cfg', 'sampler', 'scheduler', 'width', 'height',
-                            'hiresSteps', 'hiresScale', 'hiresUpscaler', 'denoising', 'shift'])
-            params[name] = located[resolveName(name, mode, located)]?.widget.value ?? null;
+                            'hiresSteps', 'hiresScale', 'hiresUpscaler', 'denoising', 'shift', ...INPAINT_PARAMS])
+            params[name] = valueOf(located[resolveName(name, mode, located)]);
 
         // The seed is -1 while it is randomized after each generation
         if (located.seed)
@@ -159,7 +185,10 @@ export function createParamRegistry(ops) {
             checkpoints: getWidgetChoices(checkpoint) ?? undefined,
             samplers: getWidgetChoices(located.sampler?.widget) ?? undefined,
             schedulers: getWidgetChoices(located.scheduler?.widget) ?? undefined,
-            upscalers: getWidgetChoices(located.hiresUpscaler?.widget) ?? []
+            upscalers: getWidgetChoices(located.hiresUpscaler?.widget) ?? [],
+            // The labels of the values maps, as WebUI's radio choices
+            maskMode: Object.keys(located.maskMode?.values ?? {}),
+            inpaintArea: Object.keys(located.inpaintArea?.values ?? {})
         };
 
         const features = {
@@ -177,7 +206,8 @@ export function createParamRegistry(ops) {
             hiresFix: params.hiresFix !== null,
             hiresSteps: !!located.hiresSteps,
             hiresScale: !!located.hiresScale,
-            hiresUpscaler: !!located.hiresUpscaler
+            hiresUpscaler: !!located.hiresUpscaler,
+            ...Object.fromEntries(INPAINT_PARAMS.map(name => [name, !!located[name]]))
         };
 
         const sliderKind = located.guidance ? 'distilledCfg' : located.shift ? 'shift' : null;
@@ -235,12 +265,13 @@ export function createParamRegistry(ops) {
 
     /**
      * Execution ids and widget names of the located parameters, used to read them from /history
-     * @returns {Object} {name: {executionId, widget}}
+     * @returns {Object} {name: {executionId, widget, values}}
      */
     function getExecutionIds() {
         return Object.fromEntries(Object.entries(locateAll())
             .filter(([, located]) => located)
-            .map(([name, located]) => [name, {executionId: located.target.executionId, widget: located.widgetName}]));
+            .map(([name, located]) => [name, {executionId: located.target.executionId, widget: located.widgetName,
+                                              values: located.values}]));
     }
 
     return {locate, getValue, setValue, getSeedControl, setSeedControl, read, apply, getExecutionIds};

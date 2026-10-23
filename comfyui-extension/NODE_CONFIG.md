@@ -97,16 +97,32 @@ widget wins:
 
 | Locator key | Meaning |
 |-------------|---------|
-| `widget` | The widget holding the value (required) |
+| `widget` | The widget holding the value; a parameter whose locators have no widget is an **anchor**, only the start of others (`from`) |
 | `role` | Start node: `sampler` (`ib:smp`, default) or `hiresSampler` (`ib:smp:1`) |
+| `from` | Start at the node located for another parameter or anchor instead of a sampler |
+| `values` | Choice labels of the Generate tab mapped to widget values, e.g. `{"Inpaint masked": false, "Inpaint not masked": true}`; the labels are also the choices offered |
 | `via` | Input names followed one after another from the start node; without `via` the widget is on the start node itself |
 | `types` | Accepted node types of the node reached; any type if absent |
 | `deep` | If the node reached is not of `types`, keep walking upstream: `true` through any input, an input name through inputs of that name only (e.g. `"model"` walks the model chain through LoRA loaders). The nearest matching node wins; deep walks never pass another sampler. |
 
 Parameters: `seed`, `steps`, `cfg`, `sampler`, `scheduler`, `denoise`, `guidance` (shown as Distilled CFG), `shift`
-(shown when there is no `guidance`), `width`, `height`, `hiresSteps`, `hiresDenoise`, `hiresScale`, `hiresUpscaler`.
+(shown when there is no `guidance`), `width`, `height`, `hiresSteps`, `hiresDenoise`, `hiresScale`, `hiresUpscaler`,
+and the inpaint parameters `maskBlur`, `maskMode`, `inpaintArea`, `inpaintPadding`.
 They are also used by batch generation, parameter sweeps and model exploration, and to read the parameters of finished
 images from `/history`. Keys starting with `_` are comments.
+
+The inpaint parameters start at the anchor `inpaintCrop`, the Inpaint Crop node
+([ComfyUI-Inpaint-CropAndStitch](https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch)) upstream of the sampler's
+latent. The bundled inpaint workflows feed its `optional_context_mask` from a `GrowMask` (Only masked padding) and a
+`SolidMask` (Inpaint area: value 0 Only masked, 1 Whole picture); the size of the Generate tab is its target size:
+
+```json
+"inpaintCrop": [{"via": ["latent_image"], "deep": true, "types": ["InpaintCropImproved"]}],
+"maskMode": [{"from": "inpaintCrop", "widget": "mask_invert",
+              "values": {"Inpaint masked": false, "Inpaint not masked": true}}],
+"inpaintPadding": [{"from": "inpaintCrop", "via": ["optional_context_mask"], "deep": true, "types": ["GrowMask"],
+                    "widget": "expand"}]
+```
 
 Example: a custom noise node `MyNoise` with a `seed` widget feeding `SamplerCustomAdvanced`:
 
