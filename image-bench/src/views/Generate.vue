@@ -348,6 +348,14 @@ function toggleSizeInputs() {
   storage.setItem(SIZE_INPUT_KEY, JSON.stringify(sizeInputModes.value));
 }
 
+const sizeInput = ref(null);
+
+// A size set from the image cell (Use size, the crop factors, reset) flashes the width and height inputs if shown
+function onCellUseSize(width, height) {
+  setParams({width, height});
+  sizeInput.value?.flash();
+}
+
 const checkpointTitle = computed(() => hasModules.value
   ? `${checkpointValue.value}
 VAE / Text Encoder: ${modulesSummary(form.modules) || "built-in"}`
@@ -1399,7 +1407,7 @@ const gridStyle = computed(() => ({
                   :aria-label="sizeInputs ? 'Show the size presets' : 'Show the width and height inputs'"
                   @click="toggleSizeInputs"
             ><AppIcon :name="sizeInputs ? 'ruler' : 'list'" :size="14"/></button>
-          <ResizeToInput v-if="sizeInputs" class="size" :width="form.width" :height="form.height"
+          <ResizeToInput v-if="sizeInputs" ref="sizeInput" class="size" :width="form.width" :height="form.height"
                          :label="isTxt2Img ? 'Size' : 'Resize to'"
                          @change="(width, height) => setParams({width, height})"/>
           <SizeSelect v-else class="size" :width="form.width" :height="form.height"
@@ -1507,7 +1515,7 @@ const gridStyle = computed(() => ({
                            :input-image="inputs.image" :input-mask="inputs.mask" :inpaint-crop="inpaintCrop"
                            :action-image="generating || livePreview ? null : resultImage"
                            @result-click="onResultClick" @upload="onInputUpload" @show-params="onShowParams"
-                           @set-marking="onSetMarking" @use-size="(width, height) => setParams({width, height})"/>
+                           @set-marking="onSetMarking" @use-size="onCellUseSize"/>
       </div>
 
       <div class="column-grip side-grip" :class="{active: sideWidth.resizing}" role="separator"

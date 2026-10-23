@@ -3,8 +3,9 @@
  * Size as width and height inputs ("Resize to" in img2img), and a button rounding them to the nearest multiples of 16
  * (sizes taken from an input image are often not). Switched with SizeSelect in the Generate tab.
  */
-import {computed} from "vue";
+import {computed, ref} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
+import {animateColors} from "@/utils_html.js";
 
 const MULTIPLE = 16;
 
@@ -45,10 +46,19 @@ function onInput(which, e) {
 
   emit('change', which === "width" ? value : width.value, which === "height" ? value : height.value);
 }
+
+const root = ref(null);
+
+// Flashes the inputs, for a size set from elsewhere (the crop factors of the mask view)
+function flash() {
+  root.value?.querySelectorAll("input").forEach(input => animateColors(input, 0.7));
+}
+
+defineExpose({flash});
 </script>
 
 <template>
-  <div class="resize-to" :title="label">
+  <div ref="root" class="resize-to" :title="label">
     <input type="number" min="1" :class="{unaligned: !aligned}" :value="width" :disabled="disabled"
            :aria-label="`${label} width`" @change="e => onInput('width', e)">
     <span class="times" :class="{disabled: disabled || width === height}" title="Swap width and height"
