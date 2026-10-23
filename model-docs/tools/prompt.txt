@@ -34,6 +34,8 @@ FORMAT
 
 SECTIONS, IN THIS ORDER
 
+# Top-level heading: <Model name> Reference
+
 ## Encoder/VAE
    A short bullet list of what I have to download, nothing else:
    - The first bullet is the repos, both on one line: the official HuggingFace repo id and
