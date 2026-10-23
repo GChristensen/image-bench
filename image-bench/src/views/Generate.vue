@@ -470,6 +470,8 @@ const historyEntry = computed(() => !shown.value ? null
 // The entry shown as it is instead of compared with the current prompts
 const historyPlain = ref(false);
 
+// The history of the mode's group (txt2img or img2img); the switch resets the shown entry with the watch below
+watch(mode, value => promptHistory.setMode(value), {immediate: true});
 watch(() => promptHistory.entries, () => shown.value = null);
 watch(() => promptHistory.variants, variants => {
   if (variantIndex.value !== null && variantIndex.value >= variants.length)
@@ -491,9 +493,15 @@ function usePrompts(entry) {
                                     : {prompt: entry.prompt});
 }
 
-// The history entry shown becomes a variant under a name
-async function forkHistoryEntry() {
-  const entry = historyEntry.value;
+function currentPrompts() {
+  return {prompt: form.prompt ?? "", negativePrompt: has("negativePrompt") ? form.negativePrompt ?? "" : ""};
+}
+
+const currentForkable = computed(() => !!(form.prompt?.trim()
+  || has("negativePrompt") && form.negativePrompt?.trim()));
+
+// The history entry shown, or the current prompts, become a variant under a name
+async function forkPrompts(entry) {
   const name = entry && await dialog.prompt("Name of the variant:", {title: "Fork a prompt variant", okText: "Fork"});
 
   if (name)
@@ -1437,18 +1445,21 @@ const gridStyle = computed(() => ({
                    :tokens="has('tokens') && !historyEntry ? sdWebUI.tokens?.prompt : null"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"
                    @dragover="onPromptDragOver" @drop="onPromptDrop" @focusin="snippetTarget = 'prompt'">
-        <template v-if="promptHistory.entries.length || promptHistory.variants.length" #after-label>
+        <template v-if="promptHistory.entries.length || promptHistory.variants.length || currentForkable" #after-label>
           <PromptHistoryBar :entries="promptHistory.entries" :selected="historyIndex"
                             @select="selectHistoryEntry" @use="index => usePrompts(promptHistory.entries[index])"/>
           <PromptVariantsSelect v-if="promptHistory.variants.length" :variants="promptHistory.variants"
                                 :selected="variantIndex" @select="selectVariant"
                                 @use="index => usePrompts(promptHistory.variants[index])"
                                 @rename="renameVariant" @remove="removeVariant"/>
+          <button v-if="!historyEntry && currentForkable" type="button" class="history-btn icon"
+                  title="Fork: keep the current prompts as a named variant" aria-label="Fork a prompt variant"
+                  @click="forkPrompts(currentPrompts())"><AppIcon name="fork" :size="11"/></button>
           <template v-if="historyEntry">
             <template v-if="historyIndex !== null">
               <span class="history-info">#{{ historyIndex + 1 }} · {{ formatHistoryTime(historyEntry.time) }}</span>
               <button type="button" class="history-btn icon" title="Fork: keep these prompts as a named variant"
-                      aria-label="Fork a prompt variant" @click="forkHistoryEntry"><AppIcon name="fork" :size="11"/></button>
+                      aria-label="Fork a prompt variant" @click="forkPrompts(historyEntry)"><AppIcon name="fork" :size="11"/></button>
             </template>
             <button type="button" class="history-btn" :class="{on: !historyPlain}" :aria-pressed="!historyPlain"
                     title="Compare with the current prompt" @click="historyPlain = !historyPlain">

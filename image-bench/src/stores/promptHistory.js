@@ -1,5 +1,5 @@
 import {defineStore} from "pinia";
-import {ref} from "vue";
+import {computed, ref} from "vue";
 
 const URL = "/image-bench/prompt_history";
 const MAX_ENTRIES = 16;
@@ -16,15 +16,39 @@ export function formatHistoryTime(time) {
     : date.toLocaleString([], {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
 }
 
+const GROUPS = ["txt2img", "img2img"];
+
 /**
- * The prompts generated from the Generate tab, the latest first: {prompt, negativePrompt, time} entries kept in
- * store/prompt_history.json as {version, entries, variants}. A prompt pair generated again moves to the front.
- * Variants are history prompts forked under a name ({name, prompt, negativePrompt, time}, in the order of forking),
- * kept until the history is cleared. Saved into a project and restored from it, but not part of its unsaved changes
+ * @param {string} mode - Generation mode of the Generate tab
+ * @returns {string} Its history group: txt2img, or img2img for img2img, inpaint and the other img2img tabs
+ */
+export function historyGroup(mode) {
+  return mode === "txt2img" ? "txt2img" : "img2img";
+}
+
+/**
+ * @param {*} history - {entries, variants} as read from the file
+ * @returns {{entries: Array, variants: Array}}
+ */
+function readHistory(history) {
+  return {entries: Array.isArray(history?.entries) ? history.entries.slice(0, MAX_ENTRIES) : [],
+          variants: Array.isArray(history?.variants) ? history.variants : []};
+}
+
+/**
+ * The prompts generated from the Generate tab, the latest first, per history group (txt2img; img2img for img2img and
+ * inpaint): {prompt, negativePrompt, time} entries kept in store/prompt_history.json as
+ * {version: 2, txt2img: {entries, variants}, img2img: {entries, variants}} (version 1, a single {entries, variants},
+ * is read into both groups). A prompt pair generated again moves to the front. Variants are history prompts forked
+ * under a name ({name, prompt, negativePrompt, time}, in the order of forking), kept until the history is cleared.
+ * entries and variants are those of the group of the mode shown (setMode). Saved into a project and restored from it,
+ * but not part of its unsaved changes
  */
 export const usePromptHistoryStore = defineStore("promptHistory", () => {
-  const entries = ref([]);
-  const variants = ref([]);
+  const histories = ref(Object.fromEntries(GROUPS.map(name => [name, readHistory(null)])));
+  const group = ref(GROUPS[0]);
+  const entries = computed(() => histories.value[group.value].entries);
+  const variants = computed(() => histories.value[group.value].variants);
   let saving = Promise.resolve();
 
   async function load() {
@@ -33,15 +57,25 @@ export const usePromptHistoryStore = defineStore("promptHistory", () => {
       const text = response.ok ? await response.text() : "";
       const data = text.trim() ? JSON.parse(text) : null;
 
-      entries.value = Array.isArray(data?.entries) ? data.entries.slice(0, MAX_ENTRIES) : [];
-      variants.value = Array.isArray(data?.variants) ? data.variants : [];
+      histories.value = Object.fromEntries(GROUPS.map(name =>
+        [name, readHistory(data?.version >= 2 ? data[name] : data)]));
     } catch (error) {
       console.error("[Image Bench] Unable to load the prompt history:", error);
     }
   }
 
+  function setMode(mode) {
+    group.value = historyGroup(mode);
+  }
+
+  // Replaces the lists of the current group
+  function update(changes) {
+    histories.value = {...histories.value, [group.value]: {...histories.value[group.value], ...changes}};
+    persist();
+  }
+
   function persist() {
-    const body = JSON.stringify({version: 1, entries: entries.value, variants: variants.value});
+    const body = JSON.stringify({version: 2, ...histories.value});
 
     saving = saving
       .then(() => fetch(URL, {method: "post", body}))
@@ -64,10 +98,9 @@ export const usePromptHistoryStore = defineStore("promptHistory", () => {
     if (first?.prompt === prompt && first?.negativePrompt === negativePrompt)
       return;
 
-    entries.value = [{prompt, negativePrompt, time: Date.now()},
-                     ...entries.value.filter(entry => entry.prompt !== prompt || entry.negativePrompt !== negativePrompt)]
-      .slice(0, MAX_ENTRIES);
-    persist();
+    update({entries: [{prompt, negativePrompt, time: Date.now()},
+                      ...entries.value.filter(entry => entry.prompt !== prompt || entry.negativePrompt !== negativePrompt)]
+      .slice(0, MAX_ENTRIES)});
   }
 
   /**
@@ -75,31 +108,28 @@ export const usePromptHistoryStore = defineStore("promptHistory", () => {
    * @param {{prompt: string, negativePrompt: string}} entry - The forked prompts
    */
   function fork(name, {prompt, negativePrompt}) {
-    variants.value = [...variants.value, {name, prompt, negativePrompt, time: Date.now()}];
-    persist();
+    update({variants: [...variants.value, {name, prompt, negativePrompt, time: Date.now()}]});
   }
 
   function renameVariant(index, name) {
-    variants.value = variants.value.map((variant, i) => i === index ? {...variant, name} : variant);
-    persist();
+    update({variants: variants.value.map((variant, i) => i === index ? {...variant, name} : variant)});
   }
 
   function removeVariant(index) {
-    variants.value = variants.value.filter((_, i) => i !== index);
-    persist();
+    update({variants: variants.value.filter((_, i) => i !== index)});
   }
 
+  // Both groups
   function clear() {
-    if (!entries.value.length && !variants.value.length)
+    if (Object.values(histories.value).every(history => !history.entries.length && !history.variants.length))
       return;
 
-    entries.value = [];
-    variants.value = [];
+    histories.value = Object.fromEntries(GROUPS.map(name => [name, readHistory(null)]));
     persist();
   }
 
   // Before a project is saved
   const flush = () => saving;
 
-  return {entries, variants, load, record, fork, renameVariant, removeVariant, clear, flush};
+  return {entries, variants, load, setMode, record, fork, renameVariant, removeVariant, clear, flush};
 });

@@ -377,13 +377,14 @@ const hostOrigin = location.origin;
           <AppIcon name="lock" :size="13" class="inline-icon"/> <b>Prompt lock</b> makes the prompts editable only
           here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
         <li><b>Prompt history</b>: the buttons after the prompt label hold the last 16 prompts generated from this tab
-          (<b>1</b> is the latest; a prompt generated again moves to the front). A number shows that prompt and its
+          (<b>1</b> is the latest; a prompt generated again moves to the front). txt2img and img2img (with
+          Inpaint) keep separate histories and variants. A number shows that prompt and its
           negative read-only, compared with the current ones: green is what it would add, struck out what it would
           remove, amber a changed weight. <b>Diff</b> switches to the plain text, and <b>Use</b> or a double click on
           the number replaces the current prompts with it. <AppIcon name="pencil" :size="13" class="inline-icon"/>
           is the current prompt, the only editable one, and starting a generation returns to it.
           <AppIcon name="fork" :size="13" class="inline-icon"/> <b>Fork</b>, before <b>Diff</b>, keeps the prompts
-          shown as a named variant of the experiment; once there are variants, the <b>Variants</b> dropdown after the
+          shown (the current ones too, after the history buttons) as a named variant of the experiment; once there are variants, the <b>Variants</b> dropdown after the
           numbers lists them by name with the beginning of their prompt, and shows, uses (double click), renames or
           removes them like the history entries. The history and its variants are saved with the projects and
           restored when one is opened; <b>Start a blank workspace</b> clears both.</li>
