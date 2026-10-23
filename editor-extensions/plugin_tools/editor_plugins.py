@@ -1,11 +1,11 @@
 """
-The editor plugins supplied with the extension (editor-extensions/): packaging one for download from the manual
-and telling the installed version. The editor-specific parts are in the installer modules (uxp_install for
-Photoshop, krita_install for Krita, gimp_install for GIMP), which provide get_status(manifest), the
-PACKAGE_EXTENSION of the download, MANIFEST (the path of manifest.json in the plugin folder) and EXCLUDED_FILES
-(development files that are not a part of the plugin). The extension never installs a plugin itself: the plugins
-are installed from the downloads, or in development by the scripts of their folders (editor-extensions/krita/krita.py,
-gimp/gimp.py deploy, photoshop/uxp.ps1), which are not shipped
+Packaging the editor plugins (editor-extensions/) for their downloads, the assets of the editor-plugins GitHub release
+(tools/plugins_release.py) linked from the manual. The editor-specific parts are in the installer modules
+(uxp_install for Photoshop, krita_install for Krita, gimp_install for GIMP), which provide the PACKAGE_EXTENSION of
+the download, MANIFEST (the path of manifest.json in the plugin folder) and EXCLUDED_FILES (development files that
+are not a part of the plugin). Development code, never shipped with the extension: the plugins are installed from the
+downloads, or in development by the scripts of their folders (editor-extensions/krita/krita.py, gimp/gimp.py deploy,
+photoshop/uxp.ps1)
 """
 import importlib
 import io
@@ -13,16 +13,10 @@ import json
 import os
 import zipfile
 
-_SHARED_DIR = os.path.dirname(os.path.abspath(__file__))
+# Folder of the plugin folders
+EDITOR_EXTENSIONS_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-_REPOSITORY_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..")
-
-# Folder of the plugin folders: copied next to this module by the deploy, or the repository folder
-# (the extension's image_bench_shared directory is a symlink to common-extension/shared_backend)
-EDITOR_EXTENSIONS_DIRS = (os.path.join(_SHARED_DIR, "editor-extensions"),
-                          os.path.join(_REPOSITORY_DIR, "editor-extensions"))
-
-# The plugins by their name in the API (?plugin=): their folder in editor-extensions/ and their installer module
+# The plugins by their name (PluginCard of the manual, editor-plugins.json): their folder in editor-extensions/ and their installer module
 PLUGINS = {
     "image-bench": {"dir": "photoshop", "installer": "uxp_install"},
     "canny": {"dir": "photoshop-canny", "installer": "uxp_install"},
@@ -49,19 +43,22 @@ def get_plugin_dir(plugin=DEFAULT_PLUGIN):
         plugin: A key of PLUGINS
     """
     info, installer = _get_plugin(plugin)
+    path = os.path.join(EDITOR_EXTENSIONS_DIR, info["dir"])
 
-    for root in EDITOR_EXTENSIONS_DIRS:
-        path = os.path.join(root, info["dir"])
+    if not os.path.isfile(os.path.join(path, installer.MANIFEST)):
+        raise PluginError(f"The manifest of the editor plugin is missing: {os.path.join(path, installer.MANIFEST)}")
 
-        if os.path.isfile(os.path.join(path, installer.MANIFEST)):
-            return os.path.normpath(path)
-
-    raise PluginError("The editor plugin files are not found in the extension")
+    return path
 
 
 def read_manifest(plugin_dir, installer):
     with open(os.path.join(plugin_dir, installer.MANIFEST), encoding="utf-8") as file:
         return json.load(file)
+
+
+def get_manifest(plugin=DEFAULT_PLUGIN):
+    """The manifest.json of the plugin"""
+    return read_manifest(get_plugin_dir(plugin), _get_plugin(plugin)[1])
 
 
 def get_plugin_files(plugin_dir, excluded=()):
@@ -106,19 +103,3 @@ def package(plugin=DEFAULT_PLUGIN):
             archive.write(os.path.join(plugin_dir, path), path.replace(os.sep, "/"))
 
     return f"{manifest['id']}_{manifest['version']}{installer.PACKAGE_EXTENSION}", buffer.getvalue()
-
-
-def get_status(plugin=DEFAULT_PLUGIN):
-    """
-    The version of the supplied plugin, and the version installed on this computer (None if not installed):
-    {available, installed, supported, platform, package}
-    """
-    try:
-        installer, _, _, manifest = _load(plugin)
-    except (PluginError, OSError, ValueError):
-        installer = _get_plugin(plugin)[1]
-        status = installer.get_status(None)
-        return {**status, "available": None, "installed": None, "package": installer.PACKAGE_EXTENSION}
-
-    return {**installer.get_status(manifest), "available": manifest["version"],
-            "package": installer.PACKAGE_EXTENSION}

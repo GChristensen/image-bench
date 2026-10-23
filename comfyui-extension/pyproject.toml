@@ -1,7 +1,7 @@
 [project]
 name = "image-bench"
 description = "A generation and curation workspace for ComfyUI: every generated image arrives with its parameters in one window, so you can sort them into persistent trays, compare models or crops side by side and upscale with one click, with no digging through output folders and image viewers. Exchanges layers and masks with Photoshop, Krita and GIMP."
-version = "0.1.4"
+version = "0.1.5"
 license = { file = "GPL-3.0" }
 dependencies = []
 

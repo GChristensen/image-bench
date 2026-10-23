@@ -43,10 +43,8 @@ Requires Photoshop 2024 (25.0) or newer.
 
 ## Installation
 
-- From Image Bench: the Editors chapter of the manual (Library tab) has a **Download .ccx** link. The backend
-  (`common-extension/shared_backend/editor_plugins.py`, `uxp_install.py`) finds the plugin in
-  `image_bench_shared/editor-extensions/photoshop` of the extension (copied there by `just deploy-webui` / `deploy-comfy`
-  and the release builds, without `uxp.ps1`) or in this folder.
+- From Image Bench: the Editors chapter of the manual (Library tab) has a **Download .ccx** link to the asset of the
+  `editor-plugins` GitHub release, which `just plugins-release` (`tools/plugins_release.py`) packages and uploads.
 - With the Creative Cloud app: run `just ps-package` (or **Package** in UXP Developer Tool), then double-click
   the produced `dist/*.ccx` file.
 - Without it: run `just ps-deploy` from an elevated shell. It copies the plugin to

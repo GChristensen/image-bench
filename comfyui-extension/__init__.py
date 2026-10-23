@@ -14,8 +14,8 @@ from aiohttp import web
 from server import PromptServer
 import folder_paths
 
-from .image_bench_shared import (civitai, console, controlnet_inputs, editor, editor_plugins, explore_export,
-                                 launcher, loras, media, persist, pnginfo, projects)
+from .image_bench_shared import (civitai, console, controlnet_inputs, editor, explore_export, launcher, loras, media,
+                                 persist, pnginfo, projects)
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from .image_bench_shared.tray import (TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler,
                                       save_tray_images)
@@ -967,31 +967,6 @@ async def get_editor_image(request):
 
     content, media_type = image
     return web.Response(body=content, content_type=media_type, headers={"Cache-Control": "no-store"})
-
-
-def _editor_plugin_name(request):
-    """The plugin of a request (?plugin=, a key of editor_plugins.PLUGINS)"""
-    return request.query.get("plugin", editor_plugins.DEFAULT_PLUGIN)
-
-
-# Version of a supplied editor plugin and of the one installed on the server computer
-@PromptServer.instance.routes.get(BASE_PATH + "/editor/plugin")
-async def get_editor_plugin_status(request):
-    try:
-        return web.json_response(editor_plugins.get_status(_editor_plugin_name(request)))
-    except editor_plugins.PluginError as e:
-        return web.Response(text=str(e), status=404)
-
-
-@PromptServer.instance.routes.get(BASE_PATH + "/editor/plugin/package")
-async def download_editor_plugin(request):
-    try:
-        name, content = editor_plugins.package(_editor_plugin_name(request))
-    except editor_plugins.PluginError as e:
-        return web.Response(text=str(e), status=404)
-
-    return web.Response(body=content, content_type="application/octet-stream",
-                        headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 # Close all WebSocket connections

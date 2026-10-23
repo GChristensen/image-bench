@@ -21,11 +21,11 @@ webui_dest := env("WEBUI_DEST", "")
 comfy_dest := env("COMFY_DEST", "")
 
 # Build and copy the code files of the extension to the remote WebUI install (symlinked shared code included)
-deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html default_snippets.json") (_deploy_docs webui_dest) (_deploy_editors webui_dest)
+deploy-webui: (_require "WEBUI_DEST" webui_dest) webui (_deploy "webui-extension" webui_dest "*.js *.py *.css *.html default_snippets.json") (_deploy_docs webui_dest)
 
 # Build and copy the code files of the extension and its workflows to the remote ComfyUI install
 # (symlinked shared code included)
-deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md default_snippets.json") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_docs comfy_dest) (_deploy_editors comfy_dest)
+deploy-comfy: (_require "COMFY_DEST" comfy_dest) comfy (_deploy "comfyui-extension" comfy_dest "*.js *.py *.html node_config.json NODE_CONFIG.md default_snippets.json") (_deploy "comfyui-extension/workflows" (comfy_dest + "/workflows") "*.json") (_deploy_docs comfy_dest)
 
 # The Host Restart addon (addons/image-bench-host-restart, installed by hand and never released), next to the
 # extension of the remote install; its store/ (host_restart.json) is kept
@@ -34,10 +34,6 @@ deploy-restart-comfy: (_require "COMFY_DEST" comfy_dest) (_deploy "addons/image-
 
 # The model docs, into the default docs folder of the remote install
 _deploy_docs dest: (_deploy "model-docs/docs" (dest + "/model_docs") "*")
-
-# The editor plugins, supplied with the extension for installing them from the manual (Library tab);
-# without their development scripts (krita.py, gimp.py, uxp.ps1)
-_deploy_editors dest: (_deploy "editor-extensions/photoshop" (dest + "/image_bench_shared/editor-extensions/photoshop") "index.js index.html manifest.json") (_deploy "editor-extensions/photoshop-canny" (dest + "/image_bench_shared/editor-extensions/photoshop-canny") "*.js index.html manifest.json") (_deploy "editor-extensions/krita" (dest + "/image_bench_shared/editor-extensions/krita") "*.desktop") (_deploy "editor-extensions/krita/image_bench" (dest + "/image_bench_shared/editor-extensions/krita/image_bench") "*.py manifest.json") (_deploy "editor-extensions/gimp/image_bench" (dest + "/image_bench_shared/editor-extensions/gimp/image_bench") "*.py manifest.json")
 
 # Checkouts of the build repositories (sd-webui-image-bench, comfyui-image-bench), set in .env
 webui_release := env("WEBUI_RELEASE_REPO", "")
@@ -50,6 +46,12 @@ release-webui: (_require "WEBUI_RELEASE_REPO" webui_release) webui
 # Build and assemble the release tree into the checkout of the ComfyUI build repository (bump the pyproject.toml version first)
 release-comfy: (_require "COMFY_RELEASE_REPO" comfy_release) comfy
     python tools/assemble.py comfy "{{comfy_release}}"
+
+# Package the editor plugins and upload them to the editor-plugins GitHub release (gh auth login first), then write
+# image-bench/src/assets/editor-plugins.json, which the manual's download cards link; run it when a plugin version
+# changes, before building the releases
+plugins-release:
+    python tools/plugins_release.py
 
 _require name value:
     @{{ if value == "" { error(name + " is not set: copy .env.example to .env and set it") } else { "echo " + name + "=" + value } }}

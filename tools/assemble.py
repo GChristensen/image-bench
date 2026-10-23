@@ -22,15 +22,6 @@ SKIPPED_FILES = {"config.json", ".gitkeep"}
 # Files of all add-ons (repository root -> tree root)
 COMMON_FILES = ["LICENSE", "THIRD_PARTY_LICENSES"]
 
-# Editor plugins, supplied for installing them from the manual: folder and file patterns (_deploy_editors), without
-# their development scripts (krita.py, gimp.py, uxp.ps1)
-EDITOR_PLUGINS = {
-    "photoshop": ["index.js", "index.html", "manifest.json"],
-    "photoshop-canny": ["*.js", "index.html", "manifest.json"],
-    "krita": ["image_bench/*.py", "image_bench/manifest.json", "*.desktop"],
-    "gimp": ["image_bench/*.py", "image_bench/manifest.json"],
-}
-
 HOSTS = {
     "webui": {
         "dir": "webui-extension",
@@ -110,10 +101,6 @@ def assemble(host, out_dir):
     copy_tree(os.path.join(common_dir, "shared_frontend"), os.path.join(out_dir, config["shared_frontend"]),
               ["*.js"])
     copy_tree(os.path.join(REPOSITORY_DIR, "model-docs", "docs"), os.path.join(out_dir, "model_docs"))
-
-    for folder, patterns in EDITOR_PLUGINS.items():
-        copy_tree(os.path.join(REPOSITORY_DIR, "editor-extensions", folder),
-                  os.path.join(out_dir, "image_bench_shared", "editor-extensions", folder), patterns)
 
     for name in COMMON_FILES:
         if not os.path.exists(os.path.join(out_dir, name)):

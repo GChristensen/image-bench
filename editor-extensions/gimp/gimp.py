@@ -1,6 +1,6 @@
 """
-GIMP plugin management from a shell (just gimp-package / gimp-deploy / gimp-undeploy), through the same backend
-code as the install card of the Image Bench manual:
+GIMP plugin management from a shell (just gimp-package / gimp-deploy / gimp-undeploy), through the packaging code
+of the release downloads (editor-extensions/plugin_tools):
   package  - Build dist/image_bench_gimp_<version>.zip, to unpack into the plug-ins folder of GIMP
   deploy   - Copy the plugin to the plug-ins folder of the GIMP 3 profile: GIMP3_DIRECTORY (e.g. from .env, for
              GIMP Portable's Data/GimpAppData), else the newest GIMP/3.x folder; restart GIMP afterwards
@@ -13,10 +13,10 @@ import stat
 import sys
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(PLUGIN_DIR, "..", "..", "common-extension"))
+sys.path.insert(0, os.path.join(PLUGIN_DIR, ".."))
 
-from shared_backend import editor_plugins, gimp_install  # noqa: E402
-from shared_backend.editor_plugins import PluginError  # noqa: E402
+from plugin_tools import editor_plugins, gimp_install  # noqa: E402
+from plugin_tools.editor_plugins import PluginError  # noqa: E402
 
 
 def deploy():

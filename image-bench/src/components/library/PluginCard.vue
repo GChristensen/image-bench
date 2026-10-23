@@ -1,52 +1,26 @@
 <script setup>
 /**
- * Download card of an editor plugin supplied with the extension (manual, Editors chapter): its version, the version
- * installed on the computer running the host, and Download (.ccx for Photoshop, .zip for Krita and GIMP).
- * The notes are the default slot (list items)
+ * Download card of an editor plugin (manual, Editors chapter): its version and Download (.ccx for Photoshop, .zip
+ * for Krita and GIMP), an asset of the editor-plugins GitHub release, which tools/plugins_release.py uploads along
+ * with writing editor-plugins.json. The notes are the default slot (list items)
  */
-import {computed, onMounted, ref} from "vue";
+import {computed} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
+import PLUGINS from "@/assets/editor-plugins.json";
 
 const props = defineProps({
-  // Plugin name of the backend (shared_backend/editor_plugins.py: PLUGINS)
+  // Plugin name of editor-plugins.json (editor-extensions/plugin_tools/editor_plugins.py: PLUGINS)
   plugin: {type: String, required: true},
   title: {type: String, required: true},
   // Short name of the editor on the badge
   badge: {type: String, default: "Ps"},
 });
 
-const PLUGIN_URL = "/image-bench/editor/plugin";
-const query = computed(() => `?plugin=${encodeURIComponent(props.plugin)}`);
+const RELEASE_URL = "https://github.com/GChristensen/image-bench/releases/tag/editor-plugins";
+const DOWNLOAD_URL = "https://github.com/GChristensen/image-bench/releases/download/editor-plugins/";
 
-const status = ref(null);
-// The installed version is that of the computer running the host, which is not this one for a remote host
-const isRemoteHost = !["localhost", "127.0.0.1", "[::1]", "::1"].includes(location.hostname);
-
-const state = computed(() => {
-  const value = status.value;
-
-  if (!value)
-    return "";
-  if (!value.available)
-    return "The plugin files are missing from the extension.";
-  if (!value.installed)
-    return `Version ${value.available} is supplied; not installed${isRemoteHost ? " on the server computer" : ""}.`;
-  if (value.installed !== value.available)
-    return `Version ${value.installed} is installed, ${value.available} is supplied: download it to update.`;
-
-  return `Version ${value.installed} is installed${isRemoteHost ? " on the server computer" : ""}.`;
-});
-
-async function loadStatus() {
-  try {
-    const response = await fetch(PLUGIN_URL + query.value);
-    status.value = response.ok ? await response.json() : null;
-  } catch (e) {
-    status.value = null;
-  }
-}
-
-onMounted(loadStatus);
+const info = computed(() => PLUGINS[props.plugin]);
+const extension = computed(() => info.value?.file.slice(info.value.file.lastIndexOf(".")) ?? "");
 </script>
 
 <template>
@@ -55,12 +29,13 @@ onMounted(loadStatus);
     <span class="ps-badge">{{ badge }}</span>
     <div>
       <div class="plugin-title">{{ title }}</div>
-      <div class="plugin-status">{{ state || "Checking the plugin…" }}</div>
+      <div class="plugin-status">{{ info ? `Version ${info.version}` : "Not published yet." }}</div>
     </div>
   </div>
   <div class="plugin-actions">
-    <a class="btn primary" :class="{disabled: !status?.available}" :href="`${PLUGIN_URL}/package${query}`" download
-      ><AppIcon name="save" :size="14"/>Download {{ status?.package ?? "" }}</a>
+    <a class="btn primary" :class="{disabled: !info}" :href="info ? DOWNLOAD_URL + info.file : undefined"
+      ><AppIcon name="save" :size="14"/>Download {{ extension }}</a>
+    <a class="btn" :href="RELEASE_URL" target="_blank" rel="noopener">Release page</a>
   </div>
   <ul v-if="$slots.default" class="plugin-notes">
     <slot/>

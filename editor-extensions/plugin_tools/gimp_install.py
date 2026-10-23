@@ -1,10 +1,9 @@
 """
-The GIMP plugin (editor-extensions/gimp): its package and the version installed in the plug-ins folder of the current
-user's GIMP 3 profile: the folder of GIMP3_DIRECTORY if set (GIMP's own override of the profile folder, set by GIMP
+The GIMP plugin (editor-extensions/gimp): its package and the plug-ins folder of the current user's GIMP 3
+profile: the folder of GIMP3_DIRECTORY if set (GIMP's own override of the profile folder, set by GIMP
 Portable's launcher), else the newest GIMP/3.x folder. It is installed from the downloaded .zip file, or in development
 with editor-extensions/gimp/gimp.py deploy
 """
-import json
 import os
 import re
 import sys
@@ -65,19 +64,3 @@ def get_plugins_dir():
                 profiles.append((int(match.group(1)), os.path.join(root, name)))
 
     return os.path.join(max(profiles)[1], "plug-ins") if profiles else ""
-
-
-def get_status(manifest):
-    """The version of the plugin installed on this computer (None if not installed)"""
-    plugins_dir = get_plugins_dir()
-    status = {"installed": None, "supported": plugins_dir is not None, "platform": sys.platform}
-
-    if manifest and plugins_dir:
-        try:
-            with open(os.path.join(plugins_dir, MANIFEST), encoding="utf-8") as file:
-                status["installed"] = json.load(file).get("version")
-        except (OSError, ValueError):
-            pass
-
-    return status
-

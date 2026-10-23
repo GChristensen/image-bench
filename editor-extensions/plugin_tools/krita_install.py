@@ -1,9 +1,7 @@
 """
-The Krita plugin (editor-extensions/krita): its package and the version installed in the Python plugin folder of the
-current user. It is installed from the downloaded .zip file, or in development with editor-extensions/krita/krita.py
-deploy
+The Krita plugin (editor-extensions/krita): its package and the Python plugin folder of the current user. It is
+installed from the downloaded .zip file, or in development with editor-extensions/krita/krita.py deploy
 """
-import json
 import os
 import sys
 
@@ -34,19 +32,3 @@ def get_install_locations():
         return os.path.join(data_home, "krita", "pykrita"), os.path.join(config_home, "kritarc")
 
     return None
-
-
-def get_status(manifest):
-    """The version of the plugin installed on this computer (None if not installed)"""
-    locations = get_install_locations()
-    status = {"installed": None, "supported": locations is not None, "platform": sys.platform}
-
-    if manifest and locations:
-        try:
-            with open(os.path.join(locations[0], MANIFEST), encoding="utf-8") as file:
-                status["installed"] = json.load(file).get("version")
-        except (OSError, ValueError):
-            pass
-
-    return status
-

@@ -29,6 +29,8 @@ const showAllTags = ref(false);
 
 // "Show in Explorer" opens the file manager of the server computer
 const isLocal = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(location.hostname);
+// Show in Explorer (projects.reveal) is Windows only; a local host runs on the browser's computer
+const canReveal = isLocal && navigator.userAgent.includes("Windows");
 
 const toNodes = entries => entries.map(entry => entry.type === "folder"
   ? {key: entry.path, name: entry.name, children: toNodes(entry.children), entry}
@@ -250,7 +252,7 @@ function onMenu(e, node) {
   items.push({separator: true});
   items.push({icon: "copy", label: "Copy path", run: () => copyPath(entry.path)});
 
-  if (isLocal)
+  if (canReveal)
     items.push({icon: "external", label: "Show in Explorer", run: () => store.reveal(entry.path)});
 
   items.push({separator: true});

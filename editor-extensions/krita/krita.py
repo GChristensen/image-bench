@@ -1,6 +1,6 @@
 """
-Krita plugin management from a shell (just krita-package / krita-deploy / krita-undeploy), through the same backend
-code as the install card of the Image Bench manual:
+Krita plugin management from a shell (just krita-package / krita-deploy / krita-undeploy), through the packaging code
+of the release downloads (editor-extensions/plugin_tools):
   package  - Build dist/image_bench_<version>.zip, importable with Tools › Scripts › Import Python Plugin from File
   deploy   - Copy the plugin to Krita's Python plugin folder and enable it in kritarc, as Krita's Python Plugin
              Manager does (Krita must be closed)
@@ -13,10 +13,10 @@ import subprocess
 import sys
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(PLUGIN_DIR, "..", "..", "common-extension"))
+sys.path.insert(0, os.path.join(PLUGIN_DIR, ".."))
 
-from shared_backend import editor_plugins, krita_install  # noqa: E402
-from shared_backend.editor_plugins import PluginError  # noqa: E402
+from plugin_tools import editor_plugins, krita_install  # noqa: E402
+from plugin_tools.editor_plugins import PluginError  # noqa: E402
 
 
 def is_krita_running():
