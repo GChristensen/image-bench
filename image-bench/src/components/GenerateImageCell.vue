@@ -11,6 +11,7 @@ import AppIcon from "@/components/AppIcon.vue";
 import ActionRim from "@/components/ActionRim.vue";
 import MediaPlayback from "@/components/MediaPlayback.vue";
 import {getImageSize, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
+import {blurExtent, CROP_FACTORS, cropRegion, expandCropRegion, maskBounds, renderSize} from "@/inpaintCrop.js";
 import {rimActionGroups, runImageAction} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import {useCtrlKey} from "@/composables/useCtrlKey.js";
@@ -52,6 +53,12 @@ const props = defineProps({
   },
   // Image of the result view whose actions the rim offers on hover, null while generating
   actionImage: {
+    type: Object,
+    default: null
+  },
+  // The "Only masked" crop parameters, {padding, maskBlur, inverted, width, height}, null if it does not apply:
+  // the mask view then shows the mask box and the crop, and sets Resize to from a factor of the padded box
+  inpaintCrop: {
     type: Object,
     default: null
   }
@@ -220,6 +227,136 @@ async function onUseSize() {
   if (size)
     emit('use-size', size.width, size.height);
 }
+
+// ---------- The "Only masked" crop: mask box, crop rectangle and Resize to from a factor (one-shot) ----------
+
+const maskInfo = ref(null);
+const inputSize = ref(null);
+
+watch(() => [props.inputMask, !!props.inpaintCrop?.inverted], async ([mask, inverted]) => {
+  const info = mask ? await maskBounds(mask, inverted) : null;
+
+  if (props.inputMask === mask && !!props.inpaintCrop?.inverted === inverted)
+    maskInfo.value = info;
+}, {immediate: true});
+
+watch(() => props.inputImage, async image => {
+  const size = image ? await getImageSize(image) : null;
+
+  if (props.inputImage === image)
+    inputSize.value = size;
+}, {immediate: true});
+
+// The box grown by the padding (and the reach of WebUI's mask blur), from which a factor sets Resize to
+const baseCrop = computed(() => {
+  const params = props.inpaintCrop;
+
+  if (!params || !maskInfo.value?.box)
+    return null;
+
+  return cropRegion(maskInfo.value, (parseInt(params.padding) || 0) + blurExtent(parseInt(params.maskBlur) || 0));
+});
+
+const renderWidth = computed(() => parseInt(props.inpaintCrop?.width) || 0);
+const renderHeight = computed(() => parseInt(props.inpaintCrop?.height) || 0);
+
+// The part of the image regenerated: the padded box grown to the aspect of Resize to
+const crop = computed(() => baseCrop.value && renderWidth.value && renderHeight.value
+  ? expandCropRegion(baseCrop.value, renderWidth.value, renderHeight.value, maskInfo.value.width, maskInfo.value.height)
+  : null);
+
+// Over the input image only if the mask has its aspect, so that both fit the cell alike
+const cropOverInput = computed(() => {
+  const size = inputSize.value;
+  const info = maskInfo.value;
+  return !!size && !!info && Math.abs(size.width / size.height - info.width / info.height) < 0.01;
+});
+
+const cropShown = computed(() => !!crop.value && (shownView.value === "mask"
+  || shownView.value === "input" && hasMask.value && maskOverlay.value && cropOverInput.value));
+
+// Outside of the crop, dimmed
+const cropShade = computed(() => {
+  const {width, height} = maskInfo.value;
+  const [x1, y1, x2, y2] = crop.value;
+  return `M0 0H${width}V${height}H0Z M${x1} ${y1}V${y2}H${x2}V${y1}Z`;
+});
+
+const cropTitle = computed(() => {
+  const [x1, y1, x2, y2] = crop.value;
+  const scale = renderWidth.value / (x2 - x1);
+  return `Render size (Resize to). Crop ${x2 - x1}×${y2 - y1} of the image, rendered ×${scale.toFixed(1)}`;
+});
+
+// The factor Resize to was set from, if it still is
+const appliedFactor = computed(() => baseCrop.value ? CROP_FACTORS.find(factor => {
+  const size = renderSize(baseCrop.value, factor);
+  return size.width === renderWidth.value && size.height === renderHeight.value;
+}) ?? null : null);
+
+const factorsOpen = ref(false);
+const factorElement = ref(null);
+
+function applyFactor(factor) {
+  factorsOpen.value = false;
+
+  if (!baseCrop.value)
+    return;
+
+  const size = renderSize(baseCrop.value, factor);
+  emit('use-size', size.width, size.height);
+}
+
+const resetWidth = computed(() => config.inpaintResetWidth);
+const resetHeight = computed(() => config.inpaintResetHeight);
+
+function onResetSize() {
+  factorsOpen.value = false;
+  emit('use-size', resetWidth.value, resetHeight.value);
+}
+
+// The wheel steps from the applied factor, else from the one nearest to the present enlargement
+function onFactorWheel(e) {
+  if (!baseCrop.value)
+    return;
+
+  let index = CROP_FACTORS.indexOf(appliedFactor.value);
+
+  if (index < 0) {
+    const ratio = renderWidth.value / (baseCrop.value[2] - baseCrop.value[0]);
+    index = CROP_FACTORS.reduce((best, factor, i) =>
+      Math.abs(factor - ratio) < Math.abs(CROP_FACTORS[best] - ratio) ? i : best, 0);
+  } else {
+    index += e.deltaY < 0 ? 1 : -1;
+  }
+
+  applyFactor(CROP_FACTORS[Math.max(0, Math.min(CROP_FACTORS.length - 1, index))]);
+}
+
+function onFactorsOutside(e) {
+  if (!factorElement.value?.contains(e.target))
+    factorsOpen.value = false;
+}
+
+function onFactorsKey(e) {
+  if (e.key === "Escape") {
+    e.stopPropagation();
+    factorsOpen.value = false;
+  }
+}
+
+watch(factorsOpen, open => {
+  const method = open ? "addEventListener" : "removeEventListener";
+  document[method]("pointerdown", onFactorsOutside, true);
+  document[method]("keydown", onFactorsKey, true);
+});
+
+watch(shownView, () => factorsOpen.value = false);
+
+onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", onFactorsOutside, true);
+  document.removeEventListener("keydown", onFactorsKey, true);
+});
 </script>
 
 <template>
@@ -248,6 +385,15 @@ async function onUseSize() {
       <span v-else class="empty">No mask<br><small>Upload, drop or paste one, or send it from the editor</small></span>
     </div>
 
+    <!-- The mask box and the crop of "Only masked", in mask pixels, fitted like the images -->
+    <svg v-if="cropShown" class="crop-overlay" :viewBox="`0 0 ${maskInfo.width} ${maskInfo.height}`"
+         preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <path class="crop-shade" :d="cropShade" fill-rule="evenodd"/>
+      <rect class="mask-box" :x="maskInfo.box[0]" :y="maskInfo.box[1]" :width="maskInfo.box[2] - maskInfo.box[0]"
+            :height="maskInfo.box[3] - maskInfo.box[1]"/>
+      <rect class="crop-box" :x="crop[0]" :y="crop[1]" :width="crop[2] - crop[0]" :height="crop[3] - crop[1]"/>
+    </svg>
+
     <!-- Outside the v-if chain of the views above -->
     <MediaPlayback v-if="shownView === 'result' && resultMedia && liveProgress === null" :key="resultMedia.src"
                    :src="resultMedia.src" :kind="resultMedia.kind" @open="emit('result-click')"/>
@@ -272,6 +418,30 @@ async function onUseSize() {
         <span class="spacer"></span>
         <button type="button" class="overlay-button" title="Resize to the size of the input image"
                 @click="onUseSize">Use size</button>
+      </div>
+
+      <div v-if="shownView === 'mask' && crop" class="input-actions">
+        <div ref="factorElement" class="factor">
+          <div v-if="factorsOpen" class="factor-list" role="menu" aria-label="Render the crop enlarged by">
+            <button v-for="factor in [...CROP_FACTORS].reverse()" :key="factor" type="button" role="menuitem"
+                    :class="{on: factor === appliedFactor}" @click="applyFactor(factor)">×{{ factor }}</button>
+          </div>
+          <div class="crop-tools">
+            <button type="button" :class="{on: factorsOpen}" :aria-expanded="factorsOpen"
+                    aria-label="Resize to the crop enlarged by a factor"
+                    title="Resize to the padded mask box enlarged by a factor: click to choose, wheel to step"
+                    @click="factorsOpen = !factorsOpen" @wheel.prevent="onFactorWheel">
+              <AppIcon name="maskFit" :size="14"/><span v-if="appliedFactor" class="factor-value">×{{ appliedFactor }}</span>
+            </button>
+            <i class="tools-separator" aria-hidden="true"></i>
+            <button type="button" :aria-label="`Reset Resize to to ${resetWidth}×${resetHeight}`"
+                    :title="`Reset Resize to to ${resetWidth}×${resetHeight} (Settings)`" @click="onResetSize">
+              <AppIcon name="reset" :size="13"/>
+            </button>
+          </div>
+        </div>
+        <span class="spacer"></span>
+        <span class="overlay-badge" :title="cropTitle"><AppIcon name="picture" :size="13"/>{{ renderWidth }}×{{ renderHeight }}</span>
       </div>
 
       <button v-if="shownView === 'result' && inputImage" type="button" class="pip" :class="{new: newInput}"
@@ -366,6 +536,125 @@ async function onUseSize() {
   opacity: 0.55;
   filter: brightness(0.7) sepia(1) hue-rotate(100deg) saturate(4);
   pointer-events: none;
+}
+
+.crop-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.crop-shade {
+  fill: rgba(0, 0, 0, 0.4);
+}
+
+.crop-overlay rect {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.mask-box {
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.crop-box {
+  stroke: var(--ib-accent);
+  stroke-width: 1.5;
+}
+
+.factor {
+  position: relative;
+}
+
+.crop-tools {
+  display: flex;
+  align-items: stretch;
+  height: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid var(--ib-border-2);
+  border-radius: 5px;
+  background: rgba(17, 19, 23, 0.85);
+}
+
+.crop-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border: 0;
+  background: none;
+  color: var(--ib-text);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.crop-tools button:hover,
+.crop-tools button.on {
+  color: var(--ib-accent);
+}
+
+.tools-separator {
+  width: 1px;
+  margin: 4px 0;
+  background: var(--ib-border-2);
+}
+
+.factor-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.factor-list {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--ib-border-2);
+  border-radius: 5px;
+  background: rgba(17, 19, 23, 0.95);
+}
+
+.factor-list button {
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--ib-text);
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.factor-list button:hover {
+  background: var(--ib-elev-2);
+}
+
+.factor-list button.on {
+  color: var(--ib-accent);
+}
+
+.overlay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 7px;
+  box-sizing: border-box;
+  border: 1px solid var(--ib-border-2);
+  border-radius: 5px;
+  background: rgba(17, 19, 23, 0.85);
+  color: var(--ib-text);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .empty {

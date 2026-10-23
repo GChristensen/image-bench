@@ -855,6 +855,13 @@ watch(() => sessionImagesStore.images, images => {
 // Input images of the shown mode, as WebUI reports them
 const inputs = computed(() => sdWebUI.inputs.mode === mode.value ? sdWebUI.inputs : {image: null, mask: null});
 
+// The "Only masked" crop shown over the mask (src/inpaintCrop.js); ComfyUI's mask blur does not widen the crop
+const inpaintCrop = computed(() => mode.value === "inpaint" && has('inpaintPadding')
+  && form.inpaintArea === "Only masked"
+  ? {padding: form.inpaintPadding, maskBlur: isComfy ? 0 : form.maskBlur,
+     inverted: form.maskMode === "Inpaint not masked", width: form.width, height: form.height}
+  : null);
+
 function onInputUpload(kind, file) {
   webUI.setInputImage(kind, file);
 }
@@ -1486,7 +1493,7 @@ const gridStyle = computed(() => ({
                            :mode="mode" :result-url="shownImageUrl" :result-media="resultMedia"
                            :live-progress="livePreview ? sdWebUI.live.progress : null"
                            :result-clickable="!!resultImage && !livePreview"
-                           :input-image="inputs.image" :input-mask="inputs.mask"
+                           :input-image="inputs.image" :input-mask="inputs.mask" :inpaint-crop="inpaintCrop"
                            :action-image="generating || livePreview ? null : resultImage"
                            @result-click="onResultClick" @upload="onInputUpload" @show-params="onShowParams"
                            @set-marking="onSetMarking" @use-size="(width, height) => setParams({width, height})"/>

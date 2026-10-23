@@ -2,6 +2,8 @@ import {defineStore} from "pinia";
 import {computed, reactive} from "vue";
 import {ACCENT_COLORS, DEFAULT_ACCENT_COLOR, DEFAULT_GENERATE_PRESET_IMAGES, DEFAULT_GENERATE_UI_PRESETS} from "@/consts.js";
 
+const DEFAULT_INPAINT_RESET_SIZE = 1024;
+
 export const useAppConfigStore = defineStore('appConfig', () => {
     const _config = reactive({});
 
@@ -164,6 +166,27 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Resize to set by the reset button of the inpaint crop in the Generate tab (1024 × 1024 unless set)
+    const inpaintResetWidth = computed({
+        get() {
+            return parseInt(_config.inpaintResetWidth) > 0 ? parseInt(_config.inpaintResetWidth) : DEFAULT_INPAINT_RESET_SIZE;
+        },
+        set(v) {
+            _config.inpaintResetWidth = parseInt(v) > 0 ? parseInt(v) : DEFAULT_INPAINT_RESET_SIZE;
+            return persist();
+        }
+    });
+
+    const inpaintResetHeight = computed({
+        get() {
+            return parseInt(_config.inpaintResetHeight) > 0 ? parseInt(_config.inpaintResetHeight) : DEFAULT_INPAINT_RESET_SIZE;
+        },
+        set(v) {
+            _config.inpaintResetHeight = parseInt(v) > 0 ? parseInt(v) : DEFAULT_INPAINT_RESET_SIZE;
+            return persist();
+        }
+    });
+
     // Root directory of the projects of the Library tab, as the server sees it (local or UNC path)
     const projectRoot = computed({
         get() {
@@ -238,6 +261,8 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         persistGenerationParams,
         generateUiPresets,
         generatePresetImages,
+        inpaintResetWidth,
+        inpaintResetHeight,
         projectRoot,
         docsRoot,
         accentColor

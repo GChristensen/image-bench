@@ -152,6 +152,14 @@ function setGenerateUiPreset(index, value) {
     >Keep the session filmstrip shown when a batch ends</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.commonSizesOnly"
     >Show only common sizes in the size picker (1:1, A4, canvas, photo, video, cinema)</label>
+    <div class="setting-label generate-setting">
+      <span>Inpaint crop reset size</span>
+      <input type="number" min="16" step="16" :value="appConfigStore.inpaintResetWidth" aria-label="Inpaint crop reset width"
+             @change="e => appConfigStore.inpaintResetWidth = e.target.value">
+      ×
+      <input type="number" min="16" step="16" :value="appConfigStore.inpaintResetHeight" aria-label="Inpaint crop reset height"
+             @change="e => appConfigStore.inpaintResetHeight = e.target.value">
+    </div>
     <template v-if="isWebUI">
       <div class="setting-label generate-setting">
         <span>UI preset buttons</span>
@@ -263,9 +271,14 @@ function setGenerateUiPreset(index, value) {
 </template>
 
 <style scoped>
+/* Scrolls within the tab content, so that the tab bar stays */
 .settings-container {
   display: flex;
   flex-direction: row;
+  align-items: flex-start;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
   padding-top: 15px;
 }
 

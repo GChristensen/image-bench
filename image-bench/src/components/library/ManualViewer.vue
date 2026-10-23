@@ -358,6 +358,13 @@ const hostOrigin = location.origin;
         <li><b>Result, Input and Mask</b>: upload, drop or paste the input image or mask onto its pane. Hold
           <span class="kbd">Ctrl</span> over the result, or click its <AppIcon name="rim" :size="13" class="inline-icon"/>
           button, to show its action rim. Drag the grips to resize the panes; double-click restores them.</li>
+        <li><b>Only masked crop</b>: with the inpaint area Only masked, the Mask pane outlines the mask (dashed)
+          and the part of the image that is regenerated: the mask grown by the padding, then to the shape of the
+          size. <AppIcon name="maskFit" :size="13" class="inline-icon"/> sets the size to that padded box enlarged
+          by a factor, in multiples of 16 (pick one from its list, or step with the wheel over it); the padding
+          stays the amount of context. <AppIcon name="reset" :size="13" class="inline-icon"/> beside it sets the
+          size back to the one in Settings › Generate Tab (1024 × 1024 unless changed). The size at the right is what the crop is rendered at; its tooltip tells
+          the crop size and the enlargement. The outline also shows on the Input pane with Mask overlay.</li>
         <li><b>Session filmstrip</b> (the tabs at the right edge of the parameters): the images generated while
           the window is open, grouped by batch. It is shown during a batch of several images. Click an image to
           open it, or middle-click it to show it in the Result pane.</li>
