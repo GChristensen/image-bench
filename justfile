@@ -137,3 +137,13 @@ gimp-deploy:
 # Remove the GIMP plugin installed by gimp-deploy
 gimp-undeploy:
     {{gimp}} undeploy
+
+# Package the diffusion-prompting Claude skill into skills/diffusion-prompting/dist/*.zip, with the model docs of
+# model-docs/docs that its SKILL.md names as references
+skill-diffusion-prompting:
+    python skills/diffusion-prompting/build_skill.py
+
+# Package the diffusion-prompting skill and upload it to the skills release of the GitHub repository (gh auth login
+# first), replacing the previous upload
+cskill-diffusion-prompting-release:
+    python skills/diffusion-prompting/build_skill.py --release

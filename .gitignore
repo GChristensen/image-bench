@@ -13,6 +13,7 @@ CLAUDE.md
 /comfyui-extension/model_docs/*
 !/comfyui-extension/model_docs/.gitkeep
 /editor-extensions/*/dist/
+/skills/*/dist/
 /.env
 /.local/
 __pycache__/

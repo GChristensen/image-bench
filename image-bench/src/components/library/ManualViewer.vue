@@ -392,31 +392,18 @@ const hostOrigin = location.origin;
           image chosen, pasted or dropped there (or on the prompt). <b>Apply</b> sets the checked groups and lists
           the values that {{ HOST_NAME }} does not have.</li>
         <li><b><AppIcon name="terminal" :size="13" class="inline-icon"/> Console</b> opens a drawer with the terminal
-          output of {{ HOST_NAME }}. It stays open across the tabs; Ctrl+` opens and closes it
-          in any tab<template v-if="EMBEDDED">, as does a middle click or Shift+click on the
-          <AppIcon name="appWindow" :size="13" class="inline-icon"/> {{ HOST_NAME }} tab</template>. Use its <AppIcon name="power" :size="13" class="inline-icon"/> button to restart
-          {{ HOST_NAME }} when it hangs or crashes, for example after running out of memory. The restart kills the
-          {{ HOST_NAME }} process and its console window, then runs the script that starts {{ HOST_NAME }}. While the
-          connection to {{ HOST_NAME }} is lost, the <AppIcon name="unplug" :size="13" class="inline-icon"/> icon
-          after the Library tab shows whether the process is still running, and clicking the icon restarts
-          {{ HOST_NAME }} as well. Restarts need the
-          <a :href="ADDON_URL" target="_blank" rel="noopener">Host Restart addon</a>, which is not a part of Image
-          Bench: it kills and starts processes and runs a helper that listens on a port of its own, which security
-          software may flag, so it is installed by hand. Copy its folder next to Image Bench in the
-          <code>{{ isComfy ? "custom_nodes" : "extensions" }}</code> folder of {{ HOST_NAME }} and restart
-          {{ HOST_NAME }}; until then, the button tells you where to get it. To enable restarts, create
-          <code>host_restart.json</code> in the <code>store</code> folder of the addon with the path of your start
-          script, for example <code>{"command": "D:\\sd\\run.bat"}</code>. Until the file exists, the button tells
-          you where to create it
-          and which script started {{ HOST_NAME }}; <b>Settings › Host restart</b> shows the same information. The
-          file can only be edited by hand, so nobody who reaches {{ HOST_NAME }} over the network can change the
-          command. If {{ HOST_NAME }} still responds, the restart request goes through it. If it hangs, the browser
-          contacts a small helper process that runs alongside {{ HOST_NAME }}. The helper listens on the same
-          addresses as {{ HOST_NAME }} (including the network with <code>--listen</code>), on the
-          {{ HOST_NAME }} port plus 100; set <code>"port"</code> in the file to use a different port. When
-          {{ HOST_NAME }} uses https, the helper uses the same certificate. If the certificate is self-signed, your
-          browser has to accept it once for the helper's port too; <b>Settings › Host restart</b> has a link for
-          this.</li>
+          output of {{ HOST_NAME }}. It stays open across the tabs, and Ctrl+` opens or closes it from any
+          tab<template v-if="EMBEDDED">, as does a middle click or Shift+click on the
+          <AppIcon name="appWindow" :size="13" class="inline-icon"/> {{ HOST_NAME }} tab</template>.
+          Its <AppIcon name="power" :size="13" class="inline-icon"/> button restarts {{ HOST_NAME }} when it hangs
+          or crashes (e.g. after running out of memory): it kills the {{ HOST_NAME }} process along with its console
+          window and runs your start script again.
+          Restarting needs the <a :href="ADDON_URL" target="_blank" rel="noopener">Host Restart addon</a>, which is
+          installed by hand because security software may flag its process control logic; the button explains how to
+          get and set it up. When {{ HOST_NAME }} hangs, the browser reaches the addon's helper process on the
+          {{ HOST_NAME }} port plus 100 (<code>"port"</code> in <code>host_restart.json</code> changes it). When using Image Bench through HTTPS with a
+          self-signed https certificate, accept it once more for that port through <b>Settings › Host
+          restart</b>.</li>
       </ul>
       <p v-if="isComfy" class="muted">
         A control whose node cannot be found in the workflow is hidden, so a missing control usually means a

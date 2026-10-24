@@ -31,6 +31,7 @@ deploy and editor plugin recipes.
 | `common-extension/`  | Code shared by both extensions: `shared_frontend/` (JS) and `shared_backend/` (Python)               |
 | `editor-extensions/` | Photoshop, Krita and GIMP plugins; `PROTOCOL.md` describes their protocol                             |
 | `model-docs/`        | The model docs shown in the Library tab, copied into the extensions by the build                      |
+| `skills/`            | Claude skills: `diffusion-prompting/` writes prompts and settings for the models of `model-docs/`; `just skill-diffusion-prompting` packages it with those docs as its references |
 | `landing/`           | Sources of the GitHub Pages site, built into the repo-root `index.html`                               |
 | `tools/`             | `assemble.py`, which makes the release trees of the installation repositories                        |
 
