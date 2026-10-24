@@ -105,6 +105,18 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // Ask before generating when the work may start anew in the current project (projectReminder.js; enabled unless
+    // set to false); off, the project cube at the Generate button stays, but is never armed
+    const projectReminder = computed({
+        get() {
+            return _config.projectReminder ?? true;
+        },
+        set(v) {
+            _config.projectReminder = v;
+            return persist();
+        }
+    });
+
     // Show only the common sizes in the size picker of the Generate tab: 1:1, A4 and the ratios of a medium
     // (enabled unless set to false)
     const commonSizesOnly = computed({
@@ -264,6 +276,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         exploreLoraFreeImages,
         flashGeneratedTab,
         keepSessionStrip,
+        projectReminder,
         commonSizesOnly,
         rimOnHover,
         persistGenerationParams,

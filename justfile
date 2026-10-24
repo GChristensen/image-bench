@@ -47,6 +47,9 @@ release-webui: (_require "WEBUI_RELEASE_REPO" webui_release) webui
 release-comfy: (_require "COMFY_RELEASE_REPO" comfy_release) comfy
     python tools/assemble.py comfy "{{comfy_release}}"
 
+publish-comfy: release-comfy
+    cd ../image-bench-comfy; comfy node publish
+
 # Package the editor plugins and upload them to the editor-plugins GitHub release (gh auth login first), then write
 # image-bench/src/assets/editor-plugins.json, which the manual's download cards link; run it when a plugin version
 # changes, before building the releases

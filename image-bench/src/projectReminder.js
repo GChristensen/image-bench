@@ -1,10 +1,12 @@
 import {reactive, watch} from "vue";
 import {useProjectsStore} from "@/stores/projects.js";
+import {useAppConfigStore} from "@/stores/appConfig.js";
 
 /**
  * The reminder that the workspace is a project (ProjectCube.vue at the Generate button): armed when the work probably
  * starts anew (the extension window opened, the prompts cleared, PNG Info applied), the next generation from the
- * Generate tab asks whether to continue the project first. Kept in memory only
+ * Generate tab asks whether to continue the project first. Kept in memory only; the projectReminder setting turns
+ * the arming off
  */
 export const reminder = reactive({
   armed: false,
@@ -20,7 +22,7 @@ const SESSION_KEY = "imageBench_reminderSession";
 export function armReminder(reason) {
   const projects = useProjectsStore();
 
-  if (!projects.hasCurrent || projects.current.path === reminder.mutedPath)
+  if (!useAppConfigStore().projectReminder || !projects.hasCurrent || projects.current.path === reminder.mutedPath)
     return;
 
   reminder.armed = true;
@@ -60,4 +62,6 @@ export function initReminder() {
     reminder.mutedPath = null;
     disarmReminder();
   });
+
+  watch(() => useAppConfigStore().projectReminder, enabled => enabled || disarmReminder());
 }
