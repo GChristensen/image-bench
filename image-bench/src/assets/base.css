@@ -66,6 +66,12 @@
   --ib-accent-ink: #1a0b00;
   --ib-accent-soft: rgba(249, 115, 22, 0.13);
   --ib-accent-border: rgba(249, 115, 22, 0.4);
+  /* The current project: the accent color paired with the accent (ACCENT_COLORS project) */
+  --ib-project: #38bdf8;
+  --ib-project-hover: #5ccbfa;
+  --ib-project-ink: #03141d;
+  --ib-project-soft: rgba(56, 189, 248, 0.13);
+  --ib-project-border: rgba(56, 189, 248, 0.45);
   --ib-danger: #e5484d;
   --ib-danger-hover: #f05a5e;
   --ib-danger-text: #ff7a7d;

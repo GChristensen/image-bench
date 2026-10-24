@@ -127,7 +127,7 @@ export const useProjectsStore = defineStore("projects", () => {
   const tree = ref(null);
   const treeLoading = ref(false);
   const treeError = ref(null);
-  // {path: null} or {path, name, exists, trays: {kind: {workspace, saved, changed}}, changed}
+  // {path: null} or {path, name, exists, savedAt, trays: {kind: {workspace, saved, changed}}, changed}
   const current = ref({path: null});
   const selectedPath = ref(storage.getItem(SELECTED_KEY));
   // Project shown in the Projects tab: {path, name, data, files, trays}

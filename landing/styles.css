@@ -103,6 +103,8 @@ kbd { font: inherit; }
   padding: 6px 12px; border-radius: 999px;
   background: #ffffff; color: #27272a; box-shadow: inset 0 0 0 1px var(--card-line);
 }
+a.chip { text-decoration: none; transition: box-shadow 0.15s, color 0.15s; }
+a.chip:hover { color: var(--accent-deep); box-shadow: inset 0 0 0 1px var(--accent); }
 .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 
 .card { border-radius: 16px; background: #ffffff; box-shadow: inset 0 0 0 1px var(--card-line); }
@@ -334,6 +336,14 @@ kbd { font: inherit; }
 .points > div { border-top: 2px solid var(--accent); padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
 .points h3 { font-size: 18px; font-weight: 700; }
 .points p { font-size: 16px; line-height: 1.6; color: var(--text2); }
+
+/* the Only masked crop: the screenshot is small (368×306), kept at its own width */
+.mr { display: flex; flex-wrap: wrap; gap: 32px 56px; align-items: center; padding-top: 8px; }
+.mr-figure { flex: 0 1 368px; }
+.mr-text { flex: 1 1 380px; display: flex; flex-direction: column; gap: 14px; }
+.mr-text .label { font-size: 12px; font-weight: 600; color: var(--accent-deep); text-transform: uppercase; letter-spacing: 0.06em; }
+.mr-text h3 { font-size: 28px; line-height: 1.2; }
+.mr-text p { font-size: 16px; line-height: 1.6; color: var(--text2); max-width: 600px; }
 
 /* ---------------------------------------------------------------- compare */
 

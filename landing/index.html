@@ -74,8 +74,8 @@
       </div>
       <div class="row row-tight">
         <span class="muted small">Runs on</span>
-        <span class="chip">Forge Neo</span>
-        <span class="chip">ComfyUI</span>
+        <a class="chip" href="https://github.com/Haoming02/sd-webui-forge-classic/tree/neo" target="_blank" rel="noopener">Forge Neo</a>
+        <a class="chip" href="https://www.comfy.org/" target="_blank" rel="noopener">ComfyUI</a>
       </div>
     </div>
     <div class="hero-art">
@@ -294,7 +294,7 @@
     <div class="intro intro-wide">
       <div class="kicker">04 — Editors</div>
       <h2 class="disp">Built for precision. Your editor draws the masks.</h2>
-      <p class="lead">Image Bench has no brush, on purpose. Masks come only from a real graphics editor: make a selection in Photoshop, Krita or GIMP and send it. The image, mask or reference goes straight into Forge Neo or ComfyUI, and the result comes back as a new layer.</p>
+      <p class="lead">Image Bench has no inpainting brush, on purpose. Masks come only from a real graphics editor: make a selection in Photoshop, Krita or GIMP and send it. The image, mask or reference goes straight into Forge Neo or ComfyUI, and the result comes back as a new layer.</p>
       <p class="note">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v6M12 22v-6M4.9 4.9l4.2 4.2M19.1 19.1l-4.2-4.2M2 12h6M22 12h-6"/></svg>
         <span>This needs the Image Bench plugin for your editor. Download it from the built-in manual (Library › Manual › Editors) and install it in Photoshop, Krita or GIMP.</span>
@@ -343,6 +343,19 @@
       <div><h3>Selections become masks</h3><p>Feather and refine with real tools, at full resolution, and send the selection as the inpaint mask.</p></div>
       <div><h3>Any target</h3><p>Send to the input image, a reference, a ControlNet unit (preprocessed or as is) or the Compare tab.</p></div>
       <div><h3>Back as layers</h3><p>Send to Photoshop, Krita or GIMP from any image. Results arrive as layers, ready to blend.</p></div>
+    </div>
+
+    <!-- the Only masked crop of the Mask pane and its factor list -->
+    <div class="mr">
+      <div class="mr-figure window">
+        <img src="img/screenshots/mask-resampling.webp" width="368" height="306" loading="lazy" alt="The Mask pane of the Generate tab: the mask with its bounding box dashed and the crop outlined in orange. The factor list is open at ×1.5, and the size reads 608×592">
+      </div>
+      <div class="mr-text">
+        <div class="mono label">Inpainting · Only masked</div>
+        <h3 class="disp">Keep the aspect ratio of the inpainting area.</h3>
+        <p>Inpainting with <b>Only masked</b> doesn't regenerate the whole image. The model works on a crop around the mask, enlarged to the generation size, and the result is scaled back into place. If that size has a different shape than the crop, the area you inpaint may end up distorted.</p>
+        <p>The factor button in the Mask pane sets the generation size from the bounding box of your selection, so the working image has the same aspect ratio as the area around the mask. You only pick how much to enlarge it during the inpainting: at ×1.5, a 400-pixel selection is generated at 600 pixels, rounded to a multiple of 16. In the pane, the dashed box is the mask and the orange one is the padded area that gets regenerated.</p>
+      </div>
     </div>
   </div>
 </section>

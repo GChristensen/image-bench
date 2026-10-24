@@ -36,7 +36,10 @@ import SnippetsPanel from "@/components/generate/SnippetsPanel.vue";
 import PromptHistoryBar from "@/components/generate/PromptHistoryBar.vue";
 import PromptVariantsSelect from "@/components/generate/PromptVariantsSelect.vue";
 import PromptDiff from "@/components/generate/PromptDiff.vue";
+import ProjectCube from "@/components/generate/ProjectCube.vue";
 import {consoleOpen, toggleConsole} from "@/consoleDrawer.js";
+import {armReminder, reminder} from "@/projectReminder.js";
+import {useProjectsStore} from "@/stores/projects.js";
 import {withCurrent} from "@/components/generate/choices.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
@@ -676,12 +679,30 @@ const toolbarStatus = computed(() => {
   return null;
 });
 
+// ---------- Project reminder ----------
+
+const projects = useProjectsStore();
+const projectCube = ref(null);
+
+/**
+ * A generation from the toolbar: while the project reminder is armed, it asks first whether to continue the project
+ * (ProjectCube.vue); Ctrl+click skips it
+ * @param {Function} handler - The generation
+ * @param {MouseEvent} e - The click on the button, under which the reminder is shown
+ */
+function generateChecked(handler, e) {
+  if (reminder.armed && projects.hasCurrent && projectCube.value && !e.ctrlKey)
+    projectCube.value.ask(handler, e.currentTarget);
+  else
+    handler();
+}
+
 function onGenerateButton(e) {
   if (restarting.value)
     return;
 
   if (!generating.value)
-    onGenerate();
+    generateChecked(onGenerate, e);
   else if (e.ctrlKey)
     onRestart();
   else
@@ -718,6 +739,7 @@ async function clearPrompts() {
     return;
 
   setParams(has("negativePrompt") ? {prompt: "", negativePrompt: ""} : {prompt: ""});
+  armReminder("new");
 }
 
 // ---------- PNG Info ----------
@@ -756,6 +778,8 @@ function onPngInfoApply({hiresFix, ...values}) {
 
   if (hiresFix !== undefined)
     webUI.setWebUIParams({hiresFix});
+
+  armReminder("new");
 }
 
 // An image dropped on the prompt (a file or a card of the image lists) opens PNG Info; text is dropped as usual
@@ -1302,15 +1326,17 @@ const gridStyle = computed(() => ({
   <div class="view-container generate">
     <div class="toolbar">
       <div class="toolbar-group">
-        <button class="btn swap" :class="generating ? 'stop' : 'primary'"
+        <button class="btn swap" :class="[generating ? 'stop' : 'primary', {joined: projects.hasCurrent}]"
                 :disabled="!generating && (!connected || sdWebUI.restoringParams)"
-                :title="generating ? 'Stop; Ctrl+click or middle click: stop and generate again' : undefined"
+                :title="generating ? 'Stop; Ctrl+click or middle click: stop and generate again'
+                  : projects.hasCurrent ? `Generate (project ${projects.current.name})` : undefined"
                 @click="onGenerateButton" @mousedown.middle.prevent
                 @auxclick="e => e.button === 1 && generating && onRestart()">
           <span :class="{off: generating}"><AppIcon name="play" :size="13"/>Generate</span>
           <span :class="{off: !generating || ctrlDown || restarting}"><AppIcon name="stop" :size="13"/>Stop</span>
           <span :class="{off: !generating || !(ctrlDown || restarting)}"><AppIcon name="refresh" :size="13"/>Restart</span>
         </button>
+        <ProjectCube v-if="projects.hasCurrent" ref="projectCube"/>
         <button class="btn outline" :disabled="!generating" title="Skip the image being generated"
                 @click="webUI.skipGeneration()"><AppIcon name="skip" :size="13"/>Skip</button>
         <label class="toolbar-group-label"><span class="reset-count" title="Reset to 1 image"
@@ -1324,7 +1350,7 @@ const gridStyle = computed(() => ({
       </div>
       <button v-if="has('variations')" class="btn outline" :disabled="generating || !connected"
               title="Generate variations of the current seed in the Generated tab; the variation seed and strength are set for the batch and cleared afterwards automatically"
-              @click="onGenerateVariations"><AppIcon name="shuffle" :size="14"/>Variations…</button>
+              @click="e => generateChecked(onGenerateVariations, e)"><AppIcon name="shuffle" :size="14"/>Variations…</button>
 
       <ProgressIndicator v-if="generating" :value="progress.value" :label="progress.label"
                          :completed="progress.completed || 0" :total="progress.total || 0"/>
@@ -1795,6 +1821,11 @@ const gridStyle = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* The Generate button joined to the project cube (ProjectCube.vue) */
+.btn.joined {
+  border-radius: 5px 0 0 5px;
 }
 
 .status-pill {

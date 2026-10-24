@@ -30,6 +30,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas} from "@/host.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useProjectsStore} from "@/stores/projects.js";
+import {initReminder} from "@/projectReminder.js";
 import {useManualStore} from "@/stores/manual.js";
 import {handleHostResponse} from "@/hostRequest.js";
 import {EMBEDDED, handleHostAttachment, hostConnected} from "@/hostWindow.js";
@@ -120,6 +121,7 @@ onBeforeMount(async () => {
   await useGenerationSettingsStore().init();
   await usePromptHistoryStore().load();
   await projectsStore.init();
+  initReminder();
 
   // The host page of the embedded mode is initialized when it attaches (HOST_READY)
   if (!EMBEDDED)

@@ -373,6 +373,9 @@ const hostOrigin = location.origin;
           <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
           skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click or a middle click
           on Stop stops the generation and starts a new one a second later.</li>
+        <li><b>Project cube</b>: while a project is current, the <AppIcon name="box" :size="13" class="inline-icon"/>
+          cube joined to Generate, in the project color, reminds you that the workspace is that project; click it to
+          save the project or start a new workspace. The Projects chapter tells when it asks before generating.</li>
         <li v-if="isWebUI"><b>UI preset buttons</b> switch the Forge UI preset.
           <AppIcon name="lock" :size="13" class="inline-icon"/> <b>Prompt lock</b> makes the prompts editable only
           here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
@@ -808,6 +811,14 @@ const hostOrigin = location.origin;
           chip reads <i>No project</i>, and its <AppIcon name="plus" :size="13" class="inline-icon"/> button
           creates a new project. Right-click the chip to open one of the recent projects.
           Drop image cards on the chip to copy them into the folder of the current project.</li>
+        <li><b>The project reminder</b>: while a project is current, a cube in the project color is joined to the
+          Generate button; click it for <b>Save project</b> and <b>New workspace…</b>. The cube turns striped and
+          pulses when the work may be starting anew: when the Image Bench window opens with a project current (not
+          when it is reloaded), after clearing the prompts, and after applying PNG Info. The next <b>Generate</b> or
+          <b>Variations…</b> then asks first: <b>Continue project</b> (<span class="kbd">Enter</span>) generates,
+          <b>New workspace</b> clears the images and trays and closes the project but keeps the prompts and
+          parameters, then generates, and <span class="kbd">Esc</span> generates nothing. Ctrl+click on Generate skips
+          the question; <b>Don't ask again for this project</b> silences it until the window is opened again.</li>
         <li><b>New project</b> creates the folder and, unless unchecked, saves the workspace into it and makes it
           current.</li>
         <li><b>Open</b> (or double-click) restores the trays and parameters of a project and makes it current.

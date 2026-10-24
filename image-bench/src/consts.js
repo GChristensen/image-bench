@@ -26,10 +26,10 @@ export function generationStateToKind(generationState) {
 }
 // Selectable accent colors: base, hover, text on accent background, and RGB triplet for translucent variants
 export const ACCENT_COLORS = {
-    orange: {name: "Orange", accent: "#f97316", hover: "#fb8a3c", ink: "#1a0b00", rgb: "249, 115, 22"},
-    amethyst: {name: "Amethyst", accent: "#bb7ff1", hover: "#ca9bf5", ink: "#14061f", rgb: "187, 127, 241"},
-    green: {name: "Green", accent: "#2cbf8a", hover: "#3ad39b", ink: "#05150e", rgb: "44, 191, 138"},
-    blue: {name: "Light Blue", accent: "#38bdf8", hover: "#5ccbfa", ink: "#03141d", rgb: "56, 189, 248"},
+    orange: {name: "Orange", accent: "#f97316", hover: "#fb8a3c", ink: "#1a0b00", rgb: "249, 115, 22", project: "blue"},
+    amethyst: {name: "Amethyst", accent: "#bb7ff1", hover: "#ca9bf5", ink: "#14061f", rgb: "187, 127, 241", project: "green"},
+    green: {name: "Green", accent: "#2cbf8a", hover: "#3ad39b", ink: "#05150e", rgb: "44, 191, 138", project: "amethyst"},
+    blue: {name: "Light Blue", accent: "#38bdf8", hover: "#5ccbfa", ink: "#03141d", rgb: "56, 189, 248", project: "orange"},
 };
 export const DEFAULT_ACCENT_COLOR = "orange";
 

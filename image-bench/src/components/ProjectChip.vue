@@ -4,15 +4,16 @@
  * tab), a dot while the workspace has unsaved changes, the Save button, and the close button, which starts a blank
  * workspace (as the clean-up action). Without a current project: "No project" (shows the projects) and a button
  * creating a new project. Right-click lists the recent projects; image cards dropped on the chip are copied into
- * the folder of the current project
+ * the folder of the current project. It pulses when the project reminder is armed (projectReminder.js)
  */
-import {computed, ref} from "vue";
+import {computed, ref, watch} from "vue";
 import {RouterLink, useRoute, useRouter} from "vue-router";
 import AppIcon from "@/components/AppIcon.vue";
 import {baseName, PROJECT_TRAYS, useProjectsStore} from "@/stores/projects.js";
 import {startBlankWorkspace} from "@/workspace.js";
 import {copyToProject, openContextMenu} from "@/contextMenu.js";
 import {canDropOn, KIND_PROJECT, takeDraggedImages} from "@/imageDrag.js";
+import {reminder} from "@/projectReminder.js";
 
 const PROJECTS_ROUTE = "/projects";
 
@@ -23,6 +24,9 @@ const router = useRouter();
 const active = computed(() => route.path === PROJECTS_ROUTE);
 const canTakeImages = computed(() => store.hasCurrent && store.current.exists !== false);
 const dropTarget = ref(false);
+const pulsing = ref(false);
+
+watch(() => reminder.armed, armed => pulsing.value = armed);
 
 const title = computed(() => {
   const current = store.current;
@@ -89,8 +93,8 @@ function onDrop() {
             :title="store.busy || 'New project, into which the workspace can be saved'" aria-label="New project"
             @click="store.createProject()"><span v-if="store.busy" class="spinner"></span><AppIcon v-else name="plus" :size="13"/></button>
   </div>
-  <div v-else class="project-chip" :class="{active, missing: store.current.exists === false, 'drop-target': dropTarget}"
-       @contextmenu="openRecentMenu" @dragover="onDragOver" @dragleave="onDragLeave" @drop.prevent="onDrop">
+  <div v-else class="project-chip" :class="{active, missing: store.current.exists === false, 'drop-target': dropTarget, pulsing}"
+       @animationend="pulsing = false" @contextmenu="openRecentMenu" @dragover="onDragOver" @dragleave="onDragLeave" @drop.prevent="onDrop">
     <RouterLink :to="PROJECTS_ROUTE" class="chip-name" :title="title" @click="show">
       <AppIcon :name="store.current.exists === false ? 'alert' : 'box'" :size="13"/>
       <span class="name">{{ store.current.name }}</span>
@@ -111,9 +115,9 @@ function onDrop() {
   align-items: center;
   height: 26px;
   margin-right: 6px;
-  border: 1px solid var(--ib-accent-border);
+  border: 1px solid var(--ib-project-border);
   border-radius: 13px;
-  background: color-mix(in srgb, var(--ib-accent) 7%, transparent);
+  background: var(--ib-project-soft);
   overflow: hidden;
   /* In a narrow window the name is cut, never the buttons: overflow: hidden would let the chip shrink to 0,
      and min-content would include the whole name, so the floor is the icon, the dot and both buttons */
@@ -155,9 +159,25 @@ function onDrop() {
   color: var(--ib-accent);
 }
 
+.project-chip.pulsing {
+  animation: pulse 0.9s ease-out 2;
+}
+
+@keyframes pulse {
+  30% {
+    box-shadow: 0 0 0 4px var(--ib-project-border);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-chip.pulsing {
+    animation: none;
+  }
+}
+
 .project-chip.drop-target {
-  background: var(--ib-accent-soft);
-  box-shadow: inset 0 0 0 1px var(--ib-accent-border);
+  background: color-mix(in srgb, var(--ib-project) 22%, transparent);
+  box-shadow: inset 0 0 0 1px var(--ib-project-border);
 }
 
 .chip-name,
@@ -184,6 +204,11 @@ function onDrop() {
 
 .chip-name .app-icon {
   flex-shrink: 0;
+  color: var(--ib-project);
+}
+
+.active .chip-name .app-icon,
+.active .chip-save {
   color: var(--ib-accent);
 }
 
@@ -215,7 +240,7 @@ function onDrop() {
 .chip-save {
   width: 28px;
   justify-content: center;
-  color: var(--ib-accent);
+  color: var(--ib-project);
 }
 
 .chip-close {

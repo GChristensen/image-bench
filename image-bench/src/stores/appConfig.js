@@ -228,6 +228,14 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         style.setProperty("--ib-accent-ink", color.ink);
         style.setProperty("--ib-accent-soft", `rgba(${color.rgb}, 0.13)`);
         style.setProperty("--ib-accent-border", `rgba(${color.rgb}, 0.4)`);
+
+        // The color of the current project, far from the accent on the color wheel
+        const project = ACCENT_COLORS[color.project];
+        style.setProperty("--ib-project", project.accent);
+        style.setProperty("--ib-project-hover", project.hover);
+        style.setProperty("--ib-project-ink", project.ink);
+        style.setProperty("--ib-project-soft", `rgba(${project.rgb}, 0.13)`);
+        style.setProperty("--ib-project-border", `rgba(${project.rgb}, 0.45)`);
     }
 
     async function init() {
