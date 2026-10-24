@@ -226,7 +226,7 @@ async def get_system_info(request):
 # Explore presets endpoints
 
 # Clear outputs directory endpoint
-@PromptServer.instance.routes.get(BASE_PATH + "/clear_outputs_dir")
+@PromptServer.instance.routes.post(BASE_PATH + "/clear_outputs_dir")
 async def clear_outputs_dir(request):
     """Clear all files in the ComfyUI output directory"""
     try:
@@ -316,7 +316,7 @@ async def projects_action(request):
     try:
         args = projects.parse_args(dict(request.query), form, body, files)
         result = await asyncio.to_thread(projects.dispatch, request.match_info["action"], args, files, config,
-                                         store_dir, get_image_bench_dir(), "comfyui")
+                                         store_dir, get_image_bench_dir(), "comfyui", request.method)
     except projects.ProjectError as e:
         return web.json_response({"error": str(e)}, status=e.status)
     except OSError as e:
@@ -970,7 +970,7 @@ async def get_editor_image(request):
 
 
 # Close all WebSocket connections
-@PromptServer.instance.routes.get(BASE_PATH + "/close_websocket")
+@PromptServer.instance.routes.post(BASE_PATH + "/close_websocket")
 async def close_websocket(request):
     """Close all WebSocket connections"""
     for ws in list(websocket_clients):

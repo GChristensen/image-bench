@@ -112,15 +112,24 @@ const viewStores = {
 }
 
 onBeforeMount(async () => {
-  await appConfigStore.init();
+  // One that fails (the backend is down) does not keep the others from loading
+  const load = async (name, init) => {
+    try {
+      await init();
+    } catch (error) {
+      console.error(`[Image Bench] Unable to load the ${name}:`, error);
+    }
+  };
+
+  await load("settings", () => appConfigStore.init());
   await imageTrayStore.init();
   await conceptTrayStore.init();
   await compareStore.init();
   await upscaledImageStore.init();
-  await configPresetsStore.init();
-  await useGenerationSettingsStore().init();
-  await usePromptHistoryStore().load();
-  await projectsStore.init();
+  await load("config presets", () => configPresetsStore.init());
+  await load("generation settings", () => useGenerationSettingsStore().init());
+  await load("prompt history", () => usePromptHistoryStore().load());
+  await load("projects", () => projectsStore.init());
   initReminder();
 
   // The host page of the embedded mode is initialized when it attaches (HOST_READY)

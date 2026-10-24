@@ -25,23 +25,64 @@ export function useTrayStoreState(kind) {
   let persistTimer = null;
   let persisting = Promise.resolve();
 
-  // Override init to load from server
-  async function init() {
-    const response = await fetch(`/image-bench/${kind}`);
-
-    if (response.ok && response.headers.get('content-length') > 0) {
-      const trayContent = await response.json();
-      baseStore.images.value = trayContent.images;
-    }
-  }
-
+  // Whether the tray was read from the server: until then a save would replace the saved tray with the images
+  // added meanwhile (the backend was down when the window opened)
+  let loaded = false;
   // Whether the last save failed (the backend was down): saved again when the backend is back
   let dirty = false;
 
-  onBackendReconnected(() => dirty && !persistTimer && (persisting = _persistToServer()));
+  // Override init to load from server; the images added before a first successful load are kept
+  async function init() {
+    let text;
+
+    try {
+      const response = await fetch(`/image-bench/${kind}`, {cache: "no-store"});
+
+      if (!response.ok)
+        throw new Error(`The request failed (${response.status}).`);
+
+      text = await response.text();
+    } catch (error) {
+      console.error(`[Image Bench] Unable to load the ${kind}:`, error);
+      return;
+    }
+
+    let images = [];
+
+    // An unreadable store file is replaced by the next save, like an empty one
+    try {
+      images = (text.trim() && JSON.parse(text)?.images) || [];
+    } catch (error) {
+      console.error(`[Image Bench] The saved ${kind} is unreadable:`, error);
+    }
+
+    const added = loaded ? [] : baseStore.images.value.filter(image => !findIn(images, image));
+
+    baseStore.images.value = [...images, ...added];
+    loaded = true;
+
+    // Nothing was lost while it was not loaded, unless images were added
+    if (added.length)
+      persist();
+    else
+      dirty = false;
+  }
+
+  onBackendReconnected(() => {
+    if (!loaded)
+      init();
+    else if (dirty && !persistTimer)
+      persisting = _persistToServer();
+  });
 
   // Internal persist function; a failed save leaves the tray dirty
   async function _persistToServer() {
+    // Saved after the tray is loaded (init() saves the images added meanwhile)
+    if (!loaded) {
+      dirty = true;
+      return;
+    }
+
     try {
       dirty = !await _sendToServer();
     } catch (error) {
@@ -105,9 +146,13 @@ export function useTrayStoreState(kind) {
   // Images keep their original path in sourcePath after being copied to the tray directory
   // (a copy in another tray or the Compare tab has the same one)
   function findInTray(imageData) {
+    return findIn(baseStore.images.value, imageData);
+  }
+
+  function findIn(images, imageData) {
     const source = imageData.sourcePath || imageData.imagePath;
 
-    return baseStore.images.value.find(i =>
+    return images.find(i =>
       (i.sourcePath || i.imagePath) === source || i.imagePath === imageData.imagePath);
   }
 

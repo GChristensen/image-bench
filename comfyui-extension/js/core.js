@@ -76,6 +76,8 @@ app.registerExtension({
         api.addEventListener("execution_start", handleExecutionStart);
         api.addEventListener("execution_error", handleExecutionError);
         api.addEventListener("execution_success", handleExecutionSuccess);
+        // An interrupted prompt does not end with execution_success (generation.js continues the strategy)
+        api.addEventListener("execution_interrupted", e => pendingExecuted.delete(e.detail?.prompt_id));
         api.addEventListener("image-bench.editor", handleEditorImage);
 
         // Listen for postMessage from popup window
@@ -301,25 +303,34 @@ function addToolbarButton() {
     console.log('[Image Bench] Toolbar button added successfully using app.menu API');
 }
 
-// Outputs read by workflow.js:extractImageInfo()
-const MEDIA_OUTPUTS = ["images", "gifs", "video", "audio"];
-// Prompts that sent images, until their execution_success
-const promptsWithMedia = new Set();
+// The handleExecuted() calls of each prompt until its execution_success, which waits for them before the strategy
+// continues: a prompt has an executed event per output node (a preview and a save, a video and its audio)
+const pendingExecuted = new Map();
 
 /**
- * Handle execution completion event
+ * Handle execution completion event of an output node
  */
-async function handleExecuted(event) {
-    const { node, output, prompt_id } = event.detail;
+function handleExecuted(event) {
+    const {prompt_id} = event.detail;
 
     // A preprocessor run of the ControlNet tab
     if (controlNet?.ownsPrompt(prompt_id))
         return;
 
-    // Before any await: execution_success may arrive meanwhile
-    if (MEDIA_OUTPUTS.some(key => output?.[key]?.length))
-        promptsWithMedia.add(prompt_id);
+    // Taken before any await, while the strategy is still on the item of this prompt
+    const strategyParams = currentStrategy?.isProcessing() ? currentStrategy.getMessageParams() : null;
+    const handled = sendExecutedMedia(event.detail, strategyParams)
+        .catch(error => console.error('[Image Bench] Unable to send the generated images:', error));
 
+    pendingExecuted.set(prompt_id, [...(pendingExecuted.get(prompt_id) ?? []), handled]);
+}
+
+/**
+ * Send the images of an output node to the popup
+ * @param {{node: string, output: Object, prompt_id: string}} detail - of the executed event
+ * @param {Object|null} strategyParams - message parameters of the active strategy
+ */
+async function sendExecutedMedia({node, output, prompt_id}, strategyParams) {
     console.log('[Image Bench] Image generated:', { node, output, prompt_id });
 
     // Extract image information
@@ -370,20 +381,10 @@ async function handleExecuted(event) {
                 message.controlnet = controlnet;
 
             // Add strategy-specific parameters if a strategy is active
-            if (currentStrategy && currentStrategy.isProcessing()) {
-                console.log('[Image Bench] Active strategy detected, adding message params');
-                Object.assign(message, currentStrategy.getMessageParams());
-            }
+            if (strategyParams)
+                Object.assign(message, strategyParams);
 
             sendPopupMessage(message);
-        }
-
-        // CRITICAL: Process next item in queue if a strategy is active
-        if (currentStrategy && currentStrategy.isProcessing()) {
-            console.log('[Image Bench] Calling processNext() on active strategy');
-            currentStrategy.processNext();
-        } else {
-            console.log('[Image Bench] No active strategy, skipping processNext()');
         }
     }
 }
@@ -422,7 +423,7 @@ function handleExecutionError(event) {
         return;
 
     console.error('[Image Bench] Execution error:', exception_message);
-    promptsWithMedia.delete(prompt_id);
+    pendingExecuted.delete(prompt_id);
 
     sendPopupMessage({
         type: "GENERATION_ERROR",
@@ -439,19 +440,22 @@ function handleExecutionError(event) {
 }
 
 /**
- * Handle the end of a prompt. A prompt that ComfyUI served entirely from its cache (the same prompt as an earlier one)
- * sends no executed event for its output nodes: a strategy waiting for its image continues with the next item
+ * Handle the end of a prompt: a strategy continues with the next item once per prompt, after its images are sent.
+ * A prompt that ComfyUI served entirely from its cache (the same prompt as an earlier one) sends no executed event
+ * for its output nodes, but ends here too
  */
-function handleExecutionSuccess(event) {
+async function handleExecutionSuccess(event) {
     const {prompt_id} = event.detail;
 
     if (controlNet?.ownsPrompt(prompt_id))
         return;
 
-    const sentMedia = promptsWithMedia.delete(prompt_id);
+    const pending = pendingExecuted.get(prompt_id) ?? [];
+    pendingExecuted.delete(prompt_id);
+    await Promise.allSettled(pending);
 
-    if (!sentMedia && currentStrategy && currentStrategy.isProcessing()) {
-        console.log('[Image Bench] Prompt served from cache, no image:', prompt_id);
+    if (currentStrategy && currentStrategy.isProcessing()) {
+        console.log('[Image Bench] Prompt finished, calling processNext() on active strategy:', prompt_id);
         currentStrategy.processNext();
     }
 }
@@ -916,7 +920,7 @@ function initializePrompts() {
 window.addEventListener("beforeunload", () => {
     popupManager.close();
     popupManager.closeWebSocket();
-    fetch("/image-bench/close_websocket", { keepalive: true });
+    fetch("/image-bench/close_websocket", { method: "POST", keepalive: true });
 });
 
 console.log('[Image Bench] Extension script loaded');

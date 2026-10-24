@@ -38,7 +38,7 @@ async function onDeleteOutputsClick() {
       + `including the images of the trays, the Compare tab and the Upscaled tab, and empties all tabs and trays. `
       + "This cannot be undone.", {title: "Delete all output files", okText: "Delete files", danger: true})) {
     clearViewsAndTrays();
-    setTimeout(() => fetch("/image-bench/clear_outputs_dir"), 500);
+    setTimeout(() => fetch("/image-bench/clear_outputs_dir", {method: "POST"}), 500);
     emit('close');
   }
 }
