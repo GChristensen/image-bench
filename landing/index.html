@@ -30,7 +30,7 @@
       <a class="navlink" href="#prompts">Prompts</a>
       <a class="navlink" href="#editors">Editors</a>
       <a class="navlink" href="#compare">Compare</a>
-      <a class="navlink" href="#edit">Editing</a>
+      <a class="navlink" href="#projects">Projects</a>
       <a class="navlink" href="#comfy">ComfyUI</a>
       <a class="navlink" href="#screens">Screens</a>
       <a class="navlink" href="#install">Install</a>
@@ -387,28 +387,28 @@
   </div>
 </section>
 
-<!-- ================= edit ================= -->
-<section id="edit" class="sec band">
+<!-- ================= projects ================= -->
+<section id="projects" class="sec band">
   <div class="wrap stack-44">
     <div class="edit-head">
       <div class="intro">
-        <div class="kicker">06 — Editing</div>
-        <h2 class="disp">Edit images by saying what to change.</h2>
+        <div class="kicker">06 — Projects</div>
+        <h2 class="disp">Save the workspace. Pick it up next week.</h2>
       </div>
-      <p class="lead">Edit models like Flux Klein, Kontext and Qwen Edit take reference images and a sentence. Image Bench gives them a proper home: add references by drag and drop, one switch for edit mode, and the result next to its input.</p>
+      <p class="lead">A project is a folder that keeps everything an image took: the trays, the generation parameters, the ControlNet inputs, the prompt history and the final image. Save it when you stop, open it when you come back, and the bench is set up as you left it.</p>
     </div>
     <div class="edit-figure">
       <div class="window">
-        <img src="img/screenshots/edit.webp" width="1194" height="667" alt="The Generate tab in edit mode: a reference image of a milk pack, the prompt to add it to the table, and the result">
+        <img src="img/screenshots/projects.webp" width="1198" height="677" loading="lazy" alt="The Projects tab: the project tree at the left, and the project still-life with its final image of peonies and fruit, the parameter snapshot, notes and the saved concept tray">
       </div>
-      <span class="mono badge" style="left: 3%; top: 40%">1</span>
-      <span class="mono badge" style="left: 66%; top: 35%">2</span>
-      <span class="mono badge" style="left: 71%; top: 64%">3</span>
+      <span class="mono badge" style="left: 1%; top: 37%">1</span>
+      <span class="mono badge" style="left: 56%; top: 15%">2</span>
+      <span class="mono badge" style="left: 81%; top: 4%">3</span>
     </div>
     <div class="numbered">
-      <div><span class="mono">1</span><p><strong>Say what to change.</strong> "Add the milk pack from the first image on the table, right of the vase."</p></div>
-      <div><span class="mono">2</span><p><strong>Drop the references.</strong> Drop, paste or drag them from the stream and the trays. Your editor can send them too.</p></div>
-      <div><span class="mono">3</span><p><strong>Compare and iterate.</strong> The result sits next to its input. Keep it, send it back as the next input, or edit it further.</p></div>
+      <div><span class="mono">1</span><p><strong>Keep projects in folders.</strong> Any folder under your project root, on a local disk or a network share. Find them by name, prompt, #tag or host.</p></div>
+      <div><span class="mono">2</span><p><strong>Everything in one place.</strong> The final image, a snapshot of the parameters, notes, and the image tray, concept tray and Compare images. <span class="ui-btn">Apply to Generate</span> brings the parameters back.</p></div>
+      <div><span class="mono">3</span><p><strong>Save when you are done.</strong> The project chip in the tab bar shows the open project and its unsaved changes. Ctrl+S saves it; opening another one asks first.</p></div>
     </div>
   </div>
 </section>
@@ -597,7 +597,7 @@
         </ol>
         <div class="code"><code class="mono">https://github.com/GChristensen/comfyui-image-bench</code><button class="copy" type="button">Copy</button></div>
         <ol start="3"><li>Restart ComfyUI. It loads extensions and the Image Bench Prompt node at startup.</li></ol>
-        <p class="fine">Manager accepts Git URLs with <code class="mono">allow_git_url_install = true</code> in its config.ini. Image Bench is also on the Comfy Registry.</p>
+        <p class="fine">Manager accepts Git URLs with <code class="mono">allow_git_url_install = true</code> in its config.ini.</p>
       </div>
       <div class="card inst">
         <h3>Manual clone</h3>
@@ -639,7 +639,7 @@
         <h2 class="disp">Still an experiment.</h2>
         <p>Image Bench is a work in progress. Features change, the hosts it drives change under it, and things will break now and then. Try it, keep your projects backed up, and stick to the backend version that still works.</p>
       </div>
-      <a class="btn btn-sec" href="https://github.com/GChristensen/sd-webui-image-bench/issues">Report an issue</a>
+      <!--a class="btn btn-sec" href="https://github.com/GChristensen/sd-webui-image-bench/issues">Report an issue</a-->
     </div>
   </div>
 </section>
