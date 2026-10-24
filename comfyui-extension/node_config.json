@@ -44,7 +44,8 @@
       "CLIPTextEncodeSDXL",
       "CLIPTextEncodeFlux",
       "CLIPTextEncodeSD3",
-      "TextEncodeQwenImage21"
+      "TextEncodeQwenImage21",
+      "TextEncodeFibo2"
     ],
     "widgetNames": {
       "ImageBenchPrompt": "text",
@@ -53,7 +54,8 @@
       "CLIPTextEncodeSDXL": "text",
       "CLIPTextEncodeFlux": "text",
       "CLIPTextEncodeSD3": "text",
-      "TextEncodeQwenImage21": "prompt"
+      "TextEncodeQwenImage21": "prompt",
+      "TextEncodeFibo2": "prompt"
     }
   },
   "negative_prompt": {
@@ -65,7 +67,8 @@
       "CLIPTextEncodeSDXL",
       "CLIPTextEncodeFlux",
       "CLIPTextEncodeSD3",
-      "TextEncodeQwenImage21"
+      "TextEncodeQwenImage21",
+      "TextEncodeFibo2"
     ],
     "widgetNames": {
       "ImageBenchPrompt": "text",
@@ -74,7 +77,8 @@
       "CLIPTextEncodeSDXL": "text",
       "CLIPTextEncodeFlux": "text",
       "CLIPTextEncodeSD3": "text",
-      "TextEncodeQwenImage21": "negative_prompt"
+      "TextEncodeQwenImage21": "negative_prompt",
+      "TextEncodeFibo2": "negative_prompt"
     }
   },
   "lora": {

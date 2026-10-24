@@ -2,7 +2,7 @@ import {defineStore} from "pinia";
 import {computed, ref} from "vue";
 
 const URL = "/image-bench/prompt_history";
-const MAX_ENTRIES = 16;
+const MAX_ENTRIES = 20;
 
 /**
  * @param {number} time

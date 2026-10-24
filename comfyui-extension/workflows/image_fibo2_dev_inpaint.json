@@ -1,0 +1,1234 @@
+{
+  "id": "72c6dcb6-b08f-4a0b-933d-43d7112f0db3",
+  "revision": 0,
+  "last_node_id": 20,
+  "last_link_id": 27,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "MarkdownNote",
+      "pos": [
+        -760,
+        130
+      ],
+      "size": [
+        680,
+        1300
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## Fibo 2.0 inpainting\n\nRepaints the masked area of an image with Fibo 2.0 Dev the way Forge's \"Inpaint upload\" does. The core Text Encode\nFibo 2 node has no mask input, so this is the generic latent-mask inpainting of a regular model: **Inpaint Crop** cuts\nthe masked area with some context out of the image and scales it to the generation size, so that even a small area\nis sampled at full resolution; **Inpaint Stitch** scales the result back and blends it into the original through the\nblurred mask. **Differential Diffusion** makes the soft mask edge blend gradually. Bria's native masked edit\n(white = regenerate) needs the custom pack [drphero/ComfyUI-Fibo2](https://github.com/drphero/ComfyUI-Fibo2), whose\nnodes do not mix with the core Load CLIP.\n\n**Settings**: 50 steps, CFG 5, euler, simple, denoising 0.9, 1024×1024 crop. Leave the negative prompt empty.\n\nRequires [ComfyUI-Inpaint-CropAndStitch](https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch) (install it with\nthe ComfyUI Manager).\n\nFibo 2.0 needs a ComfyUI with the **TextEncodeFibo2** node (master after 21 Oct 2026, PR #17240; v0.42.3\nand older lack it). The CLIP loader type must be `fibo2`.\n\n## Image Bench\n\nThe Generate tab is in **Inpaint** mode while this workflow is loaded.\n\n| Marker / node | Generate tab |\n|---------------|--------------|\n| `ib:img` Load Image | Input cell; \"Send image\" from the editor |\n| `ib:mask` Load Image Mask | Mask cell; the editor selection |\n| `ib:cp`, `ib:pp`, `ib:np` | model, prompts (`ib:np` is the `negative_prompt` widget of Text Encode Fibo 2) |\n| `ib:smp` KSampler | seed, steps, CFG scale, sampling method, schedule type, denoising |\n| Inpaint Crop | Resize to (`output_target_width/height`), Mask blur (`mask_blend_pixels`), Mask mode (`mask_invert`) |\n| Only masked padding (Grow Mask) | Only masked padding, pixels |\n| Whole picture (Solid Mask) | Inpaint area: value 0 = Only masked, 1 = Whole picture |\n\nThe loaders refer to the files the editor plugins write (`image_bench_photoshop_*.png`); send an image and a mask, or\nset them in the Input / Mask cells of the Generate tab, before the first queue.\n\n- **Only masked**: the model sees only the crop (the mask's bounding box plus the padding, widened to the aspect\n  ratio of the size). Describe what the crop shows, the new content of the masked area and its surroundings.\n- **Whole picture**: the whole image is scaled to the size and sampled; describe the whole image.\n- Denoising 0.85-1.0 replaces the content, 0.4-0.7 keeps its colors and shapes.\n- Mask blur widens the mask by that many pixels and blurs it; the pixels outside the mask within that distance are\n  blended too.\n- Fibo 2.0 is trained at about 1 MP; keep the crop size near it, sides multiples of 16.\n\n## Model Links\n\n[Comfy-Org/Fibo-2.0](https://huggingface.co/Comfy-Org/Fibo-2.0) (ungated repack of [briaai/Fibo-2.0-dev](https://huggingface.co/briaai/Fibo-2.0-dev) and\n[briaai/Fibo-2.0-edit-turbo](https://huggingface.co/briaai/Fibo-2.0-edit-turbo)) also has the `*_bf16` diffusion models (16.45 GB) and the\n`qwen3vl_4b_int8_convrot` text encoder (text-to-image only: it errors on image input).\n\n**diffusion_models**: [fibo2_dev_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_dev_int8_convrot.safetensors), [fibo2_edit_turbo_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_edit_turbo_int8_convrot.safetensors)\n**text_encoders**: [qwen3vl_4b_bf16.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors) (one file for Dev and Edit Turbo)\n**vae**: [flux2-vae.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/vae/flux2-vae.safetensors) (the FLUX.2 VAE)\n\nFibo 2.0 is released under CC BY-NC 4.0 (non-commercial; commercial use needs an agreement with Bria).\n"
+      ],
+      "title": "Note: Fibo 2.0 inpainting",
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 2,
+      "type": "UNETLoader",
+      "pos": [
+        -50,
+        130
+      ],
+      "size": [
+        310,
+        82
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "fibo2_dev_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_dev_int8_convrot.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "fibo2_dev_int8_convrot.safetensors",
+        "default"
+      ],
+      "title": "Load Diffusion Model ib:cp"
+    },
+    {
+      "id": 3,
+      "type": "CLIPLoader",
+      "pos": [
+        -50,
+        260
+      ],
+      "size": [
+        310,
+        106
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen3vl_4b_bf16.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen3vl_4b_bf16.safetensors",
+        "fibo2",
+        "default"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "VAELoader",
+      "pos": [
+        -50,
+        420
+      ],
+      "size": [
+        310,
+        58
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            16,
+            24
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "flux2-vae.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/vae/flux2-vae.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "flux2-vae.safetensors"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "LoadImage",
+      "pos": [
+        -50,
+        520
+      ],
+      "size": [
+        310,
+        330
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            7,
+            12
+          ]
+        },
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "image_bench_photoshop_image.png",
+        "image"
+      ],
+      "title": "Load Image ib:img"
+    },
+    {
+      "id": 6,
+      "type": "LoadImageMask",
+      "pos": [
+        -50,
+        900
+      ],
+      "size": [
+        310,
+        340
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            6,
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImageMask"
+      },
+      "widgets_values": [
+        "image_bench_photoshop_mask.png",
+        "red",
+        "image"
+      ],
+      "title": "Load Image Mask ib:mask"
+    },
+    {
+      "id": 7,
+      "type": "ImageBenchPrompt",
+      "pos": [
+        1010,
+        -200
+      ],
+      "size": [
+        420,
+        220
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            5
+          ]
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            3
+          ]
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageBenchPrompt"
+      },
+      "widgets_values": [
+        "A woman in a red knitted scarf and a white winter coat on a snowy street at dusk, warm light from a shop window, soft falling snow. Photorealistic, 50mm lens, shallow depth of field."
+      ],
+      "title": "Prompt ib:pp"
+    },
+    {
+      "id": 8,
+      "type": "TextEncodeFibo2",
+      "pos": [
+        1010,
+        60
+      ],
+      "size": [
+        440,
+        400
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 3
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "localized_name": "images.image_1",
+          "name": "images.image_1",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "localized_name": "images.image_2",
+          "name": "images.image_2",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "localized_name": "images.image_3",
+          "name": "images.image_3",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "localized_name": "images.image_4",
+          "name": "images.image_4",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "localized_name": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "link": 4,
+          "widget": {
+            "name": "prompt"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            20
+          ]
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "links": [
+            21
+          ]
+        },
+        {
+          "localized_name": "latent",
+          "name": "latent",
+          "type": "LATENT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextEncodeFibo2"
+      },
+      "widgets_values": [
+        "",
+        "",
+        1024,
+        1024,
+        1
+      ],
+      "title": "Text Encode Fibo 2 ib:np"
+    },
+    {
+      "id": 9,
+      "type": "GrowMask",
+      "pos": [
+        300,
+        900
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GrowMask"
+      },
+      "widgets_values": [
+        32,
+        true
+      ],
+      "title": "Only masked padding"
+    },
+    {
+      "id": 10,
+      "type": "GetImageSize",
+      "pos": [
+        300,
+        1030
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "links": [
+            8
+          ]
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "links": [
+            9
+          ]
+        },
+        {
+          "localized_name": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GetImageSize"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "SolidMask",
+      "pos": [
+        300,
+        1180
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "link": 8,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "link": 9,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SolidMask"
+      },
+      "widgets_values": [
+        0,
+        1024,
+        1024
+      ],
+      "title": "Whole picture (value 1)"
+    },
+    {
+      "id": 12,
+      "type": "MaskComposite",
+      "pos": [
+        300,
+        1330
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "destination",
+          "name": "destination",
+          "type": "MASK",
+          "link": 10
+        },
+        {
+          "localized_name": "source",
+          "name": "source",
+          "type": "MASK",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MaskComposite"
+      },
+      "widgets_values": [
+        0,
+        0,
+        "add"
+      ],
+      "title": "Context mask"
+    },
+    {
+      "id": 13,
+      "type": "InpaintCropImproved",
+      "pos": [
+        630,
+        520
+      ],
+      "size": [
+        340,
+        720
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 12
+        },
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 13,
+          "shape": 7
+        },
+        {
+          "localized_name": "optional_context_mask",
+          "name": "optional_context_mask",
+          "type": "MASK",
+          "link": 14,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "stitcher",
+          "name": "stitcher",
+          "type": "STITCHER",
+          "links": [
+            25
+          ]
+        },
+        {
+          "localized_name": "cropped_image",
+          "name": "cropped_image",
+          "type": "IMAGE",
+          "links": [
+            15
+          ]
+        },
+        {
+          "localized_name": "cropped_mask",
+          "name": "cropped_mask",
+          "type": "MASK",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "InpaintCropImproved"
+      },
+      "widgets_values": [
+        "bilinear",
+        "bicubic",
+        false,
+        "ensure minimum resolution",
+        1024,
+        1024,
+        16384,
+        16384,
+        false,
+        0,
+        false,
+        8,
+        0.1,
+        false,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        true,
+        1024,
+        1024,
+        "16",
+        "gpu (much faster)"
+      ],
+      "title": "Inpaint Crop (Generate tab: size, mask blur, mask mode)"
+    },
+    {
+      "id": 14,
+      "type": "VAEEncode",
+      "pos": [
+        1010,
+        520
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "pixels",
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 15
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            17
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 15,
+      "type": "SetLatentNoiseMask",
+      "pos": [
+        1010,
+        610
+      ],
+      "size": [
+        230,
+        46
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 17
+        },
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            22
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SetLatentNoiseMask"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 16,
+      "type": "DifferentialDiffusion",
+      "pos": [
+        1500,
+        -100
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            19
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DifferentialDiffusion"
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 17,
+      "type": "KSampler",
+      "pos": [
+        1500,
+        130
+      ],
+      "size": [
+        300,
+        262
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 19
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 20
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 21
+        },
+        {
+          "localized_name": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 22
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            23
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        720554185572427,
+        "randomize",
+        50,
+        5,
+        "euler",
+        "simple",
+        0.9
+      ],
+      "title": "KSampler ib:smp"
+    },
+    {
+      "id": 18,
+      "type": "VAEDecode",
+      "pos": [
+        1850,
+        130
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 23
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 24
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            26
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 19,
+      "type": "InpaintStitchImproved",
+      "pos": [
+        1850,
+        250
+      ],
+      "size": [
+        270,
+        46
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "stitcher",
+          "name": "stitcher",
+          "type": "STITCHER",
+          "link": 25
+        },
+        {
+          "localized_name": "inpainted_image",
+          "name": "inpainted_image",
+          "type": "IMAGE",
+          "link": 26
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            27
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "InpaintStitchImproved"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 20,
+      "type": "SaveImage",
+      "pos": [
+        2160,
+        130
+      ],
+      "size": [
+        500,
+        560
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 27
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "Fibo-2.0-inpaint"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      7,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      3,
+      0,
+      7,
+      1,
+      "CLIP"
+    ],
+    [
+      3,
+      7,
+      1,
+      8,
+      0,
+      "CLIP"
+    ],
+    [
+      4,
+      7,
+      2,
+      8,
+      6,
+      "STRING"
+    ],
+    [
+      5,
+      7,
+      0,
+      16,
+      0,
+      "MODEL"
+    ],
+    [
+      6,
+      6,
+      0,
+      9,
+      0,
+      "MASK"
+    ],
+    [
+      7,
+      5,
+      0,
+      10,
+      0,
+      "IMAGE"
+    ],
+    [
+      8,
+      10,
+      0,
+      11,
+      0,
+      "INT"
+    ],
+    [
+      9,
+      10,
+      1,
+      11,
+      1,
+      "INT"
+    ],
+    [
+      10,
+      9,
+      0,
+      12,
+      0,
+      "MASK"
+    ],
+    [
+      11,
+      11,
+      0,
+      12,
+      1,
+      "MASK"
+    ],
+    [
+      12,
+      5,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      13,
+      6,
+      0,
+      13,
+      1,
+      "MASK"
+    ],
+    [
+      14,
+      12,
+      0,
+      13,
+      2,
+      "MASK"
+    ],
+    [
+      15,
+      13,
+      1,
+      14,
+      0,
+      "IMAGE"
+    ],
+    [
+      16,
+      4,
+      0,
+      14,
+      1,
+      "VAE"
+    ],
+    [
+      17,
+      14,
+      0,
+      15,
+      0,
+      "LATENT"
+    ],
+    [
+      18,
+      13,
+      2,
+      15,
+      1,
+      "MASK"
+    ],
+    [
+      19,
+      16,
+      0,
+      17,
+      0,
+      "MODEL"
+    ],
+    [
+      20,
+      8,
+      0,
+      17,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      21,
+      8,
+      1,
+      17,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      22,
+      15,
+      0,
+      17,
+      3,
+      "LATENT"
+    ],
+    [
+      23,
+      17,
+      0,
+      18,
+      0,
+      "LATENT"
+    ],
+    [
+      24,
+      4,
+      0,
+      18,
+      1,
+      "VAE"
+    ],
+    [
+      25,
+      13,
+      0,
+      19,
+      0,
+      "STITCHER"
+    ],
+    [
+      26,
+      18,
+      0,
+      19,
+      1,
+      "IMAGE"
+    ],
+    [
+      27,
+      19,
+      0,
+      20,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Inpaint area (Generate tab: Inpaint area, padding)",
+      "bounding": [
+        280,
+        850,
+        310,
+        620
+      ],
+      "color": "#3f8a52",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.75,
+      "offset": [
+        800,
+        0
+      ]
+    }
+  },
+  "version": 0.4
+}

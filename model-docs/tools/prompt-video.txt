@@ -26,7 +26,7 @@ RULES
    unknown value inside a table may be "[?]".
 7. The document is reference material read on its own: no inline citations, source markers,
    footnotes, links to search results, "§N" cross-references or remarks about your research
-   process. No title heading, introduction or closing remarks.
+   process. No introduction beyond the Overview section, no closing remarks.
 
 FORMAT
 - Plain GitHub-flavored Markdown, no HTML tags (no <sub>, <br>).
@@ -37,6 +37,24 @@ FORMAT
 SECTIONS, IN THIS ORDER
 
 # Top-level heading: <Model name> Reference
+
+## Overview
+   5-7 bullets, each a short bold label and one line of facts (about 400-700 bytes in all),
+   the facts that explain the rest of the document, not settings or filenames:
+   - **Model:** developer, release month (YYYY-MM) of the open weights, and the lineage: what
+     it derives from or is distilled from, and whose LoRAs / VAE it therefore shares.
+   - **Backbone:** DiT type (full 3D attention, dual/single-stream, ...), parameter count of
+     the diffusion model alone, whether it is a high/low-noise expert pair (MoE) and how the
+     steps are split; training objective (rectified flow / flow matching, ...).
+   - **Text:** encoder type (T5 / umT5, an LLM or VLM by name) and how it conditions the model.
+   - **Video:** native frame count and fps, maximum clip length; how image conditioning enters
+     (first/last frame latents, channel concatenation, a vision encoder).
+   - **Audio:** joint audio-video generation or not, and the audio branch in a few words.
+     Only if the model has audio.
+   - **Strengths:** one factual line on what the model does better than its peers (motion,
+     prompt adherence, length, speed, lip sync). No adjectives without content.
+   VAE compression details stay in Encoder/VAE. No license, variant list, VRAM or checkpoint
+   sizes here; they belong to Variants.
 
 ## Encoder/VAE
    A short bullet list of the components I have to download:

@@ -376,7 +376,7 @@ const hostOrigin = location.origin;
         <li v-if="isWebUI"><b>UI preset buttons</b> switch the Forge UI preset.
           <AppIcon name="lock" :size="13" class="inline-icon"/> <b>Prompt lock</b> makes the prompts editable only
           here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
-        <li><b>Prompt history</b>: the buttons after the prompt label hold the last 16 prompts generated from this tab
+        <li><b>Prompt history</b>: the buttons after the prompt label hold the last 20 prompts generated from this tab
           (<b>1</b> is the latest; a prompt generated again moves to the front). txt2img and img2img (with
           Inpaint) keep separate histories and variants. A number shows that prompt and its
           negative read-only, compared with the current ones: green is what it would add, struck out what it would
