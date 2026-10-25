@@ -37,7 +37,9 @@ const WEBUI_FEATURES = {
     stallCheck: true,
     // Length and frame rate of a video workflow, a tab beside Sampling (ComfyUI)
     video: false,
-    fps: false
+    fps: false,
+    // Why the host refused or failed a run and what the workflow lacks, in the status slot (ComfyUI)
+    hostErrors: false
   },
   controlnet: {
     tabSwitch: true,
@@ -72,7 +74,8 @@ const COMFY_FEATURES = {
     workflowSelect: true,
     stallCheck: false,
     video: true,
-    fps: true
+    fps: true,
+    hostErrors: true
   },
   controlnet: {
     tabSwitch: false,

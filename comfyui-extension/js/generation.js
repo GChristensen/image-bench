@@ -3,6 +3,8 @@
  * skipping the image being generated and stopping everything.
  */
 
+import {queueWorkflow} from './runErrors.js';
+
 /**
  * @param {Object} ctx - {app, api, popup: {sendMessage, isOpen}}
  * @param {Object} hooks
@@ -25,12 +27,11 @@ export function createGeneration({app, api, popup}, {onSkipped, onStop}) {
     async function generateImage() {
         pendingSingle++;
 
-        try {
-            if (await app.queuePrompt(0, 1) === false)
-                throw new Error('The workflow was not queued');
-        } catch (error) {
-            console.error('[Image Bench] Unable to queue the workflow:', error);
+        const {ok, error} = await queueWorkflow(app);
+
+        if (!ok) {
             pendingSingle = Math.max(0, pendingSingle - 1);
+            popup.sendMessage({type: "GENERATION_ERROR", error});
             popup.sendMessage({type: "GENERATION_FINISHED"});
         }
     }

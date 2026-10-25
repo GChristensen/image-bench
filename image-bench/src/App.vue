@@ -12,6 +12,7 @@ import {generationStateToKind, KIND_GENERATED, KIND_UPSCALED, KIND_IMAGE_TRAY, K
 import {canDropOn, isMoveTo, dropImages} from "@/imageDrag.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {useSDWebUIStateStore} from "@/stores/sdwebui.js";
+import {summarizeHostError, useHostErrorsStore} from "@/stores/hostErrors.js";
 import {useControlNetStore} from "@/stores/controlnet.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
@@ -66,6 +67,7 @@ const sessionImagesStore = useSessionImagesStore();
 const upscaledImageStore = useUpscaledImagesStore();
 const configPresetsStore = useConfigPresetsStore();
 const sdWebUIStateStore = useSDWebUIStateStore();
+const hostErrorsStore = useHostErrorsStore();
 const controlNetStore = useControlNetStore();
 const projectsStore = useProjectsStore();
 const manualStore = useManualStore();
@@ -271,6 +273,11 @@ async function onSDEvent(e) {
   sdWebUIStateStore.onSDEvent(e);
   controlNetStore.onSDEvent(e);
   compareStore.onSDEvent(e);
+  hostErrorsStore.onSDEvent(e);
+
+  // The Generate tab shows the error in its status slot, with the details
+  if (e.type === "GENERATION_ERROR" && hostHas("generate", "hostErrors") && route.path !== "/generate")
+    toast(summarizeHostError(hostErrorsStore.runError), {kind: "error", duration: 8000});
 
   try {
     routerView.value?.onAfterSDEvent?.(e);

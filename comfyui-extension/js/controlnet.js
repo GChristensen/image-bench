@@ -17,6 +17,7 @@ import {getImageSize, getMaskPreview, getTargetImageUrl, setLoadImage, uploadInp
         uploadInputMask} from "./images.js";
 import {sendImageToEditor} from "./shared/editor-send.js";
 import {getWidgetChoices} from "./params.js";
+import {formatPromptRefusal} from "./runErrors.js";
 
 const POLL_INTERVAL = 600;
 const APPLY_SETTLE_DELAY = 300;
@@ -482,7 +483,7 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
             });
 
             if (!response.ok)
-                throw new Error(`Unable to run the preprocessor: ${await response.text()}`);
+                throw new Error(`Unable to run the preprocessor: ${formatPromptRefusal(await response.text())}`);
 
             const preview = await result;
             previews.set(index, preview);

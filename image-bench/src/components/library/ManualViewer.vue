@@ -1244,6 +1244,14 @@ const hostOrigin = location.origin;
           <code>NODE_CONFIG.md</code> in the extension folder describes the format.</li>
         <li>The workflow must have an output node (Save Image or Preview Image). Without one, no images reach
           Image Bench.</li>
+        <li><b>Errors</b> appear in the status slot of the Generate toolbar. If ComfyUI refuses the workflow (a model
+          file that is not installed, a missing node, an invalid input) or a run fails, a red pill names the node and
+          the error. It stays until the next run begins. In other tabs a notice is shown instead, and a running batch
+          or exploration stops. Click the pill for the details: every node with its errors, and <b>Show in
+          ComfyUI</b>, which selects the node and switches to ComfyUI. While the Generate tab is shown, a yellow pill
+          also lists active nodes that are not installed and model files that are not in their lists. These are only
+          warnings, and you can still generate. A file added after the ComfyUI page was loaded is listed until you
+          click the pill's refresh button, which rescans the model lists.</li>
       </ul>
 
       <h3 id="manual-comfy-markers">Markers in detail</h3>

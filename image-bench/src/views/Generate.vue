@@ -71,6 +71,7 @@ import {imageFilesFromDataTransfer} from "@/imageFiles.js";
 import {isStill, mediaKind, previewUrl} from "@/media.js";
 import {appendToPrompt, insertIntoTextarea, useSnippetsStore} from "@/stores/snippets.js";
 import {useRouter} from "vue-router";
+import {showHostErrors, summarizeHostError, useHostErrorsStore} from "@/stores/hostErrors.js";
 
 // A value edited here is not overwritten by the polled WebUI value for this long,
 // which covers the send delay and the next poll
@@ -628,6 +629,7 @@ async function onGenerate() {
   if (!await ensureGenerationIdle())
     return;
 
+  hostErrors.clearRunError();
   flushParams();
   recordPrompts();
 
@@ -748,8 +750,36 @@ const toolbarStatus = computed(() => {
     return {text: "Restoring parameters…"};
   if (switchingUiPreset.value)
     return {text: "Switching UI preset…"};
+  if (!has("hostErrors"))
+    return null;
+  // The last run the host refused or failed, until the next one begins
+  if (hostErrors.runError)
+    return {text: summarizeHostError(hostErrors.runError), error: true,
+            title: `${hostErrors.runError.message}
+Click for the details`,
+            open: () => showHostErrors({error: hostErrors.runError, problems: hostErrors.problems}, router)};
+  if (hostErrors.problems)
+    return {text: problemsText(hostErrors.problems), stalled: true,
+            title: `The workflow uses nodes or files that ${HOST_NAME} does not have
+Click for the details`,
+            open: () => showHostErrors({problems: hostErrors.problems}, router),
+            action: {title: "Refresh the model lists", run: refreshModels}};
   return null;
 });
+
+// The host refused or failed a run, the workflow lacks nodes or files (stores/hostErrors.js; ComfyUI)
+const hostErrors = useHostErrorsStore();
+
+function problemsText({missingNodes, missingFiles}) {
+  const parts = [];
+
+  if (missingNodes.length)
+    parts.push(`${missingNodes.length} missing node${missingNodes.length > 1 ? "s" : ""}`);
+  if (missingFiles.length)
+    parts.push(`${missingFiles.length} missing file${missingFiles.length > 1 ? "s" : ""}`);
+
+  return parts.join(", ");
+}
 
 // ---------- Project reminder ----------
 
@@ -1444,13 +1474,15 @@ const gridStyle = computed(() => ({
       <div class="status-slot">
         <Transition name="status" mode="out-in">
           <span v-if="toolbarStatus" :key="toolbarStatus.text" class="status-pill"
-                :class="{waiting: toolbarStatus.waiting, stalled: toolbarStatus.stalled, full: toolbarStatus.full}" role="status" :title="toolbarStatus.title ?? toolbarStatus.text">
+                :class="{waiting: toolbarStatus.waiting, stalled: toolbarStatus.stalled, error: toolbarStatus.error,
+                         full: toolbarStatus.full, clickable: !!toolbarStatus.open}"
+                role="status" :title="toolbarStatus.title ?? toolbarStatus.text" @click="toolbarStatus.open?.()">
             <span v-if="toolbarStatus.waiting" class="dot"></span>
-            <AppIcon v-else-if="toolbarStatus.stalled" name="alert" :size="12"/>
+            <AppIcon v-else-if="toolbarStatus.stalled || toolbarStatus.error" name="alert" :size="12"/>
             <span v-else class="spinner"></span>
             <span class="status-text">{{ toolbarStatus.text }}</span>
             <button v-if="toolbarStatus.action" type="button" class="status-action" :title="toolbarStatus.action.title"
-                    :aria-label="toolbarStatus.action.title" @click="toolbarStatus.action.run"><AppIcon name="refresh" :size="11"/></button>
+                    :aria-label="toolbarStatus.action.title" @click.stop="toolbarStatus.action.run"><AppIcon name="refresh" :size="11"/></button>
           </span>
         </Transition>
       </div>
@@ -1978,6 +2010,20 @@ const gridStyle = computed(() => ({
   border-color: color-mix(in srgb, var(--ib-warn) 45%, transparent);
   background: color-mix(in srgb, var(--ib-warn) 12%, transparent);
   color: var(--ib-warn);
+}
+
+.status-pill.error {
+  border-color: color-mix(in srgb, var(--ib-danger-text) 45%, transparent);
+  background: color-mix(in srgb, var(--ib-danger-text) 12%, transparent);
+  color: var(--ib-danger-text);
+}
+
+.status-pill.clickable {
+  cursor: pointer;
+}
+
+.status-pill.clickable:hover {
+  filter: brightness(1.15);
 }
 
 .status-action {

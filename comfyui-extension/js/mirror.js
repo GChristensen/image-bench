@@ -9,6 +9,7 @@
 import {MARKER_ROLES, getRoleWidgetName} from "./workflow.js";
 import {getMaskPreview, getTargetImageUrl, uploadInputImage, uploadInputMask} from "./images.js";
 import {captureWorkflows} from "./workflows.js";
+import {checkWorkflow} from "./runErrors.js";
 
 const POLL_INTERVAL = 600;
 // Lets the widget callbacks run before the values are read back
@@ -91,6 +92,8 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
             references: references.captureState(),
             busy: progress.takeBusy(),
             locked: false,
+            // Nodes and model files the workflow uses that ComfyUI does not have (runErrors.js)
+            problems: checkWorkflow(app),
             // The workflow dropdown: the saved workflows and the active one, which follows the tabs of ComfyUI
             ...captureWorkflows(app)
         };

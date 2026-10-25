@@ -25,6 +25,7 @@ import {
 } from '../workflow.js';
 import {createParamRegistry} from '../params.js';
 import {setLoadImage} from '../images.js';
+import {queueWorkflow} from '../runErrors.js';
 
 // Strength widgets of LoRA loaders (LoraLoaderModelOnly has only strength_model)
 const LORA_STRENGTH_WIDGETS = ['strength_model', 'strength_clip'];
@@ -51,6 +52,8 @@ export class ComfyUIOperations {
         this.params = createParamRegistry(this);
         // Generation progress (progress.js), attached by core.js
         this.progress = null;
+        // Receives the error of a workflow ComfyUI refused (runErrors.js), set by core.js
+        this.onQueueError = null;
     }
 
     // ==================== NODE DISCOVERY METHODS ====================
@@ -409,17 +412,16 @@ export class ComfyUIOperations {
     async applyGenerationParams(params) {}
 
     /**
-     * Click the generate button (queue the workflow)
-     * @returns {boolean} Whether the workflow was queued
+     * Click the generate button (queue the workflow); a refused workflow is reported through onQueueError
+     * @returns {Promise<boolean>} Whether the workflow was queued
      */
-    clickGenerate() {
-        try {
-            this.app.queuePrompt(0, 1); // Queue with batch count 1
-            return true;
-        } catch (e) {
-            console.error('Failed to queue prompt:', e);
-            return false;
-        }
+    async clickGenerate() {
+        const {ok, error} = await queueWorkflow(this.app);
+
+        if (!ok)
+            this.onQueueError?.(error);
+
+        return ok;
     }
 
     /**

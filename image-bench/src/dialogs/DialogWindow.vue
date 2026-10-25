@@ -4,12 +4,13 @@ import { useLocalStorage } from '@/composables/useLocalStorage.js';
 import ComboInput from '@/dialogs/ComboInput.vue';
 import FilterChecklist from '@/components/FilterChecklist.vue';
 import ModelInfoContent from '@/dialogs/ModelInfoContent.vue';
+import HostErrorsContent from '@/dialogs/HostErrorsContent.vue';
 
 const props = defineProps({
   entry: {
     type: Object,
     required: true,
-    validator: (value) => ['alert', 'confirm', 'prompt', 'checklist', 'modelInfo'].includes(value.kind)
+    validator: (value) => ['alert', 'confirm', 'prompt', 'checklist', 'modelInfo', 'hostErrors'].includes(value.kind)
   }
 });
 
@@ -69,6 +70,9 @@ function confirm() {
   }
   else if (props.entry.kind === 'modelInfo') {
     emit('close', 'open');
+  }
+  else if (props.entry.kind === 'hostErrors') {
+    emit('close', null);
   }
   else if (isChecklist.value) {
     if (checked.value.length)
@@ -146,6 +150,8 @@ defineExpose({onEnterKey, onEscapeKey, keepsKey});
       <div class="dialog-body">
         <label v-if="isPrompt" class="dialog-message" :for="`dialog-input-${entry.id}`">{{ entry.message }}</label>
         <ModelInfoContent v-else-if="entry.kind === 'modelInfo'" :info="options.info"/>
+        <HostErrorsContent v-else-if="entry.kind === 'hostErrors'" :error="options.error" :problems="options.problems"
+                           @show="id => emit('close', id)"/>
         <p v-else-if="entry.message" class="dialog-message">{{ entry.message }}</p>
         <div v-if="isPrompt && options.choices" class="dialog-choices" role="radiogroup">
           <button v-for="item in options.choices.items" :key="item.value" type="button" role="radio"
@@ -186,7 +192,7 @@ defineExpose({onEnterKey, onEscapeKey, keepsKey});
       <div class="dialog-footer">
         <button v-for="action in options.actions || []" :key="action.id" class="btn outline"
                 @click="emit('close', action.id)">{{ action.label }}</button>
-        <button v-if="entry.kind !== 'alert'" class="btn outline" @click="cancel">{{ options.cancelText || 'Cancel' }}</button>
+        <button v-if="entry.kind !== 'alert' && entry.kind !== 'hostErrors'" class="btn outline" @click="cancel">{{ options.cancelText || 'Cancel' }}</button>
         <button ref="okRef" class="btn" :class="options.danger ? 'stop' : 'primary'"
                 :disabled="isChecklist && !checked.length" @click="confirm">{{ okText }}</button>
       </div>

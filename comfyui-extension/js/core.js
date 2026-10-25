@@ -17,6 +17,7 @@ import {createMirror} from "./mirror.js";
 import {createControlNet} from "./controlnet.js";
 import {createProjects} from "./projects.js";
 import {createWorkflows} from "./workflows.js";
+import {describeExecutionError, showNode} from "./runErrors.js";
 // The same URL as strategy-factory.js imports: a differently cased one is another module with a bus of its own
 import {messageBus} from "./shared/messaging/MessageBus.js";
 import {createStrategies} from "./shared/strategy-factory.js";
@@ -163,6 +164,8 @@ function initializeTabModules() {
 
     const progress = createProgress(ctx);
     uiOperations.progress = progress;
+    // A workflow refused while a strategy runs: QueueProcessor.clickGenerate() ends the strategy
+    uiOperations.onQueueError = error => sendPopupMessage({type: "GENERATION_ERROR", error});
 
     references = createReferences(ctx);
     mirror = createMirror(ctx, {progress, references});
@@ -177,7 +180,9 @@ function initializeTabModules() {
     const workflows = createWorkflows(ctx);
 
     messageHandlers = {...mirror.handlers, ...controlNet.handlers, ...generation.handlers, ...projects.handlers,
-                       ...workflows.handlers};
+                       ...workflows.handlers,
+                       // "Show in ComfyUI" of the error details in the popup
+                       SHOW_NODE: ({id}) => showNode(app, id)};
 }
 
 /**
@@ -428,7 +433,7 @@ function handleExecutionError(event) {
     sendPopupMessage({
         type: "GENERATION_ERROR",
         prompt_id: prompt_id,
-        error: exception_message
+        error: describeExecutionError(app, event.detail)
     });
 
     // The strategy would wait forever for the image, and its generation state would route all later images

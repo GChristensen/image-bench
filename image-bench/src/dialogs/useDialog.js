@@ -99,6 +99,15 @@ export const dialog = {
       ...options,
       info
     }, null);
+  },
+
+  /**
+   * Why the host refused or failed a run, and what the workflow lacks (HostErrorsContent.vue)
+   * @param {{error?: Object|null, problems?: Object|null, title?: string}} options
+   * @returns {Promise<string|null>} The execution id of a node to show in the host, null if closed
+   */
+  hostErrors(options) {
+    return open('hostErrors', '', {okText: 'Close', ...options}, null);
   }
 };
 
