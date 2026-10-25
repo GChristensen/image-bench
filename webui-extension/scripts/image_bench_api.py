@@ -1076,6 +1076,11 @@ def install_interrupt_hook():
 try:
     # As early as possible: the console drawer shows the output from here on
     console.install_stream_tee()
+
+    # The Total progress bar writes to the stdout of the import of shared, and tqdm measures the terminal only for
+    # the current sys.stdout / sys.stderr: without this it keeps its narrow default width
+    if getattr(shared, "progress_print_out", None) is getattr(sys.stdout, "original", None):
+        shared.progress_print_out = sys.stdout
 except Exception as e:
     print(f"[Image Bench] Unable to capture the console output: {e}")
 

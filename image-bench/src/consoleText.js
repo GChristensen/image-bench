@@ -1,7 +1,8 @@
 /**
  * The text of the console drawer: the terminal output of the host as lines of styled segments.
  * Only what a log needs is followed: line feeds, carriage returns (a progress bar redraws its line: the next text
- * replaces it) and the SGR color and weight codes. Other control sequences (cursor moves, erasing) are dropped.
+ * replaces it), cursor up/down (tqdm bars of a position other than 0 are drawn on the following lines and the cursor
+ * goes back up), erasing the whole line and the SGR color and weight codes. Other control sequences are dropped.
  */
 
 const TOKEN = /\x1b\[([0-9;?]*)([@-~])|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][\x20-\x7e]|\x1b[\x20-\x7e]|\n|\r|[^\x1b\n\r]+/g;
@@ -137,15 +138,35 @@ export function createConsoleText({maxLines = 5000} = {}) {
   // A carriage return was written: the next text replaces the line
   let returned = false;
   let nextId = 0;
+  // The line of the cursor: the last one, unless a cursor move went up
+  let row = 0;
 
   const newLine = () => {
     lines.push({id: nextId++, version: 0, segments: []});
 
     if (lines.length > maxLines)
       lines.splice(0, lines.length - maxLines);
+
+    row = lines.length - 1;
   };
 
-  const current = () => lines[lines.length - 1];
+  function lineFeed() {
+    if (row < lines.length - 1) {
+      // Onto a line written before: the next text replaces it, as it starts at its first column
+      row++;
+      returned = true;
+    }
+    else {
+      returned = false;
+      newLine();
+    }
+  }
+
+  function moveCursor(rows) {
+    row = Math.min(Math.max(row + rows, 0), lines.length - 1);
+  }
+
+  const current = () => lines[row];
 
   function clearLine() {
     const line = current();
@@ -184,10 +205,8 @@ export function createConsoleText({maxLines = 5000} = {}) {
     for (const match of text.matchAll(TOKEN)) {
       const token = match[0];
 
-      if (token === "\n") {
-        returned = false;
-        newLine();
-      }
+      if (token === "\n")
+        lineFeed();
       else if (token === "\r")
         returned = true;
       else if (token[0] !== "\x1b")
@@ -199,6 +218,10 @@ export function createConsoleText({maxLines = 5000} = {}) {
       // Erase the whole line
       else if (match[2] === "K" && match[1] === "2")
         clearLine();
+      else if (match[2] === "A" || match[2] === "B") {
+        const rows = parseInt(match[1]) || 1;
+        moveCursor(match[2] === "A" ? -rows : rows);
+      }
     }
   }
 
