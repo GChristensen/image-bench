@@ -99,6 +99,7 @@ class ImageBenchApi():
         self.add_api_route("/png_info", self.png_info, methods=["POST"])
         self.add_api_route("/infotext", self.write_infotext, methods=["POST"])
         self.add_api_route("/media/thumb", self.get_media_thumb, methods=["GET"])
+        self.add_api_route("/media/info", self.get_media_info, methods=["GET"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["POST"])
         self.add_api_route("/download_image_tray", self.download_image_tray, methods=["GET"])
@@ -302,6 +303,18 @@ class ImageBenchApi():
             raise HTTPException(status_code=404, detail=str(e))
 
         return FileResponse(thumb_path, media_type="image/jpeg", headers={"Cache-Control": "max-age=86400"})
+
+    async def get_media_info(self, url: str):
+        """Duration, frame rate, frame count and soundtrack of a video or audio file by its /file= URL"""
+        path = self.media_file_path(url)
+
+        if not path or media.media_kind(path) == "image" or not os.path.isfile(path):
+            raise HTTPException(status_code=400, detail="Not a video or audio file")
+
+        try:
+            return await asyncio.to_thread(media.probe, path)
+        except media.MediaError as e:
+            raise HTTPException(status_code=404, detail=str(e))
 
     def pnginfo_to_dict(self, prompt, negative_prompt, pnginfo):
         return tray.pnginfo_to_dict(prompt, negative_prompt, pnginfo)

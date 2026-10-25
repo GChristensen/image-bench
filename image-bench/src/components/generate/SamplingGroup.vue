@@ -39,7 +39,7 @@ const shiftLabel = computed(() => props.sliderKind === "distilledCfg" ? "Distill
 
 <template>
   <div class="group">
-    <div class="group-header label-small">Sampling</div>
+    <div class="group-header label-small"><slot name="title">Sampling</slot></div>
     <label v-if="has('sampler')" class="field">Sampling method
       <span class="select-wrap">
         <select :value="form.sampler" @change="e => emit('set', 'sampler', e.target.value)">

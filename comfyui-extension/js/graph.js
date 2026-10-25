@@ -187,14 +187,32 @@ function hasPassThrough(node, bypassedInput) {
 }
 
 /**
+ * Whether a node has one of the inputs linked from a node in use (not bypassed and not in the chain)
+ * @param {Object} node
+ * @param {string[]} names - Input names
+ * @param {Object[]} chain - Nodes being bypassed
+ * @returns {boolean}
+ */
+function hasInputInUse(node, names, chain) {
+    return (node.inputs ?? []).some(input => {
+        const link = names.includes(input.name) && input.link != null && getLink(node.graph, input.link);
+        const origin = link && node.graph.getNodeById(link.origin_id);
+        return origin && !chain.includes(origin) && origin.mode !== MODE_BYPASS;
+    });
+}
+
+/**
  * The nodes to bypass together with a node so that the workflow still runs without it: following its outputs,
- * a consumer that takes it through an optional input stays, one that can pass something else through
- * (e.g. ReferenceLatent) is bypassed and ends the chain, and one that cannot (e.g. VAEEncode) is bypassed
+ * a consumer that takes it through an optional input stays (unless it is listed in bypassWhenEmpty and none of its
+ * inputs listed there is in use otherwise: it is bypassed and ends the chain), one that can pass something else
+ * through (e.g. ReferenceLatent) is bypassed and ends the chain, and one that cannot (e.g. VAEEncode) is bypassed
  * and followed further. Only nodes of the node's own graph are followed.
  * @param {Object} node
+ * @param {Object} [bypassWhenEmpty] - {node type: input names} of nodes that fail without all of those inputs
+ *   (the bypass_when_empty section of node_config.json, e.g. MiniMaxH3AddGuide: image, audio)
  * @returns {Object[]} The node and the consumers to bypass with it
  */
-export function getBypassChain(node) {
+export function getBypassChain(node, bypassWhenEmpty = {}) {
     const chain = [node];
     const queue = [node];
 
@@ -207,8 +225,17 @@ export function getBypassChain(node) {
                 const consumer = link && current.graph.getNodeById(link.target_id);
                 const input = consumer?.inputs?.[link.target_slot];
 
-                if (!consumer || !input || chain.includes(consumer) || isOptionalInput(consumer, input.name))
+                if (!consumer || !input || chain.includes(consumer))
                     continue;
+
+                if (isOptionalInput(consumer, input.name)) {
+                    const names = bypassWhenEmpty[consumer.type];
+
+                    if (Array.isArray(names) && names.includes(input.name) && !hasInputInUse(consumer, names, chain))
+                        chain.push(consumer);
+
+                    continue;
+                }
 
                 chain.push(consumer);
 

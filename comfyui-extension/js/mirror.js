@@ -168,11 +168,25 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
         pollIfActive();
     }
 
+    // The video of an "Extend video" image action
+    async function setContinuation(url) {
+        try {
+            if (!await references.setContinuation(url))
+                showAlert('Unable to extend the video: no node is marked "ib:ext". Open a video workflow with an '
+                    + '"Extend from video" group.');
+        } catch (error) {
+            showAlert(error.message);
+        }
+
+        pollIfActive();
+    }
+
     const handlers = {
         MIRROR_SUBSCRIBE: payload => subscribe(payload.active),
         SET_WEBUI_PARAMS: payload => applyParams(payload.params),
         SET_INPUT_IMAGE: payload => setInputImage(payload.kind, payload.file),
         EDIT_REFERENCES: payload => editReferences(payload.edit),
+        SET_CONTINUATION: payload => setContinuation(payload.url),
         SET_EDITOR_TARGET: payload => editorTarget = payload.target,
         // WebUI features the Generate tab does not offer in ComfyUI
         REUSE_SEED: () => {},

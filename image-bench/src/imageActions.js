@@ -10,11 +10,11 @@ import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
-import {HOST_NAME, hostHas, isWebUI} from "@/host.js";
-import {ensureGenerationIdle} from "@/sdwebui.js";
+import {HOST_NAME, hostHas, isComfy, isWebUI} from "@/host.js";
+import {createImageLink, ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
 import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
 import {editorIcon, editorName} from "@/editor.js";
-import {KIND_AUDIO, isStill, mediaKind} from "@/media.js";
+import {KIND_AUDIO, KIND_VIDEO, isStill, mediaKind} from "@/media.js";
 
 /**
  * Actions on a single image, defined once for the image card, its context menu and the keys on a hovered card.
@@ -38,6 +38,12 @@ async function sendToControlNet(image) {
     await dialog.alert(error, {title: "Send to ControlNet"});
   else
     flashTrayTab("controlnet-tab");
+}
+
+// The video goes into the node marked ib:ext of the workflow, whose last frames start the next generation
+function extendVideo(image) {
+  sendWebUIMessage({type: "SET_CONTINUATION", url: createImageLink(image)});
+  flashTrayTab("generate-tab");
 }
 
 export const INPAINT_LABEL = isWebUI ? "Send to the inpaint upload image" : "Send to the input image (ib:img)";
@@ -241,6 +247,11 @@ export const IMAGE_ACTIONS = [
     id: "controlnet", side: "right", group: 2, icon: "controlnet", label: "Send to ControlNet", key: "N",
     visible: image => hostHas("images", "sendToControlNet") && isStill(image),
     run: image => sendToControlNet(image)
+  },
+  {
+    id: "extend", side: "right", group: 2, icon: "video", label: "Extend video", key: "X",
+    visible: image => isComfy && mediaKind(image) === KIND_VIDEO,
+    run: image => extendVideo(image)
   },
   {
     // Labelled by the connected editor (editor.js), so the label and icon are getters

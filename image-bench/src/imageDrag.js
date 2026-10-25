@@ -89,6 +89,15 @@ export function takeDraggedImages() {
   return images;
 }
 
+/**
+ * The dragged images without taking them, for a drop target that also takes the native URL of a card
+ * (the References panel takes the files of video and audio cards, whose image is a thumbnail)
+ * @returns {Object[]}
+ */
+export function peekDraggedImages() {
+  return dragged?.images ?? [];
+}
+
 // Views whose cards are reordered by dragging them onto another card of the view
 const REORDERABLE_KINDS = new Set([KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED]);
 

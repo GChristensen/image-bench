@@ -34,7 +34,10 @@ const WEBUI_FEATURES = {
     // Dropdown of the workflows of the extension (ComfyUI)
     workflowSelect: false,
     // Telling a page that shows a generation the server has ended (useHostStall.js)
-    stallCheck: true
+    stallCheck: true,
+    // Length and frame rate of a video workflow, a tab beside Sampling (ComfyUI)
+    video: false,
+    fps: false
   },
   controlnet: {
     tabSwitch: true,
@@ -67,7 +70,9 @@ const COMFY_FEATURES = {
     referencesEnabled: false,
     referenceMaxSize: false,
     workflowSelect: true,
-    stallCheck: false
+    stallCheck: false,
+    video: true,
+    fps: true
   },
   controlnet: {
     tabSwitch: false,

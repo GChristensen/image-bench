@@ -883,6 +883,9 @@ export class ComfyUIOperations {
             height: parameters['height'] ?? (sizeHeight || undefined),
             // The Generate tab's shift field: Distilled CFG (FluxGuidance) or Shift, whichever the workflow has
             shift: parameters['guidance'] ?? parameters['distilled cfg scale'] ?? parameters['shift'],
+            // Length and frame rate of a video workflow
+            frames: parameters['frames'],
+            fps: parameters['fps'],
             // Inpaint options by their infotext keys, where the workflow has an Inpaint Crop; WebUI writes the area
             // and the mask mode only if they are not the defaults
             maskBlur: parameters['mask blur'],

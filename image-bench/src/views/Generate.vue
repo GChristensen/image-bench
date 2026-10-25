@@ -30,6 +30,7 @@ import HiresGroup from "@/components/generate/HiresGroup.vue";
 import Img2ImgGroup from "@/components/generate/Img2ImgGroup.vue";
 import ControlNetGroup from "@/components/generate/ControlNetGroup.vue";
 import GroupTabs from "@/components/generate/GroupTabs.vue";
+import VideoGroup from "@/components/generate/VideoGroup.vue";
 import SessionStrip from "@/components/generate/SessionStrip.vue";
 import PngInfoDialog from "@/components/generate/PngInfoDialog.vue";
 import WorkflowSelect from "@/components/generate/WorkflowSelect.vue";
@@ -106,6 +107,7 @@ const IMAGE_HEIGHT_KEY = "imageBench_generateImageHeight";
 const LOWER_HEIGHT_KEY = "imageBench_generateLowerHeight";
 // Hires. fix / img2img ("main") or ControlNet in the third parameter group
 const GROUP_TAB_KEY = "imageBench_generateGroupTab";
+const FIRST_GROUP_TAB_KEY = "imageBench_generateFirstGroupTab";
 const NEGATIVE_HEIGHT = {min: 40, max: 320, default: 62};
 // Parameters or filmstrip: the parameter groups at their own height unless resized; the prompts keep the reserve
 const LOWER_HEIGHT = {min: 80, default: 150, promptReserve: 260};
@@ -138,7 +140,7 @@ const has = useFeatures("generate", () => sdWebUI.features);
 // null without the Forge Neo dropdown); txt2img: hiresFix (the checkbox; null without the ComfyUI ib:hr switch),
 // hiresUpscaler, hiresScale, hiresSteps (denoising is that of hires. fix); img2img and inpaint: resizeMode,
 // maskMode, inpaintArea, maskedContent, maskBlur, inpaintPadding (choice labels and pixels as in WebUI; in ComfyUI
-// those of the Inpaint Crop node).
+// those of the Inpaint Crop node); video workflows (ComfyUI): frames, fps.
 const form = reactive({});
 const editedAt = {};
 let pending = {};
@@ -1054,6 +1056,10 @@ const references = computed(() => {
   return {...state, ...held};
 });
 
+// Images, and in a ComfyUI video workflow videos and audio
+const referenceCount = computed(() => !references.value ? 0
+  : references.value.images.length + (references.value.videos?.length ?? 0) + (references.value.audios?.length ?? 0));
+
 // LoRA or references
 const sideTab = ref(storage.getItem(SIDE_TAB_KEY) === "references" ? "references" : "lora");
 const shownSideTab = computed(() => references.value ? sideTab.value : "lora");
@@ -1081,6 +1087,15 @@ function setEditorTarget(target) {
 
 // The host page forgets the target when WebUI is reloaded
 onActivated(() => webUI.setEditorTarget(editorTarget.value));
+
+// ---------- Video ----------
+
+// The first parameter column shows Sampling or, in a video workflow, the length and frame rate in a tab beside it
+const firstGroupTab = ref(storage.getItem(FIRST_GROUP_TAB_KEY) === "video" ? "video" : "sampling");
+const shownFirstGroupTab = computed(() => has("video") ? firstGroupTab.value : "sampling");
+const firstGroupTabs = [{value: "sampling", label: "Sampling"}, {value: "video", label: "Video"}];
+
+watch(firstGroupTab, tab => storage.setItem(FIRST_GROUP_TAB_KEY, tab));
 
 // ---------- ControlNet ----------
 
@@ -1484,7 +1499,7 @@ const gridStyle = computed(() => ({
             <span v-if="selectedLoras.size" class="count" title="LoRAs in the prompt">{{ selectedLoras.size }}</span></button>
           <button type="button" role="tab" class="side-tab label-small" :class="{on: shownSideTab === 'references'}"
                   :aria-selected="shownSideTab === 'references'" @click="sideTab = 'references'">References
-            <span v-if="references.images.length" class="count" title="Reference images">{{ references.images.length }}</span></button>
+            <span v-if="referenceCount" class="count" title="References">{{ referenceCount }}</span></button>
         </div>
         <template v-else>
           <span class="label-small">LoRA</span>
@@ -1542,9 +1557,9 @@ const gridStyle = computed(() => ({
       <!-- LoRAs or references with the image below them; wide, the image is in a column of its own -->
       <div class="side">
         <ReferencesPanel v-if="shownSideTab === 'references'" class="side-panel" :references="references"
-                         :editor-target="editorTarget" :has="has"
+                         :editor-target="editorTarget" :has="has" :frames="has('video') ? form.frames ?? null : null"
                          @add="files => webUI.editReferences({add: files})"
-                         @remove="index => webUI.editReferences({remove: index})"
+                         @remove="(index, kind) => webUI.editReferences({remove: index, kind})"
                          @clear="webUI.editReferences({clear: true})"
                          @enabled="value => setReferenceParam('enabled', 'referencesEnabled', value)"
                          @max-size="value => setReferenceParam('maxSize', 'referenceMaxSize', value)"
@@ -1628,8 +1643,14 @@ const gridStyle = computed(() => ({
           <div class="lower-area" :style="{height: `${lowerHeight.size}px`}">
             <div v-show="lowerTab === 'params'" class="lower-pane params-pane">
               <div ref="groupsElement" class="groups">
-                <SamplingGroup :form="form" :samplers="samplerChoices" :schedulers="schedulerChoices"
-                               :slider-kind="sdWebUI.sliderKind" :has="has" @set="setParam"/>
+                <VideoGroup v-if="shownFirstGroupTab === 'video'" :form="form" :grid="sdWebUI.options.frameGrid"
+                            :has="has" @set="setParam">
+                  <template #title><GroupTabs v-model="firstGroupTab" :tabs="firstGroupTabs"/></template>
+                </VideoGroup>
+                <SamplingGroup v-else :form="form" :samplers="samplerChoices" :schedulers="schedulerChoices"
+                               :slider-kind="sdWebUI.sliderKind" :has="has" @set="setParam">
+                  <template v-if="has('video')" #title><GroupTabs v-model="firstGroupTab" :tabs="firstGroupTabs"/></template>
+                </SamplingGroup>
                 <SeedGroup :form="form" :has="has" @set="setParam" @reuse="onReuseSeed"/>
                 <ControlNetGroup v-if="shownGroupTab === 'controlnet'" :form="controlNet.form" :units="enabledUnits"
                                  :unit="controlNetUnit" :models="controlNet.modelChoices.value"

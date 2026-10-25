@@ -75,6 +75,9 @@ export const MARKER_ROLES = {
     mask: {marker: 'mask', configKey: 'mask', requireWidget: true},
     controlnet: {marker: 'cn', configKey: 'controlnet', requireWidget: true},
     reference: {marker: 'ref', configKey: 'reference', requireWidget: true},
+    videoReference: {marker: 'vref', configKey: 'video_reference', requireWidget: true},
+    audioReference: {marker: 'aref', configKey: 'audio_reference', requireWidget: true},
+    continuation: {marker: 'ext', configKey: 'continuation', requireWidget: true},
     hiresFix: {marker: 'hr', configKey: 'hires_fix', requireWidget: true}
 };
 
@@ -606,9 +609,9 @@ function extractSamplerFromHistory(historyPrompt, nodeConfig, executionIds) {
 }
 
 // Located generation parameters (params.js) read from /history, by their image parameter names;
-// the size and the guidance / shift let an image be generated again as it was
+// the size, the guidance / shift and the length / frame rate of a video let an image be generated again as it was
 const HISTORY_PARAMS = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'denoise', 'width', 'height',
-    'guidance', 'shift'];
+    'guidance', 'shift', 'frames', 'fps'];
 
 // Inpaint parameters, by the infotext keys of WebUI
 const HISTORY_INPAINT_PARAMS = {

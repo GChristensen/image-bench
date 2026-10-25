@@ -672,6 +672,20 @@ async def media_thumb(request):
     return web.FileResponse(thumb_path, headers={"Content-Type": "image/jpeg", "Cache-Control": "max-age=86400"})
 
 
+@PromptServer.instance.routes.get(BASE_PATH + "/media/info")
+async def media_probe(request):
+    """Duration, frame rate, frame count and soundtrack of a video or audio file by its /view URL"""
+    path = resolve_view_path(request.query.get("url"))
+
+    if not path or media.media_kind(path) == "image" or not os.path.isfile(path):
+        return web.Response(text="Not a video or audio file", status=400)
+
+    try:
+        return web.json_response(await asyncio.to_thread(media.probe, path))
+    except media.MediaError as e:
+        return web.Response(text=str(e), status=404)
+
+
 @PromptServer.instance.routes.post(BASE_PATH + "/png_info")
 async def png_info(request):
     """Infotext and parameters of an uploaded image (PNG text, EXIF or comment)"""

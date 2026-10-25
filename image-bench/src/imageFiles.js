@@ -37,7 +37,10 @@ export async function imageFilesFromDataTransfer(dataTransfer, {media = false} =
         if (!response.ok || !accepted(blob.type, media))
             return [];
 
-        const name = decodeURIComponent(new URL(url, location.href).pathname.split("/").pop() || "image.png");
+        // A /view URL names its file in the query
+        const parsed = new URL(url, location.href);
+        const name = parsed.searchParams.get("filename")
+          || decodeURIComponent(parsed.pathname.split("/").pop() || "image.png");
         return [new File([blob], name, {type: blob.type})];
     } catch (e) {
         console.error("Unable to load the dropped image:", e);

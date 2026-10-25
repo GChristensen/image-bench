@@ -154,6 +154,61 @@
       "LoadImage": "image"
     }
   },
+  "video_reference": {
+    "_comment": "Reference and guide videos of the References panel. limits by the node type that takes the clip (found downstream of the loader): minSeconds / maxSeconds per clip, totalSeconds of all clips of that node, fps the frame rate the model reads them at, minFrames \"frames\": at least the Frames parameter of the Video tab.",
+    "marker": "vref",
+    "nodeTypes": [
+      "LoadVideo"
+    ],
+    "widgetNames": {
+      "LoadVideo": "file"
+    },
+    "limits": {
+      "MiniMaxH3ReferenceToVideo": {
+        "minSeconds": 2,
+        "maxSeconds": 15,
+        "totalSeconds": 15,
+        "fps": 24
+      },
+      "LTXVAddGuide": {
+        "minFrames": "frames"
+      }
+    }
+  },
+  "audio_reference": {
+    "_comment": "Reference audio of the References panel; limits as for video_reference.",
+    "marker": "aref",
+    "nodeTypes": [
+      "LoadAudio"
+    ],
+    "widgetNames": {
+      "LoadAudio": "audio"
+    },
+    "limits": {
+      "MiniMaxH3ReferenceToVideo": {
+        "minSeconds": 2,
+        "maxSeconds": 15,
+        "totalSeconds": 15
+      }
+    }
+  },
+  "continuation": {
+    "_comment": "The video an \"Extend video\" image action continues: its last frames guide the start of the new one.",
+    "marker": "ext",
+    "nodeTypes": [
+      "LoadVideo"
+    ],
+    "widgetNames": {
+      "LoadVideo": "file"
+    }
+  },
+  "bypass_when_empty": {
+    "_comment": "Nodes bypassed together with an unused marked loader when none of these (optional) inputs is linked from a node in use, since they fail without them: an empty reference or extension slot bypasses its chain up to them.",
+    "MiniMaxH3AddGuide": [
+      "image",
+      "audio"
+    ]
+  },
   "hires_fix": {
     "_comment": "The switch of the Hires. fix pass, e.g. an If/Else Switch choosing between the images of the first and the second pass. All marked nodes are set together.",
     "marker": "hr",
@@ -321,6 +376,16 @@
       },
       {
         "via": [
+          "guider"
+        ],
+        "deep": true,
+        "types": [
+          "MiniMaxH3SigmaShift"
+        ],
+        "widget": "shift_video"
+      },
+      {
+        "via": [
           "sigmas"
         ],
         "deep": true,
@@ -355,13 +420,26 @@
           "EmptyQwenImageLayeredLatentImage",
           "EmptyLTXVLatentVideo",
           "EmptyMochiLatentVideo",
-          "EmptyCosmosLatentVideo"
+          "EmptyCosmosLatentVideo",
+          "MiniMaxH3ImageToVideo",
+          "MiniMaxH3ReferenceToVideo",
+          "EmptyMiniMaxH3LatentAV"
         ],
         "widget": "width"
       },
       {
         "from": "inpaintCrop",
         "widget": "output_target_width"
+      },
+      {
+        "via": [
+          "latent_image"
+        ],
+        "deep": true,
+        "types": [
+          "EmptyLTXVLatentVideo"
+        ],
+        "widget": "width"
       }
     ],
     "height": [
@@ -389,13 +467,112 @@
           "EmptyQwenImageLayeredLatentImage",
           "EmptyLTXVLatentVideo",
           "EmptyMochiLatentVideo",
-          "EmptyCosmosLatentVideo"
+          "EmptyCosmosLatentVideo",
+          "MiniMaxH3ImageToVideo",
+          "MiniMaxH3ReferenceToVideo",
+          "EmptyMiniMaxH3LatentAV"
         ],
         "widget": "height"
       },
       {
         "from": "inpaintCrop",
         "widget": "output_target_height"
+      },
+      {
+        "via": [
+          "latent_image"
+        ],
+        "deep": true,
+        "types": [
+          "EmptyLTXVLatentVideo"
+        ],
+        "widget": "height"
+      }
+    ],
+    "_video": "Video workflows: videoLatent and audioLatent are anchors (the empty video latent or the MiniMax H3 conditioning node, the LTX audio latent), the start of frames and fps. grid is the frame grid of the model, {step, offset, fps}: lengths of step * k + offset frames, fps the fixed frame rate of a model without an fps parameter.",
+    "videoLatent": [
+      {
+        "via": [
+          "latent_image"
+        ],
+        "deep": true,
+        "types": [
+          "EmptyLTXVLatentVideo",
+          "MiniMaxH3ImageToVideo",
+          "MiniMaxH3ReferenceToVideo",
+          "EmptyMiniMaxH3LatentAV"
+        ]
+      }
+    ],
+    "audioLatent": [
+      {
+        "via": [
+          "latent_image"
+        ],
+        "deep": true,
+        "types": [
+          "LTXVEmptyLatentAudio"
+        ]
+      }
+    ],
+    "frames": [
+      {
+        "from": "videoLatent",
+        "via": [
+          "length"
+        ],
+        "types": [
+          "PrimitiveInt",
+          "PrimitiveNode"
+        ],
+        "widget": "value",
+        "grid": {
+          "step": 8,
+          "offset": 1
+        }
+      },
+      {
+        "from": "videoLatent",
+        "types": [
+          "EmptyLTXVLatentVideo"
+        ],
+        "widget": "length",
+        "grid": {
+          "step": 8,
+          "offset": 1
+        }
+      },
+      {
+        "from": "videoLatent",
+        "types": [
+          "MiniMaxH3ImageToVideo",
+          "MiniMaxH3ReferenceToVideo",
+          "EmptyMiniMaxH3LatentAV"
+        ],
+        "widget": "length",
+        "grid": {
+          "step": 17,
+          "offset": 5,
+          "fps": 24
+        }
+      }
+    ],
+    "fps": [
+      {
+        "from": "audioLatent",
+        "via": [
+          "frame_rate"
+        ],
+        "types": [
+          "PrimitiveFloat",
+          "PrimitiveInt",
+          "PrimitiveNode"
+        ],
+        "widget": "value"
+      },
+      {
+        "from": "audioLatent",
+        "widget": "frame_rate"
       }
     ],
     "_inpaint": "Inpaint Crop (ComfyUI-Inpaint-CropAndStitch) of the inpaint workflows: inpaintCrop is an anchor without a widget, the start (from) of the inpaint parameters. values maps the choice labels of the Generate tab to widget values.",

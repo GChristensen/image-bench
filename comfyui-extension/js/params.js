@@ -15,7 +15,7 @@ const RANDOM_SEED_MAX = 1125899906842624;
 // Located parameters, in the order of the generation_params section
 const LOCATED_PARAMS = ['seed', 'steps', 'cfg', 'sampler', 'scheduler', 'denoise', 'guidance', 'shift',
     'width', 'height', 'hiresSteps', 'hiresDenoise', 'hiresScale', 'hiresUpscaler',
-    'maskBlur', 'maskMode', 'inpaintArea', 'inpaintPadding'];
+    'maskBlur', 'maskMode', 'inpaintArea', 'inpaintPadding', 'frames', 'fps'];
 
 // Inpaint parameters of the Generate tab (Inpaint Crop of the inpaint workflows)
 const INPAINT_PARAMS = ['maskBlur', 'maskMode', 'inpaintArea', 'inpaintPadding'];
@@ -47,7 +47,7 @@ export function createParamRegistry(ops) {
      * Locate a parameter by its generation_params locators. A locator starts at the sampler of its role, or at the
      * node of another located name (`from`); a locator without a widget is an anchor, only such a start
      * @param {string} name
-     * @returns {{target: Object, widget: Object, widgetName: string, values: Object|null}|null}
+     * @returns {{target: Object, widget: Object, widgetName: string, values: Object|null, grid: Object|null}|null}
      */
     function locate(name) {
         for (const locator of getConfig()[name] ?? []) {
@@ -60,7 +60,8 @@ export function createParamRegistry(ops) {
             const widget = target && getTargetWidget(target, locator.widget);
 
             if (widget)
-                return {target, widget, widgetName: locator.widget, values: locator.values ?? null};
+                return {target, widget, widgetName: locator.widget, values: locator.values ?? null,
+                        grid: locator.grid ?? null};
         }
 
         return null;
@@ -165,7 +166,8 @@ export function createParamRegistry(ops) {
         const params = {};
 
         for (const name of ['steps', 'cfg', 'sampler', 'scheduler', 'width', 'height',
-                            'hiresSteps', 'hiresScale', 'hiresUpscaler', 'denoising', 'shift', ...INPAINT_PARAMS])
+                            'hiresSteps', 'hiresScale', 'hiresUpscaler', 'denoising', 'shift', 'frames', 'fps',
+                            ...INPAINT_PARAMS])
             params[name] = valueOf(located[resolveName(name, mode, located)]);
 
         // The seed is -1 while it is randomized after each generation
@@ -188,7 +190,9 @@ export function createParamRegistry(ops) {
             upscalers: getWidgetChoices(located.hiresUpscaler?.widget) ?? [],
             // The labels of the values maps, as WebUI's radio choices
             maskMode: Object.keys(located.maskMode?.values ?? {}),
-            inpaintArea: Object.keys(located.inpaintArea?.values ?? {})
+            inpaintArea: Object.keys(located.inpaintArea?.values ?? {}),
+            // Frame grid of the video model, {step, offset, fps} (node_config.json)
+            frameGrid: located.frames?.grid ?? null
         };
 
         const features = {
@@ -207,6 +211,8 @@ export function createParamRegistry(ops) {
             hiresSteps: !!located.hiresSteps,
             hiresScale: !!located.hiresScale,
             hiresUpscaler: !!located.hiresUpscaler,
+            video: !!located.frames,
+            fps: !!located.fps,
             ...Object.fromEntries(INPAINT_PARAMS.map(name => [name, !!located[name]]))
         };
 

@@ -258,6 +258,9 @@ const hostOrigin = location.origin;
             v-else>Sends the image to the load node marked <code>ib:img</code>.</template></td></tr>
         <tr><td><AppIcon name="controlnet" :size="14"/></td><td><span class="kbd">N</span> Sends the image to the
           control image of the ControlNet tab.</td></tr>
+        <tr v-if="isComfy"><td><AppIcon name="video" :size="14"/></td><td><span class="kbd">X</span> (videos)
+          Extends the video: loads it into the node marked <code>ib:ext</code>, whose last frames start the next
+          generation (see <a href="#" @click.prevent="scrollTo('comfy-references')">References</a>).</td></tr>
         <tr><td><AppIcon name="photoshop" :size="14"/></td><td><span class="kbd">P</span> Sends the image to
           the editor (Photoshop, Krita or GIMP) as a new document. Middle-click or
           <span class="kbd">Shift</span>+<span class="kbd">P</span> places it as a layer of the active document.</td></tr>
@@ -338,7 +341,14 @@ const hostOrigin = location.origin;
         <li><b>References</b> (beside the LoRA list) holds the reference images of edit models (Flux Kontext / Klein,
           Qwen Image Edit, ...).<template v-if="isWebUI"> <b>Edit</b> turns reference editing on for the current
           model family.</template> The option named <span class="kbd">Ps</span> <b>sends to</b> decides whether an image
-          from the editor becomes the input image or a new reference.</li>
+          from the editor becomes the input image or a new reference.<template v-if="isComfy"> In a video workflow
+          the panel also takes videos and audio files (browse, paste, or drag a video card from Generated). Each
+          clip shows its duration and frame rate, with a warning when it is outside what the model takes (too
+          short or long, the wrong frame rate, a guide video shorter than the video). The video of
+          <b>Extend video</b> is listed as <b>Extends</b>; removing it stops extending.</template></li>
+        <li v-if="isComfy"><b>Video</b> (a tab in the header of the Sampling group, shown for video workflows):
+          <b>Frames</b>, the length of the video, which steps on the frame grid of the model (MiniMax H3 17k+5,
+          LTX 8n+1) and shows the duration in seconds, and <b>Frame rate</b>, if the workflow has one.</li>
         <li><b>Sampling, Seed and Hires. fix.</b> <AppIcon name="dice" :size="13" class="inline-icon"/> sets a
           random seed (−1), and <AppIcon name="recycle" :size="13" class="inline-icon"/> takes the seed of the Result
           image.</li>
@@ -1359,6 +1369,21 @@ const hostOrigin = location.origin;
         workflow, check the bypassed nodes once. Slots inside a subgraph cannot be bypassed and always count as
         used.
       </p>
+      <p>
+        Video and audio references work the same way: title the Load Video nodes <code>ib:vref:0</code>,
+        <code>ib:vref:1</code>, ... and the Load Audio nodes <code>ib:aref:0</code>, ... An added file goes into a
+        slot of its kind. The clip checks of the References panel come from <code>limits</code> in
+        <code>node_config.json</code>, keyed by the node that takes the clip. A Load Video titled <code>ib:ext</code>
+        receives the video of <b>Extend video</b>; the bundled video workflows feed its last frames to a guide node
+        at frame 0, so the new clip continues the old one (it begins with those frames). A node that fails without
+        any of its optional inputs (MiniMax H3 Add Guide) is listed under <code>bypass_when_empty</code> and is
+        bypassed with its last slot.
+      </p>
+      <p>
+        The <b>Image Bench</b> folder of the Workflows sidebar has video workflows for MiniMax H3 (text or frames
+        to video, and Ref2VA with image, video and audio references) and LTX-2.5 (two stages, and an IC-LoRA guide
+        video). Their notes list the models.
+      </p>
 
       <h3 id="manual-comfy-controlnet">ControlNet units</h3>
       <p>
@@ -1404,7 +1429,9 @@ const hostOrigin = location.origin;
       <p>
         Images for the marked nodes are saved under fixed names in the ComfyUI <code>input</code> folder, and each
         file is overwritten by the next image of the same kind: <code>image_bench_input_*.png</code> (Input and
-        Mask panes), <code>image_bench_reference_N.png</code> (references), <code>image_bench_cn_N_*.png</code>
+        Mask panes), <code>image_bench_reference_N.png</code> (references),
+        <code>image_bench_reference_video_N.*</code> / <code>image_bench_reference_audio_N.*</code> (video and audio
+        references), <code>image_bench_continuation.*</code> (Extend video), <code>image_bench_cn_N_*.png</code>
         (ControlNet units) and <code>image_bench_photoshop_*.png</code> (the editor). The trays, presets, model
         hashes and Civitai lookups are stored in <code>store/</code> in the extension folder.
       </p>
