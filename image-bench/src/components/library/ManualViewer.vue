@@ -83,10 +83,12 @@ const hostOrigin = location.origin;
     <section id="manual-overview">
       <h1>Image Bench for {{ HOST_NAME }}</h1>
       <p class="lead">
-        Image Bench automates the small repetitive tasks of working with
-        {{ isWebUI ? "SD WebUI (Forge / Forge Neo)" : "ComfyUI" }}: generating batches, comparing models,
-        collecting the best images, moving images to and from a graphics editor, and so on. All of it is done from
-        one window, so you do not have to look for controls in the {{ HOST_NAME }} page.
+        Image Bench is a generation workspace for
+        {{ isWebUI ? "SD WebUI (Forge / Forge Neo)" : "ComfyUI" }}, laid out so that the frequent steps of image
+        generation take as few actions as possible. It automates the common tasks: generating batches, comparing
+        models,controlnet sweeping, collecting the best images, moving images to and from a graphics editor, and so on. All of it is
+        done from one window, without the file manager, an image browser or hunting for controls in the
+        {{ HOST_NAME }} page.
       </p>
       <p>
         For example, to upscale an image you usually find it in the filesystem, extract its id and prompt, enable
