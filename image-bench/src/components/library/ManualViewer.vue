@@ -102,8 +102,8 @@ const hostOrigin = location.origin;
         with its generation parameters.
       </p>
       <p>
-        It may be hard to read this manual at once. Read only the parts of interest at first, and refer to it while
-        exploring the application tabs.
+        You do not need to read this manual from start to finish. Read the parts you need first, and come back to it
+        as you explore the tabs.
       </p>
       <p>The window has the following tabs:</p>
       <ul>
@@ -125,7 +125,7 @@ const hostOrigin = location.origin;
           bar) holds the application options.</li>
       </ul>
       <p>
-        Plugins for Photoshop, Krita and GIMP come with the extension. They send images from the editor to {{ HOST_NAME }}
+        Image Bench has plugins for Photoshop, Krita and GIMP. They send images from the editor to {{ HOST_NAME }}
         and open any image from Image Bench in the editor as a new document or a layer (see
         <a href="#" @click.prevent="scrollTo('editors')">Editors</a>).
       </p>
@@ -135,11 +135,10 @@ const hostOrigin = location.origin;
       <h2>Launching Image Bench</h2>
       <p>
         The URL <a :href="`${hostOrigin}/image-bench/app`" target="_blank">{{ hostOrigin }}/image-bench/app</a> (bookmark
-        it) opens Image Bench in a browser tab, which also loads {{ HOST_NAME }} in the background. Clicking the
-        <AppIcon name="appWindow" :size="13" class="inline-icon"/> icon shows the {{ HOST_NAME }}
-        page. If the
-        page is reloaded in that tab, or {{ HOST_NAME }} restarts, Image Bench shows <span class="kbd warn"><AppIcon name="alert" :size="12" class="inline-icon"/>
-        Connecting to {{ HOST_NAME }}</span> until the page is back, and then continues.
+        it) opens Image Bench in a browser tab and loads {{ HOST_NAME }} in the background. The
+        <AppIcon name="appWindow" :size="13" class="inline-icon"/> icon shows the {{ HOST_NAME }} page. When that
+        page reloads or {{ HOST_NAME }} restarts, Image Bench shows <span class="kbd warn"><AppIcon name="alert" :size="12" class="inline-icon"/>
+        Connecting to {{ HOST_NAME }}</span> until the page is back, then carries on.
       </p>
       <p>
         The <b>🔬 Image Bench</b> button {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}
@@ -148,10 +147,10 @@ const hostOrigin = location.origin;
       </p>
 
       <p>
-        With the setting <b>Open Image Bench from the {{ HOST_NAME }} interface</b>, the button opens Image Bench from
-        the {{ HOST_NAME }} page instead. Image Bench then opens in a browser tab that stays connected to the
-        {{ HOST_NAME }} page it was opened from. Drag that tab into a window of its own, so that the {{ HOST_NAME }}
-        page remains the active tab of its window (see below).
+        With the setting <b>Open Image Bench from the {{ HOST_NAME }} interface</b>, the button opens Image Bench
+        directly, in a browser tab that stays connected to the {{ HOST_NAME }} page it was opened from. Drag that
+        tab into a window of its own so that the {{ HOST_NAME }} page stays the active tab of its window (see
+        below).
       </p>
 
       <div class="note">
@@ -187,18 +186,18 @@ const hostOrigin = location.origin;
         new images from it.
       </p>
       <p>
-        Edit models change an image by an instruction in the prompt, or by reference images, without a mask.
-        Activate img2img mode at the Generate tab. Send
+        Edit models change an image according to an instruction in the prompt or to reference images, without a
+        mask. <template v-if="isWebUI">Switch the Generate tab to img2img, send</template><template v-else>Send</template>
         the image from a tray or from the editor to <template v-if="isWebUI">img2img</template><template v-else>the load node
-        marked <code>ib:img</code></template> and describe the
-        change in the prompt.
+        marked <code>ib:img</code></template>, and describe the change in the prompt.
       </p>
       <p>
-        For inpainting, activate the inpaint mode at the Generate tab, select the area to change in the editor and send the image with the selection as the mask
+        To inpaint, <template v-if="isWebUI">switch the Generate tab to Inpaint, </template>select the area to change
+        in the editor, and send the image with the selection as the mask
         to <template v-if="isWebUI">img2img › Inpaint upload</template><template v-else>the nodes marked
         <code>ib:img</code> and <code>ib:mask</code></template>.
-        Add the inpainted variants to the <a href="#" @click.prevent="scrollTo('compare')">Compare</a> tab as they arrive, pick the
-        best one there, and put it into the image tray or the concept tray.
+        Add the inpainted variants to the <a href="#" @click.prevent="scrollTo('compare')">Compare</a> tab as they
+        arrive, pick the best one there, and put it into the image tray or the concept tray.
       </p>
       <p>
         The two <a href="#" @click.prevent="scrollTo('trays')">trays</a> can also be split by how long their images
@@ -213,13 +212,12 @@ const hostOrigin = location.origin;
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        Holding <span class="kbd">Ctrl</span> over an image shows its action rim. So does the
-        <AppIcon name="rim" :size="13" class="inline-icon"/> button at the top right of the image,
-        until it is clicked again or the pointer leaves the image card. The rim is a
-        ring of colored sectors, one per a kind of action. The middle of the
-        ring shows the name and keyboard key of the sector under the pointer. Sectors with an alternative action perform it on a
-        middle click or Shift+click; holding Shift shows their alternative icons. Clicking the image inside or
-        outside the ring opens the image as usual.
+        Hold <span class="kbd">Ctrl</span> over an image to show its action rim, or click the
+        <AppIcon name="rim" :size="13" class="inline-icon"/> button at the top right of the image, which keeps the
+        rim shown until you click it again or the pointer leaves the card. The rim is a ring of sectors, one per
+        action, colored by the kind of action. The middle of the ring shows the name and key of the sector under
+        the pointer. Some sectors have an alternative action, which runs on a middle click or Shift+click; holding
+        Shift shows their alternative icons. A click on the image inside or outside the ring opens it as usual.
       </p>
       <p>
         With <b>Show the action rim of an image on hover (without holding Ctrl)</b> turned on in the Settings tab,
@@ -227,10 +225,9 @@ const hostOrigin = location.origin;
         ring and all other controls, so a click anywhere on the image opens it.
       </p>
       <p>
-        The button in the middle shows the marking of the image; click it to switch
-        the ring to the markings and back. The marking is also shown at the bottom-right corner of the image. Click
-        it there to show only the images with that marking, or middle-click it to remove the marking. While the
-        pointer is over an image, the hotkeys act on that image:
+        The button in the middle of the ring shows the marking of the image; click it to switch the ring to the
+        markings and back. The marking also appears at the bottom right of the image, where a click shows only the
+        images with that marking and a middle click removes it. Keys act on the image under the pointer:
         <span class="kbd">1</span>–<span class="kbd">9</span> set its marking (<span class="kbd">0</span> removes it) and
         <span class="kbd">V</span> views it large.
       </p>
@@ -270,12 +267,12 @@ const hostOrigin = location.origin;
         Right-click an image for a menu with all of its actions. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
       </p>
       <p>
-        The menu also has <AppIcon name="params" :size="13" class="inline-icon"/> <b>Copy infotext</b>, which puts the
-        generation parameters of the image file on the clipboard as text (for an image made by ComfyUI, the parameters
-        read from its workflow), and, on PNG images, <AppIcon name="paste" :size="13" class="inline-icon"/>
-        <b>Paste infotext…</b>, which writes such text into the file after showing it for review (it can be edited
-        there). Use it to give an image exported from the editor, e.g. a final image saved to the project folder,
-        the parameters of the image it was made from, or to replace the parameters of an image.
+        The menu also has <AppIcon name="params" :size="13" class="inline-icon"/> <b>Copy infotext</b>, which copies
+        the generation parameters of the image file as text (for an image made by ComfyUI, the parameters read from
+        its workflow). PNG images also have <AppIcon name="paste" :size="13" class="inline-icon"/>
+        <b>Paste infotext…</b>, which shows the copied text for review and editing, then writes it into the file. Use
+        it to replace the parameters of an image, or to give an image exported from the editor (a final image saved
+        to the project folder, for example) the parameters of the image it was made from.
       </p>
       <p>
         Click an image to view it large. In that view, <span class="kbd">←</span> and
@@ -300,8 +297,8 @@ const hostOrigin = location.origin;
         projects like images, but not into Compare, the editor, the input images or the upscaling actions.
       </p>
       <p>
-        The server takes the frame with PyAV (part of ComfyUI) or the <code>ffmpeg</code> program on the
-        path. Without either, the card shows the start of the video itself. In the Projects tab, only the final
+        The server takes the frame with PyAV, which both hosts install. If that fails, the card shows the start of
+        the video itself. In the Projects tab, only the final
         file plays in its card; the videos and audio of the trays and the folder show their frames and placeholders
         and play in the large view.
       </p>
@@ -361,18 +358,20 @@ const hostOrigin = location.origin;
           <AppIcon name="photoCamera" :size="13" class="inline-icon"/> 3:2, 35 mm photography;
           <AppIcon name="tv" :size="13" class="inline-icon"/> 16:9, television and video;
           <AppIcon name="cinemaCamera" :size="13" class="inline-icon"/> 12:5, anamorphic cinema.
-          <AppIcon name="bucketOff" :size="13" class="inline-icon"/> marks A4, which is no training bucket of any
-          model.</li>
+          <AppIcon name="bucketOff" :size="13" class="inline-icon"/> marks A4, which matches no model's training
+          buckets.</li>
         <li><b>Result, Input and Mask</b>: upload, drop or paste the input image or mask onto its pane. Hold
           <span class="kbd">Ctrl</span> over the result, or click its <AppIcon name="rim" :size="13" class="inline-icon"/>
           button, to show its action rim. Drag the grips to resize the panes; double-click restores them.</li>
-        <li><b>Only masked crop</b>: with the inpaint area Only masked, the Mask pane outlines the mask (dashed)
-          and the part of the image that is regenerated: the mask grown by the padding, then to the shape of the
-          size. <AppIcon name="maskFit" :size="13" class="inline-icon"/> sets the size to that padded box enlarged
-          by a factor, in multiples of 16 (pick one from its list, or step with the wheel over it); the padding
-          stays the amount of context. <AppIcon name="reset" :size="13" class="inline-icon"/> beside it sets the
-          size back to the one in Settings › Generate Tab (1024 × 1024 unless changed). The size at the right is what the crop is rendered at; its tooltip tells
-          the crop size and the enlargement. The outline also shows on the Input pane with Mask overlay.</li>
+        <li><b>Only masked crop</b>: when the inpaint area is Only masked, the Mask pane outlines the mask (dashed)
+          and the part of the image that is regenerated, which is the mask grown by the padding and then widened to
+          the aspect ratio of the size. <AppIcon name="maskFit" :size="13" class="inline-icon"/> sets the size to
+          this padded box enlarged by a factor, rounded to multiples of 16 (pick the factor from its list, or step
+          through them with the wheel); the padding still sets how much context surrounds the mask.
+          <AppIcon name="reset" :size="13" class="inline-icon"/> beside it restores the size from Settings ›
+          Generate Tab (1024 × 1024 unless changed). The size at the right is the resolution the crop is rendered
+          at, and its tooltip gives the crop size and the enlargement. With Mask overlay, the outline also appears
+          on the Input pane.</li>
         <li><b>Session filmstrip</b> (the tabs at the right edge of the parameters): the images generated while
           the window is open, grouped by batch. It is shown during a batch of several images. Click an image to
           open it, or middle-click it to show it in the Result pane.</li>
@@ -380,30 +379,33 @@ const hostOrigin = location.origin;
           <AppIcon name="infinity" :size="13" class="inline-icon"/>), it runs a batch in the Generated tab.
           <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
           skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click or a middle click
-          on Stop stops the generation and starts a new one a second later.<template v-if="isWebUI"> One Stop
-          is enough, also right after Generate: the generation ends before its first image (a model being loaded
-          finishes loading first; the toolbar shows "Stopping…" meanwhile). In the rare case that the WebUI page
-          keeps showing a generation after the server has been idle for 10 seconds, the toolbar says so and
-          offers its <AppIcon name="refresh" :size="13" class="inline-icon"/> button, which reloads the WebUI
+          on Stop stops the generation and starts a new one a second later.<template v-if="isWebUI"> A single
+          Stop works even right after Generate: the generation ends before its first image (a model that is
+          loading finishes loading first, and the toolbar shows "Stopping…" meanwhile). Rarely, the WebUI page
+          keeps showing a generation although the server has been idle for 10 seconds. The toolbar then says so
+          and offers a <AppIcon name="refresh" :size="13" class="inline-icon"/> button that reloads the WebUI
           page and ends the run.</template></li>
         <li><b>Project cube</b>: while a project is current, the <AppIcon name="box" :size="13" class="inline-icon"/>
-          cube joined to Generate, in the project color, reminds you that the workspace is that project; click it to
-          save the project or start a new workspace. The Projects chapter tells when it asks before generating.</li>
+          cube in the project color, joined to Generate, reminds you that you are working in that project. Click it
+          to save the project or start a new workspace. When it asks before generating is described under
+          <a href="#" @click.prevent="scrollTo('projects')">Projects</a>.</li>
         <li v-if="isWebUI"><b>UI preset buttons</b> switch the Forge UI preset.
           <AppIcon name="lock" :size="13" class="inline-icon"/> <b>Prompt lock</b> makes the prompts editable only
           here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
-        <li><b>Prompt history</b>: the buttons after the prompt label hold the last 20 prompts generated from this tab
-          (<b>1</b> is the latest; a prompt generated again moves to the front). txt2img and img2img (with
-          Inpaint) keep separate histories and variants. A number shows that prompt and its
-          negative read-only, compared with the current ones: green is what it would add, struck out what it would
-          remove, amber a changed weight. <b>Diff</b> switches to the plain text, and <b>Use</b> or a double click on
-          the number replaces the current prompts with it. <AppIcon name="pencil" :size="13" class="inline-icon"/>
-          is the current prompt, the only editable one, and starting a generation returns to it.
-          <AppIcon name="fork" :size="13" class="inline-icon"/> <b>Fork</b>, before <b>Diff</b>, keeps the prompts
-          shown (the current ones too, after the history buttons) as a named variant of the experiment; once there are variants, the <b>Variants</b> dropdown after the
-          numbers lists them by name with the beginning of their prompt, and shows, uses (double click), renames or
-          removes them like the history entries. The history and its variants are saved with the projects and
-          restored when one is opened; <b>Start a blank workspace</b> clears both.</li>
+        <li><b>Prompt history</b>: the numbered buttons after the prompt label hold the last 20 prompts generated
+          from this tab. <b>1</b> is the latest, and a prompt generated again moves to the front. txt2img and
+          img2img (including Inpaint) keep separate histories and variants. Click a number to see that prompt and
+          its negative, read-only and compared with the current ones: green text would be added, struck-out text
+          removed, and amber marks a changed weight. <b>Diff</b> switches to the plain text, and <b>Use</b> (or a
+          double click on the number) replaces the current prompts with it.
+          <AppIcon name="pencil" :size="13" class="inline-icon"/> is the current prompt, the only editable one;
+          starting a generation returns to it.
+          <AppIcon name="fork" :size="13" class="inline-icon"/> <b>Fork</b>, before <b>Diff</b>, saves the prompts
+          shown as a named variant (for the current prompts, it is after the history buttons). Once there are
+          variants, the <b>Variants</b> dropdown after the numbers lists them by name and the beginning of their
+          prompt. It shows, uses (double click), renames and removes them like history entries. The history and the
+          variants are saved with a project and restored when it is opened; <b>Start a blank workspace</b> clears
+          both.</li>
         <li><b><AppIcon name="fileSearch" :size="13" class="inline-icon"/> PNG Info</b> shows the parameters of an
           image chosen, pasted or dropped there (or on the prompt). <b>Apply</b> sets the checked groups and lists
           the values that {{ HOST_NAME }} does not have.</li>
@@ -414,12 +416,12 @@ const hostOrigin = location.origin;
           Its <AppIcon name="power" :size="13" class="inline-icon"/> button restarts {{ HOST_NAME }} when it hangs
           or crashes (e.g. after running out of memory): it kills the {{ HOST_NAME }} process along with its console
           window and runs your start script again.
-          Restarting needs the <a :href="ADDON_URL" target="_blank" rel="noopener">Host Restart addon</a>, which is
-          installed by hand because security software may flag its process control logic; the button explains how to
-          get and set it up. When {{ HOST_NAME }} hangs, the browser reaches the addon's helper process on the
-          {{ HOST_NAME }} port plus 100 (<code>"port"</code> in <code>host_restart.json</code> changes it). When using Image Bench through HTTPS with a
-          self-signed https certificate, accept it once more for that port through <b>Settings › Host
-          restart</b>.</li>
+          Restarting needs the <a :href="ADDON_URL" target="_blank" rel="noopener">Host Restart addon</a>. It is
+          installed by hand, because security software may flag its process control; the button explains where to
+          get it and how to set it up. While {{ HOST_NAME }} hangs, the browser talks to the addon's helper process
+          on the {{ HOST_NAME }} port plus 100 (<code>"port"</code> in <code>host_restart.json</code> changes it). If
+          you use Image Bench over HTTPS with a self-signed certificate, accept the certificate once more for that
+          port through <b>Settings › Host restart</b>.</li>
       </ul>
       <p v-if="isComfy" class="muted">
         A control whose node cannot be found in the workflow is hidden, so a missing control usually means a
@@ -572,7 +574,7 @@ const hostOrigin = location.origin;
         This tab collects every image that {{ HOST_NAME }} generates while Image Bench is open, each
         with its parameters.
       </p>
-      <p>The toolbar and what you can do with the results:</p>
+      <p>The toolbar and the results offer the following:</p>
       <ul>
         <li><b>Generate × N</b> runs a batch with the current parameters and a random seed for each image. The
           count button beside it sets the number chosen in <b>Settings › Images set by the count button</b>,
@@ -732,7 +734,7 @@ const hostOrigin = location.origin;
         them as a .zip, which can be imported into a tray.
       </p>
       <p>
-        Images are checked as in the <a href="#" @click.prevent="scrollTo('generated')">Generated</a> tab, with the
+        Select images as in the <a href="#" @click.prevent="scrollTo('generated')">Generated</a> tab, which has the
         same buttons to add them to the Compare tab or a tray. <b>Remove selected</b> removes them from the tab
         (the files stay on disk).
       </p>
@@ -880,10 +882,10 @@ const hostOrigin = location.origin;
         <li><b>Open Image Bench in a popup window instead of a browser tab</b>: the 🔬 button and the
           <code>/image-bench/app</code> link open Image Bench in a popup window (without bookmarks and extension
           buttons) instead of a regular browser tab. The change takes effect the next time Image Bench is opened.</li>
-        <li><b>Flash the Generated tab when an image arrives while another tab is shown</b>: generations started
-          from the Generate tab or in {{ HOST_NAME }} itself leave Image Bench on the tab it shows, and the tab that
-          receives each image flashes. Turn this setting
-          off to stop the Generated tab from flashing; the Upscaled tab still flashes.</li>
+        <li><b>Flash the Generated tab when an image arrives while another tab is shown</b>: a generation started
+          from the Generate tab or in {{ HOST_NAME }} itself does not switch tabs; instead, the tab that receives
+          each image flashes. Turn this setting off to stop the Generated tab from flashing. The Upscaled tab
+          flashes either way.</li>
         <template v-if="isWebUI">
           <li><b>UI preset buttons</b>: the Forge UI presets that the buttons of the Generate tab switch to. The
             other presets remain available in the menu next to them.</li>
@@ -935,8 +937,7 @@ const hostOrigin = location.origin;
     <section id="manual-editors">
       <h2>Editors</h2>
       <p>
-        Plugins for <b>Photoshop</b>, <b>Krita</b> and <b>GIMP</b> come with this extension and connect the editor to
-        {{ HOST_NAME }}. They send the document and its selection to the Generate, ControlNet and Compare tabs, and
+        The plugins for <b>Photoshop</b>, <b>Krita</b> and <b>GIMP</b> connect the editor to {{ HOST_NAME }}. They send the document and its selection to the Generate, ControlNet and Compare tabs, and
         receive any image from Image Bench as a new document or layer.
       </p>
       <p>
@@ -1043,10 +1044,10 @@ const hostOrigin = location.origin;
         like <b>To Photoshop</b> in the ControlNet panes, opens the image as a new document.
         Middle-click or Shift+click it to place the image as a new layer of the active document instead. The layer
         is rasterized, so you can edit its pixels directly; check <b>Place as smart objects</b> in the plugin panel
-        to keep it a smart object. A notice at the bottom of the window shows the transfer until the image is in
-        Photoshop. With a plugin installed before this notice was added, the notice lasts only until the server has
-        passed the image on; reinstall the plugin above to fix this. The plugin panel also shows a blinking dot
-        while an image is sent or received, and its buttons wait until the transfer ends.
+        to keep it a smart object. A notice at the bottom of the window stays until the image is in Photoshop. With
+        an older plugin, the notice disappears as soon as the server has passed the image on; install the current
+        plugin above to fix this. During a transfer in either direction, the plugin panel shows a blinking dot and
+        its buttons wait until the transfer ends.
       </p>
 
       <h3 id="manual-photoshop-canny">Canny Edges plugin</h3>

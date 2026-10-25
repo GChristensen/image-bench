@@ -230,11 +230,16 @@
     <!-- before / after -->
     <div class="ba">
       <div class="ba-head">
-        <div class="ba-sub">
-          <p class="disp">Upscaling one image.</p>
-          <p class="muted">Now multiply by every image you keep.</p>
+        <div class="ba-title">
+          <div class="ba-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          </div>
+          <div class="ba-sub">
+            <h2 class="disp">Upscaling one image.</h2>
+            <p class="muted">Now multiply by every image you keep.</p>
+          </div>
         </div>
-        <h2 class="disp">Six steps <span class="accent">→</span> one key.</h2>
+        <p class="disp ba-claim">Six steps <span class="accent">→</span> one key.</p>
       </div>
       <div class="ba-row">
         <div class="ba-before">
@@ -258,6 +263,22 @@
             <img src="img/generations/image05.jpg" alt="">
             <svg class="fill" viewBox="0 0 150 150" role="img" aria-label="The action rim with the Upscale sector highlighted" data-rim="mini"></svg>
           </div>
+        </div>
+      </div>
+      <div class="ba-features">
+        <div class="ba-feature">
+          <div class="ba-feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20v-4M12 20v-9M18 20V4"/></svg>
+          </div>
+          <div class="ba-feature-name"><span>Generate with steps</span><kbd class="mono">G</kbd></div>
+          <p>Provide a list of step counts and the image is rerun at each, same seed and prompt, to see where more steps stop paying off.</p>
+        </div>
+        <div class="ba-feature">
+          <div class="ba-feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></svg>
+          </div>
+          <div class="ba-feature-name"><span>Upscale with denoising</span><kbd class="mono">D</kbd></div>
+          <p>Upscale it at several denoising strengths in one go and keep the one that adds detail without redrawing the image.</p>
         </div>
       </div>
     </div>

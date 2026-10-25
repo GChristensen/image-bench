@@ -255,11 +255,28 @@ a.chip:hover { color: var(--accent-deep); box-shadow: inset 0 0 0 1px var(--acce
 
 /* before / after */
 .ba { display: flex; flex-direction: column; gap: 32px; padding-top: 32px; }
-.ba-head { display: flex; flex-wrap: wrap; gap: 12px 40px; align-items: baseline; justify-content: space-between; }
+.ba-head { display: flex; flex-wrap: wrap; gap: 12px 40px; align-items: center; justify-content: space-between; }
+.ba-title { display: flex; gap: 20px; align-items: center; }
+.ba-icon {
+  flex: none; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: var(--ink-on-accent); box-shadow: 0 4px 0 var(--accent-deep);
+}
 .sec .ba-head h2 { font-size: clamp(30px, 3.6vw, 46px); line-height: 1.05; }
 .ba-sub { display: flex; flex-direction: column; gap: 4px; }
-.ba-sub .disp { font-size: 22px; line-height: 1.3; font-weight: 700; color: var(--text); }
 .ba-sub .muted { font-size: 15px; line-height: 1.4; }
+.ba-claim { font-size: clamp(22px, 2.2vw, 26px); line-height: 1.1; font-weight: 700; color: var(--text2); }
+.ba-features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px; padding-top: 8px; }
+.ba-feature { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 18px; align-items: start; }
+.ba-feature-icon {
+  grid-row: span 2; width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  background: var(--disc); color: var(--accent-deep);
+}
+.ba-feature-name { display: flex; gap: 10px; align-items: center; font-size: 18px; font-weight: 700; }
+.ba-feature-name kbd {
+  font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 5px; background: #ffffff; color: var(--text2);
+  box-shadow: inset 0 0 0 1px var(--card-line), 0 1px 0 var(--card-line);
+}
+.ba-feature p { margin: 0; font-size: 16px; line-height: 1.45; color: var(--text2); }
 .ba-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; }
 .ba .label { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
 .ba-before {
@@ -555,7 +572,8 @@ a.chip:hover { color: var(--accent-deep); box-shadow: inset 0 0 0 1px var(--acce
   .hero { padding: 56px 0 72px; }
   .demo { margin-bottom: 56px; }
   .split-text, .hero-text, .flow-gallery, .inst, .ba-before, .ba-after, .cmp, .status-text { flex-basis: 100%; }
-  .steps { grid-template-columns: minmax(0, 1fr); }
+  .steps, .ba-features { grid-template-columns: minmax(0, 1fr); }
+  .ba-icon { width: 52px; height: 52px; border-radius: 13px; }
   .ba-before, .ba-after, .inst, .status-card, .tour-caption { padding: 22px 20px; }
   .slab { transform: none !important; }
   .iso-arrows svg { transform: rotate(90deg); margin: 30px 0; }
