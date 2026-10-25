@@ -320,7 +320,9 @@ const hostOrigin = location.origin;
           <span class="snippet-badge negative">−</span> when there is one) into the negative prompt. Middle-click
           inserts only the part for that prompt; Shift+click wraps the selection. <b>From selection</b> saves the
           selected text as a new snippet.</li>
-        <li><b>Checkpoint</b>: <AppIcon name="info" :size="13" class="inline-icon"/> opens the model's Civitai
+        <li><b>Checkpoint</b>: typing in the open dropdown (or on the closed one) narrows the list down to the
+          names containing every typed word; ↑/↓ and Enter pick one. The VAE / Text Encoder and workflow dropdowns
+          filter the same way. <AppIcon name="info" :size="13" class="inline-icon"/> opens the model's Civitai
           page.<template v-if="isWebUI"> The <AppIcon name="box" :size="13" class="inline-icon"/>/<AppIcon
           name="puzzle" :size="13" class="inline-icon"/> button before it switches to the Forge Neo VAE / Text
           Encoder list, which is kept per <b>UI preset</b> (the setting in the WebUI).</template></li>

@@ -20,6 +20,7 @@ import ProgressIndicator from "@/components/ProgressIndicator.vue";
 import PromptField from "@/components/PromptField.vue";
 import ReferencesPanel from "@/components/ReferencesPanel.vue";
 import ModulesSelect from "@/components/ModulesSelect.vue";
+import FilterSelect from "@/components/FilterSelect.vue";
 import ResizeToInput from "@/components/ResizeToInput.vue";
 import SizeSelect from "@/components/SizeSelect.vue";
 import UiPresetSelect from "@/components/UiPresetSelect.vue";
@@ -1449,13 +1450,10 @@ const gridStyle = computed(() => ({
           ><AppIcon :name="shownModelSlot === 'modules' ? 'puzzle' : 'box'" :size="14"/></button>
         <ModulesSelect v-if="shownModelSlot === 'modules'" class="checkpoint" :model-value="form.modules"
                        :choices="modules" @update:model-value="v => setParam('modules', v)"/>
-        <div v-else-if="has('checkpoint')" class="select-wrap checkpoint">
-          <select :value="checkpointValue" aria-label="Checkpoint" :title="checkpointTitle"
-                  @change="e => setParam('checkpoint', e.target.value)">
-            <option v-for="title in withCurrent(checkpointChoices, checkpointValue)" :key="title" :value="title">{{ title }}</option>
-          </select>
-          <AppIcon name="chevron" :size="14"/>
-        </div>
+        <FilterSelect v-else-if="has('checkpoint')" class="checkpoint" :model-value="checkpointValue"
+                      :choices="withCurrent(checkpointChoices, checkpointValue)" label="Checkpoint"
+                      :title="checkpointTitle" empty-text="No checkpoints"
+                      @update:model-value="v => setParam('checkpoint', v)"/>
         <span v-else class="checkpoint"></span>
         <button v-if="has('checkpoint')" class="ib" :class="{busy: modelInfoBusy}" :disabled="!form.checkpoint || modelInfoBusy"
                 title="Open the checkpoint page on Civitai" aria-label="Civitai model info" @click="onModelInfo"

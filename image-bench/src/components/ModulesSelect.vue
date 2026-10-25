@@ -8,6 +8,7 @@ import {computed, onBeforeUnmount, onMounted, ref} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import FilterChecklist from "@/components/FilterChecklist.vue";
 import {MODULE_KIND_LABELS, modulesSummary, stripExtension} from "@/modules.js";
+import {typeIntoFilter} from "@/typeToFilter.js";
 
 const model = defineModel({type: Array, default: () => []});
 
@@ -22,6 +23,7 @@ const props = defineProps({
 const open = ref(false);
 const filter = ref("");
 const element = ref(null);
+const checklist = ref(null);
 
 // Chosen modules missing from the choices (e.g. the list is not loaded yet) are listed too
 const items = computed(() => {
@@ -46,6 +48,8 @@ function onKeydown(e) {
     e.stopPropagation();
     open.value = false;
   }
+  else if (open.value)
+    typeIntoFilter(e, checklist.value?.input);
 }
 
 onMounted(() => document.addEventListener("mousedown", onDocumentMousedown));
@@ -59,7 +63,7 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onDocumentMoused
       >{{ summary || "Built-in VAE / Text Encoder" }}</button>
     <AppIcon name="chevron" :size="14"/>
     <div v-if="open" class="menu popover" role="dialog" aria-label="VAE / Text Encoder">
-      <FilterChecklist v-model="model" v-model:filter="filter" :items="items" :groups="MODULE_KIND_LABELS"
+      <FilterChecklist ref="checklist" v-model="model" v-model:filter="filter" :items="items" :groups="MODULE_KIND_LABELS"
                        empty-text="No VAE or text encoder files" autofocus/>
     </div>
   </div>

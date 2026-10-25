@@ -48,7 +48,7 @@ function toggle(value, checked) {
 
 onMounted(() => props.autofocus && nextTick(() => filterInput.value?.focus()));
 
-defineExpose({focus: () => filterInput.value?.focus()});
+defineExpose({focus: () => filterInput.value?.focus(), input: filterInput});
 </script>
 
 <template>

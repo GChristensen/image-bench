@@ -6,6 +6,7 @@
 import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import TreeView from "@/components/TreeView.vue";
+import {typeIntoFilter} from "@/typeToFilter.js";
 
 const props = defineProps({
   // [{path, name}], name: the path below the workflows folder without .json ("portraits/anima/base")
@@ -125,6 +126,8 @@ function onKeydown(e) {
     e.stopPropagation();
     open.value = false;
   }
+  else if (open.value)
+    typeIntoFilter(e, filterInput.value);
 }
 
 onMounted(() => document.addEventListener("mousedown", onDocumentMousedown));
