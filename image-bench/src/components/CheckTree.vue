@@ -134,6 +134,7 @@ const rows = computed(() => {
                  @change="e => emit('toggle', row.item.key, e.target.checked)">
           <span class="item-label" :title="row.item.label">{{ row.item.name }}</span>
           <span v-if="params[row.item.key]" class="params-dot" title="Has custom parameters"></span>
+          <span v-if="$slots['item-actions']" class="item-actions"><slot name="item-actions" :item="row.item"/></span>
         </div>
       </template>
     </div>
@@ -240,6 +241,19 @@ const rows = computed(() => {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Shown on hover, and while busy, so that a spinner stays visible */
+.item-actions {
+  display: none;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: -4px;
+}
+
+.item:hover .item-actions,
+.item-actions:has(.busy) {
+  display: flex;
 }
 
 .params-dot {

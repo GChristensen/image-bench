@@ -60,7 +60,7 @@ import {createImageLink, ensureGenerationIdle, isGenerationActive} from "@/sdweb
 import {useCtrlKey} from "@/composables/useCtrlKey.js";
 import {useHostStall} from "@/composables/useHostStall.js";
 import {reloadStalledHost} from "@/hostResync.js";
-import {fetchModelInfo} from "@/civitai.js";
+import {fetchModelInfo, showModelInfo} from "@/civitai.js";
 import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {requestHost} from "@/hostRequest.js";
@@ -451,6 +451,45 @@ function onLoraToggle(names, checked) {
   }
 
   setParam("prompt", prompt);
+}
+
+// Names of the LoRAs whose Civitai info is being fetched: the first request hashes the file
+const loraInfoBusy = ref(new Set());
+
+function setLoraInfoBusy(name, busy) {
+  const names = new Set(loraInfoBusy.value);
+  busy ? names.add(name) : names.delete(name);
+  loraInfoBusy.value = names;
+}
+
+// Civitai info dialog of a LoRA; direct: its Civitai page (or the search by name) in a new tab
+async function onLoraInfo(name, direct = false) {
+  if (loraInfoBusy.value.has(name))
+    return;
+
+  const query = {kind: "lora", name};
+  // Opened before the request, which may outlast the user activation that allows opening a tab
+  const tab = direct ? window.open("about:blank", "_blank") : null;
+  let info;
+
+  setLoraInfoBusy(name, true);
+
+  try {
+    info = await fetchModelInfo(query);
+  }
+  finally {
+    setLoraInfoBusy(name, false);
+  }
+
+  const url = info.url || info.searchUrl;
+
+  if (tab && url && !info.error) {
+    tab.location.href = url;
+    return;
+  }
+
+  tab?.close();
+  await showModelInfo(query, {info});
 }
 
 onBeforeMount(async () => {
@@ -1570,7 +1609,16 @@ const gridStyle = computed(() => ({
                      storage-key="imageBench_generateLoraCollapsed"
                      @toggle="(name, checked) => onLoraToggle([name], checked)"
                      @toggle-many="onLoraToggle"
-                     @focus="name => onLoraToggle([name], !selectedLoras.has(name))"/>
+                     @focus="name => onLoraToggle([name], !selectedLoras.has(name))">
+            <template #item-actions="{item}">
+              <button class="lora-info" :class="{busy: loraInfoBusy.has(item.key)}"
+                      title="Civitai info (middle-click or Shift+click: open the Civitai page)" aria-label="Civitai info"
+                      @click.stop="e => onLoraInfo(item.key, e.shiftKey)"
+                      @auxclick.stop="e => e.button === 1 && onLoraInfo(item.key, true)"
+                      @mousedown.middle.prevent
+              ><span v-if="loraInfoBusy.has(item.key)" class="spinner"></span><AppIcon v-else name="info" :size="12"/></button>
+            </template>
+          </CheckTree>
           <div v-else class="empty">{{ loras.length ? "No matching LoRAs" : "No LoRAs" }}</div>
         </div>
 
@@ -2101,6 +2149,24 @@ const gridStyle = computed(() => ({
   border: 1px solid var(--ib-border);
   border-radius: 6px;
   background: var(--ib-surface);
+}
+
+.lora-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--ib-muted);
+  cursor: pointer;
+}
+
+.lora-info:hover {
+  color: var(--ib-text);
 }
 
 .empty {

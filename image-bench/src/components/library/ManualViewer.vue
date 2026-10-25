@@ -334,7 +334,9 @@ const hostOrigin = location.origin;
           name="puzzle" :size="13" class="inline-icon"/> button before it switches to the Forge Neo VAE / Text
           Encoder list, which is kept per <b>UI preset</b> (the setting in the WebUI).</template></li>
         <li><b>LoRA list</b>: checking a LoRA adds its <code>&lt;lora:name:weight&gt;</code> tag (and activation
-          text) to the prompt, and the LoRA stays checked while the tag is there.
+          text) to the prompt, and the LoRA stays checked while the tag is there. Hovering a LoRA shows
+          <AppIcon name="info" :size="13" class="inline-icon"/> for its Civitai information; a middle click or
+          Shift+click on it opens the Civitai page of the LoRA instead.
           <AppIcon name="refresh" :size="13" class="inline-icon"/> rescans the checkpoints and LoRAs.
           <span v-if="isComfy">This requires the <b>Image Bench Prompt</b> node (see
             <a href="#" @click.prevent="scrollTo('comfy-setup')">ComfyUI setup</a>).</span></li>
@@ -932,7 +934,7 @@ const hostOrigin = location.origin;
       </p>
       <ul>
         <li><b>Clear generated images</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> removes all
-          images from the Generated, Upscaled and Explore tabs. The trays, the
+          images from the Generated, Upscaled and Explore tabs and the ControlNet sweep. The trays, the
           Compare tab, the prompts and the parameters are kept, and no files are deleted.</li>
         <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
           name="nuke" :size="13" class="inline-icon"/> is for starting a new project. It also empties both trays and

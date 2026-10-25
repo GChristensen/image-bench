@@ -4,6 +4,7 @@ import {useImageTrayStore} from "@/stores/imageTray.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useCompareStore} from "@/stores/compare.js";
+import {useControlNetSweepStore} from "@/stores/controlnetSweep.js";
 import {useProjectsStore} from "@/stores/projects.js";
 import {usePromptHistoryStore} from "@/stores/promptHistory.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
@@ -16,12 +17,13 @@ import {HOST_NAME, isWebUI} from "@/host.js";
  */
 
 // The views that are not trays, as named in the confirmations
-export const VIEWS = "Generated, Explore and Upscaled tabs";
+export const VIEWS = "Generated, Explore and Upscaled tabs and the ControlNet sweep";
 
 export function clearViews() {
   useExploreImagesStore().clear();
   useGeneratedImagesStore().clear();
   useUpscaledImagesStore().clear();
+  useControlNetSweepStore().clear();
 }
 
 export function clearViewsAndTrays() {
