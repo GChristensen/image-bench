@@ -372,7 +372,12 @@ const hostOrigin = location.origin;
           <AppIcon name="infinity" :size="13" class="inline-icon"/>), it runs a batch in the Generated tab.
           <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
           skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click or a middle click
-          on Stop stops the generation and starts a new one a second later.</li>
+          on Stop stops the generation and starts a new one a second later.<template v-if="isWebUI"> One Stop
+          is enough, also right after Generate: the generation ends before its first image (a model being loaded
+          finishes loading first; the toolbar shows "Stopping…" meanwhile). In the rare case that the WebUI page
+          keeps showing a generation after the server has been idle for 10 seconds, the toolbar says so and
+          offers its <AppIcon name="refresh" :size="13" class="inline-icon"/> button, which reloads the WebUI
+          page and ends the run.</template></li>
         <li><b>Project cube</b>: while a project is current, the <AppIcon name="box" :size="13" class="inline-icon"/>
           cube joined to Generate, in the project color, reminds you that the workspace is that project; click it to
           save the project or start a new workspace. The Projects chapter tells when it asks before generating.</li>

@@ -32,7 +32,9 @@ const WEBUI_FEATURES = {
     referencesEnabled: true,
     referenceMaxSize: true,
     // Dropdown of the workflows of the extension (ComfyUI)
-    workflowSelect: false
+    workflowSelect: false,
+    // Telling a page that shows a generation the server has ended (useHostStall.js)
+    stallCheck: true
   },
   controlnet: {
     tabSwitch: true,
@@ -64,7 +66,8 @@ const COMFY_FEATURES = {
     img2imgOptions: false,
     referencesEnabled: false,
     referenceMaxSize: false,
-    workflowSelect: true
+    workflowSelect: true,
+    stallCheck: false
   },
   controlnet: {
     tabSwitch: false,

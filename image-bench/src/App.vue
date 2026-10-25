@@ -39,7 +39,7 @@ import HostFrame from "@/components/HostFrame.vue";
 import {HOST_NAME} from "@/host.js";
 import {backendConnected, onBackendReconnected, startBackendMonitor} from "@/backendStatus.js";
 import {backendDownTitle, canRestart, restartHost, restarting, startHostRestart} from "@/hostRestart.js";
-import {resyncHost} from "@/hostResync.js";
+import {resyncHost, setRunEnder} from "@/hostResync.js";
 import {toast} from "@/toast.js";
 import ConsoleDrawer from "@/components/ConsoleDrawer.vue";
 import {consoleOpen, onConsoleKey, toggleConsole} from "@/consoleDrawer.js";
@@ -212,6 +212,12 @@ onBackendReconnected(async () => {
     await onSDEvent({type: "GENERATION_FINISHED"});
 
   toast(interrupted ? `${HOST_NAME} is back. The run was interrupted by the restart` : `${HOST_NAME} is back`);
+});
+
+// A WebUI page reloaded since it shows a generation that has ended on the server (hostResync.js)
+setRunEnder(async () => {
+  if (runActive)
+    await onSDEvent({type: "GENERATION_FINISHED"});
 });
 
 function trackRun(e) {

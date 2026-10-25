@@ -132,6 +132,8 @@ class ImageBenchApi():
         self.add_api_route("/editor/send", self.editor_send, methods=["POST"])
         self.add_api_route("/editor/image", self.get_editor_image, methods=["GET"])
         self.add_api_route("/editor/status", self.get_editor_status, methods=["GET"])
+        self.add_api_route("/generation_status", self.get_generation_status, methods=["GET"])
+        self.add_api_route("/interrupt", self.interrupt, methods=["POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/editor/host-websocket", self.handle_editor_host_websocket)
         self.app.add_websocket_route(self.BASE_PATH + "/editor/websocket", self.handle_editor_websocket)
         # The routes of the Photoshop plugins installed before the editor bridge
@@ -505,6 +507,48 @@ class ImageBenchApi():
     def get_editor_status(self):
         """The name of the connected editor, or null"""
         return JSONResponse(self.editor.status())
+
+    def get_generation_status(self):
+        """Whether the server runs or queues a generation. The page may still show one that has ended here,
+        when Gradio lost its result (an interrupt just as the job ended); the popup then offers to reload it"""
+        from modules import call_queue, progress
+
+        # FIFOLock of Forge wraps a threading.Lock, older versions use one directly
+        lock = getattr(call_queue.queue_lock, "_lock", call_queue.queue_lock)
+        locked = lock.locked() if hasattr(lock, "locked") else False
+        busy = locked or progress.current_task is not None or bool(progress.pending_tasks) or bool(shared.state.job)
+
+        return JSONResponse({"busy": busy}, headers={"Cache-Control": "no-store"})
+
+    async def interrupt(self, request: Request):
+        """
+        Stop the generation of the page's tasks ({tasks: [ids]}, the ids of Forge's submit()) without its Interrupt
+        button, whose "Interrupting..." placeholder stays for good if a click comes after the job has ended.
+        A running task is interrupted as the button does; one not begun yet is interrupted as it begins, since
+        begin() clears an earlier interrupt (install_interrupt_hook()); a finished one is left alone, so that a late
+        Stop does not end the next generation. Without ids, the running job is interrupted
+        """
+        from modules import progress
+
+        body = await persist.read_request_body(request)
+        tasks = [task for task in (json.loads(body or b"{}").get("tasks") or []) if isinstance(task, str)]
+        interrupted = pending = False
+
+        # state.job is set by begin(), current_task just after it
+        if progress.current_task in tasks or shared.state.job in tasks or not tasks and shared.state.job:
+            interrupt_like_button()
+            interrupted = True
+        else:
+            stops = getattr(shared.state.begin, "_image_bench_stops", None)
+
+            for task in tasks:
+                if stops is not None and task not in progress.finished_tasks:
+                    stops[task] = time.time()
+                    pending = True
+
+            prune_pending_stops(stops)
+
+        return JSONResponse({"interrupted": interrupted, "pending": pending}, headers={"Cache-Control": "no-store"})
 
     def get_editor_image(self, kind: str):
         image = self.editor_images.get(kind)
@@ -969,6 +1013,66 @@ def install_video_hook(api):
     save_video._image_bench_api = api
 
 
+PENDING_STOP_AGE = 120
+PENDING_STOP_LIMIT = 16
+
+
+def interrupt_like_button():
+    """The interrupt_function of the Interrupt button (modules/ui_toprow.py): with "Don't Interrupt in the middle",
+    the first stop of a batch ends it after the current image"""
+    state = shared.state
+
+    if not state.stopping_generation and state.job_count > 1 and getattr(shared.opts, "interrupt_after_current", False):
+        state.stop_generating()
+    else:
+        state.interrupt()
+
+
+def prune_pending_stops(stops):
+    """Drop the stops of tasks that never began: too old, or beyond the limit (the oldest first)"""
+    if stops is None:
+        return
+
+    now = time.time()
+
+    for task, added in list(stops.items()):
+        if now - added > PENDING_STOP_AGE:
+            del stops[task]
+
+    while len(stops) > PENDING_STOP_LIMIT:
+        del stops[next(iter(stops))]
+
+
+def install_interrupt_hook():
+    """
+    Wrap shared.state.begin once, so that a stop of a task that had not begun yet (/image-bench/interrupt) is applied
+    as it begins: begin() clears the interrupt flag. The pending stops live on the wrapper, so a reload of the scripts
+    keeps them
+    """
+    state = shared.state
+    begin = getattr(state, "begin", None)
+
+    if begin is None or getattr(begin, "_image_bench", False):
+        return
+
+    original = begin
+
+    def begin(*args, **kwargs):
+        original(*args, **kwargs)
+
+        try:
+            job = kwargs.get("job", args[0] if args else None)
+
+            if job is not None and begin._image_bench_stops.pop(job, None) is not None:
+                state.interrupt()
+        except Exception as e:
+            print(f"[Image Bench] Unable to apply a pending stop: {e}")
+
+    begin._image_bench = True
+    begin._image_bench_stops = {}
+    state.begin = begin
+
+
 try:
     # As early as possible: the console drawer shows the output from here on
     console.install_stream_tee()
@@ -980,6 +1084,7 @@ try:
     script_callbacks.on_app_started(api.start)
     script_callbacks.on_image_saved(api.on_image_saved)
     install_video_hook(api)
+    install_interrupt_hook()
     script_callbacks.on_before_component(api.on_before_config_presets)
 except Exception as e:
     print(e)

@@ -56,6 +56,8 @@ import {useControlNetStore} from "@/stores/controlnet.js";
 import {HOST_NAME, isComfy} from "@/host.js";
 import {createImageLink, ensureGenerationIdle, isGenerationActive} from "@/sdwebui.js";
 import {useCtrlKey} from "@/composables/useCtrlKey.js";
+import {useHostStall} from "@/composables/useHostStall.js";
+import {reloadStalledHost} from "@/hostResync.js";
 import {fetchModelInfo} from "@/civitai.js";
 import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
@@ -637,9 +639,18 @@ async function onGenerateVariations() {
   webUI.generateVariations(strength, nImages, {mode: generationMode.value});
 }
 
+// A stop takes effect when sampling would begin, which may wait for a model load
+const stopping = ref(false);
+
 function onInterrupt() {
+  stopping.value = true;
   webUI.stopGeneration();
 }
+
+watch(generating, isGenerating => {
+  if (!isGenerating)
+    stopping.value = false;
+});
 
 // Ctrl+click or middle click on Stop: stop, then generate again once the host is idle
 const ctrlDown = useCtrlKey();
@@ -665,12 +676,31 @@ async function onRestart() {
   }
 }
 
+// The page stays busy after an interrupt that met the end of the job (useHostStall.js); busy is current
+// only while this tab is shown and mirrors the page
+const tabShown = ref(false);
+onActivated(() => tabShown.value = true);
+onDeactivated(() => tabShown.value = false);
+
+const hostStalled = useHostStall(() => tabShown.value && has("stallCheck") && connected.value && sdWebUI.busy);
+
+function onReloadStalledHost() {
+  hostStalled.value = false;
+  reloadStalledHost();
+}
+
 // What the status slot of the toolbar shows, one at a time; null if nothing
 const toolbarStatus = computed(() => {
   if (!connected.value)
     return {text: `Waiting for ${HOST_NAME}…`, waiting: true};
+  if (hostStalled.value)
+    return {text: `${HOST_NAME} page is stuck`, stalled: true,
+            title: `The ${HOST_NAME} page still shows a generation that has ended on the server`,
+            action: {title: `Reload the ${HOST_NAME} page`, run: onReloadStalledHost}};
   if (restarting.value)
     return {text: "Restarting the generation…"};
+  if (stopping.value)
+    return {text: "Stopping…", full: true};
   // The restore may switch the UI preset itself
   if (sdWebUI.restoringParams)
     return {text: "Restoring parameters…"};
@@ -1358,10 +1388,14 @@ const gridStyle = computed(() => ({
       <!-- The free space of the toolbar, with the status centered in it -->
       <div class="status-slot">
         <Transition name="status" mode="out-in">
-          <span v-if="toolbarStatus" :key="toolbarStatus.text" class="status-pill" :class="{waiting: toolbarStatus.waiting}"
-                role="status" :title="toolbarStatus.text">
-            <span v-if="toolbarStatus.waiting" class="dot"></span><span v-else class="spinner"></span>
+          <span v-if="toolbarStatus" :key="toolbarStatus.text" class="status-pill"
+                :class="{waiting: toolbarStatus.waiting, stalled: toolbarStatus.stalled, full: toolbarStatus.full}" role="status" :title="toolbarStatus.title ?? toolbarStatus.text">
+            <span v-if="toolbarStatus.waiting" class="dot"></span>
+            <AppIcon v-else-if="toolbarStatus.stalled" name="alert" :size="12"/>
+            <span v-else class="spinner"></span>
             <span class="status-text">{{ toolbarStatus.text }}</span>
+            <button v-if="toolbarStatus.action" type="button" class="status-action" :title="toolbarStatus.action.title"
+                    :aria-label="toolbarStatus.action.title" @click="toolbarStatus.action.run"><AppIcon name="refresh" :size="11"/></button>
           </span>
         </Transition>
       </div>
@@ -1821,6 +1855,28 @@ const gridStyle = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
+  container-type: inline-size;
+}
+
+/* Too narrow for the text: the icon and the action remain, the pill's title tells the rest */
+@container (max-width: 150px) {
+  .status-pill:not(.full) .status-text {
+    display: none;
+  }
+
+  .status-pill:not(.full) {
+    padding: 0 6px;
+  }
+}
+
+/* A short text shown whole, never cut */
+.status-pill.full {
+  flex: none;
+  max-width: none;
+}
+
+.status-pill.full .status-text {
+  overflow: visible;
 }
 
 /* The Generate button joined to the project cube (ProjectCube.vue) */
@@ -1848,6 +1904,32 @@ const gridStyle = computed(() => ({
   border-color: var(--ib-border-2);
   background: var(--ib-elev-2);
   color: var(--ib-text-2);
+}
+
+.status-pill.stalled {
+  padding-right: 3px;
+  border-color: color-mix(in srgb, var(--ib-warn) 45%, transparent);
+  background: color-mix(in srgb, var(--ib-warn) 12%, transparent);
+  color: var(--ib-warn);
+}
+
+.status-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ib-warn);
+  color: var(--ib-bg, #000);
+  cursor: pointer;
+}
+
+.status-action:hover {
+  filter: brightness(1.12);
 }
 
 .status-pill .spinner {

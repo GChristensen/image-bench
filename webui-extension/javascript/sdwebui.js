@@ -96,7 +96,46 @@ function onSendToTxt2ImgButtonClick(e) {
     messageBus.publish('EXPLORATION_INVALIDATE');
 }
 
+// The ids of the running tasks, set by Forge's submit() and removed when their progress ends
+const TASK_ID_KEYS = ["txt2img_task_id", "img2img_task_id"];
+
+/**
+ * Stop the generation on the server (/image-bench/interrupt), not with the Interrupt button: its click shows the
+ * "Interrupting..." placeholder, which stays for good if a click comes after the job has ended, and a stop before
+ * the job begins is cleared by Forge. The end of the run is told as before, when the page hides the button again.
+ * The button is clicked only if the request fails
+ */
 export async function stopGeneration() {
+    messageBus.publish('STRATEGY_FINISH_REQUEST');
+
+    const tasks = TASK_ID_KEYS.map(key => {
+        try {
+            return localStorage.getItem(key);
+        } catch {
+            return null;
+        }
+    }).filter(Boolean);
+
+    try {
+        const response = await fetch("/image-bench/interrupt", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({tasks})
+        });
+
+        if (response.ok)
+            return;
+    } catch (e) {
+        console.warn('[Image Bench] Unable to stop the generation on the server:', e);
+    }
+
+    await clickInterruptButton();
+}
+
+/**
+ * Stop with the Interrupt button of the shown tab, as a user click does
+ */
+async function clickInterruptButton() {
     const mousedownEvent = new MouseEvent('mousedown', {
         bubbles: true,
         cancelable: true,

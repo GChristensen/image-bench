@@ -31,11 +31,36 @@ export async function resyncHost() {
   }
 
   await delay(RELOAD_DELAY);
+  reloadHostPage();
+}
 
+/**
+ * Reload the WebUI page, attached in the iframe or the opener
+ */
+export function reloadHostPage() {
   if (EMBEDDED)
     getHostWindow()?.location.reload();
   else
     reloadOpener();
+}
+
+// Ends the run of the popup, set by App.vue, which tracks it
+let endRun = null;
+
+/**
+ * @param {() => Promise<void>} callback
+ */
+export function setRunEnder(callback) {
+  endRun = callback;
+}
+
+/**
+ * Reload a WebUI page that shows a generation the server has ended (useHostStall.js). Its strategy, if any,
+ * goes with it, and the reloaded page knows nothing of the run, so the popup ends it
+ */
+export async function reloadStalledHost() {
+  reloadHostPage();
+  await endRun?.();
 }
 
 /**
