@@ -1,0 +1,303 @@
+/* Image Bench tutorial. The look of the landing page (landing/styles.css): light page, orange accent
+   (ACCENT_COLORS.orange of the app: #f97316, deep #c2410c), screenshots in dark frames. Static, no script. */
+
+:root {
+  --page: #fbfaf8;
+  --band: #fff6ee;
+  --band-line: #fbe3cf;
+  --grey-band: #f5f3f0;
+  --line: #ece8e4;
+  --card-line: #e7e5e4;
+  --text: #18181b;
+  --text2: #44403c;
+  --muted: #57534e;
+  --logo: #78716c;
+  --header: rgba(251, 250, 248, 0.86);
+  --accent: #f97316;
+  --accent-text: #ea580c;
+  --accent-deep: #c2410c;
+  --ink-on-accent: #1a0b00;
+  --dark: #18181b;
+  --dark-line: #27272a;
+  --warn-bg: #f5f3f0;
+  --warn-line: #d6d3d1;
+  --shadow-window: 0 30px 60px -24px rgba(68, 30, 6, 0.45), 0 0 0 1px var(--dark-line);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family: 'Figtree', system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img { max-width: 100%; }
+a { color: var(--accent-deep); }
+a:hover { color: #9a3412; }
+h1, h2, h3, h4, p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.disp { font-family: 'Bricolage Grotesque', 'Figtree', sans-serif; letter-spacing: -0.02em; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+.accent { color: var(--accent-text); }
+.muted { color: var(--muted); }
+
+code {
+  font: 0.86em 'JetBrains Mono', ui-monospace, monospace;
+  padding: 1px 6px; border-radius: 6px;
+  background: #f3efeb; color: #3f3a36; white-space: nowrap;
+}
+kbd {
+  display: inline-block; min-width: 1.7em; padding: 0 6px; text-align: center;
+  font: 600 0.8em/1.75 'JetBrains Mono', ui-monospace, monospace;
+  border-radius: 6px; background: #ffffff; color: var(--text);
+  box-shadow: inset 0 0 0 1px #d6d3d1, 0 1.5px 0 #d6d3d1;
+}
+
+.kicker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent-deep);
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 0 16px; border-radius: 12px;
+  font: 600 15px 'Figtree', sans-serif; text-decoration: none;
+}
+.btn-sec { color: var(--text); box-shadow: inset 0 0 0 1.5px #d4d4d8; }
+.btn-sec:hover { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--accent); }
+
+/* ---------------------------------------------------------------- header */
+
+.site-header {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--header); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
+}
+.header-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 68px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; }
+.brand:hover { color: var(--text); }
+.brand .disp { font-size: 20px; font-weight: 700; }
+.brand-sub { font: 600 13px 'JetBrains Mono', ui-monospace, monospace; color: var(--accent-deep);
+  padding: 2px 8px; border-radius: 999px; background: var(--band); box-shadow: inset 0 0 0 1px var(--band-line); }
+.header-links { display: flex; align-items: center; gap: 18px; }
+.navlink { color: var(--text2); text-decoration: none; font-weight: 500; font-size: 15px; padding: 10px 4px; }
+.navlink:hover { color: var(--accent-deep); }
+
+/* ---------------------------------------------------------------- hero */
+
+.hero { padding: 80px 0 72px; background: var(--band); border-bottom: 1px solid var(--band-line); }
+.hero-row { display: flex; flex-wrap: wrap; gap: 40px 64px; align-items: flex-end; }
+.hero-text { flex: 1 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.hero h1 { font-size: clamp(36px, 5vw, 64px); line-height: 1.02; font-weight: 800; }
+.hero-lead { font-size: 20px; line-height: 1.55; color: var(--text2); max-width: 36em; }
+.legend-card {
+  flex: 0 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 12px;
+  padding: 22px 24px; border-radius: 16px; background: #ffffff; box-shadow: inset 0 0 0 1px var(--band-line);
+}
+.legend-card h2 { font: 600 13px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted); }
+.legend-row { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 1.5; color: var(--text2); }
+.legend-row .tag { flex: none; }
+
+/* ---------------------------------------------------------------- layout: contents + chapters */
+
+.layout { display: flex; flex-wrap: wrap; gap: 56px; align-items: flex-start; padding-top: 64px; padding-bottom: 120px; }
+.toc {
+  flex: 1 1 250px; max-width: 280px; min-width: 0;
+  position: sticky; top: 92px; max-height: calc(100vh - 110px); overflow-y: auto;
+  padding-right: 6px;
+}
+.toc h2 { font: 600 13px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.toc a {
+  display: flex; gap: 12px; align-items: baseline; padding: 7px 10px; border-radius: 10px;
+  color: var(--text2); text-decoration: none; font-size: 15px; line-height: 1.35;
+}
+.toc a:hover { background: var(--band); color: var(--accent-deep); }
+.toc .n { flex: none; width: 1.6em; font: 600 13px 'JetBrains Mono', ui-monospace, monospace; color: var(--accent); }
+
+.content { flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 96px; }
+
+/* ---------------------------------------------------------------- chapter */
+
+.chapter { display: flex; flex-direction: column; gap: 28px; }
+/* the chapter head opens with a full-width orange rule; under it the chapter label and the count, then a large title */
+.chapter-head { display: flex; flex-direction: column; gap: 16px; }
+/* the rule and the chapter label hanging from it are one shape: the label is a tab with its top edge on the rule */
+.chapter-head::before { content: ""; height: 4px; margin-bottom: -16px; border-radius: 2px 2px 0 0; background: var(--accent-text); }
+.chapter-kicker { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 4px 16px; }
+.chapter-kicker > span:first-child {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 7px 16px 8px; border-radius: 0 0 10px 10px;
+  background: var(--accent-text); color: #ffffff; font-weight: 700;
+}
+.chapter-count { padding-top: 7px; color: var(--logo); }
+.chapter h2 { font-size: clamp(34px, 4vw, 52px); line-height: 1.04; font-weight: 800; letter-spacing: -0.025em; }
+.scenario { font-size: 19px; line-height: 1.6; color: var(--text2); max-width: 44em; }
+
+.topic { display: flex; flex-direction: column; gap: 14px; }
+.topic h3 { font-family: 'Bricolage Grotesque', 'Figtree', sans-serif; font-size: 24px; font-weight: 700;
+  letter-spacing: -0.01em; line-height: 1.25; }
+.topic p, .topic li { color: var(--text2); max-width: 46em; }
+.topic ul, .topic ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 8px; }
+
+/* numbered steps */
+ol.steps { list-style: none; padding: 0; counter-reset: step; gap: 12px; }
+ol.steps > li { position: relative; padding-left: 44px; counter-increment: step; }
+ol.steps > li::before {
+  content: counter(step); position: absolute; left: 0; top: 1px;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font: 600 13px 'JetBrains Mono', ui-monospace, monospace;
+  background: var(--accent); color: var(--ink-on-accent);
+}
+
+/* callouts */
+.callout { display: flex; flex-direction: column; gap: 8px; padding: 18px 22px; border-radius: 14px; max-width: 48em; }
+.callout p, .callout li { color: var(--text2); }
+.callout ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+.callout-title { display: flex; align-items: center; gap: 8px; font: 600 13px 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.08em; text-transform: uppercase; }
+.callout svg { flex: none; }
+.non-obvious { background: var(--band); box-shadow: inset 0 0 0 1px var(--band-line); }
+.non-obvious .callout-title { color: var(--accent-deep); }
+.fix { background: var(--warn-bg); box-shadow: inset 0 0 0 1px var(--warn-line); }
+.fix .callout-title { color: #44403c; }
+
+/* an app button drawn in the text: dark like the app's toolbar */
+.ui {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 1.7em; height: 1.5em; padding: 0 4px; border-radius: 6px; vertical-align: -0.3em;
+  background: #27272a; color: #e4e4e7; font-size: 0.85em; font-weight: 600; white-space: nowrap;
+}
+.ui-wide { padding: 0 8px 0 6px; }
+/* key, icon and the first text line share one 21px line box (15px text at line-height 1.4), so they stay aligned when the text wraps */
+.key .ui { flex: none; height: 21px; vertical-align: 0; }
+
+/* replicas of app controls (Generate toolbar buttons, status pills) on the app's dark ground, colors of base.css */
+.app-demo {
+  display: flex; flex-direction: column; gap: 10px; max-width: 48em;
+  padding: 16px 18px; border-radius: 14px; background: #111317; box-shadow: 0 0 0 1px #27272a;
+  font: 12.5px/1.4 'Figtree', system-ui, sans-serif;
+}
+.app-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
+.app-note { color: #a7aeb8; font-size: 13px; }
+.app-note kbd { font-size: 0.9em; }
+.app-btns { display: inline-flex; gap: 6px; min-width: 190px; }
+.app-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
+  border: 1px solid transparent; border-radius: 5px; font-weight: 500; color: #a7aeb8;
+}
+.app-btn.primary { background: #f97316; color: #1a0b00; font-weight: 600; }
+.app-btn.stop { background: #e5484d; color: #ffffff; font-weight: 600; }
+.app-btn.outline { border-color: #2a2e35; background: #1d2025; color: #e3e6ea; }
+.app-btn.off { opacity: 0.45; }
+/* Generate / Stop / Restart is one button that keeps the width of its widest label, as .btn.swap does in the app */
+.app-btns > .app-btn:first-child { width: 98px; justify-content: center; }
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; height: 22px; padding: 0 10px;
+  border: 1px solid rgba(249, 115, 22, 0.4); border-radius: 11px;
+  background: rgba(249, 115, 22, 0.13); color: #f97316; font-size: 11.5px; white-space: nowrap;
+}
+.pill.waiting { border-color: #3a3f48; background: #252930; color: #a7aeb8; }
+.pill.stalled { padding-right: 3px; border-color: rgba(240, 164, 49, 0.45); background: rgba(240, 164, 49, 0.12); color: #f0a431; }
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill-action { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(240, 164, 49, 0.2); }
+.app-demo .app-row > .pill { min-width: 190px; justify-content: flex-start; }
+@media (max-width: 640px) { .app-btns, .app-demo .app-row > .pill { min-width: 0; } }
+
+/* host tags */
+.tag {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; vertical-align: 1px;
+  font: 600 12px/1.6 'JetBrains Mono', ui-monospace, monospace;
+}
+.tag-webui { background: #e8efff; color: #1e3a8a; }
+.tag-comfy { background: #ecfdf3; color: #14532d; }
+
+/* screenshots */
+figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+figcaption { font-size: 14px; line-height: 1.5; color: var(--muted); max-width: 48em; }
+.window { border-radius: 14px; background: var(--dark); box-shadow: var(--shadow-window); overflow: hidden; }
+.window > img { display: block; width: 100%; height: auto; }
+.window-bar {
+  height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 12px;
+  background: #232326; border-bottom: 1px solid #2e2e33;
+}
+.window-bar > i { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.window-title { margin-left: 12px; font: 12px 'JetBrains Mono', ui-monospace, monospace; color: #a1a1aa;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shot-small { max-width: 420px; }
+.shot-mid { max-width: 820px; }
+.shot-small img, .shot-mid img { border-radius: 12px; box-shadow: 0 0 0 1px var(--card-line), 0 12px 28px -16px rgba(68, 30, 6, 0.35); }
+
+/* side by side: text and a small picture */
+.pair { display: flex; flex-wrap: wrap; gap: 24px 36px; align-items: flex-start; }
+.pair > .topic { flex: 1 1 360px; min-width: 0; }
+.pair > figure { flex: 0 1 380px; min-width: 0; }
+.pair > p { flex: 1 1 360px; min-width: 0; }
+.pair > figure.shot-narrow { flex-basis: 300px; }
+/* a screenshot with numbered markers and lines to detail views, drawn as one SVG so everything scales together */
+.annotated svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ann-link rect, .ann-link path { fill: none; stroke: var(--accent-text); stroke-width: 2.5; stroke-linecap: round;
+  paint-order: stroke; filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.9)); }
+.ann-markers circle { fill: var(--accent-text); stroke: #ffffff; stroke-width: 2.5; }
+.ann-markers text { fill: #ffffff; font: 700 14px 'JetBrains Mono', ui-monospace, monospace;
+  text-anchor: middle; dominant-baseline: central; }
+/* the list that explains the markers: its numbers look like the markers */
+ol.marker-list > li::before { background: var(--accent-text); color: #ffffff; box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px var(--card-line); }
+
+/* two screenshots side by side, stacked on narrow screens */
+.shots-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 640px) { .shots-row { grid-template-columns: minmax(0, 1fr); } }
+/* a wide strip of the app (the filmstrip), shown at the column width */
+.shot-wide img { display: block; width: 100%; height: auto; border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--card-line), 0 12px 28px -16px rgba(68, 30, 6, 0.35); }
+
+/* tables */
+.table-box { overflow-x: auto; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--card-line); background: #ffffff; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; line-height: 1.5; }
+th, td { text-align: left; vertical-align: top; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font: 600 12px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); background: #faf8f6; }
+td { color: var(--text2); }
+td:first-child { white-space: nowrap; }
+.yes { color: #15803d; font-weight: 600; }
+.no { color: var(--muted); }
+
+/* a row of key / meaning cards */
+.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.key { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; border-radius: 12px;
+  background: #ffffff; box-shadow: inset 0 0 0 1px var(--card-line); font-size: 15px; color: var(--text2); line-height: 1.4; }
+.key kbd { flex: none; height: 21px; }
+
+/* ---------------------------------------------------------------- footer */
+
+.site-footer { border-top: 1px solid var(--line); padding: 36px 0 48px; color: var(--muted); font-size: 15px; }
+.footer-row { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; }
+
+/* ---------------------------------------------------------------- narrow screens */
+
+@media (max-width: 920px) {
+  .toc { position: static; max-width: none; max-height: none; flex-basis: 100%; }
+  .layout { gap: 40px; padding-top: 40px; }
+}
+@media (max-width: 640px) {
+  .wrap { padding: 0 16px; }
+  .header-links .navlink { display: none; }
+  .hero { padding: 48px 0 44px; }
+  .hero-lead, .scenario { font-size: 17px; }
+  .content { gap: 72px; }
+  td:first-child { white-space: normal; }
+  code { white-space: normal; }
+}

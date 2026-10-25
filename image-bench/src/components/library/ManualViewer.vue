@@ -105,7 +105,9 @@ const hostOrigin = location.origin;
       </p>
       <p>
         You do not need to read this manual from start to finish. Read the parts you need first, and come back to it
-        as you explore the tabs.
+        as you explore the tabs. If you are new to Image Bench, start with the
+        <a href="https://gchristensen.github.io/image-bench/tutorial/" target="_blank" rel="noopener">tutorial</a>,
+        which walks through the common workflows with screenshots.
       </p>
       <p>The window has the following tabs:</p>
       <ul>

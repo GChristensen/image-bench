@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image Bench Tutorial</title>
+<meta name="description" content="How to work with Image Bench in Forge Neo and ComfyUI: setup, generation, prompts, inpainting, model exploration, ControlNet, trays, Compare, projects, editor plugins and troubleshooting.">
+<meta name="theme-color" content="#fbfaf8">
+<link rel="icon" type="image/svg+xml" href="../landing/img/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- the logo and the callout icons, drawn where they are used -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 32 32">
+    <path d="M21 27C28 22 26 12 17 10" fill="none" stroke="var(--logo)" stroke-width="3.5" stroke-linecap="round"/>
+    <rect x="5" y="26" width="22" height="4" rx="2" fill="var(--logo)"/>
+    <rect x="5" y="19.5" width="14" height="2.5" rx="1.25" fill="var(--logo)"/>
+    <g transform="rotate(25 15 10)">
+      <rect x="12" y="3" width="6" height="12" rx="1" fill="#f97316"/>
+      <rect x="11" y="0.5" width="8" height="3.5" rx="1" fill="#c2410c"/>
+      <rect x="13.25" y="14.5" width="3.5" height="3.5" rx="0.75" fill="#c2410c"/>
+    </g>
+  </symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V17h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>
+  </symbol>
+  <symbol id="ic-snippet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"></path></symbol>
+  <symbol id="ic-png" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><circle cx="11" cy="14" r="2.5"></circle><path d="m13 16 2.5 2.5"></path></symbol>
+  <symbol id="ic-eraser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4l10-10a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L11 21z"></path><path d="M22 21H7M5 11l9 9"></path></symbol>
+  <symbol id="ic-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path></symbol>
+  <symbol id="ic-unplug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m19 5 3-3"></path><path d="m2 22 3-3"></path><path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z"></path><path d="M7.5 13.5 10 11"></path><path d="M10.5 16.5 13 14"></path><path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z"></path></symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></symbol>
+  <symbol id="ic-ruler" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"></path><path d="m14.5 12.5 2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"></path></symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15l12-7.5z" fill="currentColor"></path></symbol>
+  <symbol id="ic-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"></rect></symbol>
+  <symbol id="ic-skip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m5 4 10 8-10 8z"></path><path d="M19 5v14"></path></symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path></symbol>
+  <symbol id="ic-steps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20v-4M12 20v-9M18 20V4"></path></symbol>
+  <symbol id="ic-puzzle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z"></path></symbol>
+  <symbol id="ic-upscale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path></symbol>
+  <symbol id="ic-denoise" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m22 17-8.5-8.5-5 5L2 7"></path><path d="M16 17h6v-6"></path></symbol>
+  <symbol id="ic-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="m3.3 7 8.7 5 8.7-5M12 22V12"></path></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>
+  </symbol>
+</svg>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="brand" href="../">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><use href="#logo"/></svg>
+      <span class="disp">Image Bench</span>
+      <span class="brand-sub">tutorial</span>
+    </a>
+    <div class="header-links">
+      <a class="navlink" href="../#install">Install</a>
+      <a class="navlink" href="#ch14">Cheat sheet</a>
+      <a class="btn btn-sec" href="https://github.com/GChristensen/sd-webui-image-bench">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="wrap hero-row">
+    <div class="hero-text">
+      <div class="kicker">Tutorial</div>
+      <h1 class="disp">How to work with <span class="accent">Image Bench.</span></h1>
+      <p class="hero-lead">The manual in the Library tab describes each control. This tutorial follows the work itself, from the first prompt to the final image, and points out the places where Image Bench behaves differently than you might expect.</p>
+    </div>
+    <div class="legend-card">
+      <h2>Reading this page</h2>
+      <div class="legend-row"><span class="tag tag-webui">WebUI</span><span>Applies only to Forge Neo and SD WebUI.</span></div>
+      <div class="legend-row"><span class="tag tag-comfy">ComfyUI</span><span>Applies only to ComfyUI.</span></div>
+      <div class="legend-row"><svg width="20" height="20" aria-hidden="true" style="color: var(--accent-deep); flex: none"><use href="#i-bulb"/></svg><span>Good to know: tips, and behavior that may surprise you.</span></div>
+      <div class="legend-row"><svg width="20" height="20" aria-hidden="true" style="color: #44403c; flex: none"><use href="#i-wrench"/></svg><span>If it doesn't work: common causes and fixes.</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap layout">
+
+  <nav class="toc" aria-label="Chapters">
+    <h2>Chapters</h2>
+    <ol>
+      <li><a href="#ch01"><span class="n">01</span>Getting oriented</a></li>
+      <li><a href="#ch02"><span class="n">02</span>ComfyUI setup: markers</a></li>
+      <li><a href="#ch03"><span class="n">03</span>Everyday generation</a></li>
+      <li><a href="#ch04"><span class="n">04</span>Prompts</a></li>
+      <li><a href="#ch05"><span class="n">05</span>Img2img and inpainting</a></li>
+      <li><a href="#ch06"><span class="n">06</span>Exploring and varying</a></li>
+      <li><a href="#ch07"><span class="n">07</span>ControlNet</a></li>
+      <li><a href="#ch08"><span class="n">08</span>Working with images</a></li>
+      <li><a href="#ch09"><span class="n">09</span>Trays and Compare</a></li>
+      <li><a href="#ch10"><span class="n">10</span>Projects</a></li>
+      <li><a href="#ch11"><span class="n">11</span>Editor round-trips</a></li>
+      <li><a href="#ch12"><span class="n">12</span>Library</a></li>
+      <li><a href="#ch13"><span class="n">13</span>Troubleshooting</a></li>
+      <li><a href="#ch14"><span class="n">14</span>Cheat sheet</a></li>
+    </ol>
+  </nav>
+
+  <div class="content">
+
+<!-- ================================================================ 01 -->
+<section id="ch01" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 01 · Getting oriented</span><span class="chapter-count">01 / 14</span></div>
+    <h2 class="disp">One window that drives your host.</h2>
+    <p class="scenario">You have installed the extension and restarted Forge Neo or ComfyUI. Before you generate anything, take a minute to see where Image Bench runs, how it works with the host, and what each tab is for.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Opening the app</h3>
+    <ol class="steps">
+      <li>Open <code>/image-bench/app</code> on your host, for example <code>http://127.0.0.1:7860/image-bench/app</code>, and bookmark the address. This is the usual way to start Image Bench.</li>
+      <li>Image Bench opens in its own browser tab and loads the host UI into one of its own tabs: the one with the host icon, after Settings.</li>
+      <li>If Image Bench is already open, opening the address again brings the open copy to the front and closes the new tab. Where the browser does not allow a page to take focus, the open copy flashes its title instead.</li>
+    </ol>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>By default, the 🔬 Image Bench button in the host UI shows the <code>/image-bench/app</code> link in a small dialog instead of opening the app. Left-clicking the link opens the app in the same tab. To have the button open Image Bench as a popup next to the host page, turn on <em>Settings › Open Image Bench from the host interface</em>.</li>
+        <li>With <em>Settings › Open Image Bench in a popup window instead of a browser tab</em>, the app opens in a window of its own, which remembers its size and position.</li>
+        <li>The host UI keeps running in its tab while you work in the others. You can still use it directly, and Image Bench picks up the changes you make there.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Image Bench tabs</h3>
+    <p>The tab bar follows the usual course of work from left to right. You set up a generation in Generate, ControlNet or Explore, and the results arrive in Generated. From there you move the images worth keeping to the trays, compare candidates in Compare, and upscale the best ones into Upscaled. The numbers on the tabs count the images each one holds, and a tray tab flashes when an image is added to it. The tray tabs are also drop targets: drag an image card onto one to put the image there. Library, the project chip, Settings and the host tab sit at the right end of the bar.</p>
+    <div class="table-box">
+      <table>
+        <thead><tr><th>Tab</th><th>Use it for</th></tr></thead>
+        <tbody>
+          <tr><td>Generate</td><td>Prompts, model, LoRAs, sampling, size and Hires. fix for txt2img, img2img or Inpaint. The controls stay in sync with the host in both directions.</td></tr>
+          <tr><td>ControlNet</td><td>One ControlNet unit at a time, with its preprocessor preview and the weight × step sweep.</td></tr>
+          <tr><td>Explore</td><td>Running one prompt on several checkpoints or LoRAs.</td></tr>
+          <tr><td>Generated</td><td>All images of the session, each with its parameters.</td></tr>
+          <tr><td>Concept tray / Image tray</td><td>Persistent collections of the images you want to keep. Together they form the workspace of a project.</td></tr>
+          <tr><td>Upscaled</td><td>Hires. fix and upscale results.</td></tr>
+          <tr><td>Compare</td><td>Images side by side, with shared zoom and crop.</td></tr>
+          <tr><td>Library</td><td>Model docs, tag lists, prompt snippets and the manual.</td></tr>
+          <tr><td>Settings</td><td>Behavior options, folder paths and the accent color.</td></tr>
+          <tr><td>Host tab (icon)</td><td>The Forge Neo or ComfyUI page.</td></tr>
+          <tr><td>Project chip</td><td>The current project, at the right end of the tab bar. Click its name to open the Projects view.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <figure>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Generate</span></div>
+      <img src="../landing/img/screenshots/01-generate.webp" width="1194" height="667" alt="The Generate tab: prompt fields at the top, the model, LoRA and size controls, the sampling, seed and Hires. fix groups, and the result image at the right">
+    </div>
+    <figcaption>The Generate tab, where most sessions start.</figcaption>
+  </figure>
+
+  <div class="topic">
+    <h3>WebUI and ComfyUI</h3>
+    <p>Image Bench looks and works the same on both hosts. Controls that the host or the current workflow cannot use are hidden, so a ComfyUI workflow without a Hires. fix sampler has no Hires. fix group. The <a href="#ch14">cheat sheet</a> lists which features each host supports.</p>
+  </div>
+
+  <div class="callout fix">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-wrench"/></svg>If it doesn't work</div>
+    <ul>
+      <li><strong>Image Bench does not appear in ComfyUI:</strong> ComfyUI loads extensions only at startup, so restart it after installing.</li>
+      <li><strong>Generated images never arrive:</strong> the app connects to the backend at the address you opened it from. Open it at the host's own address and port, without another proxy or port in between.</li>
+      <li><strong>Copy image fails:</strong> browsers let pages write images to the clipboard only over https or on localhost. To use it from another computer, run the host over https (see <a href="#ch13">Troubleshooting</a>).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 02 -->
+<section id="ch02" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 02 · ComfyUI setup <span class="tag tag-comfy">ComfyUI</span></span><span class="chapter-count">02 / 14</span></div>
+    <h2 class="disp">Tell Image Bench which node is which.</h2>
+    <p class="scenario">A ComfyUI workflow can be any graph, so Image Bench cannot tell on its own which node loads the checkpoint or which one samples. You mark these nodes by giving them special titles. If you use WebUI, skip this chapter.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Start from a bundled workflow</h3>
+    <p>At startup, Image Bench copies its own reference workflows into the <em>Image Bench</em> folder of ComfyUI's Workflows sidebar. These workflows are already marked. Choose one from the workflow dropdown in the Generate toolbar and use it as a template for your own.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Marking your own workflow</h3>
+    <ol class="steps">
+      <li>Open the workflow in the host tab.</li>
+      <li>Right-click a node, choose Title, and enter a marker from the table below, for example <code>ib:cp:0</code> for the checkpoint loader.</li>
+      <li>Save the workflow. The Generate tab now shows the controls that the markers enable.</li>
+    </ol>
+    <div class="table-box">
+      <table>
+        <thead><tr><th>Marker</th><th>Node</th><th>What it enables</th></tr></thead>
+        <tbody>
+          <tr><td><code>ib:cp:0</code></td><td>Checkpoint / model loader</td><td>Model choice, model exploration</td></tr>
+          <tr><td><code>ib:pp</code> / <code>ib:np</code></td><td>Positive / negative prompt</td><td>Prompt fields</td></tr>
+          <tr><td><code>ib:smp</code></td><td>Sampler (first pass)</td><td>Found automatically in most graphs. Mark it when the graph has several samplers.</td></tr>
+          <tr><td><code>ib:smp:1</code></td><td>Hires. fix sampler</td><td>Hires. fix group, Upscale actions</td></tr>
+          <tr><td><code>ib:hr</code></td><td>If/Else switch between the first-pass and the Hires. fix image</td><td>The Hires. fix checkbox</td></tr>
+          <tr><td><code>ib:lora</code></td><td>LoRA loader</td><td>LoRA exploration</td></tr>
+          <tr><td><code>ib:img</code> / <code>ib:mask</code></td><td>Load Image nodes</td><td>img2img and Inpaint modes, images from editors</td></tr>
+          <tr><td><code>ib:ref:N</code></td><td>Load Image slots of an edit model</td><td>References panel</td></tr>
+          <tr><td><code>ib:cn:N</code></td><td>ControlNet apply node of unit N</td><td>ControlNet tab</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>LoRAs in the prompt</h3>
+    <p>The <strong>Image Bench Prompt</strong> node reads the <code>&lt;lora:name:weight&gt;</code> tags in its text, applies those LoRAs, and passes the text on with the tags removed. Mark this node <code>ib:pp</code>, and the LoRA list in the Generate tab works the same way it does in WebUI.</p>
+  </div>
+
+  <div class="callout non-obvious">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+    <ul>
+      <li>If a control is missing from the Generate or ControlNet tab, check the markers first. A missing marker is by far the most common cause.</li>
+      <li>Image Bench finds the sampler parameters (seed, steps, CFG, guidance, shift and size) by following the graph from the sampler through nodes such as <code>RandomNoise</code>, <code>BasicScheduler</code>, <code>CFGGuider</code>, <code>FluxGuidance</code>, <code>ModelSampling*</code> and the empty latent. It also follows Reroutes and subgraphs.</li>
+      <li>To support a custom loader or sampler node, add it to <code>store/node_config.json</code> in the extension folder. This file is merged over the bundled <code>node_config.json</code> and is kept when the extension updates.</li>
+      <li>Inpaint workflows can use ComfyUI-Inpaint-CropAndStitch. When it is installed, the tab also shows Mask blur, Only masked and padding.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 03 -->
+<section id="ch03" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 03 · Everyday generation</span><span class="chapter-count">03 / 14</span></div>
+    <h2 class="disp">The Generate tab mirrors the host.</h2>
+    <p class="scenario">You write a prompt, pick a model and a size, and generate. Meanwhile, Image Bench keeps every control in sync with the host page, and this explains most of how the tab behaves.</p>
+  </div>
+
+  <div class="topic">
+    <h3>The layout</h3>
+    <p>The Generate tab follows the layout of the SD WebUI txt2img and img2img tabs, so if you know WebUI, you will find the controls where you expect them. The whole tab fits in a 1200×800 window without scrolling, with all the commonly used controls in view. Controls you need less often are hidden behind buttons and switches, which show them in the same place when you click them. Each numbered marker in the screenshot is explained in the list that follows.</p>
+    <figure class="annotated">
+      <svg viewBox="0 0 1196 1010" role="img" aria-label="The Generate tab in Inpaint mode with numbered markers on its controls; under it, the Input and Mask views of the result cell, joined by lines to the Input and Mask buttons">
+        <defs>
+          <clipPath id="clip-main"><rect width="1196" height="679" rx="12"/></clipPath>
+          <clipPath id="clip-input"><rect x="470" y="723" width="352" height="287" rx="10"/></clipPath>
+          <clipPath id="clip-mask"><rect x="844" y="723" width="352" height="287" rx="10"/></clipPath>
+        </defs>
+        <image href="../landing/img/screenshots/inpaint-view.webp" width="1196" height="679" clip-path="url(#clip-main)"/>
+        <image href="../landing/img/screenshots/input-view.webp" x="470" y="723" width="352" height="287" clip-path="url(#clip-input)"/>
+        <image href="../landing/img/screenshots/mask-view.webp" x="844" y="723" width="352" height="287" clip-path="url(#clip-mask)"/>
+        <!-- the Input and Mask buttons, and the lines to their views -->
+        <g class="ann-link">
+          <rect x="896" y="396" width="44" height="23" rx="5"/>
+          <rect x="943" y="396" width="44" height="23" rx="5"/>
+          <path d="M918 419 L646 723 M965 419 L1020 723"/>
+        </g>
+        <g class="ann-markers">
+          <g transform="translate(14 44)"><circle r="13"/><text>1</text></g>
+          <g transform="translate(209 38)"><circle r="13"/><text>2</text></g>
+          <g transform="translate(334 38)"><circle r="13"/><text>3</text></g>
+          <g transform="translate(367 38)"><circle r="13"/><text>4</text></g>
+          <g transform="translate(806 40)"><circle r="13"/><text>5</text></g>
+          <g transform="translate(980 40)"><circle r="13"/><text>6</text></g>
+          <g transform="translate(10 84)"><circle r="13"/><text>7</text></g>
+          <g transform="translate(190 84)"><circle r="13"/><text>8</text></g>
+          <g transform="translate(484 84)"><circle r="13"/><text>9</text></g>
+          <g transform="translate(246 137)"><circle r="13"/><text>10</text></g>
+          <g transform="translate(836 86)"><circle r="13"/><text>11</text></g>
+          <g transform="translate(10 460)"><circle r="13"/><text>12</text></g>
+          <g transform="translate(785 560)"><circle r="13"/><text>13</text></g>
+          <g transform="translate(832 395)"><circle r="13"/><text>14</text></g>
+        </g>
+      </svg>
+      <figcaption>The Generate tab in Inpaint mode, with the Input and Mask views of the result cell below it.</figcaption>
+    </figure>
+    <ol class="steps marker-list">
+      <li>The Generate button starts a run and becomes Stop while the run is in progress. Next to it are Skip and the number of images to generate. Variations… generates seed variations (see <a href="#ch06">chapter 6</a>).</li>
+      <li>The × in front of the image count resets it to 1.</li>
+      <li>The count button sets the number of images to the value of <em>Settings › Images set by the count button</em>, 128 in the screenshot. It is highlighted while the count has that value. WebUI generates at most 100 images per batch unless you raise the Batch count maximum in <code>ui-config.json</code> in the WebUI folder and restart WebUI.</li>
+      <li>The ∞ button generates images until you press Stop. Click it again to go back to the number of images you had before.</li>
+      <li>The prompt tools, from left to right: Snippets, PNG Info, the eraser that clears both prompts, the prompt lock and the console drawer.</li>
+      <li>The mode switch selects txt2img, img2img or Inpaint.</li>
+      <li>The WebUI UI preset, which sets up WebUI for a model family.</li>
+      <li>The checkpoint dropdown. The button in front of it switches the dropdown to the VAE and text encoder files, and the button after it opens the checkpoint's page on Civitai.</li>
+      <li>The image size and the number of steps. The button in front of the size switches between preset sizes and width/height fields.</li>
+      <li>The prompt history buttons, the variants dropdown and the fork button. The token count of the prompt is at the right end of the same line.</li>
+      <li>The LoRA and References tabs. The field next to them filters the list.</li>
+      <li>The parameter groups. Sampling and Seed are always shown; the third group holds the Hires. fix settings in txt2img and the img2img or inpaint settings in the other modes.</li>
+      <li>The vertical tabs switch this area between the parameter groups and the session filmstrip.</li>
+      <li>The result cell has three views: Result shows the latest image, Input the input image and Mask the mask. Use the Image and Mask buttons to upload an input image or a mask. The Input view draws the mask and the inpaint crop over the image, and the Mask view shows the mask by itself together with its size (see <a href="#ch05">chapter 5</a>).</li>
+    </ol>
+    <p>To give more room to the prompts or to the parameter groups, drag the handles between them.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Two-way sync</h3>
+    <p>While the Generate tab is open, it reads the host's controls and writes your edits back to them. If you change the steps in Image Bench, the host's slider moves; if you change the sampler in the host tab, Image Bench updates.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>For 2 seconds after you edit a value, Image Bench does not read that value back from the host, so the sync never overwrites what you are typing.</li>
+        <li>Generate waits until all pending edits have reached the host before it starts.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>txt2img, img2img and Inpaint <span class="tag tag-webui">WebUI</span></h3>
+    <p>The switch at the right end of the toolbar selects the mode and switches the WebUI tab to match the selected one. Because img2img and Inpaint share the same WebUI controls, Image Bench remembers the parameters of each mode and restores them when you switch back.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>The UI preset, the checkpoint and the size are shared by all modes and do not change when you switch.</li>
+        <li>The remembered parameters are kept in memory only and are lost when the app reloads.</li>
+        <li>If WebUI shows another img2img tab, such as Sketch or Inpaint sketch, Image Bench reports the mode as <em>other</em> and does not change that tab.</li>
+        <li>ComfyUI has no mode switch. The mode follows the workflow: img2img when it has an <code>ib:img</code> node, and Inpaint when it also has an <code>ib:mask</code> node.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Checkpoint and VAE / text encoders</h3>
+    <p>By default, the model dropdown shows the selected checkpoint <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-box"></use></svg></span>. In the case Forge Neo, the button in front of the model selector switches the dropdown to the VAE and text encoder file selector <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-puzzle"></use></svg></span> and back. Image Bench remembers which of the two you chose. The info button <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-info"></use></svg></span> after the dropdown opens the checkpoint's page on Civitai.</p>
+    <p>The VAE / text encoder dropdown is a checklist where the files grouped into VAE and text encoders sections. It sets the VAE / Text Encoder field of Forge Neo, and each change you make reaches Forge right away. Both dropdowns can be filtered: start typing while a dropdown is closed, and it opens with the list narrowed to the entries that contain every word you typed.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
+      <ul>
+        <li>The switch appears only when the host has the VAE / Text Encoder field, which is Forge Neo. In ComfyUI, the dropdown always shows the checkpoint of the node marked <code>ib:cp:0</code>.</li>
+        <li>When you apply an image's parameters, the modules recorded in its infotext are applied too, and a model exploration restores your modules when it ends.</li>
+        <li>To compare text encoders on one image, use <em>Generate with text encoders</em> (<kbd>E</kbd>, see <a href="#ch06">chapter 6</a>).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Size</h3>
+    <p>The button in front of the size toggles between a dropdown of preset sizes, shown with the list icon <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-list"></use></svg></span>, and width/height fields, shown with the ruler icon <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-ruler"></use></svg></span>. The fields round to multiples of 16. Image Bench remembers your choice for each mode. Inpaint starts with the fields, which set <em>Resize to</em> in that mode.</p>
+  </div>
+
+  <div class="topic">
+    <h3>The status pill</h3>
+    <p>The free space in the middle of the toolbar shows one status at a time, as a pill. These are the statuses you may see:</p>
+    <div class="app-demo" role="img" aria-label="The status pills of the Generate toolbar">
+      <div class="app-row"><span class="pill waiting"><span class="dot"></span>Waiting for WebUI…</span><span class="app-note">The app has no connection to the host page yet.</span></div>
+      <div class="app-row"><span class="pill">Restoring parameters…</span><span class="app-note">The host page is putting back your last values.</span></div>
+      <div class="app-row"><span class="pill">Switching UI preset…</span><span class="app-note">WebUI is changing the preset for a new model family.</span></div>
+      <div class="app-row"><span class="pill">Stopping…</span><span class="app-note">A stop request is on its way.</span></div>
+      <div class="app-row"><span class="pill">Restarting the generation…</span><span class="app-note">Stop and generate again (see below).</span></div>
+      <div class="app-row"><span class="pill stalled"><svg width="12" height="12" aria-hidden="true"><use href="#ic-alert"></use></svg>WebUI page is stuck<span class="pill-action"><svg width="11" height="11" aria-hidden="true"><use href="#ic-refresh"></use></svg></span></span><span class="app-note">The page still shows a generation that has ended. The button reloads it.</span></div>
+    </div>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <p>Generate is disabled while <em>Restoring parameters</em> is shown. When <em>Settings › Remember prompts and generation parameters across WebUI reloads</em> is on, the host page restores your last values after it loads, and generating before then would use the defaults.</p>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Stop and Skip buttons</h3>
+    <p>While a generation runs, the Generate button turns into Stop, and Skip next to it becomes active. Skip ends the image that is being generated and continues with the rest of the batch. Stop ends the whole run. To stop and immediately generate again with the current parameters, <kbd>Ctrl</kbd>+click or middle-click Stop; while you hold <kbd>Ctrl</kbd>, the button reads Restart.</p>
+    <div class="app-demo" role="img" aria-label="The Generate, Stop and Skip buttons in their three states">
+      <div class="app-row"><span class="app-btns"><span class="app-btn primary"><svg width="13" height="13" aria-hidden="true"><use href="#ic-play"></use></svg>Generate</span><span class="app-btn outline off"><svg width="13" height="13" aria-hidden="true"><use href="#ic-skip"></use></svg>Skip</span></span><span class="app-note">Idle</span></div>
+      <div class="app-row"><span class="app-btns"><span class="app-btn stop"><svg width="13" height="13" aria-hidden="true"><use href="#ic-stop"></use></svg>Stop</span><span class="app-btn outline"><svg width="13" height="13" aria-hidden="true"><use href="#ic-skip"></use></svg>Skip</span></span><span class="app-note">Generating</span></div>
+      <div class="app-row"><span class="app-btns"><span class="app-btn stop"><svg width="13" height="13" aria-hidden="true"><use href="#ic-refresh"></use></svg>Restart</span><span class="app-btn outline"><svg width="13" height="13" aria-hidden="true"><use href="#ic-skip"></use></svg>Skip</span></span><span class="app-note">Generating, with <kbd>Ctrl</kbd> held</span></div>
+    </div>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know <span class="tag tag-webui">WebUI</span></div>
+      <p>Stop asks the server to stop the page's own task and does not click Forge's Interrupt button. A click on Interrupt that arrives just after a job ends can leave "Interrupting…" on the page for good. If you press Stop before the job has actually started, the request is kept and applied as soon as the job begins.</p>
+    </div>
+  </div>
+
+  <div class="callout fix">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-wrench"/></svg>If it doesn't work</div>
+    <ul>
+      <li><strong>The host stays busy and Generate stays disabled</strong> <span class="tag tag-webui">WebUI</span>: when a job is interrupted just as it ends, Forge sometimes loses its result and keeps showing Interrupt. If the server has been idle for 10 seconds while the page still looks busy, the status pill offers <em>Reload</em>, which reloads the host page and ends the run in Image Bench.</li>
+      <li><strong>A batch does not start:</strong> Image Bench does not start a run while the host reports that it is busy. Check the host tab, or open the console drawer with <kbd>Ctrl</kbd>+<kbd>`</kbd>.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 04 -->
+<section id="ch04" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 04 · Prompts</span><span class="chapter-count">04 / 14</span></div>
+    <h2 class="disp">Write, compare, reuse.</h2>
+    <p class="scenario">You are refining a prompt. You add a LoRA, try new wording, return to the version that worked an hour ago, or take the prompt from a downloaded image.</p>
+  </div>
+
+  <div class="topic">
+    <h3>History, diff and variants</h3>
+    <p>Besides the prompt fields themselves, the Generate tab has additional tools for working with prompts: a prompt history, a diff of any earlier prompt against the current one, named variants, snippets and PNG Info. All of them are in the buttons around the prompt fields.</p>
+    <figure class="shot-mid">
+      <img src="../landing/img/screenshots/prompt-diff.webp" width="820" height="215" loading="lazy" alt="The prompt field showing an earlier prompt as a diff: a removed phrase struck through in red, the new phrase highlighted in green">
+      <figcaption>An earlier prompt shown as a diff against the current one.</figcaption>
+    </figure>
+    <ol class="steps">
+        <li>Each generation you start from the tab adds its prompt pair to the history, which keeps the last 20.</li>
+        <li>The history buttons above the prompt step through the entries. The pencil button returns to the current prompt, which is the one you can edit.</li>
+        <li>A history entry is displayed as a read-only <strong>diff</strong> against the current prompt, with removed text struck through and new text highlighted.</li>
+        <li>The fork button saves the displayed history entry as a named <strong>variant</strong>. Variants are listed in a dropdown of their own.</li>
+      </ol>
+  </div>
+
+  <div class="callout non-obvious">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+    <ul>
+      <li>txt2img and img2img keep separate histories. Inpaint shares the img2img history.</li>
+      <li>The diff compares the pieces of the prompt between commas and line breaks and ignores weights. Moving a phrase, or changing <code>(word:1.2)</code> to <code>(word:1.3)</code>, does not show up as a rewrite.</li>
+      <li>Editing the prompt or generating switches the view back to the current prompt. To continue from an older prompt, copy it or save it as a variant first.</li>
+      <li>The history is saved with a project and restored when you open the project. Changes to it do not count as unsaved changes.</li>
+    </ul>
+  </div>
+
+  <div class="topic">
+    <h3>LoRAs</h3>
+    <p>The LoRA tab lists the LoRAs installed on the host, grouped by their folders. A LoRA is checked when the prompt contains its <code>&lt;lora:…&gt;</code> tag, so the checkboxes always match the prompt, including tags you typed or pasted. The number on the tab is the count of LoRAs in the prompt.</p>
+    <ul>
+      <li>To add a LoRA, check it or click its name. Image Bench appends <code>&lt;lora:name:weight&gt;</code> to the end of the prompt. Unchecking the LoRA removes its tag from anywhere in the prompt.</li>
+      <li>The weight in the tag is the LoRA's preferred weight, and the LoRA's activation text is added after the tag. You set both in the LoRA's metadata in WebUI's LoRA card, which stores them in a <code>.json</code> file next to the LoRA. Values set for the LoRA in the Explore tab override the metadata. If neither is set, the weight is 1.</li>
+      <li>To change the weight later, edit the number in the tag. The LoRA stays checked.</li>
+      <li>The filter field above the list matches LoRA names and folder names. The refresh button next to it makes the host rescan its checkpoints and LoRAs, so you can use a newly downloaded LoRA without restarting the host.</li>
+    </ul>
+    <p><span class="tag tag-comfy">ComfyUI</span> The LoRA list requires the positive prompt to be an Image Bench Prompt node marked <code>ib:pp</code>. This node loads the LoRAs named in the <code>&lt;lora:…&gt;</code> tags of its text and passes the text on with the tags removed.</p>
+  </div>
+
+  <div class="topic">
+    <div class="pair">
+      <div class="topic">
+        <h3>Snippets</h3>
+        <p>The Snippets button <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-snippet"></use></svg></span> next to the prompt opens a floating panel above it. You can move the panel by its header and resize it by its corner. The badge in the header shows which prompt receives the snippets: the one you edited last.</p>
+        <ul>
+          <li>Clicking a snippet inserts it at the cursor. If the snippet also has a negative part, that part goes into the negative prompt.</li>
+          <li>Middle-clicking inserts the snippet into this prompt only.</li>
+          <li><kbd>Shift</kbd>+click wraps the selected text: the selection takes the place of <code>{}</code> or <code>{prompt}</code> in the snippet.</li>
+        </ul>
+        <p>The prompt keeps the focus, so you can insert several snippets in a row, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes an insertion. <em>From selection</em> makes a new snippet of the selected prompt text. <em>Edit in Library</em> opens <a href="#ch12">Library › Snippets</a>, where you manage them.</p>
+      </div>
+      <figure class="shot-small shot-narrow">
+        <img src="../landing/img/screenshots/snippets.webp" width="300" height="440" loading="lazy" alt="The Snippets panel: a filter field, a tree of snippet folders with the Aesthetic folder open, the hints Click: insert, Middle: this prompt only, Shift: wrap, and the buttons From selection and Edit in Library">
+        <figcaption>The Snippets panel over the prompt.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Taking parameters from an image: PNG Info</h3>
+    <ol class="steps">
+      <li>Drop an image on the prompt, or click the PNG Info button <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-png"></use></svg></span> to the left of the eraser <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-eraser"></use></svg></span> that clears the prompts.</li>
+      <li>Check the groups you want to apply: prompts, model, sampling, size, Hires. fix and so on.</li>
+      <li>Click Apply. Only the checked groups change.</li>
+    </ol>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>Images saved by ComfyUI have no infotext, but they contain the executed graph. Image Bench reconstructs an infotext from it, including the sampler, the prompts (traced back through the conditioning nodes), the checkpoint, LoRAs, size and the Hires. fix pass.</li>
+        <li><span class="tag tag-webui">WebUI</span> When you apply a checkpoint, the UI preset also switches to the one for that model family.</li>
+        <li>The image context menu has <em>Copy infotext</em> and <em>Paste infotext…</em>. Paste writes the text into the PNG file and keeps its other metadata, so you can use it to correct or add an image's parameters.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 05 -->
+<section id="ch05" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 05 · Img2img and inpainting</span><span class="chapter-count">05 / 14</span></div>
+    <h2 class="disp">Images in, masks drawn, crops understood.</h2>
+    <p class="scenario">You want to rework one of your images, or repaint part of it using a mask drawn in your editor.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Img2img and Inpaint</h3>
+    <p>Both modes start from an existing image, and you choose between them with the mode switch at the right of the Generate tab's toolbar. Img2img takes only an input image and regenerates all of it, with the denoising strength setting how far the result may move away from the input. Inpaint takes an input image and a mask, and regenerates only the masked area while the rest of the image stays as it is.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Adding an input image</h3>
+    <p>The result cell of the Generate tab has three views: Result, Input and Mask. You can set the input image in any of these ways:</p>
+    <ul>
+      <li>Upload a file, paste one with <kbd>Ctrl</kbd>+<kbd>V</kbd>, or drop one on the Input view.</li>
+      <li>Drag an image card from any gallery onto the Input view.</li>
+      <li>Use the image actions <em>Send to img2img</em> (<kbd>M</kbd>) or <em>Send to inpaint</em> (<kbd>B</kbd>).</li>
+      <li>Send the image from Photoshop, Krita or GIMP (see <a href="#ch11">chapter 11</a>).</li>
+    </ul>
+  </div>
+
+  <div class="topic">
+    <h3>Inpainting with a mask from your editor</h3>
+    <p>For inpainting, Image Bench uses only WebUI's <em>img2img › Inpaint upload</em> tab, where the image and the mask are two separate uploads. You cannot draw a mask in Image Bench, and it does not use the brush canvas of WebUI's <em>Inpaint</em> tab. Instead, you make the mask in Photoshop, Krita or GIMP as a selection and send it together with the image with <em>Input / Inpaint: Both</em> in the editor plugin (see <a href="#ch11">chapter 11</a>). A feathered selection gives the mask soft edges. A mask saved from an editor as a file can also be uploaded with the Mask button of the result cell. If WebUI shows another img2img tab, such as <em>Sketch</em> or <em>Inpaint</em>, Image Bench leaves it as it is.</p>
+  </div>
+
+  <div class="pair">
+    <div class="topic">
+      <h3>Only masked: reading the crop</h3>
+      <p>With <em>Only masked</em> inpaint setting, WebUI cuts out the area around the mask, generates it at full resolution and pastes it back. The Mask view shows the result in advance: the bounding box of the mask is dashed, and the crop is outlined in orange. Padding and mask blur enlarge the box, and <em>Resize to</em> determines its aspect ratio.</p>
+      <p>The factor button sets <em>Resize to</em> once, to the padded box multiplied by the factor and rounded to multiples of 16. It does not update the value later.</p>
+    </div>
+    <figure class="shot-small">
+      <img src="../landing/img/screenshots/mask-resampling.webp" width="368" height="306" loading="lazy" alt="The Mask pane: the mask with its bounding box dashed and the crop outlined in orange, the factor list open at ×1.5">
+      <figcaption>The crop of an Only masked inpaint, with the factor list open.</figcaption>
+    </figure>
+  </div>
+
+  <div class="topic">
+    <h3>References for edit models</h3>
+    <div class="pair">
+      <p>Edit models (Klein, Kontext, Qwen Edit, Anima and Krea 2) take reference images. You add, reorder and remove them in the References panel, in the tab next to LoRA: drop, paste or browse for an image, or drag one from Generated or the trays. The <em>sends to</em> list at the bottom chooses where images from your editor go, the input image or the references. In ComfyUI, each reference slot is a Load Image node marked <code>ib:ref:N</code>.</p>
+      <figure class="shot-small">
+        <img src="../landing/img/screenshots/references.webp" width="352" height="265" loading="lazy" alt="The References panel: the Use checkbox and Max side field, one reference image, a drop zone, and the editor routing list set to Input image">
+        <figcaption>The References panel with one reference image.</figcaption>
+      </figure>
+    </div>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li><span class="tag tag-webui">WebUI</span> The Edit switch is a WebUI setting for the current model family and does not belong to the image. The <em>Settings in UI</em> checkboxes in the WebUI tabs override it.</li>
+        <li>The "Ps sends to" option in the Generate tab sends images from your editor to the references instead of the input.</li>
+        <li><span class="tag tag-comfy">ComfyUI</span> Removing a reference bypasses its slot and the nodes that depend on its image, so the workflow still runs.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 06 -->
+<section id="ch06" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 06 · Exploring and varying</span><span class="chapter-count">06 / 14</span></div>
+    <h2 class="disp">Many images, one question at a time.</h2>
+    <p class="scenario">You are looking for the right model, seed, step count or denoising strength. Image Bench can generate these series for you and keeps the results of each series together.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Batches and the session filmstrip</h3>
+    <p>When you generate a batch with more than one image, the session filmstrip replaces the parameter groups. It holds the last 265 images of the session, grouped by run. Click an image to view it large, or middle-click it to show it in the result pane in place of the latest image.</p>
+    <figure class="shot-wide">
+      <img src="../landing/img/screenshots/filmstrip.webp" width="1279" height="302" loading="lazy" alt="The session filmstrip under the prompt: three images of a run, the vertical Parameters and Session tabs at its right edge, and the result pane at the right">
+      <figcaption>The session filmstrip, with the Parameters and Session tabs at its right edge.</figcaption>
+    </figure>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <p>The filmstrip closes when the batch ends, unless you used it during the batch or turned on <em>Settings › Keep the session filmstrip shown when a batch ends</em>. It never opens for a single image. To open it yourself, use the vertical tabs at the right edge.</p>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Model and LoRA exploration</h3>
+    <p>Before you settle on a checkpoint or a LoRA, you may want to compare what each of them makes of the same prompt. The Explore tab generates images of the current prompt with every checkpoint or LoRA you select in a single run.</p>
+    <p>Select the checkpoints or LoRAs in the Explore tab and start the run. The prompt is generated with each of them in turn, and the results appear side by side. A LoRA exploration also generates the images without the LoRA for reference, unless you turn off the <em>No LoRA</em> button. When the run ends, your model and parameters are restored.</p>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Explore</span></div>
+      <img src="../landing/img/screenshots/03-explore.webp" width="1194" height="667" loading="lazy" alt="The Explore tab: the same prompt rendered by several checkpoints side by side">
+    </div>
+    <figure>
+      <figcaption>One prompt rendered by several checkpoints.</figcaption>
+    </figure>
+    <p>When you select both checkpoints and LoRAs, you can switch the run from <em>By model</em> to <em>Matrix</em>. A matrix run generates one image for every combination of a checkpoint and a LoRA and lays them out as a grid, with the checkpoints in rows and the LoRAs in columns. With <em>No LoRA</em> on, the first column shows each checkpoint without a LoRA. All the images of a matrix use the same random seed, so the differences you see come from the models alone. <em>Save results</em> saves the grid as a single HTML page.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Seed variations <span class="tag tag-webui">WebUI</span></h3>
+    <p><span class="ui ui-wide"><svg width="14" height="14" aria-hidden="true"><use href="#ic-shuffle"></use></svg>Variations…</span> next to Generate makes a batch of variations of the current seed. Each image keeps the seed and mixes in a random variation seed at the variation strength you enter; small strengths stay close to the original. The batch count sets the number of images.
+    While using this button you don't need to set and clear variation strength or seed in the UI, Image Bench does this for you.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
+      <p>Set the image seed before you start. With a seed of -1, every image gets a new random seed, and there is no original image to vary. Enter the seed of the image you want variations of; you can find it in the image's generation parameters (<kbd>I</kbd>).</p>
+    </div>
+  </div>
+  <div class="topic">
+    <h3>Automated sweeps from one image</h3>
+    <p>Once you have an image you like, you often want to know whether it gets better with more steps, another denoising strength or other text encoders. Testing this by hand means restoring the image's parameters and changing one value before each generation. Image Bench can do this for you in a single run.</p>
+    <p>These image actions start from the parameters of an existing image, including its seed, and generate a series in which only one setting changes. You find them on the left side of the action rim: hold <kbd>Ctrl</kbd> over an image card, or over the result in the Generate tab, and point at the icons below (see <a href="#ch08">chapter 8</a>). With the pointer over the card or in the overlay, the keys run them directly.</p>
+    <div class="keys">
+      <div class="key"><kbd>G</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-steps"></use></svg></span><span>Generate with steps: the same image at different step counts.</span></div>
+      <div class="key"><kbd>E</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-puzzle"></use></svg></span><span>Generate with text encoders: the same image with different VAE and text encoder sets <span class="tag tag-webui">Forge Neo</span>.</span></div>
+      <div class="key"><kbd>U</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-upscale"></use></svg></span><span>Upscale with the current settings. The result goes to Upscaled.</span></div>
+      <div class="key"><kbd>D</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-denoise"></use></svg></span><span>Upscale with denoising: a series of denoising strengths.</span></div>
+    </div>
+    <p>Image Bench remembers what you enter in these dialogs (step lists, denoising strengths, encoder sets) for the next run.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know <span class="tag tag-comfy">ComfyUI</span></div>
+      <p>Upscaling regenerates the image from its own parameters through the Hires. fix sampler, so the workflow needs a node marked <code>ib:smp:1</code>. Without it, the upscale actions are refused. If the workflow has an <code>ib:hr</code> switch, it is turned on for the run.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 07 -->
+<section id="ch07" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 07 · ControlNet</span><span class="chapter-count">07 / 14</span></div>
+    <h2 class="disp">One unit, in full view.</h2>
+    <p class="scenario">You want to guide a composition with a pose, depth map or edge map, and find the weight and timing that guide it just enough.</p>
+  </div>
+
+  <figure>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — ControlNet</span></div>
+      <img src="../landing/img/screenshots/02-controlnet.webp" width="1194" height="667" loading="lazy" alt="The ControlNet tab: unit parameters at the left, the control image and the preprocessor preview at the right">
+    </div>
+  </figure>
+
+  <div class="topic">
+    <h3>Setting up a unit</h3>
+    <p>The ControlNet tab works exactly like the ControlNet built into Forge Neo. It has the same units, control types, preprocessors, models and parameters, and it shows one unit at a time. Every change you make in the tab goes to the unit on the WebUI page, and every change on the page shows up in the tab, so what you know about Forge's ControlNet applies here unchanged.</p>
+    <ol class="steps">
+      <li>Select the unit. In WebUI, also select txt2img or img2img in the toolbar.</li>
+      <li>Add a control image: drop or paste it, use <em>Send to ControlNet</em> (<kbd>N</kbd>) on any image, or send it from your editor.</li>
+      <li>Choose the control type, preprocessor and model. Run the preprocessor and check the preview.</li>
+      <li>Set the weight and the timestep range, then generate from the Generate tab.</li>
+    </ol>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>The first time you use a unit in a page session, Image Bench checks Pixel Perfect and Allow Preview for it.</li>
+        <li>The model list shows only the models that match the control type. After you click its refresh button, it lists all models until you change the type.</li>
+        <li>When you change the preprocessor or its sliders after running it, the preview is marked as stale. Run the preprocessor again to update it.</li>
+        <li>In img2img, setting a control image also checks "Upload independent control image", because WebUI ignores the unit's image without it.</li>
+        <li>While a unit is enabled, the Generate tab shows a ControlNet group with the unit's weight, range and preview, so you can make small adjustments without switching tabs.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Editing a pose <span class="tag tag-webui">WebUI</span></h3>
+    <p>After you run an OpenPose preprocessor, <em>Edit pose</em> opens sd-webui-openpose-editor over the tab; the <a href="https://github.com/fabiencomte/sd-webui-openpose-editor">editor extension</a> must be installed. The edited pose is rendered into the preview, and the preview becomes the control input.</p>
+  </div>
+
+  <div class="topic">
+    <h3>The ControlNet sweep: weight × ending step</h3>
+    <p>Choosing a weight and an ending step usually takes several tries: with too much control the image follows the control map stiffly, and with too little it drifts away from the composition. A sweep renders one unit at a range of weights and ending steps with the same prompt and seed, and lays out the results as a matrix, with the weights in rows and the ending steps in columns. You can then compare the images side by side and take the values of the one you like.</p>
+    <figure>
+      <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — ControlNet sweep</span></div>
+        <img src="../landing/img/screenshots/controlnet-sweep.webp" width="1195" height="677" loading="lazy" alt="A ControlNet sweep in progress: the current values and the control image at the left, the matrix of weights and ending steps in the middle, the sweep settings at the right">
+      </div>
+      <figcaption>A sweep in progress. The diagonals are rendered first.</figcaption>
+    </figure>
+    <ol class="steps">
+      <li>Switch the parameters column from <em>Parameters</em> to <em>Sweep</em>.</li>
+      <li>Set From, To and Step for the weights (rows) and the ending steps (columns).</li>
+      <li>Start the sweep. It first generates a reference image with the unit's current values, then the cells.</li>
+      <li>To use a cell's values, apply the cell, or apply a row or column header. The values are copied to the unit.</li>
+    </ol>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>The cells are generated out of order: both diagonals first, then the cells farthest from the ones already done. If you stop early, you still have an overview of the whole range.</li>
+        <li>The seed stays fixed for the whole sweep, so the cells differ only in their ControlNet settings. A random seed is resolved once at the start, and the sweep settings can set a seed of their own.</li>
+        <li>In the overlay, <kbd>←</kbd> and <kbd>→</kbd> move through the cells in reading order, and <kbd>↑</kbd> and <kbd>↓</kbd> move within a column.</li>
+        <li>Sweep images are kept in memory only. Move the ones you want to keep into a tray.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout fix">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-wrench"/></svg>If it doesn't work <span class="tag tag-comfy">ComfyUI</span></div>
+    <ul>
+      <li>Unit N is the ControlNet apply node titled <code>ib:cn:N</code>. Without such a node, the tab is empty.</li>
+      <li>Preprocessors require comfyui_controlnet_aux. If it is not installed, the preprocessor controls are hidden.</li>
+      <li>Use Mask requires an Advanced-ControlNet apply node, which has the <code>mask_optional</code> input.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 08 -->
+<section id="ch08" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 08 · Working with images</span><span class="chapter-count">08 / 14</span></div>
+    <h2 class="disp">A ring of actions, keys, markings and drag-and-drop.</h2>
+    <p class="scenario">Your gallery is filling up. You want to sort, mark, pass on and reuse images quickly, mostly with the mouse.</p>
+  </div>
+
+  <figure>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Concept tray</span></div>
+      <img src="../landing/img/screenshots/markings-action-rim.webp" width="1196" height="674" loading="lazy" alt="The Concept tray: four image cards with color markings, one of them showing the action rim, a ring of action icons around its center with the label Hide actions">
+    </div>
+  </figure>
+
+  <div class="topic">
+    <h3>The action rim</h3>
+    <p>Most of the work with a generated image starts from its card: you look at its parameters, send it to img2img or your editor, upscale it, or put it in a tray. A card has room for only a few buttons, and they would cover the thumbnail, so Image Bench puts all these actions on a ring that you show only when you need it. The same actions are also in the card's context menu and on single keys, which work while the pointer is over the card.</p>
+    <p>Image cards have no visible action buttons. To show the actions, hold <kbd>Ctrl</kbd> over a card or click the rim toggle in its top right corner. A ring of actions appears around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>The center button switches the ring to the markings and back. Middle-clicking it turns the view's marking filter on or off.</li>
+        <li>Some actions have an alternative version, which runs on a middle click, <kbd>Shift</kbd>+click or <kbd>Shift</kbd>+key. While you hold <kbd>Shift</kbd>, the ring shows the alternative icons; for example, Send to editor becomes Send as a new layer.</li>
+        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. In this mode, holding <kbd>Ctrl</kbd> hides the ring, so a click opens the image.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>The image view</h3>
+    <p>Clicking a card, or pressing <kbd>V</kbd> over it, opens the image view, the overlay that shows the image over the whole window. The buttons at the lower right are the same send and tray actions you find on the action rim: Send to img2img, inpaint, ControlNet and your editor, and Add to compare, concept tray and image tray. The button at the top left opens the generation parameters, and the tag at the lower left sets a marking. The action and digit keys work here just as they do over a card.</p>
+    <p>Click the image to see it at full size; the point you clicked stays under the pointer. Drag to pan, and click the image again to fit it back to the window. Clicking the dark area around a fitted image closes the view.</p>
+    <p>Use <kbd>←</kbd> and <kbd>→</kbd> to move to the previous and next image. At full size, the zoom is kept as you move: the next image opens at full size, showing the same area, so you can step through a series and compare one detail across all of it.</p>
+    <div class="shots-row">
+      <figure>
+        <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — image view</span></div>
+          <img src="../landing/img/screenshots/image-view.webp" width="1198" height="683" loading="lazy" alt="An image in the image view: the parameters button at the top left, the close button at the top right, the marking tag at the lower left, and the action buttons at the lower right">
+        </div>
+        <figcaption>The image view, fitted to the window.</figcaption>
+      </figure>
+      <figure>
+        <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — image view at full size</span></div>
+          <img src="../landing/img/screenshots/image-view-zoom.webp" width="1195" height="682" loading="lazy" alt="The same image view at full size, showing a detail of the flowers and the vase">
+        </div>
+        <figcaption>At full size, the arrow keys keep showing this area on every image.</figcaption>
+      </figure>
+    </div>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
+      <p>Hold <kbd>Ctrl</kbd> to hide all buttons of the image view and see the whole image unobstructed. They come back when you release the key.</p>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Keys</h3>
+    <p>Each action has a key that acts on the card under the pointer or on the image open in the overlay. Keys are matched by their position on the keyboard, so they work with any keyboard layout. The <a href="#ch14">cheat sheet</a> lists all of them.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Markings</h3>
+    <p>The digit keys <kbd>1</kbd> to <kbd>9</kbd> set a marking (👍 👎 🔴 🟠 🟡 🟢 🔵 🟣 🏁), and <kbd>0</kbd> removes it. Clicking the marking on a card filters the view by that marking; middle-clicking it removes the marking.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>Markings are saved in the trays, Compare and Upscaled. In Generated, Explore and the Generate tab, they are kept in memory only.</li>
+        <li>🏁 marks a candidate for the final image. If you save a project without choosing a final image, the image marked 🏁 in the trays becomes the final image.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Drag and drop</h3>
+    <ul>
+      <li>Drag a card by its image onto a tray tab. Images dragged from one tray to the other are moved; images from any other view are copied. If the card is selected, the whole selection is dragged.</li>
+      <li>In the trays and in Upscaled, drop a card onto another card to change the order.</li>
+      <li>Drop a card on the Input or Mask view of the Generate tab, or on the ControlNet control image.</li>
+      <li>Drop cards on the project chip to copy them into the project folder.</li>
+    </ul>
+  </div>
+
+  <div class="topic">
+    <h3>The context menu</h3>
+    <p>Right-click an image for the commands that are not on the ring: Open in new window, Copy image, Copy to project folder, Copy infotext and Paste infotext, and a markings submenu with <em>Show only</em>.</p>
+  </div>
+
+  <div class="callout non-obvious">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Video and audio</div>
+    <p>Video and audio outputs also appear as cards. Only the play button on a card starts playback, and only one card plays at a time. Clicking anywhere else on the card opens the full view, which plays with sound. Actions that need pixels, such as Add to compare or Send to ControlNet, are not available for these cards.</p>
+  </div>
+</section>
+
+<!-- ================================================================ 09 -->
+<section id="ch09" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 09 · Trays and Compare</span><span class="chapter-count">09 / 14</span></div>
+    <h2 class="disp">Keep the good ones, look closely.</h2>
+    <p class="scenario">Out of a hundred images, a handful are worth keeping. You set them aside, then compare the closest candidates in detail.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Two trays</h3>
+    <p>The Generated tab keeps its images in memory only, so you move the images you want to keep into one of the two trays. Both trays work the same way, and how you divide images between them is up to you. You can use both as long-term collections, or keep one for the images you want to keep and use the other as a scratch area for images you only need for a while, for example to compare them or to run them through img2img once, and then delete.</p>
+    <p>The trays are persistent: they survive reloads and restarts, and a project saves their contents. A common way to use both as collections:</p>
+    <ul>
+      <li><strong>Concept tray</strong> (<kbd>Y</kbd>): ideas worth keeping, such as compositions, styles and happy accidents.</li>
+      <li><strong>Image tray</strong> (<kbd>T</kbd>): the best images, the ones you will upscale, pass on or finish.</li>
+    </ul>
+    <p>You can download each tray as a .zip file and import a .zip file into either tray.</p>
+  </div>
+
+  <figure>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Compare</span></div>
+      <img src="../landing/img/screenshots/05-compare.webp" width="1194" height="667" loading="lazy" alt="The Compare tab: several images in a strip, zoomed to the same region">
+    </div>
+  </figure>
+
+  <div class="topic">
+    <h3>Compare</h3>
+    <ol class="steps">
+      <li>Add images with <kbd>A</kbd> or the overlay button, by dropping files on the tab, or from your editor.</li>
+      <li>Zoom with the mouse wheel and pan by dragging. All images follow and show the same area, even if their resolutions differ.</li>
+      <li>In select mode, drag to draw a region; it applies to every image. The crop grid then shows only these regions, side by side.</li>
+      <li>Export the crops as a single PNG.</li>
+    </ol>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>The strip is vertical when all images are landscape with the same aspect ratio, and horizontal otherwise. In a horizontal strip, the mouse wheel scrolls sideways.</li>
+        <li>Because a plain drag pans the view, you open an image in the overlay with a middle click or <kbd>Shift</kbd>+click.</li>
+        <li>Hold <kbd>Ctrl</kbd> over an image to show its actions. To remove an image from Compare, use its context menu; this removes only the image's entry in Compare.</li>
+        <li>In the crop grid, you reorder images by dragging the grip or with <kbd>←</kbd> and <kbd>→</kbd>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 10 -->
+<section id="ch10" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 10 · Projects</span><span class="chapter-count">10 / 14</span></div>
+    <h2 class="disp">The workspace, saved as a folder.</h2>
+    <p class="scenario">The piece will take several sessions. You want to close everything tonight and find the same trays, parameters and ControlNet inputs tomorrow.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Setting up</h3>
+    <p>You do not need a project to keep your work between sessions: Image Bench keeps the trays and the Compare tab across reloads and restarts on its own. Projects are for when you work on several things in turn. A project saves the trays and Compare together with the generation parameters into a folder of its own, so you can put one piece of work aside, open another, and come back to the first one later in the state you left it.</p>
+    <ol class="steps">
+      <li>Set the project root in <em>Settings › Library</em>. It can be a local or network path, written as the server sees it.</li>
+      <li>Create a project with the project chip at the right end of the tab bar. Each project is a folder with an <code>ib_project/</code> subfolder.</li>
+      <li>Work as usual, and save with the chip or with <kbd>Ctrl</kbd>+<kbd>S</kbd>.</li>
+    </ol>
+  </div>
+
+  <figure>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Projects</span></div>
+      <img src="../landing/img/screenshots/projects.webp" width="1198" height="677" loading="lazy" alt="The Projects view: the project tree at the left, the project with its final image, parameter snapshot, notes and saved concept tray">
+    </div>
+  </figure>
+
+  <div class="topic">
+    <h3>What a project contains</h3>
+    <ul>
+      <li>The trays and Compare, as they are when you save.</li>
+      <li>A snapshot of the host parameters, the enabled ControlNet units with their images and, in ComfyUI, the workflow.</li>
+      <li>The prompt history, tags, notes and the final image.</li>
+      <li>Any other files in the folder, shown in tabs with their generation parameters.</li>
+    </ul>
+  </div>
+
+  <div class="callout non-obvious">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+    <ul>
+      <li>The trays make up the workspace. "Unsaved changes" on the chip means that the trays differ from the last save; generating images does not change them.</li>
+      <li>Projects are never saved automatically. When you open another project, Image Bench asks whether to save or discard your changes.</li>
+      <li>When you choose a final image, it is copied into the project right away, whether or not you save.</li>
+      <li>The × on the chip and <em>Start a blank workspace</em> both clear the images, trays, prompts and seed, and then close the project.</li>
+      <li>A project saved in WebUI opens in ComfyUI and vice versa. Samplers, schedulers and models are matched by name, and anything that cannot be matched is reported.</li>
+      <li>Right-click the chip to see your recent projects.</li>
+    </ul>
+  </div>
+
+  <div class="topic">
+    <h3>The project reminder</h3>
+    <div class="pair">
+      <p>While a project is open, a cube in the project color is attached to the Generate button. After you clear the prompts, apply PNG Info or reopen the window, the next Generate asks whether you are still working on this project. Choose <em>Continue project</em> (or press <kbd>Enter</kbd>), or <em>New workspace</em>, which starts a blank workspace that keeps the prompts and seed.</p>
+      <figure class="shot-small">
+        <img src="../landing/img/screenshots/project-reminder.webp" width="411" height="196" loading="lazy" alt="The project reminder under the Generate button: The current project is still-life, with the buttons Continue project and New workspace and the checkbox Don't ask again for this project">
+        <figcaption>The reminder, opened from the cube next to Generate.</figcaption>
+      </figure>
+    </div>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <p>To skip the question once, <kbd>Ctrl</kbd>+click Generate. <em>Don't ask again for this project</em> turns the reminder off for the current project. To turn it off for all projects, clear <em>Settings › Ask whether to continue the current project before generating</em>; the cube remains and opens the project menu.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ 11 -->
+<section id="ch11" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 11 · Editor round-trips</span><span class="chapter-count">11 / 14</span></div>
+    <h2 class="disp">Photoshop, Krita and GIMP as part of the loop.</h2>
+    <p class="scenario">You paint a rough fix in your editor, send it to inpainting, and get the result back as a layer, without saving a file by hand.</p>
+  </div>
+
+  <figure>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — editor round-trip</span></div>
+      <img src="../landing/img/screenshots/edit.webp" width="1194" height="667" loading="lazy" alt="An image open in a graphics editor next to Image Bench, with the Image Bench plugin panel">
+    </div>
+  </figure>
+
+  <div class="topic">
+    <h3>Setting up</h3>
+    <p>Generated images often need work that is easier to do by hand: a mask for inpainting, a fix painted over a flawed area, a collage for img2img. Without a bridge, each round trip means saving a file in one program and loading it in the other. Image Bench has plugins for Photoshop, Krita and GIMP that do this transfer for you. From the editor you send the document or the selection to the input image, the inpaint mask, a ControlNet unit or the Compare tab, and from Image Bench you send any image to the editor, where it opens as a document or a layer.</p>
+    <ol class="steps">
+      <li>Download the plugin from <em>Library › Manual › Editors</em> and install it.</li>
+      <li>In the plugin panel, enter the host address (the one you open Image Bench from) and connect.</li>
+      <li>The send actions in Image Bench now show the editor's name.</li>
+    </ol>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>Only one editor can be connected at a time. When a second editor connects, it replaces the first one, which does not reconnect by itself.</li>
+        <li>GIMP has no dockable panels, so open the plugin with <em>Tools › Image Bench › Panel</em>. Closing the panel hides it; Quit ends the connection.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>From the editor to the host</h3>
+    <p>The plugin sends the image, and the selection as a mask, to one of the targets below.</p>
+    <div class="table-box">
+      <table>
+        <thead><tr><th>Target</th><th>Where the image goes</th></tr></thead>
+        <tbody>
+          <tr><td>Input</td><td>The img2img canvas if img2img is shown, otherwise Inpaint upload. If the Generate tab sends editor images to the references, it becomes a new reference.</td></tr>
+          <tr><td>ControlNet: preprocess</td><td>The control image of the unit shown in the ControlNet tab. The preprocessor runs, and its preview is sent back to the editor as a layer.</td></tr>
+          <tr><td>ControlNet: image</td><td>The control image, used as it is; the preprocessor is set to None.</td></tr>
+          <tr><td>ControlNet: mask</td><td>The unit's mask; Use Mask is checked.</td></tr>
+          <tr><td>Compare</td><td>A new image in Compare.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>From the host to the editor, and keeping the result</h3>
+    <ul>
+      <li><em>Send to &lt;editor&gt;</em> (<kbd>P</kbd>) opens an image in the editor. <kbd>Shift</kbd>+<kbd>P</kbd> adds it as a new layer to the open document.</li>
+      <li><em>Keep › File</em> in the plugin saves the layered document into the current project folder. <em>Keep › Final</em> does the same and also makes the merged image the project's final image. Both require an open project.</li>
+    </ul>
+  </div>
+
+  <div class="callout fix">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-wrench"/></svg>If it doesn't work</div>
+    <ul>
+      <li><strong>Nothing arrives in ComfyUI:</strong> the image needs a Load Image node marked <code>ib:img</code>, and the mask one marked <code>ib:mask</code>. If none is marked, a message tells you so.</li>
+      <li><strong>The plugin was disconnected:</strong> another editor has connected. Reconnect from the plugin panel.</li>
+      <li><strong>Keep fails:</strong> no project is open.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 12 -->
+<section id="ch12" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 12 · Library</span><span class="chapter-count">12 / 14</span></div>
+    <h2 class="disp">Notes, tags and snippets next to the prompt.</h2>
+    <p class="scenario">You want to check a model's prompting guide, the exact spelling of a tag, or your favorite style fragment without leaving the app.</p>
+  </div>
+
+  <figure>
+    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Library › Snippets</span></div>
+      <img src="../landing/img/screenshots/10-snippets.webp" width="1194" height="667" loading="lazy" alt="The Snippets section of the Library tab: a tree of snippets at the left, the selected snippet at the right">
+    </div>
+  </figure>
+
+  <div class="topic">
+    <h3>Docs</h3>
+    <p>While you write prompts, you often need to look something up: how a model expects to be prompted, how a tag is spelled, or the wording of a style you used before. The Library tab keeps this material inside Image Bench, so you do not have to switch to a browser or a file manager. It has three sections, switched at the top of the tab: Docs for Markdown notes and tag lists, Snippets for reusable prompt fragments, and Manual for the Image Bench manual.</p>
+    <p>The Docs section lists the Markdown files under the docs root as a tree and displays them read-only, including their images and the links between them. You set the docs root in <em>Settings › Library</em>; when it is empty, Image Bench shows the model docs that ship with the extension. Point the root to your own notes folder to read your notes here.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
+      <p>Do not edit the docs that ship with the extension, because every update replaces them. To edit or extend them, copy the extension's <code>model_docs</code> folder into your own docs root and select that folder in <em>Settings › Library</em>.</p>
+    </div>
+    <p>Tag lists, the <code>.csv</code> files used for tag autocompletion, appear in the tree as well and can be searched. Clicking a tag copies it with spaces in place of underscores.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Snippets</h3>
+    <p>Until you save snippets of your own, the list contains a default set of styles taken from comfyui-styles-all and Fooocus. Each snippet has a prompt and a negative prompt, and you can organize them in folders. In a snippet, <code>{}</code> or <code>{prompt}</code> marks where the selected text goes when the snippet wraps it.</p>
+  </div>
+
+  <div class="topic">
+    <h3>Civitai model info</h3>
+    <p>The info action of a model looks the model up on Civitai by its hash and shows the result in a dialog. Results are cached in <code>store/civitai/</code>; to refresh one, delete its file there.</p>
+  </div>
+</section>
+
+<!-- ================================================================ 13 -->
+<section id="ch13" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 13 · Troubleshooting</span><span class="chapter-count">13 / 14</span></div>
+    <h2 class="disp">When the host goes away.</h2>
+    <p class="scenario">The host crashes, hangs or restarts, or it runs on another computer. Image Bench keeps your work and reconnects when the host is back. This chapter describes what happens in the meantime.</p>
+  </div>
+
+  <div class="topic">
+    <h3>The plug icon</h3>
+    <p>When the backend cannot be reached, the plug icon <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-unplug"></use></svg></span> appears after the Library tab. Until the connection is back:</p>
+    <ul>
+      <li>You can still edit parameters in the Generate and ControlNet tabs.</li>
+      <li>Actions that need the server, such as generating, saving or loading lists, are refused, and a single notice tells you why.</li>
+      <li>Tray saves that failed are retried after the reconnect.</li>
+    </ul>
+    <p>When the connection returns, Image Bench reloads the WebUI page and sends it your current state again. ComfyUI is not reloaded, but a run that was in progress is ended.</p>
+  </div>
+
+  <div class="topic">
+    <h3>The console drawer</h3>
+    <p>Press <kbd>Ctrl</kbd>+<kbd>`</kbd> in any tab, or middle-click or <kbd>Shift</kbd>+click the host tab, to show the host's terminal output in the lower part of the window. Drag the top edge of the drawer to resize it. Progress bars and colors appear as they do in the terminal.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know <span class="tag tag-comfy">ComfyUI</span></div>
+      <p>In the host tab, <kbd>Ctrl</kbd>+<kbd>`</kbd> also opens the Image Bench drawer, in place of ComfyUI's own logs panel.</p>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Restarting a hung host</h3>
+    <p>A hung server cannot restart itself. The optional <strong>Host Restart addon</strong> runs a small separate process that can restart it. You install the addon by hand; it is not shipped with the extension, because security software may flag its process control.</p>
+    <ol class="steps">
+      <li>Copy <code>image-bench-host-restart</code> next to the extension. The same folder works for WebUI and ComfyUI.</li>
+      <li>In the addon's <code>store/host_restart.json</code>, enter the command that starts your host, for example <code>{"command": "D:/ai/sd/webui/run.bat"}</code>. This file can only be edited by hand: a setting in the app would let anyone who can reach a <code>--listen</code> host run any command.</li>
+      <li>Restart the host once. The power button of the console drawer and the plug icon now offer a restart.</li>
+    </ol>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
+      <ul>
+        <li>The restart helper listens on the host port plus 100. If the host runs over https with a self-signed certificate, the browser must accept the certificate for this port once, through the link in Settings.</li>
+        <li>Without the addon, the restart buttons explain what it is and link to its page.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>A host on another computer</h3>
+    <p>Start the host with <code>--listen</code> and open Image Bench at that computer's address. To copy images to the clipboard, run the host over https with <code>--tls-keyfile</code> and <code>--tls-certfile</code>. A self-signed certificate works once you have accepted it in the browser.</p>
+  </div>
+
+  <div class="callout fix">
+    <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-wrench"/></svg>If it doesn't work</div>
+    <ul>
+      <li><strong>Images stop arriving, but everything else works:</strong> Image Bench is open at a different address than the host's, or a proxy does not pass WebSocket connections through.</li>
+      <li><strong>Restart does nothing over https:</strong> the restart helper's certificate has not been accepted yet.</li>
+      <li><strong>The interface is out of date after an update:</strong> reload the Image Bench window. In ComfyUI, also restart the server.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ 14 -->
+<section id="ch14" class="chapter">
+  <div class="chapter-head">
+    <div class="kicker chapter-kicker"><span>Chapter 14 · Cheat sheet</span><span class="chapter-count">14 / 14</span></div>
+    <h2 class="disp">Keys, clicks and switches.</h2>
+  </div>
+
+  <div class="topic">
+    <h3>Image keys (on a hovered card or in the overlay)</h3>
+    <div class="keys">
+      <div class="key"><kbd>I</kbd><span>Generation parameters</span></div>
+      <div class="key"><kbd>C</kbd><span>Comment</span></div>
+      <div class="key"><kbd>V</kbd><span>View large</span></div>
+      <div class="key"><kbd>G</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-steps"></use></svg></span><span>Generate with steps</span></div>
+      <div class="key"><kbd>E</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-puzzle"></use></svg></span><span>Generate with text encoders</span></div>
+      <div class="key"><kbd>U</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-upscale"></use></svg></span><span>Upscale</span></div>
+      <div class="key"><kbd>D</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-denoise"></use></svg></span><span>Upscale with denoising</span></div>
+      <div class="key"><kbd>M</kbd><span>Send to img2img</span></div>
+      <div class="key"><kbd>B</kbd><span>Send to inpaint</span></div>
+      <div class="key"><kbd>N</kbd><span>Send to ControlNet</span></div>
+      <div class="key"><kbd>P</kbd><span>Send to editor (with <kbd>Shift</kbd>: as a layer)</span></div>
+      <div class="key"><kbd>A</kbd><span>Add to compare</span></div>
+      <div class="key"><kbd>Y</kbd><span>Add to concept tray</span></div>
+      <div class="key"><kbd>T</kbd><span>Add to image tray</span></div>
+      <div class="key"><kbd>1</kbd>…<kbd>9</kbd><span>Set a marking</span></div>
+      <div class="key"><kbd>0</kbd><span>Remove the marking</span></div>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Anywhere in the app</h3>
+    <div class="keys">
+      <div class="key"><kbd>Ctrl</kbd><span>Hold over a card to show the action rim</span></div>
+      <div class="key"><kbd>Shift</kbd><span>Run the alternative action (as does a middle click)</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save the project</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+<kbd>`</kbd><span>Open or close the console drawer</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+click<span>Generate without the project reminder</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>Confirm a multi-line dialog</span></div>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Settings that change behavior</h3>
+    <div class="table-box">
+      <table>
+        <thead><tr><th>Setting</th><th>Effect</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td>Open Image Bench from the host interface</td><td>The 🔬 button opens the app as a popup instead of showing its link</td><td>Off</td></tr>
+          <tr><td>Open Image Bench in a popup window</td><td>The app opens in a window of its own instead of a browser tab</td><td>Off</td></tr>
+          <tr><td>Show the action rim on hover</td><td>The ring appears on hover; <kbd>Ctrl</kbd> hides it</td><td>Off</td></tr>
+          <tr><td>Keep the session filmstrip shown</td><td>The filmstrip stays open after a batch ends</td><td>Off</td></tr>
+          <tr><td>Ask whether to continue the current project</td><td>The project reminder before Generate</td><td>On</td></tr>
+          <tr><td>Remember prompts and parameters across WebUI reloads</td><td>The host page restores your values after it loads <span class="tag tag-webui">WebUI</span></td><td>On</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>WebUI and ComfyUI</h3>
+    <div class="table-box">
+      <table>
+        <thead><tr><th>Feature</th><th>WebUI</th><th>ComfyUI</th></tr></thead>
+        <tbody>
+          <tr><td>Mode switch txt2img / img2img / Inpaint</td><td class="yes">Yes</td><td class="no">Follows the workflow</td></tr>
+          <tr><td>Workflow dropdown</td><td class="no">No</td><td class="yes">Yes</td></tr>
+          <tr><td>UI preset, token counts, prompt lock</td><td class="yes">Yes</td><td class="no">No</td></tr>
+          <tr><td>Variations and variation seed</td><td class="yes">Yes</td><td class="no">No</td></tr>
+          <tr><td>Hires. fix</td><td class="yes">Yes</td><td class="yes">With <code>ib:smp:1</code></td></tr>
+          <tr><td>Inpaint mask blur, Only masked</td><td class="yes">Yes</td><td class="yes">With CropAndStitch</td></tr>
+          <tr><td>ControlNet preprocessors</td><td class="yes">Yes</td><td class="yes">With controlnet_aux</td></tr>
+          <tr><td>ControlNet control type, mode, resize mode</td><td class="yes">Yes</td><td class="no">No</td></tr>
+          <tr><td>OpenPose editor</td><td class="yes">With openpose-editor</td><td class="no">No</td></tr>
+          <tr><td>VAE / text encoder sets</td><td class="yes">Forge Neo</td><td class="no">No</td></tr>
+          <tr><td>Stalled page recovery</td><td class="yes">Yes</td><td class="no">Not needed</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-row">
+    <span>Image Bench, an extension for Forge Neo and ComfyUI.</span>
+    <span><a href="../">Home</a> · <a href="https://github.com/GChristensen/sd-webui-image-bench">GitHub</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

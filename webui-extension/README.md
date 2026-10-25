@@ -10,7 +10,9 @@ or other parameters, and an image goes to a graphics editor and back in one clic
 without copying and pasting. You do not need the file manager or an image browser
 at any point. See more at the [extension site](https://gchristensen.github.io/image-bench).
 
-The full manual is built in: **Library › Manual** in the Image Bench window.
+The full manual is built in: **Library › Manual** in the Image Bench window. If you are new to Image Bench, start
+with the [tutorial](https://gchristensen.github.io/image-bench/tutorial/), which walks through the common workflows
+with screenshots.
 
 Note: This add-on is not designed to make SD WebUI less complicated.
 It automates repetitive tasks, not the creative process.
