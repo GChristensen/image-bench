@@ -14,7 +14,7 @@ import {canPasteInfotext, copyInfotext, pasteInfotext} from "@/infotextClipboard
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {canReuseParameters, reuseParameters, runImageAction, visibleActionGroups} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
-import {baseName, fetchTray, PROJECT_TRAYS, projectFileUrl, trayImageUrl, useProjectsStore} from "@/stores/projects.js";
+import {baseName, fetchTray, formatSavedAt, PROJECT_TRAYS, projectFileUrl, trayImageUrl, useProjectsStore} from "@/stores/projects.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useCompareStore} from "@/stores/compare.js";
 import {HOST_LABELS, summarizeParams} from "@/projectParams.js";
@@ -24,6 +24,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {flashTrayTab} from "@/components/utils.js";
+import {animateColors} from "@/utils_html.js";
 import {startBlankWorkspace} from "@/workspace.js";
 
 const props = defineProps({
@@ -53,9 +54,7 @@ const folder = computed(() => project.value?.path.includes("/") ? project.value.
 
 const fileUrl = (name, options) => projectFileUrl(project.value.path, name, options);
 
-const formatDate = seconds => seconds
-  ? new Date(seconds * 1000).toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})
-  : null;
+const formatDate = formatSavedAt;
 
 const changedTrays = computed(() => isCurrent.value
   ? PROJECT_TRAYS.filter(tray => store.current.trays?.[tray.kind]?.changed).map(tray => tray.label)
@@ -180,12 +179,10 @@ function onFinalDragOver(e) {
 const IMAGE_TAB_KEY = "imageBench_libraryImageTab";
 // Tabs of the image grid; the trays are those saved with the project
 const IMAGE_TABS = [
-  {id: "image_tray", label: "Image tray"},
-  {id: "concept_tray", label: "Concept tray"},
-  {id: "compare", label: "Compare"},
+  ...PROJECT_TRAYS.map(tray => ({id: tray.kind, label: tray.label})),
   {id: "files", label: "Files"}
 ];
-const TRAY_KINDS = ["image_tray", "concept_tray", "compare"];
+const TRAY_KINDS = PROJECT_TRAYS.map(tray => tray.kind);
 
 const storage = useLocalStorage();
 // The tab chosen by the user, kept; without one, the first tab with images is shown
@@ -358,6 +355,11 @@ async function refreshFiles() {
 
 const viewerIndex = ref(null);
 const viewerFiles = ref([]);
+
+// The viewer covers the tab bar, so its buttons flash as the tabs do to show that the action was taken
+function flashButton(e) {
+  animateColors(e.currentTarget, 0.7);
+}
 
 function viewFiles(list, index) {
   viewerFiles.value = list;
@@ -665,18 +667,20 @@ const unitDetails = unit => [
       <!-- The buttons of the cards in one row: parameters | final | compare and send -->
       <template #actions="{file}">
         <template v-if="file?.item">
-          <ImageActionButtons :groups="actionGroups(file.item.image, 'left')" :show-alt="shiftKey"
+          <ImageActionButtons :groups="actionGroups(file.item.image, 'left')" :show-alt="shiftKey" flash
                               @run="(action, alt) => onImageAction(file.item, action, alt)"/>
           <button v-if="canReuseAll(file.item)" class="ib sm viewer-button" title="Reuse the prompts and all parameters"
-                  aria-label="Reuse the prompts and all parameters" @click="reuseAll(file.item)"
+                  aria-label="Reuse the prompts and all parameters" @click="flashButton($event); reuseAll(file.item)"
             ><AppIcon name="sliders" :size="13"/></button>
           <span v-if="file.item.image.parameters" class="viewer-sep"></span>
           <button class="ib sm viewer-button" title="Set as the final image" aria-label="Set as the final image"
-                  @click="store.setFinal(project.path, file.item.final)"><AppIcon name="star" :size="13"/></button>
+                  @click="flashButton($event); store.setFinal(project.path, file.item.final)"
+            ><AppIcon name="star" :size="13"/></button>
           <span v-if="file.item.kind === KIND_IMAGE" class="viewer-sep"></span>
           <button v-if="file.item.kind === KIND_IMAGE" class="ib sm viewer-button" title="Add to compare" aria-label="Add to compare"
-                  @click="addToCompare(file.item.url, file.item.name)"><AppIcon name="compare" :size="13"/></button>
-          <ImageActionButtons :groups="actionGroups(file.item.image, 'right')" :show-alt="shiftKey"
+                  @click="flashButton($event); addToCompare(file.item.url, file.item.name)"
+            ><AppIcon name="compare" :size="13"/></button>
+          <ImageActionButtons :groups="actionGroups(file.item.image, 'right')" :show-alt="shiftKey" flash
                               @run="(action, alt) => onImageAction(file.item, action, alt)"/>
         </template>
       </template>

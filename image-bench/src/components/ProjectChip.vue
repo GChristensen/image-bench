@@ -90,7 +90,7 @@ function onDrop() {
       <span class="name">No project</span>
     </RouterLink>
     <button class="chip-save" :disabled="!!store.busy"
-            :title="store.busy || 'New project, into which the workspace can be saved'" aria-label="New project"
+            :title="store.busy || 'New project, in the folder selected in the Projects tab or the root; the workspace can be saved into it'" aria-label="New project"
             @click="store.createProject()"><span v-if="store.busy" class="spinner"></span><AppIcon v-else name="plus" :size="13"/></button>
   </div>
   <div v-else class="project-chip" :class="{active, missing: store.current.exists === false, 'drop-target': dropTarget, pulsing}"

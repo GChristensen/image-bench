@@ -8,7 +8,7 @@ import {computed, nextTick, ref, watch} from "vue";
 import {useRouter} from "vue-router";
 import AppIcon from "@/components/AppIcon.vue";
 import TreeView from "@/components/TreeView.vue";
-import {baseName, useProjectsStore} from "@/stores/projects.js";
+import {parentPath, useProjectsStore} from "@/stores/projects.js";
 import {openContextMenu} from "@/contextMenu.js";
 import {HOST_LABELS} from "@/projectParams.js";
 import {dialog} from "@/dialogs/useDialog.js";
@@ -23,8 +23,6 @@ const store = useProjectsStore();
 const router = useRouter();
 const storage = useLocalStorage();
 const treeView = ref(null);
-// Folder or project last clicked; new folders and projects are created in it (or next to the project)
-const selectedKey = ref(store.selectedPath);
 const showAllTags = ref(false);
 
 // "Show in Explorer" opens the file manager of the server computer
@@ -140,45 +138,32 @@ function highlight(text, excerpt = false) {
   return text.split(pattern).filter(Boolean).map(part => ({text: part, hit: words.includes(part.toLowerCase())}));
 }
 
-const parentPath = path => path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
-
-// The selected project is shown in the tree when the search is cleared
+// The selected item is shown in the tree when the search is cleared
 watch(() => parsed.value.active, async active => {
-  if (!active && store.selectedPath) {
+  if (!active && store.selectedKey) {
     await nextTick();
-    treeView.value?.reveal(store.selectedPath);
+    treeView.value?.reveal(store.selectedKey);
   }
 });
 
 // ---------- Selection ----------
 
+// A folder shows its page, a project its details
 function onSelect(node) {
-  selectedKey.value = node.key;
-
-  if (!node.children)
+  if (node.children)
+    store.selectFolder(node.key);
+  else
     store.select(node.key);
 }
 
 function selectResult(entry) {
-  selectedKey.value = entry.path;
   store.select(entry.path);
 }
 
-// Folder in which new folders and projects are created
-const targetFolder = computed(() => {
-  const node = selectedKey.value && store.findNode(store.tree?.nodes ?? [], selectedKey.value);
-
-  if (!node)
-    return "";
-
-  return node.type === "folder" ? node.path : parentPath(node.path);
-});
-
-watch(() => store.selectedPath, path => {
-  if (path) {
-    selectedKey.value = path;
+// Also selections made on the folder page
+watch(() => store.selectedKey, path => {
+  if (path)
     treeView.value?.reveal(path);
-  }
 });
 
 // ---------- File operations ----------
@@ -291,9 +276,9 @@ defineExpose({reveal: path => treeView.value?.reveal(path)});
         <span class="root-path" :title="`Project root (as the server sees it): ${store.tree?.root ?? ''}`"
           ><bdi dir="ltr">{{ store.tree?.root }}</bdi></span>
         <button class="ib flat sm" title="New folder" aria-label="New folder"
-                @click="store.createFolder(targetFolder)"><AppIcon name="folder" :size="14"/></button>
+                @click="store.createFolder(store.targetFolder)"><AppIcon name="folder" :size="14"/></button>
         <button class="ib flat sm" title="New project: saves the workspace into it" aria-label="New project"
-                @click="store.createProject(targetFolder)"><AppIcon name="box" :size="14"/></button>
+                @click="store.createProject(store.targetFolder)"><AppIcon name="box" :size="14"/></button>
         <button class="ib flat sm" :class="{busy: store.treeLoading}" title="Refresh" aria-label="Refresh"
                 @click="store.loadTree()"><span v-if="store.treeLoading" class="spinner"></span><AppIcon v-else name="refresh" :size="13"/></button>
       </div>
@@ -342,7 +327,7 @@ defineExpose({reveal: path => treeView.value?.reveal(path)});
           <div v-if="!results.length" class="message">No projects match.</div>
         </template>
 
-        <TreeView v-else ref="treeView" :nodes="nodes" :selected-key="selectedKey"
+        <TreeView v-else ref="treeView" :nodes="nodes" :selected-key="store.selectedKey"
                   storage-key="imageBench_libraryProjectsOpen" :can-drop="canDrop"
                   :empty-text="store.tree ? 'No folders yet. Create a project with the box button.' : 'Loading…'"
                   @select="onSelect" @activate="onActivate" @menu="onMenu" @move="onMove"

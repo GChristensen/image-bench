@@ -746,7 +746,7 @@ const hostOrigin = location.origin;
         settings currently set in {{ isWebUI ? "WebUI" : "the workflow (the Hires. fix group of the Generate tab)" }}.
       </p>
       <p>
-        Like the trays, the tab keeps its images until you remove them.
+        Like the trays, the tab keeps its images until you remove them, and it is saved with the current project.
         A colored bar marks the images of one upscale run. Drag thumbnails onto another one to reorder them, as in
         the trays. <AppIcon name="download" :size="13" class="inline-icon"/> downloads
         them as a .zip, which can be imported into a tray.
@@ -818,7 +818,7 @@ const hostOrigin = location.origin;
         Click the project chip at the right of the tab bar to show the projects.
       </p>
       <p>
-        A project holds a piece of work: the image tray, the concept tray and the contents of the Compare tab,
+        A project holds a piece of work: the image tray, the concept tray and the contents of the Compare and Upscaled tabs,
         the parameters of the Generate and ControlNet tabs with the ControlNet images, and, in
         ComfyUI, the workflow. Projects are folders under the project root, which you set in <b>Settings › Library › Project root</b>.
         The root is a folder on the {{ HOST_NAME }} server computer and can be a network (UNC) path such as
@@ -833,7 +833,8 @@ const hostOrigin = location.origin;
           <b>Move to…</b>, and delete them (<span class="kbd">Del</span>; on local drives they go to the Recycle Bin).
           <b>Copy path</b> copies the path on the server; <b>Show in Explorer</b> is offered when {{ HOST_NAME }}
           runs on this computer. The letter after a project shows the host it was saved in: <b>W</b> (WebUI) or
-          <b>C</b> (ComfyUI).</li>
+          <b>C</b> (ComfyUI). Select a folder (or nothing, for the root) to see its page: its subfolders and its
+          projects with their final images. Click a project there to show it and double-click it to open it.</li>
         <li><b>Search</b>: words find projects by name and prompt, <code>#tag</code> keeps the projects with that
           tag, and <code>host:comfy</code> or <code>host:webui</code> keeps those of a host. Results are listed with
           their folders. The tags under the field, with their counts, add themselves to the search.</li>
@@ -842,7 +843,8 @@ const hostOrigin = location.origin;
           <span class="kbd">Ctrl</span>+<span class="kbd">S</span> saves the workspace into it; nothing is saved
           automatically. Image Bench remembers the current project across restarts. Without a current project the
           chip reads <i>No project</i>, and its <AppIcon name="plus" :size="13" class="inline-icon"/> button
-          creates a new project. Right-click the chip to open one of the recent projects.
+          creates a new project. When a folder is selected in the Projects tab, or a project inside a folder, a switch
+          in the dialog lets you choose between that folder and the root. Right-click the chip to open one of the recent projects.
           Drop image cards on the chip to copy them into the folder of the current project.</li>
         <li><b>The project reminder</b>: while a project is current, a cube in the project color is joined to the
           Generate button. Click it for <b>Save project</b> and <b>New workspace…</b>. The cube turns striped and
@@ -875,7 +877,7 @@ const hostOrigin = location.origin;
           into <code>ib_project</code> and kept even if the workspace is not saved. A project saved without a
           final image uses the image marked 🏁 in the image tray (or else in the concept tray).</li>
         <li><b>Tags</b> and <b>notes</b> are saved immediately. Click a tag to search by it.</li>
-        <li>The tabs under the parameters, <b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b> and <b>Files</b>,
+        <li>The tabs under the parameters, <b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b>, <b>Upscaled</b> and <b>Files</b>,
           contain the images of the trays as of the last save, and the image files of the project folder.
           Click an image to view it
           (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click to open it in

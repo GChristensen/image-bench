@@ -32,6 +32,8 @@ const checklistRef = ref(null);
 const checked = ref([...(options.value.selected ?? [])]);
 // Prompt with a checkbox under the input (options.checkbox: {label, checked})
 const checkboxChecked = ref(!!options.value.checkbox?.checked);
+// Prompt with a switch over the input (options.choices: {items: [{value, label, title?}], value})
+const choice = ref(options.value.choices?.value ?? options.value.choices?.items[0]?.value);
 const checklistFilter = ref(options.value.filter ?? '');
 const okText = computed(() => typeof options.value.okText === 'function'
   ? options.value.okText(checked.value.length)
@@ -79,7 +81,14 @@ function confirm() {
       if (!options.value.multiline)
         saveToHistory(value);
 
-      emit('close', options.value.checkbox ? {value, checked: checkboxChecked.value} : value);
+      if (options.value.checkbox || options.value.choices)
+        emit('close', {
+          value,
+          ...options.value.checkbox && {checked: checkboxChecked.value},
+          ...options.value.choices && {choice: choice.value}
+        });
+      else
+        emit('close', value);
     }
     else
       cancel();
@@ -138,6 +147,11 @@ defineExpose({onEnterKey, onEscapeKey, keepsKey});
         <label v-if="isPrompt" class="dialog-message" :for="`dialog-input-${entry.id}`">{{ entry.message }}</label>
         <ModelInfoContent v-else-if="entry.kind === 'modelInfo'" :info="options.info"/>
         <p v-else-if="entry.message" class="dialog-message">{{ entry.message }}</p>
+        <div v-if="isPrompt && options.choices" class="dialog-choices" role="radiogroup">
+          <button v-for="item in options.choices.items" :key="item.value" type="button" role="radio"
+                  :aria-checked="choice === item.value" :class="{on: choice === item.value}" :title="item.title"
+                  @click="choice = item.value"><bdi>{{ item.label }}</bdi></button>
+        </div>
         <FilterChecklist v-if="isChecklist" ref="checklistRef" v-model="checked" v-model:filter="checklistFilter"
                          :items="options.items" :groups="options.groups" :empty-text="options.emptyText"/>
         <ComboInput v-if="isPrompt && options.dropdown"
@@ -266,6 +280,40 @@ defineExpose({onEnterKey, onEscapeKey, keepsKey});
 
 .dialog-check input {
   margin: 0;
+}
+
+/* Segmented switch over the input of a prompt */
+.dialog-choices {
+  display: flex;
+  padding: 2px;
+  border: 1px solid var(--ib-border-2);
+  border-radius: 6px;
+  background: var(--ib-bg);
+}
+
+.dialog-choices button {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--ib-text-2);
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dialog-choices button:hover {
+  color: var(--ib-text);
+}
+
+.dialog-choices button.on {
+  border-color: var(--ib-accent-border);
+  background: var(--ib-accent-soft);
+  color: var(--ib-accent);
 }
 
 .dialog-footer {

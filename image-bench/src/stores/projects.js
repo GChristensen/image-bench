@@ -4,12 +4,13 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {requestHost} from "@/hostRequest.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
 import {HOST, isComfy} from "@/host.js";
-import {KIND_COMPARE, KIND_CONCEPT_TRAY, KIND_IMAGE_TRAY} from "@/consts.js";
+import {KIND_COMPARE, KIND_CONCEPT_TRAY, KIND_IMAGE_TRAY, KIND_UPSCALED} from "@/consts.js";
 import {fetchRestoreChoices, HOST_LABELS, loadUnitFiles, prepareRestore, snapshotToSave} from "@/projectParams.js";
 import {onTrayPersisted} from "@/stores/composables/useTrayStoreState.js";
 import {useImageTrayStore} from "@/stores/imageTray.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
 import {useCompareStore} from "@/stores/compare.js";
+import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {usePromptHistoryStore} from "@/stores/promptHistory.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 
@@ -17,10 +18,14 @@ import {useLocalStorage} from "@/composables/useLocalStorage.js";
 export const PROJECT_TRAYS = [
   {kind: KIND_IMAGE_TRAY, label: "Image tray"},
   {kind: KIND_CONCEPT_TRAY, label: "Concept tray"},
-  {kind: KIND_COMPARE, label: "Compare"}
+  {kind: KIND_COMPARE, label: "Compare"},
+  {kind: KIND_UPSCALED, label: "Upscaled"}
 ];
 
 const SELECTED_KEY = "imageBench_librarySelectedProject";
+const SELECTED_FOLDER_KEY = "imageBench_projectsSelectedFolder";
+// Where the project chip's + creates a project: "selected" (folder) or "root"
+const NEW_TARGET_KEY = "imageBench_newProjectTarget";
 const RECENT_KEY = "imageBench_recentProjects";
 // Projects listed by the context menu of the project chip
 const RECENT_SIZE = 8;
@@ -115,6 +120,22 @@ export function fetchTray(path, kind) {
 export const baseName = path => String(path ?? "").split("/").pop();
 
 /**
+ * Folder of a path relative to the root ("" for the root)
+ * @param {string} path
+ * @returns {string}
+ */
+export const parentPath = path => path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+
+/**
+ * Date and time of a save time of a project
+ * @param {number|null} seconds
+ * @returns {string}
+ */
+export const formatSavedAt = seconds => seconds
+  ? new Date(seconds * 1000).toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})
+  : null;
+
+/**
  * Projects of the Projects tab: the directory tree under the project root, the project shown in the tab, the recent
  * projects and the current project, into which the workspace (the trays, the Generate and ControlNet parameters)
  * is saved. The backend keeps the current project (store/current_project.json) with the state of the trays at the
@@ -129,7 +150,10 @@ export const useProjectsStore = defineStore("projects", () => {
   const treeError = ref(null);
   // {path: null} or {path, name, exists, savedAt, trays: {kind: {workspace, saved, changed}}, changed}
   const current = ref({path: null});
-  const selectedPath = ref(storage.getItem(SELECTED_KEY));
+  // Project selected in the Projects tab
+  const selectedPath = ref(storage.getItem(SELECTED_KEY) || null);
+  // Folder selected in the tree instead of a project, null if a project or nothing (the root) is selected
+  const selectedFolder = ref(storage.getItem(SELECTED_FOLDER_KEY) || null);
   // Project shown in the Projects tab: {path, name, data, files, trays}
   const project = ref(null);
   const projectError = ref(null);
@@ -142,8 +166,14 @@ export const useProjectsStore = defineStore("projects", () => {
 
   const hasCurrent = computed(() => current.value.path !== null && current.value.path !== undefined);
   const unsaved = computed(() => !!current.value.changed);
+  // The item highlighted in the tree
+  const selectedKey = computed(() => selectedFolder.value ?? selectedPath.value);
+  // Folder shown by the Projects tab instead of a project ("" for the root), null while a project is shown
+  const folderShown = computed(() => selectedFolder.value ?? (selectedPath.value ? null : ""));
+  // Folder in which new folders and projects are created: the selected folder or that of the selected project
+  const targetFolder = computed(() => selectedFolder.value ?? (selectedPath.value ? parentPath(selectedPath.value) : ""));
 
-  const trayStores = () => [useImageTrayStore(), useConceptTrayStore(), useCompareStore()];
+  const trayStores = () => [useImageTrayStore(), useConceptTrayStore(), useCompareStore(), useUpscaledImagesStore()];
 
   // ---------- Recent projects ----------
 
@@ -205,9 +235,27 @@ export const useProjectsStore = defineStore("projects", () => {
     }
   }
 
+  /**
+   * Select a folder in the tree, whose page the Projects tab shows
+   * @param {string|null} path - "" or null: the root
+   */
+  function selectFolder(path) {
+    selectedFolder.value = path || null;
+    storage.setItem(SELECTED_FOLDER_KEY, path ?? "");
+
+    // The root page is shown while no project is selected
+    if (!path)
+      select(null);
+  }
+
   async function select(path) {
     selectedPath.value = path;
     storage.setItem(SELECTED_KEY, path ?? "");
+
+    if (path) {
+      selectedFolder.value = null;
+      storage.setItem(SELECTED_FOLDER_KEY, "");
+    }
 
     if (!path) {
       project.value = null;
@@ -491,18 +539,61 @@ export const useProjectsStore = defineStore("projects", () => {
 
   const folderLabel = path => path ? `"${path}"` : "the project root";
 
-  async function createProject(parent = "") {
-    const answer = await dialog.prompt(`New project in ${folderLabel(parent)}:`, {
+  /**
+   * Folder offered by the project chip's + besides the root: the selected folder or that of the selected project,
+   * "" if that is the root or no longer exists
+   * @returns {Promise<string>}
+   */
+  async function chipTargetFolder() {
+    const folder = targetFolder.value;
+
+    if (!folder)
+      return "";
+
+    if (!tree.value)
+      await loadTree();
+
+    return findNode(tree.value?.nodes ?? [], folder)?.type === "folder" ? folder : "";
+  }
+
+  /**
+   * Create a project, into which the workspace may be saved at once
+   * @param {string|null} parent - null (the project chip): the selected folder or the root, by a switch of the dialog
+   */
+  async function createProject(parent = null) {
+    const options = {
       title: "New project",
       placeholder: "Project name",
       okText: "Create",
       checkbox: {label: "Save the workspace into it and make it current", checked: true}
-    });
+    };
+
+    const folder = parent === null ? await chipTargetFolder() : parent;
+    let message = `New project in ${folderLabel(folder)}:`;
+
+    if (parent === null && folder) {
+      message = "Create the project in:";
+      options.choices = {
+        items: [
+          {value: "selected", label: folder,
+           title: selectedFolder.value ? "The folder selected in the Projects tab"
+             : `The folder of the project "${baseName(selectedPath.value)}" selected in the Projects tab`},
+          {value: "root", label: "Root", title: "The project root"}
+        ],
+        value: storage.getItem(NEW_TARGET_KEY) === "root" ? "root" : "selected"
+      };
+    }
+
+    const answer = await dialog.prompt(message, options);
 
     if (!answer)
       return;
 
-    const result = await run("Creating…", () => call("create_project", {path: parent, name: answer.value}));
+    if (options.choices)
+      storage.setItem(NEW_TARGET_KEY, answer.choice);
+
+    const path = answer.choice === "root" ? "" : folder;
+    const result = await run("Creating…", () => call("create_project", {path, name: answer.value}));
 
     if (!result)
       return;
@@ -538,7 +629,13 @@ export const useProjectsStore = defineStore("projects", () => {
     await loadTree();
     await loadCurrent();
 
-    if (selectedPath.value && follow(selectedPath.value) !== selectedPath.value)
+    if (selectedFolder.value) {
+      // The project selected before the folder follows too, without being shown
+      selectedPath.value = follow(selectedPath.value);
+      storage.setItem(SELECTED_KEY, selectedPath.value ?? "");
+      selectFolder(follow(selectedFolder.value));
+    }
+    else if (selectedPath.value && follow(selectedPath.value) !== selectedPath.value)
       await select(follow(selectedPath.value));
   }
 
@@ -579,7 +676,9 @@ export const useProjectsStore = defineStore("projects", () => {
 
     setRecent(recent.value.filter(path => !inside(path)));
 
-    if (inside(selectedPath.value))
+    if (inside(selectedFolder.value))
+      selectFolder(parentPath(node.path));
+    else if (inside(selectedPath.value))
       await select(null);
 
     await loadTree();
@@ -687,9 +786,9 @@ export const useProjectsStore = defineStore("projects", () => {
   }
 
   return {
-    tree, treeLoading, treeError, current, selectedPath, project, projectError, busy, fileVersion, recent,
-    hasCurrent, unsaved,
-    init, loadTree, loadCurrent, loadProject, select, findNode, show,
+    tree, treeLoading, treeError, current, selectedPath, selectedFolder, project, projectError, busy, fileVersion,
+    recent, hasCurrent, unsaved, selectedKey, folderShown, targetFolder,
+    init, loadTree, loadCurrent, loadProject, select, selectFolder, findNode, show,
     save, saveInto, saveAs, open, close,
     createProject, createFolder, rename, move, remove, reveal,
     updateProject, setFinal, addFile, deleteFile, writeInfotext

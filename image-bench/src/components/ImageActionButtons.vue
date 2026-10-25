@@ -1,11 +1,12 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import {animateColors} from "@/utils_html.js";
 
 /**
  * Buttons of the image actions (imageActions.js) of one side of an image card, groups separated by a line.
  * A middle click or Shift+click runs the alternative of an action; showAlt shows the alternative icons.
  */
-defineProps({
+const props = defineProps({
   // Non-empty groups of actions, as returned by visibleActionGroups()
   groups: {
     type: Array,
@@ -14,14 +15,26 @@ defineProps({
   showAlt: {
     type: Boolean,
     default: false
+  },
+  // Flash the button on a run (in overlays, which cover the tabs that would flash)
+  flash: {
+    type: Boolean,
+    default: false
   }
 });
 
 const emit = defineEmits(["run", "hover"]);
 
+function run(action, alt, e) {
+  if (props.flash)
+    animateColors(e.currentTarget, 0.7);
+
+  emit("run", action, alt);
+}
+
 function onAuxClick(action, e) {
   if (e.button === 1 && action.alt)
-    emit("run", action, true);
+    run(action, true, e);
 }
 </script>
 
@@ -32,7 +45,7 @@ function onAuxClick(action, e) {
       <button v-for="action in group" :key="action.id" class="ib sm"
               :class="{on: showAlt && action.alt}"
               :aria-label="showAlt && action.alt ? action.alt.label : action.label"
-              @click="emit('run', action, $event.shiftKey)"
+              @click="run(action, $event.shiftKey, $event)"
               @mousedown.middle.prevent
               @auxclick="onAuxClick(action, $event)"
               @mouseenter="emit('hover', action)"

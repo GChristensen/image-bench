@@ -7,6 +7,7 @@
 import {computed, onActivated, reactive, ref} from "vue";
 import ProjectsBrowser from "@/components/projects/ProjectsBrowser.vue";
 import ProjectDetail from "@/components/projects/ProjectDetail.vue";
+import FolderDetail from "@/components/projects/FolderDetail.vue";
 import {useProjectsStore} from "@/stores/projects.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 
@@ -30,7 +31,12 @@ const sideWidth = reactive(useDragSize(SIDE_WIDTH_KEY, {
 onActivated(async () => {
   await projects.loadTree();
 
-  if (projects.selectedPath && (!projects.project || projects.project.path !== projects.selectedPath))
+  // A folder removed outside of Image Bench leaves the root page
+  if (projects.selectedFolder && projects.tree?.exists
+      && projects.findNode(projects.tree.nodes, projects.selectedFolder)?.type !== "folder")
+    projects.selectFolder(null);
+
+  if (projects.folderShown === null && projects.selectedPath && (!projects.project || projects.project.path !== projects.selectedPath))
     await projects.loadProject();
 });
 
@@ -64,7 +70,9 @@ function filterTag(tag) {
          @pointerdown="sideWidth.onPointerDown" @keydown="sideWidth.onKeydown" @dblclick="sideWidth.reset"><i></i></div>
     <main class="content">
       <div v-if="projects.busy" class="busy"><span class="spinner"></span>{{ projects.busy }}</div>
-      <ProjectDetail :all-tags="allTags" @filter-tag="filterTag"/>
+      <FolderDetail v-if="projects.folderShown !== null && projects.tree?.root && projects.tree.exists !== false"
+                    :path="projects.folderShown"/>
+      <ProjectDetail v-else :all-tags="allTags" @filter-tag="filterTag"/>
     </main>
   </div>
 </template>
