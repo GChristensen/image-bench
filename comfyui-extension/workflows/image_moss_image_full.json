@@ -1,8 +1,8 @@
 {
   "id": "47a7b84d-b945-5e70-b12b-2b64ddda10dd",
   "revision": 0,
-  "last_node_id": 25,
-  "last_link_id": 34,
+  "last_node_id": 26,
+  "last_link_id": 36,
   "nodes": [
     {
       "id": 1,
@@ -574,6 +574,15 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 14
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 35
         }
       ],
       "outputs": [
@@ -962,6 +971,15 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 29
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 36
         }
       ],
       "outputs": [
@@ -1131,9 +1149,43 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "## MOSS-Image: text-to-image, Hires. fix\n\n[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT) (OpenMOSS, 5.1B single-stream DiT, Qwen3.5 9B text\nencoder, FLUX.2 VAE, Apache-2.0) is strong at text rendering and layout. SFT is the curated fine-tune used here; Base\n(`moss_image_base_bf16.safetensors`) runs in the same graph, with the negative prompt `nsfw, worst quality, bad anatomy, watermark, jpeg artifact`.\n\n**Settings**: 50 steps, CFG 3 (true CFG: two passes per step), euler, simple, 1024×1024. Shift 5 is applied by the\nmodel, so there is no Shift setting. Sizes from 512×512 to about 2048×2048 (0.25-4 MP; 1, 1.5 or 2 MP recommended),\nsides multiples of 16. Leave the negative prompt empty on SFT.\n\n**Skip Layer Guidance** (layer 22, 0-1) is the official default: the negative pass runs with layer 22 skipped.\nBypass it for a more photographic look at the cost of fine detail, or set its end to 0.5 as a compromise.\n\n**Prompts**: natural language, booru-style tags or a JSON layout (paste it into the prompt; its size must match\nWidth / Height). Put text to render in double quotes; `(word:1.2)` weights are not known to work. CFG 3 suits long\nprompts; raise it toward 6 for short ones.\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` / `ib:np` | Image Bench Prompt / Negative Prompt | prompts and LoRA list |\n| `ib:smp` | KSampler | seed, steps, CFG, sampler, scheduler; size (Width / Height) |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler, scale, steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; Upscale button |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**Destripe LoRA**: SFT paints faint vertical colour stripes in smooth areas (sky, walls). Enable the bypassed\n**Destripe LoRA** (Ctrl+B) after downloading it: strength 1.0 at 768 px, 1.5 at 1024 px; SFT only.\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt. Use the normal LoRA loaders:\n`Load LoRA (Bypass)` drops the q/k/v adapters of the fused Comfy-Org checkpoints (watch the console for `lora key not\nloaded`).\n\n**Hires. fix**: the model renders up to 4 MP natively, so for a larger image prefer generating at the target size\n(composition changes with the size). Hires. fix keeps the composition: the upscaler model enlarges the first pass,\n**Resize to the hires size** brings it to the first pass size × *Upscale by* (1.5), and a second KSampler samples it\nat denoising 0.4. Put any ESRGAN-type model into `models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here); the\nloader must name an installed model even while Hires. fix is off.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: off, the first pass is saved\nand the Hires. fix nodes do not run. The **Upscale** button switches it on, generates the image again with its seed\nand parameters, and switches it back.\n\nThe Generate tab has no References panel and the ControlNet tab no units: MOSS-Image takes no reference images, and\nthere is no ControlNet for it.\n\nMOSS-Image needs a ComfyUI with native support (merged 16 Oct 2026, PR #17095; master after 0.41.x): an older\ninstall fails to load the model. The CLIP loader type must be `moss_image`.\n\n## Model Links\n\n[Comfy-Org/MOSS-Image](https://huggingface.co/Comfy-Org/MOSS-Image) also has `*_int8_convrot` diffusion models (5.4 GB,\nfor 16 GB VRAM or less) and the `qwen3.5_9b_w4a8_gptq` text encoder (7.3 GB).\n\n**diffusion_models**: [moss_image_sft_bf16.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors), [moss_image_base_bf16.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_bf16.safetensors)\n**text_encoders**: [qwen3.5_9b_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_int8_convrot.safetensors) (one file for SFT and Base)\n**vae**: [flux2-vae.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae.safetensors) (the FLUX.2 VAE)\n**loras**: [moss_sft_destripe_top64_bf16.safetensors](https://huggingface.co/nynxz/MOSS-Image/resolve/main/loras/moss_sft_destripe_top64_bf16.safetensors) (nynxz)\n"
+        "## MOSS-Image: text-to-image, Hires. fix\n\n[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT) (OpenMOSS, 5.1B single-stream DiT, Qwen3.5 9B text\nencoder, FLUX.2 VAE, Apache-2.0) is strong at text rendering and layout. **SFT** is the curated fine-tune set here;\n**Base** and Base with the 8-step **DMD2 LoRA** run in the same graph, see below.\n\n**Settings (SFT)**: 50 steps, CFG 3 (true CFG: two passes per step), euler, simple, 1024×1024. Shift 5 is applied by\nthe model, so there is no Shift setting. Sizes from 512×512 to about 2048×2048 (0.25-4 MP; 1, 1.5 or 2 MP\nrecommended), sides multiples of 16. Leave the negative prompt empty on SFT.\n\n**Skip Layer Guidance** (layer 22, 0-1) is the official default: the negative pass runs with layer 22 skipped.\nBypass it for a more photographic look at the cost of fine detail, or set its end to 0.5 as a compromise.\n\n**Prompts**: natural language, booru-style tags or a JSON layout (paste it into the prompt; its size must match\nWidth / Height). Put text to render in double quotes; `(word:1.2)` weights are not known to work. CFG 3 suits long\nprompts; raise it toward 6 for short ones.\n\n## Base\n\n**Base** (`moss_image_base_bf16`, raw pretrain) is the checkpoint LoRAs are trained on. Out of the box its anime\noutput is weak and its photoreal decent; character and style LoRAs improve it a lot. Choose it in the model list,\nkeep the SFT settings (50 steps or more, CFG 3; 4-6 for short prompts) and the Destripe LoRA bypassed, and use the\nnegative prompt `nsfw, worst quality, bad anatomy, watermark, jpeg artifact`: light data filtering lets watermarks,\nblur and JPEG artefacts leak in. Tags work best in the order Quality → Score → Meta → Year → Character → Series →\nArtist → General.\n\n**8 steps (DMD2 LoRA)**: the DMD2 LoRA of [lodestones/Kromoss](https://huggingface.co/lodestones/Kromoss) is distilled\nfrom Base (rank 128). With Base, add `<lora:8-steps-dmd2-lora:1>` to the prompt and set 8 steps (4 also works) and\nCFG 1; for Hires. fix set its steps to 8 too. At CFG 1 there is no negative pass, so the negative prompt and Skip\nLayer Guidance have no effect. **CFG above 1 burns the image.** It also works on Kromoss (`kromoss_bf16.safetensors`,\na drop-in replacement for the diffusion model); on SFT it is untested. Use one DMD LoRA at a time, and do not merge\nit into bf16 weights.\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` / `ib:np` | Image Bench Prompt / Negative Prompt | prompts and LoRA list |\n| `ib:smp` | KSampler | seed, steps, CFG (CFG), sampler, scheduler; size (Width / Height) |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler, scale, steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; Upscale button |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**CFG** feeds both KSamplers, so the Hires. fix pass follows the CFG of the Generate tab.\n\n**Destripe LoRA**: SFT paints faint vertical colour stripes in smooth areas (sky, walls). Enable the bypassed\n**Destripe LoRA** (Ctrl+B) after downloading it: strength 1.0 at 768 px, 1.5 at 1024 px; SFT only.\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt. Use the normal LoRA loaders:\n`Load LoRA (Bypass)` drops the q/k/v adapters of the fused Comfy-Org checkpoints (watch the console for `lora key not\nloaded`).\n\n**Hires. fix**: the model renders up to 4 MP natively, so for a larger image prefer generating at the target size\n(composition changes with the size). Hires. fix keeps the composition: the upscaler model enlarges the first pass,\n**Resize to the hires size** brings it to the first pass size × *Upscale by* (1.5), and a second KSampler samples it\nat denoising 0.4. Put any ESRGAN-type model into `models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here); the\nloader must name an installed model even while Hires. fix is off.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: off, the first pass is saved\nand the Hires. fix nodes do not run. The **Upscale** button switches it on, generates the image again with its seed\nand parameters, and switches it back.\n\nThe Generate tab has no References panel and the ControlNet tab no units: MOSS-Image takes no reference images, and\nthere is no ControlNet for it.\n\nMOSS-Image needs a ComfyUI with native support (merged 16 Oct 2026, PR #17095; master after 0.41.x): an older\ninstall fails to load the model. The CLIP loader type must be `moss_image`.\n\n## Model Links\n\n[Comfy-Org/MOSS-Image](https://huggingface.co/Comfy-Org/MOSS-Image) also has `*_int8_convrot` diffusion models (5.4 GB,\nfor 16 GB VRAM or less) and the `qwen3.5_9b_w4a8_gptq` text encoder (7.3 GB).\n\n**diffusion_models**: [moss_image_sft_bf16.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors), [moss_image_base_bf16.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_bf16.safetensors)\n**text_encoders**: [qwen3.5_9b_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_int8_convrot.safetensors) (one file for SFT and Base)\n**vae**: [flux2-vae.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae.safetensors) (the FLUX.2 VAE)\n**loras**: [moss_sft_destripe_top64_bf16.safetensors](https://huggingface.co/nynxz/MOSS-Image/resolve/main/loras/moss_sft_destripe_top64_bf16.safetensors) (nynxz), [8-steps-dmd2-lora.safetensors](https://huggingface.co/lodestones/Kromoss/resolve/main/8-steps-dmd2-lora.safetensors) (lodestones, into `models/loras`)"
       ],
       "title": "Note: MOSS-Image (Image Bench, all features)"
+    },
+    {
+      "id": 26,
+      "type": "PrimitiveFloat",
+      "pos": [
+        1320,
+        -110
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            35,
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveFloat"
+      },
+      "widgets_values": [
+        3
+      ],
+      "title": "CFG"
     }
   ],
   "links": [
@@ -1408,6 +1460,22 @@
       24,
       0,
       "IMAGE"
+    ],
+    [
+      35,
+      26,
+      0,
+      13,
+      4,
+      "FLOAT"
+    ],
+    [
+      36,
+      26,
+      0,
+      21,
+      4,
+      "FLOAT"
     ]
   ],
   "groups": [

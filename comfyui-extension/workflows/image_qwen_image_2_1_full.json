@@ -1,8 +1,8 @@
 {
   "id": "bc0884d1-2dbb-5a55-9c8c-9f24fdcbf239",
   "revision": 0,
-  "last_node_id": 24,
-  "last_link_id": 34,
+  "last_node_id": 25,
+  "last_link_id": 36,
   "nodes": [
     {
       "id": 1,
@@ -574,6 +574,15 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 14
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 35
         }
       ],
       "outputs": [
@@ -962,6 +971,15 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 29
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 36
         }
       ],
       "outputs": [
@@ -1131,11 +1149,45 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "## Qwen Image 2.1: text-to-image, references, Hires. fix\n\nThe Qwen Image 2.1 workflow with every Generate tab feature that ComfyUI offers for it. Write full sentences in the\norder subject → action → setting → lighting/camera → style, and put literal text in quotes.\n\n**Settings**: 25 steps, CFG 1, euler, simple, 1248×832 drafts (multiples of 32). At CFG 1 the negative prompt is\nunused; raise CFG only together with a negative prompt (it doubles the compute).\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` | Image Bench Prompt | prompt and LoRA list |\n| `ib:np` | Text Encode Qwen Image 2.1 | negative prompt (its `negative_prompt` widget) |\n| `ib:smp` | KSampler | seed, steps, CFG scale, sampling method, schedule type; size is that of Empty Latent Image |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler (Hires. fix upscaler), scale (Hires. fix scale), steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; switched on by the Upscale button |\n| `ib:ref:0-3` | Reference 1-4 (bypassed) | References panel |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**References** (up to 4; the encoder takes up to 16, connect more loaders marked `ib:ref:4`, ...): add images\nin the References panel of the Generate tab, by \"Ps sends to: reference\" from Photoshop, or by dropping them\nthere. They go into the `images` inputs of **Text Encode Qwen Image 2.1**, which shows them to the Qwen3-VL encoder\nand splices their VAE latents into the sequence (resized to about `resolution`² pixels). An empty slot is bypassed,\nwhich leaves its encoder input unconnected. For edits, generate at the size of the first reference: any other\nsize shifts the edit.\n\n**Hires. fix** upscales the first pass to *Upscale by* (1.5×, 1872×1248 from the default size), encodes it again\nand samples it at denoising 0.4. Its CFG, sampler and scheduler are the widgets of its own KSampler.\n\n**Upscaler**: **Hires. fix upscaler** (`Load Upscale Model`, the Upscaler list of the Generate tab)\nenlarges the first pass by its own factor, and **Resize to the hires size** brings it to the first pass size ×\n*Upscale by* (**Hires. fix scale** only computes that size). Put any ESRGAN-type model into\n`models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here). The loader must name an installed model\neven while Hires. fix is off, since ComfyUI checks every node before running.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: on, it saves the\nHires. fix image; off, the first pass image, and the Hires. fix nodes do not run (its inputs are lazy). The\n**Upscale** button of the image lists switches it on, generates the image again with its seed and parameters, and\nswitches it back, so drafts made with Hires. fix off can be upscaled later (keep the size the same).\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt.\n\nThe ControlNet tab has no units here: no ControlNet exists for Qwen Image 2.1 (the Qwen-Image ControlNets are for\nthe 20B model); give a pose or depth map as a reference instead.\n\n## Model Links\n\n**diffusion_models**: [qwen_image_2.1_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_int8_convrot.safetensors)\n**text_encoders**: [qwen3vl_8b_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors)\n**vae**: [qwen_image_2.1_vae_bf16.safetensors](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/vae/qwen_image_2.1_vae_bf16.safetensors)\n\nQwen Image 2.1 is released under the Qwen Research License (non-commercial).\n"
+        "## Qwen Image 2.1: text-to-image, references, Hires. fix\n\nThe Qwen Image 2.1 workflow with every Generate tab feature that ComfyUI offers for it. Write full sentences in the\norder subject → action → setting → lighting/camera → style, and put literal text in quotes.\n\n**Settings**: 25 steps, CFG 1, euler, simple, 1248×832 drafts (multiples of 32). At CFG 1 the negative prompt is\nunused; raise CFG only together with a negative prompt (it doubles the compute).\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` | Image Bench Prompt | prompt and LoRA list |\n| `ib:np` | Text Encode Qwen Image 2.1 | negative prompt (its `negative_prompt` widget) |\n| `ib:smp` | KSampler | seed, steps, CFG scale, sampling method, schedule type; size is that of Empty Latent Image |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler (Hires. fix upscaler), scale (Hires. fix scale), steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; switched on by the Upscale button |\n| `ib:ref:0-3` | Reference 1-4 (bypassed) | References panel |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**CFG** feeds both KSamplers, so the Hires. fix pass follows the CFG scale of the Generate tab.\n\n**References** (up to 4; the encoder takes up to 16, connect more loaders marked `ib:ref:4`, ...): add images\nin the References panel of the Generate tab, by \"Ps sends to: reference\" from Photoshop, or by dropping them\nthere. They go into the `images` inputs of **Text Encode Qwen Image 2.1**, which shows them to the Qwen3-VL encoder\nand splices their VAE latents into the sequence (resized to about `resolution`² pixels). An empty slot is bypassed,\nwhich leaves its encoder input unconnected. For edits, generate at the size of the first reference: any other\nsize shifts the edit.\n\n**Hires. fix** upscales the first pass to *Upscale by* (1.5×, 1872×1248 from the default size), encodes it again\nand samples it at denoising 0.4. Its CFG, sampler and scheduler are the widgets of its own KSampler.\n\n**Upscaler**: **Hires. fix upscaler** (`Load Upscale Model`, the Upscaler list of the Generate tab)\nenlarges the first pass by its own factor, and **Resize to the hires size** brings it to the first pass size ×\n*Upscale by* (**Hires. fix scale** only computes that size). Put any ESRGAN-type model into\n`models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here). The loader must name an installed model\neven while Hires. fix is off, since ComfyUI checks every node before running.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: on, it saves the\nHires. fix image; off, the first pass image, and the Hires. fix nodes do not run (its inputs are lazy). The\n**Upscale** button of the image lists switches it on, generates the image again with its seed and parameters, and\nswitches it back, so drafts made with Hires. fix off can be upscaled later (keep the size the same).\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt.\n\nThe ControlNet tab has no units here: no ControlNet exists for Qwen Image 2.1 (the Qwen-Image ControlNets are for\nthe 20B model); give a pose or depth map as a reference instead.\n\n## Model Links\n\n**diffusion_models**: [qwen_image_2.1_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_int8_convrot.safetensors)\n**text_encoders**: [qwen3vl_8b_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors)\n**vae**: [qwen_image_2.1_vae_bf16.safetensors](https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/vae/qwen_image_2.1_vae_bf16.safetensors)\n\nQwen Image 2.1 is released under the Qwen Research License (non-commercial).\n"
       ],
       "title": "Note: Qwen Image 2.1 (Image Bench, all features)",
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 25,
+      "type": "PrimitiveFloat",
+      "pos": [
+        1460,
+        -120
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            35,
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveFloat"
+      },
+      "widgets_values": [
+        1
+      ],
+      "title": "CFG"
     }
   ],
   "links": [
@@ -1410,6 +1462,22 @@
       23,
       0,
       "IMAGE"
+    ],
+    [
+      35,
+      25,
+      0,
+      12,
+      4,
+      "FLOAT"
+    ],
+    [
+      36,
+      25,
+      0,
+      20,
+      4,
+      "FLOAT"
     ]
   ],
   "groups": [

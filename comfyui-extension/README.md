@@ -51,7 +51,7 @@ Optional node packs:
 | Package | Nodes | Needed for |
 |---------|-------|------------|
 | [ComfyUI-Inpaint-CropAndStitch](https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch) | Inpaint Crop / Inpaint Stitch (Improved) | The bundled `*_inpaint` workflows, and the mask blur, mask mode, inpaint area, padding and size options of the Generate tab's Inpaint group. Your own inpaint workflows work without it, but the group then hides these options |
-| [comfyui_controlnet_aux](https://github.com/Fannovel16/comfyui_controlnet_aux) | AIO Aux Preprocessor | ControlNet preprocessors (without it the preprocessor controls are hidden), and the ControlNet units of `image_anima_full` |
+| [comfyui_controlnet_aux](https://github.com/Fannovel16/comfyui_controlnet_aux) | AIO Aux Preprocessor | ControlNet preprocessors (without it the preprocessor controls are hidden), and the ControlNet units of `image_anima_full` and `image_flux1_dev_full` |
 | [ComfyUI-Advanced-ControlNet](https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet) | Advanced ControlNet loader and apply nodes | ControlNet masks (without it *Use Mask* is hidden), and the ControlNet units of `image_anima_full` |
 | [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) or [ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) | Unet Loader (GGUF), GGUF Loader KJ | `.gguf` models as the `ib:cp` loader; not used by the bundled workflows |
 

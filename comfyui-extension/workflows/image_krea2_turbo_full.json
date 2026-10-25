@@ -1,8 +1,8 @@
 {
   "id": "3fb5c808-de55-4128-9fa8-a3224bccbc73",
   "revision": 0,
-  "last_node_id": 23,
-  "last_link_id": 32,
+  "last_node_id": 24,
+  "last_link_id": 35,
   "nodes": [
     {
       "id": 1,
@@ -219,7 +219,8 @@
           "name": "clip",
           "type": "CLIP",
           "links": [
-            4
+            4,
+            35
           ]
         },
         {
@@ -276,7 +277,6 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            6,
             10,
             25
           ]
@@ -292,24 +292,24 @@
     },
     {
       "id": 7,
-      "type": "ConditioningZeroOut",
+      "type": "CLIPTextEncode",
       "pos": [
-        960,
-        110
+        440,
+        300
       ],
       "size": [
-        220,
-        26
+        460,
+        130
       ],
       "flags": {},
       "order": 6,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "conditioning",
-          "name": "conditioning",
-          "type": "CONDITIONING",
-          "link": 6
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 35
         }
       ],
       "outputs": [
@@ -324,9 +324,12 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "ConditioningZeroOut"
+        "Node name for S&R": "CLIPTextEncode"
       },
-      "widgets_values": []
+      "widgets_values": [
+        ""
+      ],
+      "title": "Negative Prompt ib:np"
     },
     {
       "id": 8,
@@ -487,6 +490,15 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 12
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 33
         }
       ],
       "outputs": [
@@ -875,6 +887,15 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 27
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 34
         }
       ],
       "outputs": [
@@ -1044,11 +1065,45 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "## Krea 2 Turbo: text-to-image, Hires. fix\n\n[Krea 2](https://huggingface.co/krea/Krea-2-Turbo) (Krea, Qwen3-VL 4B text encoder, Qwen-Image VAE) is an aesthetic\ntext-to-image model. **Turbo** is the 8-step TDM-distilled variant; **Raw** (`krea2_raw_fp8_scaled.safetensors`) is the undistilled base, see the\nRaw workflow.\n\n**Settings**: 8 steps, CFG 1, euler, simple, 1024×1024 (up to 2048×2048). The negative conditioning is zeroed: at CFG 1\na negative prompt has no effect, so the Generate tab shows none. **CFG above 1 degrades the image.**\n\n**Prompts**: full descriptive sentences (subject, setting, composition, lighting, materials, mood), not tag\nlists. Stay well under ~500 tokens: very long prompts produce black images. `(word:1.2)` weights are not\nknown to work.\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` | Image Bench Prompt | prompt and LoRA list |\n| `ib:smp` | KSampler | seed, steps, CFG scale, sampling method, schedule type; size (Width / Height) |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler, scale, steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; Upscale button |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**Hires. fix**: Krea 2 renders up to 2048×2048 natively, so for a larger image prefer generating at the target size\n(composition changes with the size). Hires. fix keeps the composition: the upscaler model enlarges the first pass,\n**Resize to the hires size** brings it to the first pass size × *Upscale by* (1.5), and a second Turbo KSampler samples\nit at denoising 0.35 (8 steps at CFG 1; above about 0.5 it redraws details). Put any ESRGAN-type model into\n`models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here); the loader must name an installed model even\nwhile Hires. fix is off. There is no official Krea guidance for a second pass.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: off, the first pass is saved\nand the Hires. fix nodes do not run. The **Upscale** button switches it on, generates the image again with its seed\nand parameters, and switches it back.\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt.\n\n**Style LoRAs** ([Comfy-Org/Krea-2/loras](https://huggingface.co/Comfy-Org/Krea-2/tree/main/loras), strength 1.0) need\ntheir trigger words in the prompt, e.g. `<lora:krea2_darkbrush:1> monochrome ink wash style` (`darkbrush`: monochrome\nink wash style, `dotmatrix`: monochrome stippling style, `kidsdrawing`: naive expressive sketch style, `neondrip`:\ntextured abstract style, `rainywindow`: rainy window style, `retroanime`: purple retro anime style, `softwatercolor`:\nart deco watercolor style, `sunsetblur`: ethereal motion blur style, `vintagetarot`: vintage tarot style).\n\nThe Generate tab has no References panel and the ControlNet tab no units: the stock nodes take no reference images\nfor Krea 2 (the Identity Edit and Style Reference LoRAs need their own node packs), and its control LoRAs are not\nControlNets.\n\n## Model Links\n\n[Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2) also has `*_bf16` and `*_int8_convrot` diffusion models of\nRaw and Turbo, `krea2_turbo_mxfp8` / `krea2_turbo_nvfp4` (RTX 50), and the bf16 / int8 text encoders.\n\n**diffusion_models**: [krea2_turbo_fp8_scaled.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_fp8_scaled.safetensors), [krea2_raw_fp8_scaled.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_raw_fp8_scaled.safetensors)\n**text_encoders**: [qwen3vl_4b_fp8_scaled.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors) (one file for Raw and Turbo)\n**vae**: [qwen_image_vae.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors) (the Qwen-Image VAE)\n**loras**: [krea2_darkbrush.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_darkbrush.safetensors)\n\nKrea 2 is released under the Krea 2 Community License.\n"
+        "## Krea 2: text-to-image, Hires. fix\n\n[Krea 2](https://huggingface.co/krea/Krea-2-Turbo) (Krea, Qwen3-VL 4B text encoder, Qwen-Image VAE) is an aesthetic\ntext-to-image model. **Turbo** (`krea2_turbo_fp8_scaled.safetensors`, set here) is the 8-step TDM-distilled variant;\n**Raw** (`krea2_raw_fp8_scaled.safetensors`) is the undistilled base and runs in the same graph, see below.\n\n**Settings (Turbo)**: 8 steps, CFG 1, euler, simple, 1024×1024 (up to 2048×2048). At CFG 1 there is no negative\npass, so the negative prompt has no effect. **CFG above 1 degrades the image.**\n\n**Prompts**: full descriptive sentences (subject, setting, composition, lighting, materials, mood), not tag\nlists. Stay well under ~500 tokens: very long prompts produce black images. `(word:1.2)` weights are not\nknown to work.\n\n## Raw\n\n**Raw** is the checkpoint LoRAs and fine-tunes are trained on, with the widest variety and a real negative prompt. It\nis much slower than Turbo. Choose `krea2_raw_fp8_scaled` in the model list and set about 52 steps and CFG 3.5 (true\nCFG: two passes per step); for Hires. fix raise its steps too (e.g. 26). Krea gives no sampler or scheduler for Raw:\neuler / simple are a starting point. The negative prompt works at CFG 3.5; keep it short or leave it empty.\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` / `ib:np` | Image Bench Prompt / Negative Prompt | prompts and LoRA list |\n| `ib:smp` | KSampler | seed, steps, CFG scale (CFG), sampling method, schedule type; size (Width / Height) |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler, scale, steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; Upscale button |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**CFG** feeds both KSamplers, so the Hires. fix pass follows the CFG scale of the Generate tab.\n\n**Hires. fix**: Krea 2 renders up to 2048×2048 natively, so for a larger image prefer generating at the target size\n(composition changes with the size). Hires. fix keeps the composition: the upscaler model enlarges the first pass,\n**Resize to the hires size** brings it to the first pass size × *Upscale by* (1.5), and a second KSampler samples\nit at denoising 0.35 (8 steps for Turbo; above about 0.5 it redraws details). Put any ESRGAN-type model into\n`models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here); the loader must name an installed model even\nwhile Hires. fix is off. There is no official Krea guidance for a second pass.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: off, the first pass is saved\nand the Hires. fix nodes do not run. The **Upscale** button switches it on, generates the image again with its seed\nand parameters, and switches it back.\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt; the **Image Bench Prompt** node\napplies them. **Load LoRA** stays bypassed; LoRA exploration enables it for its runs and bypasses it again.\n\n**Style LoRAs** ([Comfy-Org/Krea-2/loras](https://huggingface.co/Comfy-Org/Krea-2/tree/main/loras), strength 1.0) need\ntheir trigger words in the prompt, e.g. `<lora:krea2_darkbrush:1> monochrome ink wash style` (`darkbrush`: monochrome\nink wash style, `dotmatrix`: monochrome stippling style, `kidsdrawing`: naive expressive sketch style, `neondrip`:\ntextured abstract style, `rainywindow`: rainy window style, `retroanime`: purple retro anime style, `softwatercolor`:\nart deco watercolor style, `sunsetblur`: ethereal motion blur style, `vintagetarot`: vintage tarot style).\n\nThe Generate tab has no References panel and the ControlNet tab no units: the stock nodes take no reference images\nfor Krea 2 (the Identity Edit and Style Reference LoRAs need their own node packs), and its control LoRAs are not\nControlNets.\n\n## Model Links\n\n[Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2) also has `*_bf16` and `*_int8_convrot` diffusion models of\nRaw and Turbo, `krea2_turbo_mxfp8` / `krea2_turbo_nvfp4` (RTX 50), and the bf16 / int8 text encoders.\n\n**diffusion_models**: [krea2_turbo_fp8_scaled.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_fp8_scaled.safetensors), [krea2_raw_fp8_scaled.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_raw_fp8_scaled.safetensors)\n**text_encoders**: [qwen3vl_4b_fp8_scaled.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors) (one file for Raw and Turbo)\n**vae**: [qwen_image_vae.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors) (the Qwen-Image VAE)\n**loras**: [krea2_darkbrush.safetensors](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_darkbrush.safetensors)\n\nKrea 2 is released under the Krea 2 Community License."
       ],
-      "title": "Note: Krea 2 Turbo (Image Bench, all features)",
+      "title": "Note: Krea 2 (Image Bench, all features)",
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 24,
+      "type": "PrimitiveFloat",
+      "pos": [
+        1320,
+        -110
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            33,
+            34
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveFloat"
+      },
+      "widgets_values": [
+        1
+      ],
+      "title": "CFG"
     }
   ],
   "links": [
@@ -1091,14 +1146,6 @@
       6,
       1,
       "STRING"
-    ],
-    [
-      6,
-      6,
-      0,
-      7,
-      0,
-      "CONDITIONING"
     ],
     [
       7,
@@ -1307,6 +1354,30 @@
       22,
       0,
       "IMAGE"
+    ],
+    [
+      33,
+      24,
+      0,
+      11,
+      4,
+      "FLOAT"
+    ],
+    [
+      34,
+      24,
+      0,
+      19,
+      4,
+      "FLOAT"
+    ],
+    [
+      35,
+      5,
+      1,
+      7,
+      0,
+      "CLIP"
     ]
   ],
   "groups": [

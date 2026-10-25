@@ -261,6 +261,16 @@
     ],
     "cfg": [
       {
+        "via": [
+          "cfg"
+        ],
+        "types": [
+          "PrimitiveFloat",
+          "PrimitiveNode"
+        ],
+        "widget": "value"
+      },
+      {
         "widget": "cfg"
       },
       {

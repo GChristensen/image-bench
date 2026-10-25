@@ -1,8 +1,8 @@
 {
   "id": "b1365c5d-7569-4576-b6ad-3805ec9d0050",
   "revision": 0,
-  "last_node_id": 25,
-  "last_link_id": 36,
+  "last_node_id": 26,
+  "last_link_id": 38,
   "nodes": [
     {
       "id": 1,
@@ -623,6 +623,15 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 16
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 37
         }
       ],
       "outputs": [
@@ -1011,6 +1020,15 @@
           "name": "latent_image",
           "type": "LATENT",
           "link": 31
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 38
         }
       ],
       "outputs": [
@@ -1180,11 +1198,45 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "## Fibo 2.0 Dev: text-to-image, references, Hires. fix\n\n[Fibo 2.0](https://huggingface.co/briaai/Fibo-2.0-dev) (Bria, 8B single-stream DiT, Qwen3-VL 4B text encoder, FLUX.2\nVAE) is trained on long structured captions and renders text well. **Dev** is the non-distilled base: it generates\nand edits with the same weights, and LoRAs are trained on it.\n\n**Settings**: 50 steps (30 is faster), CFG 5 (true CFG: two passes per step), euler, simple, 1024×1024. There is no\nshift setting (the schedule is resolution-dependent inside the model). About 1 MP, sides multiples of 16: 1024×1024,\n1424×800, 800×1424, 1248×832, 832×1248, 1152×896. Dev at Turbo settings (CFG 1, 4-8 steps) gives broken images.\n\n**Negative prompt**: empty is encoded as the trained null caption and works (slightly softer); for text-to-image the\nDev model card has a JSON negative (`NEGATIVE_T2I`) that treats blur, haze and flare as defects. Leave it empty for\nedits and for hazy or film looks.\n\n**Prompts**: plain sentences or a VGL JSON caption (`short_description`, `objects` with one entry per\nperson or item, `background_setting`, `lighting`, `photographic_characteristics`, `style_medium`,\n`text_render`), pasted into the prompt. Strings to render go into `text_render` (or quotes in plain\nprompts). No booru tags, no quality tokens, `(word:1.2)` weights do not work.\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` | Image Bench Prompt | prompt and LoRA list |\n| `ib:np` | Text Encode Fibo 2 | negative prompt (its `negative_prompt` widget) |\n| `ib:smp` | KSampler | seed, steps, CFG scale, sampling method, schedule type; size (Width / Height) |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler, scale, steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; Upscale button |\n| `ib:ref:0-3` | Reference 1-4 (bypassed) | References panel |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\nThe size goes through **Width** / **Height** into Text Encode Fibo 2, whose `latent` output is the empty latent.\n\n**References / editing** (up to 4; the source image first): add images in the References panel of the Generate\ntab, by \"Ps sends to: reference\" from the editor, or by dropping them there. Text Encode Fibo 2 shows them to the\nQwen3-VL encoder and appends their VAE latents to the sequence, so Dev edits with the same settings (keep CFG 5, leave\nthe negative prompt empty). Address them as `<image_1>`, `<image_2>`, ... in input order, and name what changes and\nwhat stays: \"Replace the jacket with a red leather jacket, keep the person, pose and background unchanged\". A single\nreference is resized to Width × Height, so set the size to the aspect of the source (Width and Height 0 in the graph\ntake it from the first reference). Each reference adds about a full image of tokens. An empty slot is bypassed,\nwhich leaves its encoder input unconnected.\n\n**Hires. fix** upscales the first pass to *Upscale by* (1.5×), encodes it again and samples it at denoising 0.4 with\nthe same conditioning. **Hires. fix upscaler** enlarges the first pass by its own factor and **Resize to the hires\nsize** brings it to the first pass size × *Upscale by*. Put any ESRGAN-type model into `models/upscale_models`\n([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here); the loader must name an installed model even while Hires. fix is\noff. Fibo 2.0 is trained at about 1 MP; around 2 MP renders cleanly, larger is untested.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: off, the first pass is saved\nand the Hires. fix nodes do not run. The **Upscale** button switches it on, generates the image again with its seed\nand parameters, and switches it back.\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt. LoRAs target Dev.\n\nThe ControlNet tab has no units: there is no ControlNet for Fibo 2.0.\n\nFibo 2.0 needs a ComfyUI with the **TextEncodeFibo2** node (master after 21 Oct 2026, PR #17240; v0.42.3\nand older lack it). The CLIP loader type must be `fibo2`. Use the bf16 text encoder for references: the int8 one fails with\n`NoCapableBackendError ... dequantize_int8_embedding` on image input.\n\n## Model Links\n\n[Comfy-Org/Fibo-2.0](https://huggingface.co/Comfy-Org/Fibo-2.0) (ungated repack of [briaai/Fibo-2.0-dev](https://huggingface.co/briaai/Fibo-2.0-dev) and\n[briaai/Fibo-2.0-edit-turbo](https://huggingface.co/briaai/Fibo-2.0-edit-turbo)) also has the `*_bf16` diffusion models (16.45 GB) and the\n`qwen3vl_4b_int8_convrot` text encoder (text-to-image only: it errors on image input).\n\n**diffusion_models**: [fibo2_dev_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_dev_int8_convrot.safetensors), [fibo2_edit_turbo_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_edit_turbo_int8_convrot.safetensors)\n**text_encoders**: [qwen3vl_4b_bf16.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors) (one file for Dev and Edit Turbo)\n**vae**: [flux2-vae.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/vae/flux2-vae.safetensors) (the FLUX.2 VAE)\n\nFibo 2.0 is released under CC BY-NC 4.0 (non-commercial; commercial use needs an agreement with Bria).\n"
+        "## Fibo 2.0 Dev: text-to-image, references, Hires. fix\n\n[Fibo 2.0](https://huggingface.co/briaai/Fibo-2.0-dev) (Bria, 8B single-stream DiT, Qwen3-VL 4B text encoder, FLUX.2\nVAE) is trained on long structured captions and renders text well. **Dev** is the non-distilled base: it generates\nand edits with the same weights, and LoRAs are trained on it.\n\n**Settings**: 50 steps (30 is faster), CFG 5 (true CFG: two passes per step), euler, simple, 1024×1024. There is no\nshift setting (the schedule is resolution-dependent inside the model). About 1 MP, sides multiples of 16: 1024×1024,\n1424×800, 800×1424, 1248×832, 832×1248, 1152×896. Dev at Turbo settings (CFG 1, 4-8 steps) gives broken images.\n\n**Negative prompt**: empty is encoded as the trained null caption and works (slightly softer); for text-to-image the\nDev model card has a JSON negative (`NEGATIVE_T2I`) that treats blur, haze and flare as defects. Leave it empty for\nedits and for hazy or film looks.\n\n**Prompts**: plain sentences or a VGL JSON caption (`short_description`, `objects` with one entry per\nperson or item, `background_setting`, `lighting`, `photographic_characteristics`, `style_medium`,\n`text_render`), pasted into the prompt. Strings to render go into `text_render` (or quotes in plain\nprompts). No booru tags, no quality tokens, `(word:1.2)` weights do not work.\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` | Image Bench Prompt | prompt and LoRA list |\n| `ib:np` | Text Encode Fibo 2 | negative prompt (its `negative_prompt` widget) |\n| `ib:smp` | KSampler | seed, steps, CFG scale, sampling method, schedule type; size (Width / Height) |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler, scale, steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; Upscale button |\n| `ib:ref:0-3` | Reference 1-4 (bypassed) | References panel |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**CFG** feeds both KSamplers, so the Hires. fix pass follows the CFG scale of the Generate tab.\n\nThe size goes through **Width** / **Height** into Text Encode Fibo 2, whose `latent` output is the empty latent.\n\n**References / editing** (up to 4; the source image first): add images in the References panel of the Generate\ntab, by \"Ps sends to: reference\" from the editor, or by dropping them there. Text Encode Fibo 2 shows them to the\nQwen3-VL encoder and appends their VAE latents to the sequence, so Dev edits with the same settings (keep CFG 5, leave\nthe negative prompt empty). Address them as `<image_1>`, `<image_2>`, ... in input order, and name what changes and\nwhat stays: \"Replace the jacket with a red leather jacket, keep the person, pose and background unchanged\". A single\nreference is resized to Width × Height, so set the size to the aspect of the source (Width and Height 0 in the graph\ntake it from the first reference). Each reference adds about a full image of tokens. An empty slot is bypassed,\nwhich leaves its encoder input unconnected.\n\n**Hires. fix** upscales the first pass to *Upscale by* (1.5×), encodes it again and samples it at denoising 0.4 with\nthe same conditioning. **Hires. fix upscaler** enlarges the first pass by its own factor and **Resize to the hires\nsize** brings it to the first pass size × *Upscale by*. Put any ESRGAN-type model into `models/upscale_models`\n([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here); the loader must name an installed model even while Hires. fix is\noff. Fibo 2.0 is trained at about 1 MP; around 2 MP renders cleanly, larger is untested.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: off, the first pass is saved\nand the Hires. fix nodes do not run. The **Upscale** button switches it on, generates the image again with its seed\nand parameters, and switches it back.\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt. LoRAs target Dev.\n\nThe ControlNet tab has no units: there is no ControlNet for Fibo 2.0.\n\nFibo 2.0 needs a ComfyUI with the **TextEncodeFibo2** node (master after 21 Oct 2026, PR #17240; v0.42.3\nand older lack it). The CLIP loader type must be `fibo2`. Use the bf16 text encoder for references: the int8 one fails with\n`NoCapableBackendError ... dequantize_int8_embedding` on image input.\n\n## Model Links\n\n[Comfy-Org/Fibo-2.0](https://huggingface.co/Comfy-Org/Fibo-2.0) (ungated repack of [briaai/Fibo-2.0-dev](https://huggingface.co/briaai/Fibo-2.0-dev) and\n[briaai/Fibo-2.0-edit-turbo](https://huggingface.co/briaai/Fibo-2.0-edit-turbo)) also has the `*_bf16` diffusion models (16.45 GB) and the\n`qwen3vl_4b_int8_convrot` text encoder (text-to-image only: it errors on image input).\n\n**diffusion_models**: [fibo2_dev_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_dev_int8_convrot.safetensors), [fibo2_edit_turbo_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/diffusion_models/fibo2_edit_turbo_int8_convrot.safetensors)\n**text_encoders**: [qwen3vl_4b_bf16.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors) (one file for Dev and Edit Turbo)\n**vae**: [flux2-vae.safetensors](https://huggingface.co/Comfy-Org/Fibo-2.0/resolve/main/vae/flux2-vae.safetensors) (the FLUX.2 VAE)\n\nFibo 2.0 is released under CC BY-NC 4.0 (non-commercial; commercial use needs an agreement with Bria).\n"
       ],
       "title": "Note: Fibo 2.0 Dev (Image Bench, all features)",
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 26,
+      "type": "PrimitiveFloat",
+      "pos": [
+        1460,
+        -110
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            37,
+            38
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveFloat"
+      },
+      "widgets_values": [
+        5
+      ],
+      "title": "CFG"
     }
   ],
   "links": [
@@ -1475,6 +1527,22 @@
       24,
       0,
       "IMAGE"
+    ],
+    [
+      37,
+      26,
+      0,
+      13,
+      4,
+      "FLOAT"
+    ],
+    [
+      38,
+      26,
+      0,
+      21,
+      4,
+      "FLOAT"
     ]
   ],
   "groups": [
