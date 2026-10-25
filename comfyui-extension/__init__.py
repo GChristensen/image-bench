@@ -684,6 +684,22 @@ async def png_info(request):
     return web.json_response(pnginfo.image_info(await field.read()))
 
 
+@PromptServer.instance.routes.post(BASE_PATH + "/infotext")
+async def write_infotext(request):
+    """Write an infotext into a PNG image of the output or temp directory (Paste infotext of the image context menu)"""
+    data = await request.json()
+    path = resolve_view_path(data.get("imageUrl"))
+    roots = [folder_paths.get_output_directory(), folder_paths.get_temp_directory()]
+
+    if not path or not explore_export.is_allowed_image(path, roots):
+        return web.json_response({"error": "The image is not a file of the output directory."}, status=400)
+
+    try:
+        return web.json_response(await asyncio.to_thread(pnginfo.write_infotext, path, data.get("infotext") or ""))
+    except (ValueError, OSError) as e:
+        return web.json_response({"error": str(e)}, status=400)
+
+
 # WebSocket endpoint for real-time communication
 @PromptServer.instance.routes.get(BASE_PATH + "/websocket")
 async def websocket_handler(request):

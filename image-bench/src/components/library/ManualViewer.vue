@@ -270,6 +270,14 @@ const hostOrigin = location.origin;
         Right-click an image for a menu with all of its actions. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
       </p>
       <p>
+        The menu also has <AppIcon name="params" :size="13" class="inline-icon"/> <b>Copy infotext</b>, which puts the
+        generation parameters of the image file on the clipboard as text (for an image made by ComfyUI, the parameters
+        read from its workflow), and, on PNG images, <AppIcon name="paste" :size="13" class="inline-icon"/>
+        <b>Paste infotext…</b>, which writes such text into the file after showing it for review (it can be edited
+        there). Use it to give an image exported from the editor, e.g. a final image saved to the project folder,
+        the parameters of the image it was made from, or to replace the parameters of an image.
+      </p>
+      <p>
         Click an image to view it large. In that view, <span class="kbd">←</span> and
         <span class="kbd">→</span> page through the images, a left click switches between
         full size and fit to screen, the <AppIcon name="params" :size="13" class="inline-icon"/> <b>Show

@@ -22,10 +22,14 @@ function onKeydown(e) {
   if (!stack.length || e.isComposing || e.key !== 'Escape' && e.key !== 'Enter')
     return;
 
+  const top = windows.get(stack[stack.length - 1].id);
+
+  // A multiline input takes Enter as a newline
+  if (top?.keepsKey(e))
+    return;
+
   e.preventDefault();
   e.stopImmediatePropagation();
-
-  const top = windows.get(stack[stack.length - 1].id);
 
   if (e.key === 'Escape')
     top?.onEscapeKey();

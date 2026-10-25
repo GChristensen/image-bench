@@ -58,10 +58,11 @@ export const dialog = {
    * Text input with a history of the last values per storageKey (10 unless historySize is given).
    * The history is shown as browser autocomplete, or as an editable dropdown when dropdown is true.
    * With checkbox, a checkbox is shown under the input and the result is {value, checked}.
+   * With multiline, the input is a textarea (rows, 8 by default) without history: Enter is a newline, Ctrl+Enter confirms.
    * @param {string} message
    * @param {{defaultValue?: string, storageKey?: string, placeholder?: string, title?: string,
    *          dropdown?: boolean, historySize?: number, okText?: string,
-   *          checkbox?: {label: string, checked?: boolean}}} options
+   *          checkbox?: {label: string, checked?: boolean}, multiline?: boolean, rows?: number}} options
    * @returns {Promise<string|{value: string, checked: boolean}|null>} Trimmed input value, or null if cancelled or empty
    */
   prompt(message, options = {}) {

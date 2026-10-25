@@ -10,6 +10,7 @@ import FileViewer from "@/components/projects/FileViewer.vue";
 import MediaPlayback from "@/components/MediaPlayback.vue";
 import {AUDIO_PLACEHOLDER, KIND_AUDIO, KIND_IMAGE, KIND_VIDEO, mediaKindOfName} from "@/media.js";
 import ImageActionButtons from "@/components/ImageActionButtons.vue";
+import {canPasteInfotext, copyInfotext, pasteInfotext} from "@/infotextClipboard.js";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {canReuseParameters, reuseParameters, runImageAction, visibleActionGroups} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
@@ -241,7 +242,8 @@ const gridItems = computed(() => {
       thumb: fileUrl(file.name, {thumb: true, version: file.modified}),
       title: [file.name, file.parameters?.prompt].filter(Boolean).join("\n\n"), final: {name: file.name},
       // The generation parameters read from the file (infotext, or the prompt of a ComfyUI image)
-      image: {imageUrl: fileUrl(file.name), imagePath: baseName(file.name), parameters: file.parameters}
+      image: {imageUrl: fileUrl(file.name), imagePath: baseName(file.name), parameters: file.parameters,
+              projectFile: {project: project.value.path, name: file.name}}
     }));
 
   const tray = trays.value[imageTab.value];
@@ -412,7 +414,10 @@ function onItemMenu(e, item) {
       {icon: "layers", label: `Send to ${editorName.value} as a new layer`, run: () => sendToEditor(item.url, item.name, {button: 1})}
     ] : [],
     {separator: true},
-    {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")}
+    {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")},
+    ...still ? [{icon: "params", label: "Copy infotext", run: () => copyInfotext(item.image)}] : [],
+    ...canPasteInfotext(item.image, actionContext)
+      ? [{icon: "paste", label: "Paste infotext…", run: () => pasteInfotext(item.image)}] : []
   ];
 
   // Files of the project folder only; the images of the saved trays are in their own folders

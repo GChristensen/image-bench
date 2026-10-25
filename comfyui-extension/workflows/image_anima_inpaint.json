@@ -1,34 +1,11 @@
 {
   "id": "3b8e4f51-7a2c-4d6e-9f10-2c5b7a9e4d31",
   "revision": 0,
-  "last_node_id": 72,
-  "last_link_id": 33,
+  "last_node_id": 23,
+  "last_link_id": 31,
   "nodes": [
     {
-      "id": 48,
-      "type": "MarkdownNote",
-      "pos": [
-        -760,
-        130
-      ],
-      "size": [
-        680,
-        900
-      ],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [],
-      "properties": {},
-      "widgets_values": [
-        "## Anima inpainting\n\nRepaints the masked area of an image with [Anima](https://huggingface.co/circlestone-labs/Anima) (a regular,\nnon-inpaint model) the way Forge's \"Inpaint upload\" does. **Inpaint Crop** cuts the masked area with some context\nout of the image and scales it to the generation size, so that even a small area is sampled at full resolution;\n**Inpaint Stitch** scales the result back and blends it into the original through the blurred mask.\n**Differential Diffusion** makes the soft mask edge blend gradually.\n\nRequires [ComfyUI-Inpaint-CropAndStitch](https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch) (install it with\nthe ComfyUI Manager).\n\n## Image Bench\n\nThe Generate tab is in **Inpaint** mode while this workflow is loaded.\n\n| Marker / node | Generate tab |\n|---------------|--------------|\n| `ib:img` Load Image | Input cell; \"Send image\" from Photoshop |\n| `ib:mask` Load Image Mask | Mask cell; the Photoshop selection |\n| `ib:cp`, `ib:pp`, `ib:np` | model, prompts |\n| `ib:smp` KSampler | seed, steps, CFG scale, sampling method, schedule type, denoising |\n| Inpaint Crop | Resize to (`output_target_width/height`), Mask blur (`mask_blend_pixels`), Mask mode (`mask_invert`) |\n| Only masked padding (Grow Mask) | Only masked padding, pixels |\n| Whole picture (Solid Mask) | Inpaint area: value 0 = Only masked, 1 = Whole picture |\n\nThe loaders refer to the files the Photoshop plugin writes (`image_bench_photoshop_*.png`); send an image and a\nmask, or set them in the Input / Mask cells of the Generate tab, before the first queue.\n\n- **Only masked**: the model sees only the crop (the mask's bounding box plus the padding, widened to the aspect\n  ratio of the size). Describe what the crop shows, the new content of the masked area and its surroundings, with\n  the usual quality tags.\n- **Whole picture**: the whole image is scaled to the size and sampled; describe the whole image.\n- Denoising 0.85-1.0 replaces the content, 0.4-0.7 keeps its colors and shapes.\n- Mask blur widens the mask by that many pixels and blurs it; the pixels outside the mask within that distance are\n  blended too.\n- Anima works best from 512 to 1536 px per side; keep the size in that range with sides multiples of 16.\n- Turbo variant: 10 steps, cfg 1.0, sampler euler.\n\n## Model Links\n\n- text_encoders: [qwen_3_06b_base.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors)\n- vae: [qwen_image_vae.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/vae/qwen_image_vae.safetensors)\n- diffusion_models: [anima-preview3-base.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/diffusion_models/anima-preview3-base.safetensors)\n"
-      ],
-      "color": "#222",
-      "bgcolor": "#000"
-    },
-    {
-      "id": 44,
+      "id": 1,
       "type": "UNETLoader",
       "pos": [
         -50,
@@ -39,7 +16,7 @@
         82
       ],
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -48,22 +25,28 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            32
+            1
           ]
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "UNETLoader"
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "anima-base-v1.0.safetensors",
+            "url": "https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/diffusion_models/anima-base-v1.0.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
       },
       "widgets_values": [
-        "anima-preview3-base.safetensors",
+        "anima-base-v1.0.safetensors",
         "default"
       ],
       "title": "Load Diffusion Model ib:cp"
     },
     {
-      "id": 45,
+      "id": 2,
       "type": "CLIPLoader",
       "pos": [
         -50,
@@ -74,7 +57,7 @@
         106
       ],
       "flags": {},
-      "order": 2,
+      "order": 1,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -83,14 +66,19 @@
           "name": "CLIP",
           "type": "CLIP",
           "links": [
-            2,
-            3
+            2
           ]
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "CLIPLoader"
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen_3_06b_base.safetensors",
+            "url": "https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
       },
       "widgets_values": [
         "qwen_3_06b_base.safetensors",
@@ -99,18 +87,18 @@
       ]
     },
     {
-      "id": 15,
+      "id": 3,
       "type": "VAELoader",
       "pos": [
         -50,
-        410
+        420
       ],
       "size": [
         310,
         58
       ],
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -119,21 +107,83 @@
           "name": "VAE",
           "type": "VAE",
           "links": [
-            4,
-            5
+            20,
+            28
           ]
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "VAELoader"
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "qwen_image_vae.safetensors",
+            "url": "https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/vae/qwen_image_vae.safetensors",
+            "directory": "vae"
+          }
+        ]
       },
       "widgets_values": [
         "qwen_image_vae.safetensors"
       ]
     },
     {
-      "id": 60,
+      "id": 4,
+      "type": "LoraLoader",
+      "pos": [
+        300,
+        130
+      ],
+      "size": [
+        310,
+        126
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            3
+          ]
+        },
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoader"
+      },
+      "widgets_values": [
+        "anima-lora.safetensors",
+        1,
+        1
+      ],
+      "title": "Load LoRA ib:lora"
+    },
+    {
+      "id": 5,
       "type": "LoadImage",
       "pos": [
         -50,
@@ -153,19 +203,18 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            19,
-            24
+            11,
+            16
           ]
         },
         {
           "localized_name": "MASK",
           "name": "MASK",
           "type": "MASK",
-          "links": []
+          "links": null
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
@@ -175,7 +224,7 @@
       "title": "Load Image ib:img"
     },
     {
-      "id": 61,
+      "id": 6,
       "type": "LoadImageMask",
       "pos": [
         -50,
@@ -195,13 +244,12 @@
           "name": "MASK",
           "type": "MASK",
           "links": [
-            18,
-            25
+            10,
+            17
           ]
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
         "Node name for S&R": "LoadImageMask"
       },
       "widgets_values": [
@@ -212,58 +260,79 @@
       "title": "Load Image Mask ib:mask"
     },
     {
-      "id": 11,
-      "type": "CLIPTextEncode",
+      "id": 7,
+      "type": "ImageBenchPrompt",
       "pos": [
-        1070,
-        130
+        1010,
+        -200
       ],
       "size": [
         420,
-        200
+        220
       ],
       "flags": {},
       "order": 6,
       "mode": 0,
       "inputs": [
         {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
           "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
-          "link": 2
+          "link": 4,
+          "shape": 7
         }
       ],
       "outputs": [
         {
-          "localized_name": "CONDITIONING",
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            8
+          ]
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            5,
+            7
+          ]
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
           "links": [
             6
           ]
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "CLIPTextEncode"
+        "Node name for S&R": "ImageBenchPrompt"
       },
       "widgets_values": [
         "masterpiece, best quality, score_7, safe, 1girl, solo, upper body, red knitted scarf, white winter coat, snowy street at dusk, warm shop window light, soft falling snow"
       ],
-      "title": "Positive Prompt ib:pp",
-      "color": "#232",
-      "bgcolor": "#353"
+      "title": "Prompt ib:pp"
     },
     {
-      "id": 12,
+      "id": 8,
       "type": "CLIPTextEncode",
       "pos": [
-        1070,
-        380
+        1010,
+        60
       ],
       "size": [
-        420,
-        130
+        300,
+        54
       ],
       "flags": {},
       "order": 7,
@@ -273,7 +342,16 @@
           "localized_name": "clip",
           "name": "clip",
           "type": "CLIP",
-          "link": 3
+          "link": 5
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 6,
+          "widget": {
+            "name": "text"
+          }
         }
       ],
       "outputs": [
@@ -282,12 +360,60 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            7
+            24
           ]
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "title": "CLIP Text Encode (Prompt)"
+    },
+    {
+      "id": 9,
+      "type": "CLIPTextEncode",
+      "pos": [
+        1010,
+        160
+      ],
+      "size": [
+        420,
+        130
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 7
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            25
+          ]
+        }
+      ],
+      "properties": {
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
@@ -298,235 +424,7 @@
       "bgcolor": "#533"
     },
     {
-      "id": 63,
-      "type": "VAEEncode",
-      "pos": [
-        1010,
-        520
-      ],
-      "size": [
-        210,
-        46
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "pixels",
-          "name": "pixels",
-          "type": "IMAGE",
-          "link": 27
-        },
-        {
-          "localized_name": "vae",
-          "name": "vae",
-          "type": "VAE",
-          "link": 4
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "LATENT",
-          "name": "LATENT",
-          "type": "LATENT",
-          "links": [
-            13
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "VAEEncode"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 64,
-      "type": "SetLatentNoiseMask",
-      "pos": [
-        1010,
-        610
-      ],
-      "size": [
-        230,
-        46
-      ],
-      "flags": {},
-      "order": 10,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "samples",
-          "name": "samples",
-          "type": "LATENT",
-          "link": 13
-        },
-        {
-          "localized_name": "mask",
-          "name": "mask",
-          "type": "MASK",
-          "link": 28
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "LATENT",
-          "name": "LATENT",
-          "type": "LATENT",
-          "links": [
-            14
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "SetLatentNoiseMask"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 19,
-      "type": "KSampler",
-      "pos": [
-        1550,
-        130
-      ],
-      "size": [
-        300,
-        262
-      ],
-      "flags": {},
-      "order": 11,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 33
-        },
-        {
-          "localized_name": "positive",
-          "name": "positive",
-          "type": "CONDITIONING",
-          "link": 6
-        },
-        {
-          "localized_name": "negative",
-          "name": "negative",
-          "type": "CONDITIONING",
-          "link": 7
-        },
-        {
-          "localized_name": "latent_image",
-          "name": "latent_image",
-          "type": "LATENT",
-          "link": 14
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "LATENT",
-          "name": "LATENT",
-          "type": "LATENT",
-          "links": [
-            15
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "KSampler"
-      },
-      "widgets_values": [
-        0,
-        "randomize",
-        30,
-        4,
-        "er_sde",
-        "simple",
-        0.9
-      ],
-      "title": "KSampler ib:smp"
-    },
-    {
-      "id": 8,
-      "type": "VAEDecode",
-      "pos": [
-        1890,
-        130
-      ],
-      "size": [
-        210,
-        46
-      ],
-      "flags": {},
-      "order": 12,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "samples",
-          "name": "samples",
-          "type": "LATENT",
-          "link": 15
-        },
-        {
-          "localized_name": "vae",
-          "name": "vae",
-          "type": "VAE",
-          "link": 5
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "IMAGE",
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            30
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "VAEDecode"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 46,
-      "type": "SaveImage",
-      "pos": [
-        2200,
-        130
-      ],
-      "size": [
-        500,
-        560
-      ],
-      "flags": {},
-      "order": 14,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "images",
-          "name": "images",
-          "type": "IMAGE",
-          "link": 31
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "SaveImage"
-      },
-      "widgets_values": [
-        "Anima-inpaint"
-      ]
-    },
-    {
-      "id": 66,
+      "id": 10,
       "type": "GrowMask",
       "pos": [
         300,
@@ -537,14 +435,14 @@
         82
       ],
       "flags": {},
-      "order": 13,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "mask",
           "name": "mask",
           "type": "MASK",
-          "link": 18
+          "link": 10
         }
       ],
       "outputs": [
@@ -553,7 +451,7 @@
           "name": "MASK",
           "type": "MASK",
           "links": [
-            22
+            14
           ]
         }
       ],
@@ -567,7 +465,7 @@
       "title": "Only masked padding"
     },
     {
-      "id": 67,
+      "id": 11,
       "type": "GetImageSize",
       "pos": [
         300,
@@ -578,14 +476,14 @@
         106
       ],
       "flags": {},
-      "order": 14,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
-          "link": 19
+          "link": 11
         }
       ],
       "outputs": [
@@ -594,7 +492,7 @@
           "name": "width",
           "type": "INT",
           "links": [
-            20
+            12
           ]
         },
         {
@@ -602,7 +500,7 @@
           "name": "height",
           "type": "INT",
           "links": [
-            21
+            13
           ]
         },
         {
@@ -618,7 +516,7 @@
       "widgets_values": []
     },
     {
-      "id": 68,
+      "id": 12,
       "type": "SolidMask",
       "pos": [
         300,
@@ -629,14 +527,14 @@
         106
       ],
       "flags": {},
-      "order": 15,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "width",
           "name": "width",
           "type": "INT",
-          "link": 20,
+          "link": 12,
           "widget": {
             "name": "width"
           }
@@ -645,7 +543,7 @@
           "localized_name": "height",
           "name": "height",
           "type": "INT",
-          "link": 21,
+          "link": 13,
           "widget": {
             "name": "height"
           }
@@ -657,7 +555,7 @@
           "name": "MASK",
           "type": "MASK",
           "links": [
-            23
+            15
           ]
         }
       ],
@@ -672,7 +570,7 @@
       "title": "Whole picture (value 1)"
     },
     {
-      "id": 69,
+      "id": 13,
       "type": "MaskComposite",
       "pos": [
         300,
@@ -683,20 +581,20 @@
         126
       ],
       "flags": {},
-      "order": 16,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "destination",
           "name": "destination",
           "type": "MASK",
-          "link": 22
+          "link": 14
         },
         {
           "localized_name": "source",
           "name": "source",
           "type": "MASK",
-          "link": 23
+          "link": 15
         }
       ],
       "outputs": [
@@ -705,7 +603,7 @@
           "name": "MASK",
           "type": "MASK",
           "links": [
-            26
+            18
           ]
         }
       ],
@@ -720,7 +618,7 @@
       "title": "Context mask"
     },
     {
-      "id": 70,
+      "id": 14,
       "type": "InpaintCropImproved",
       "pos": [
         630,
@@ -731,27 +629,27 @@
         720
       ],
       "flags": {},
-      "order": 17,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
           "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
-          "link": 24
+          "link": 16
         },
         {
           "localized_name": "mask",
           "name": "mask",
           "type": "MASK",
-          "link": 25,
+          "link": 17,
           "shape": 7
         },
         {
           "localized_name": "optional_context_mask",
           "name": "optional_context_mask",
           "type": "MASK",
-          "link": 26,
+          "link": 18,
           "shape": 7
         }
       ],
@@ -769,7 +667,7 @@
           "name": "cropped_image",
           "type": "IMAGE",
           "links": [
-            27
+            19
           ]
         },
         {
@@ -777,7 +675,7 @@
           "name": "cropped_mask",
           "type": "MASK",
           "links": [
-            28
+            22
           ]
         }
       ],
@@ -813,10 +711,281 @@
       "title": "Inpaint Crop (Generate tab: size, mask blur, mask mode)"
     },
     {
-      "id": 71,
+      "id": 15,
+      "type": "VAEEncode",
+      "pos": [
+        1010,
+        520
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "pixels",
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 19
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 20
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            21
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 16,
+      "type": "SetLatentNoiseMask",
+      "pos": [
+        1010,
+        610
+      ],
+      "size": [
+        230,
+        46
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 21
+        },
+        {
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "link": 22
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            26
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SetLatentNoiseMask"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 17,
+      "type": "ModelSamplingAuraFlow",
+      "pos": [
+        1500,
+        -200
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ModelSamplingAuraFlow"
+      },
+      "widgets_values": [
+        3.0
+      ]
+    },
+    {
+      "id": 18,
+      "type": "DifferentialDiffusion",
+      "pos": [
+        1500,
+        -100
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            23
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DifferentialDiffusion"
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 19,
+      "type": "KSampler",
+      "pos": [
+        1500,
+        130
+      ],
+      "size": [
+        300,
+        262
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 23
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 24
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 25
+        },
+        {
+          "localized_name": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 26
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            27
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        608812730156284,
+        "randomize",
+        30,
+        4,
+        "er_sde",
+        "simple",
+        0.9
+      ],
+      "title": "KSampler ib:smp"
+    },
+    {
+      "id": 20,
+      "type": "VAEDecode",
+      "pos": [
+        1850,
+        130
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 27
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 28
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            30
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 21,
       "type": "InpaintStitchImproved",
       "pos": [
-        1890,
+        1850,
         250
       ],
       "size": [
@@ -824,7 +993,7 @@
         46
       ],
       "flags": {},
-      "order": 18,
+      "order": 20,
       "mode": 0,
       "inputs": [
         {
@@ -856,245 +1025,310 @@
       "widgets_values": []
     },
     {
-      "id": 72,
-      "type": "DifferentialDiffusion",
+      "id": 22,
+      "type": "SaveImage",
       "pos": [
-        1220,
-        10
+        2160,
+        130
       ],
       "size": [
-        270,
-        58
+        500,
+        560
       ],
       "flags": {},
-      "order": 19,
+      "order": 21,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 32
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 31
         }
       ],
-      "outputs": [
-        {
-          "localized_name": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            33
-          ]
-        }
-      ],
+      "outputs": [],
       "properties": {
-        "Node name for S&R": "DifferentialDiffusion"
+        "Node name for S&R": "SaveImage"
       },
       "widgets_values": [
-        1
+        "Anima-inpaint"
       ]
+    },
+    {
+      "id": 23,
+      "type": "MarkdownNote",
+      "pos": [
+        -760,
+        130
+      ],
+      "size": [
+        680,
+        1300
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## Anima inpainting\n\nRepaints the masked area of an image with [Anima](https://huggingface.co/circlestone-labs/Anima) Base v1.0 (a regular,\nnon-inpaint model) the way Forge's \"Inpaint upload\" does. **Inpaint Crop** cuts the masked area with some context\nout of the image and scales it to the generation size, so that even a small area is sampled at full resolution;\n**Inpaint Stitch** scales the result back and blends it into the original through the blurred mask.\n**Differential Diffusion** makes the soft mask edge blend gradually.\n\n**Settings**: 30 steps (32-40 for finals), CFG 4-4.5 (true CFG, the negative prompt works), er_sde, simple\n(normal is the card's choice), Shift 3 (**ModelSamplingAuraFlow**), denoising 0.9.\nTurbo: 10 steps, CFG 1, euler; the negative prompt then has little effect.\n\nRequires [ComfyUI-Inpaint-CropAndStitch](https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch) (install it with\nthe ComfyUI Manager).\n\n## Image Bench\n\nThe Generate tab is in **Inpaint** mode while this workflow is loaded.\n\n| Marker / node | Generate tab |\n|---------------|--------------|\n| `ib:img` Load Image | Input cell; \"Send image\" from the editor |\n| `ib:mask` Load Image Mask | Mask cell; the editor selection |\n| `ib:cp`, `ib:pp`, `ib:np`, `ib:lora` | model, prompts and LoRA list (as in the other workflows) |\n| `ib:smp` KSampler | seed, steps, CFG scale, sampling method, schedule type, denoising; Shift (ModelSamplingAuraFlow) |\n| Inpaint Crop | Resize to (`output_target_width/height`), Mask blur (`mask_blend_pixels`), Mask mode (`mask_invert`) |\n| Only masked padding (Grow Mask) | Only masked padding, pixels |\n| Whole picture (Solid Mask) | Inpaint area: value 0 = Only masked, 1 = Whole picture |\n\nThe loaders refer to the files the editor plugins write (`image_bench_photoshop_*.png`); send an image and a mask, or\nset them in the Input / Mask cells of the Generate tab, before the first queue.\n\n- **Only masked**: the model sees only the crop (the mask's bounding box plus the padding, widened to the aspect\n  ratio of the size). Describe what the crop shows, the new content of the masked area and its surroundings, with\n  the usual quality tags.\n- **Whole picture**: the whole image is scaled to the size and sampled; describe the whole image.\n- Denoising 0.85-1.0 replaces the content, 0.4-0.7 keeps its colors and shapes.\n- Mask blur widens the mask by that many pixels and blurs it; the pixels outside the mask within that distance are\n  blended too.\n- Anima works best from 512 to 1536 px per side; keep the size in that range with sides multiples of 16.\n\n## Model Links\n\n**diffusion_models**: [anima-base-v1.0.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/diffusion_models/anima-base-v1.0.safetensors)\n(the Turbo and Aesthetic fine-tunes are in the same repository and load the same way)\n**text_encoders**: [qwen_3_06b_base.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors)\n**vae**: [qwen_image_vae.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/vae/qwen_image_vae.safetensors)\n\nAnima is under the CircleStone Labs non-commercial license.\n"
+      ],
+      "title": "Note: Anima inpainting (Image Bench)",
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
     [
+      1,
+      1,
+      0,
+      4,
+      0,
+      "MODEL"
+    ],
+    [
       2,
-      45,
+      2,
       0,
-      11,
-      0,
+      4,
+      1,
       "CLIP"
     ],
     [
       3,
-      45,
+      4,
       0,
-      12,
+      7,
       0,
-      "CLIP"
+      "MODEL"
     ],
     [
       4,
-      15,
-      0,
-      63,
+      4,
       1,
-      "VAE"
+      7,
+      1,
+      "CLIP"
     ],
     [
       5,
-      15,
-      0,
-      8,
+      7,
       1,
-      "VAE"
+      8,
+      0,
+      "CLIP"
     ],
     [
       6,
-      11,
-      0,
-      19,
+      7,
+      2,
+      8,
       1,
-      "CONDITIONING"
+      "STRING"
     ],
     [
       7,
-      12,
+      7,
+      1,
+      9,
       0,
-      19,
-      2,
-      "CONDITIONING"
+      "CLIP"
     ],
     [
-      13,
-      63,
-      0,
-      64,
-      0,
-      "LATENT"
-    ],
-    [
-      14,
-      64,
-      0,
-      19,
-      3,
-      "LATENT"
-    ],
-    [
-      15,
-      19,
-      0,
       8,
+      7,
       0,
-      "LATENT"
+      17,
+      0,
+      "MODEL"
     ],
     [
-      18,
-      61,
+      9,
+      17,
       0,
-      66,
+      18,
+      0,
+      "MODEL"
+    ],
+    [
+      10,
+      6,
+      0,
+      10,
       0,
       "MASK"
     ],
     [
-      19,
-      60,
+      11,
+      5,
       0,
-      67,
+      11,
+      0,
+      "IMAGE"
+    ],
+    [
+      12,
+      11,
+      0,
+      12,
+      0,
+      "INT"
+    ],
+    [
+      13,
+      11,
+      1,
+      12,
+      1,
+      "INT"
+    ],
+    [
+      14,
+      10,
+      0,
+      13,
+      0,
+      "MASK"
+    ],
+    [
+      15,
+      12,
+      0,
+      13,
+      1,
+      "MASK"
+    ],
+    [
+      16,
+      5,
+      0,
+      14,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      6,
+      0,
+      14,
+      1,
+      "MASK"
+    ],
+    [
+      18,
+      13,
+      0,
+      14,
+      2,
+      "MASK"
+    ],
+    [
+      19,
+      14,
+      1,
+      15,
       0,
       "IMAGE"
     ],
     [
       20,
-      67,
+      3,
       0,
-      68,
-      0,
-      "INT"
+      15,
+      1,
+      "VAE"
     ],
     [
       21,
-      67,
-      1,
-      68,
-      1,
-      "INT"
+      15,
+      0,
+      16,
+      0,
+      "LATENT"
     ],
     [
       22,
-      66,
-      0,
-      69,
-      0,
+      14,
+      2,
+      16,
+      1,
       "MASK"
     ],
     [
       23,
-      68,
+      18,
       0,
-      69,
-      1,
-      "MASK"
+      19,
+      0,
+      "MODEL"
     ],
     [
       24,
-      60,
+      8,
       0,
-      70,
-      0,
-      "IMAGE"
+      19,
+      1,
+      "CONDITIONING"
     ],
     [
       25,
-      61,
+      9,
       0,
-      70,
-      1,
-      "MASK"
+      19,
+      2,
+      "CONDITIONING"
     ],
     [
       26,
-      69,
+      16,
       0,
-      70,
-      2,
-      "MASK"
+      19,
+      3,
+      "LATENT"
     ],
     [
       27,
-      70,
-      1,
-      63,
+      19,
       0,
-      "IMAGE"
+      20,
+      0,
+      "LATENT"
     ],
     [
       28,
-      70,
-      2,
-      64,
+      3,
+      0,
+      20,
       1,
-      "MASK"
+      "VAE"
     ],
     [
       29,
-      70,
+      14,
       0,
-      71,
+      21,
       0,
       "STITCHER"
     ],
     [
       30,
-      8,
+      20,
       0,
-      71,
+      21,
       1,
       "IMAGE"
     ],
     [
       31,
-      71,
+      21,
       0,
-      46,
+      22,
       0,
       "IMAGE"
-    ],
-    [
-      32,
-      44,
-      0,
-      72,
-      0,
-      "MODEL"
-    ],
-    [
-      33,
-      72,
-      0,
-      19,
-      0,
-      "MODEL"
     ]
   ],
   "groups": [

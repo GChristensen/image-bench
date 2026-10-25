@@ -659,6 +659,20 @@ export const useProjectsStore = defineStore("projects", () => {
     return !!result;
   }
 
+  /**
+   * Write an infotext into a PNG file of a project directory (Paste infotext of the image context menu)
+   * @param {string} path
+   * @param {string} name - Relative to the project directory
+   * @param {string} infotext
+   * @returns {Promise<{infotext: string, parameters: Object}>}
+   * @throws {Error} With the message of the backend
+   */
+  async function writeInfotext(path, name, infotext) {
+    const result = await call("write_infotext", {path, name, infotext});
+    showProject(result.project);
+    return result;
+  }
+
   async function init() {
     await loadCurrent();
   }
@@ -678,6 +692,6 @@ export const useProjectsStore = defineStore("projects", () => {
     init, loadTree, loadCurrent, loadProject, select, findNode, show,
     save, saveInto, saveAs, open, close,
     createProject, createFolder, rename, move, remove, reveal,
-    updateProject, setFinal, addFile, deleteFile
+    updateProject, setFinal, addFile, deleteFile, writeInfotext
   };
 });

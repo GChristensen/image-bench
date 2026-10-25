@@ -97,6 +97,7 @@ class ImageBenchApi():
         self.add_api_route("/compare", self.write_compare, methods=["POST"])
         self.add_api_route("/compare_upload", self.compare_upload, methods=["POST"])
         self.add_api_route("/png_info", self.png_info, methods=["POST"])
+        self.add_api_route("/infotext", self.write_infotext, methods=["POST"])
         self.add_api_route("/media/thumb", self.get_media_thumb, methods=["GET"])
         self.add_api_route("/config_presets", self.get_presets, methods=["GET"])
         self.add_api_route("/clear_outputs_dir", self.clear_outputs_dir, methods=["POST"])
@@ -134,6 +135,7 @@ class ImageBenchApi():
         self.add_api_route("/editor/status", self.get_editor_status, methods=["GET"])
         self.add_api_route("/generation_status", self.get_generation_status, methods=["GET"])
         self.add_api_route("/interrupt", self.interrupt, methods=["POST"])
+        self.add_api_route("/skip", self.skip, methods=["POST"])
         self.app.add_websocket_route(self.BASE_PATH + "/editor/host-websocket", self.handle_editor_host_websocket)
         self.app.add_websocket_route(self.BASE_PATH + "/editor/websocket", self.handle_editor_websocket)
         # The routes of the Photoshop plugins installed before the editor bridge
@@ -534,8 +536,7 @@ class ImageBenchApi():
         tasks = [task for task in (json.loads(body or b"{}").get("tasks") or []) if isinstance(task, str)]
         interrupted = pending = False
 
-        # state.job is set by begin(), current_task just after it
-        if progress.current_task in tasks or shared.state.job in tasks or not tasks and shared.state.job:
+        if runs_task(tasks):
             interrupt_like_button()
             interrupted = True
         else:
@@ -549,6 +550,21 @@ class ImageBenchApi():
             prune_pending_stops(stops)
 
         return JSONResponse({"interrupted": interrupted, "pending": pending}, headers={"Cache-Control": "no-store"})
+
+    async def skip(self, request: Request):
+        """
+        Skip the image being generated of the page's tasks ({tasks: [ids]}) without the Skip button, as its click
+        does (shared.state.skip); WebUI continues with the next image of the batch. Only a running task is skipped:
+        begin() clears the flag, and a late skip must not cut the next generation. Without ids, the running job
+        """
+        body = await persist.read_request_body(request)
+        tasks = [task for task in (json.loads(body or b"{}").get("tasks") or []) if isinstance(task, str)]
+        skipped = runs_task(tasks)
+
+        if skipped:
+            shared.state.skip()
+
+        return JSONResponse({"skipped": skipped}, headers={"Cache-Control": "no-store"})
 
     def get_editor_image(self, kind: str):
         image = self.editor_images.get(kind)
@@ -718,6 +734,19 @@ class ImageBenchApi():
                 return pnginfo.read_infotext(image)
 
         return JSONResponse(content=pnginfo.image_info(await file.read(), read_infotext))
+
+    async def write_infotext(self, request: Request):
+        """Write an infotext into a PNG image of the output directories (Paste infotext of the image context menu)"""
+        data = json.loads(await request.body())
+        path = data.get("imagePath")
+
+        if not explore_export.is_allowed_image(path, self.get_image_output_dirs()):
+            return JSONResponse(content={"error": "The image is not a file of the output directories."}, status_code=400)
+
+        try:
+            return JSONResponse(content=await asyncio.to_thread(pnginfo.write_infotext, path, data.get("infotext") or ""))
+        except (ValueError, OSError) as e:
+            return JSONResponse(content={"error": str(e)}, status_code=400)
 
     async def write_tray(self, request: Request, kind):
         tray_data = json.loads(await request.body())
@@ -1015,6 +1044,14 @@ def install_video_hook(api):
 
 PENDING_STOP_AGE = 120
 PENDING_STOP_LIMIT = 16
+
+
+def runs_task(tasks):
+    """Whether one of the tasks (ids of Forge's submit()) is running; without ids, whether any job is"""
+    from modules import progress
+
+    # state.job is set by begin(), current_task just after it
+    return progress.current_task in tasks or shared.state.job in tasks or not tasks and bool(shared.state.job)
 
 
 def interrupt_like_button():

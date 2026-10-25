@@ -7,6 +7,7 @@ import {useProjectsStore} from "@/stores/projects.js";
 import {toast} from "@/toast.js";
 import {MARKINGS} from "@/consts.js";
 import {isStill} from "@/media.js";
+import {canPasteInfotext, copyInfotext, imageFileName, pasteInfotext} from "@/infotextClipboard.js";
 
 /**
  * Context menu of an image (card or overlay) or of another item (openContextMenu), rendered by ImageContextMenu.vue,
@@ -73,6 +74,14 @@ function imageMenuItems(image, ctx) {
   // The clipboard takes PNG only
   if (isStill(image))
     others.push({icon: "copy", label: "Copy image", run: () => copyImage(image)});
+
+  // The infotext of the file, or the one made from the prompt of a ComfyUI image
+  if (isStill(image))
+    others.push({icon: "params", label: "Copy infotext", run: () => copyInfotext(image)});
+
+  // Into the PNG file, after asking (e.g. a final image exported by an editor without it)
+  if (canPasteInfotext(image, ctx))
+    others.push({icon: "paste", label: "Paste infotext…", run: () => pasteInfotext(image)});
 
   const projects = useProjectsStore();
 
@@ -185,18 +194,7 @@ const EXTENSIONS = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".w
  * of its type
  */
 function fileNameOf(image, type) {
-  let name = String(image.imagePath || "").split(/[\\/]/).pop();
-
-  if (!name) {
-    try {
-      const url = new URL(image.imageUrl, location.href);
-      name = url.searchParams.get("filename") || url.pathname.split("/").pop();
-    } catch {
-      name = "";
-    }
-  }
-
-  name = name || "image";
+  const name = imageFileName(image) || "image";
   return /\.(png|jpe?g|webp|gif|bmp|avif|mp4|webm|mov|mkv|m4v|wav|mp3|flac|ogg|opus|m4a|aac)$/i.test(name) ? name : name.replace(/\.[^.]*$/, "") + (EXTENSIONS[type] ?? ".png");
 }
 

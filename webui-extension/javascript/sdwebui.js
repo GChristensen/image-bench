@@ -108,6 +108,16 @@ const TASK_ID_KEYS = ["txt2img_task_id", "img2img_task_id"];
 export async function stopGeneration() {
     messageBus.publish('STRATEGY_FINISH_REQUEST');
 
+    if (!await postTaskRequest("/image-bench/interrupt"))
+        await clickInterruptButton();
+}
+
+/**
+ * POST the ids of the page's tasks to a backend route
+ * @param {string} url
+ * @returns {Promise<boolean>} Whether the server took the request
+ */
+async function postTaskRequest(url) {
     const tasks = TASK_ID_KEYS.map(key => {
         try {
             return localStorage.getItem(key);
@@ -117,19 +127,17 @@ export async function stopGeneration() {
     }).filter(Boolean);
 
     try {
-        const response = await fetch("/image-bench/interrupt", {
+        const response = await fetch(url, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({tasks})
         });
 
-        if (response.ok)
-            return;
+        return response.ok;
     } catch (e) {
-        console.warn('[Image Bench] Unable to stop the generation on the server:', e);
+        console.warn(`[Image Bench] Request ${url} failed:`, e);
+        return false;
     }
-
-    await clickInterruptButton();
 }
 
 /**
@@ -160,9 +168,13 @@ async function clickInterruptButton() {
 }
 
 /**
- * Skip the image being generated; WebUI continues with the next image of the batch
+ * Skip the image being generated on the server (/image-bench/skip), as the Skip button does; WebUI continues
+ * with the next image of the batch. The button is clicked only if the request fails
  */
-export function skipGeneration() {
+export async function skipGeneration() {
+    if (await postTaskRequest("/image-bench/skip"))
+        return;
+
     const skipButton = getElementById(adapter.isImg2ImgTab() ? SELECTORS.IMG2IMG_SKIP : SELECTORS.TXT2IMG_SKIP);
     skipButton?.click();
 }

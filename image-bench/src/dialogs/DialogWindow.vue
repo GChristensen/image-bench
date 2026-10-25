@@ -24,6 +24,7 @@ const title = computed(() => options.value.title || (isPrompt.value ? '' : props
 
 const inputValue = ref(options.value.defaultValue ?? '');
 const inputRef = ref(null);
+const textareaRef = ref(null);
 const comboRef = ref(null);
 const okRef = ref(null);
 const checklistRef = ref(null);
@@ -39,7 +40,7 @@ const okText = computed(() => typeof options.value.okText === 'function'
 const historyKey = computed(() => `imageBench_promptHistory_${options.value.storageKey || 'default'}`);
 const historySize = computed(() => options.value.historySize || 10);
 const datalistId = computed(() => `dialog-history-${props.entry.id}`);
-const history = ref(isPrompt.value ? readHistory() : []);
+const history = ref(isPrompt.value && !options.value.multiline ? readHistory() : []);
 
 // The default value is usually the last submitted one, which may predate the history
 const dropdownItems = computed(() => {
@@ -75,7 +76,9 @@ function confirm() {
     const value = String(inputValue.value).trim();
 
     if (value) {
-      saveToHistory(value);
+      if (!options.value.multiline)
+        saveToHistory(value);
+
       emit('close', options.value.checkbox ? {value, checked: checkboxChecked.value} : value);
     }
     else
@@ -100,13 +103,20 @@ function onEscapeKey() {
     cancel();
 }
 
+// Enter in a multiline input is a newline, Ctrl+Enter confirms
+function keepsKey(e) {
+  return e.key === 'Enter' && e.target === textareaRef.value && !e.ctrlKey && !e.metaKey;
+}
+
 // Deferred to a macrotask: dialogs opened from a mousedown handler would otherwise
 // lose focus to the button's default mousedown action
 onMounted(() => setTimeout(() => {
   if (isPrompt.value) {
-    const input = comboRef.value || inputRef.value;
+    const input = comboRef.value || inputRef.value || textareaRef.value;
     input?.focus();
-    input?.select();
+
+    if (input !== textareaRef.value)
+      input?.select();
   }
   else if (isChecklist.value)
     checklistRef.value?.focus();
@@ -114,13 +124,13 @@ onMounted(() => setTimeout(() => {
     okRef.value?.focus();
 }));
 
-defineExpose({onEnterKey, onEscapeKey});
+defineExpose({onEnterKey, onEscapeKey, keepsKey});
 </script>
 
 <template>
   <div class="dialog-container">
     <div class="dialog-backdrop" @click="cancel"></div>
-    <div class="dialog-window" role="dialog" aria-modal="true" :aria-label="title || entry.message">
+    <div class="dialog-window" :class="{wide: isPrompt && options.multiline}" role="dialog" aria-modal="true" :aria-label="title || entry.message">
       <div v-if="title" class="dialog-header">
         <h3>{{ title }}</h3>
       </div>
@@ -136,6 +146,14 @@ defineExpose({onEnterKey, onEscapeKey});
                     v-model="inputValue"
                     :items="dropdownItems"
                     :placeholder="options.placeholder || 'Enter value...'"/>
+        <textarea v-else-if="isPrompt && options.multiline"
+                  :id="`dialog-input-${entry.id}`"
+                  ref="textareaRef"
+                  v-model="inputValue"
+                  class="dialog-input dialog-textarea"
+                  :rows="options.rows || 8"
+                  spellcheck="false"
+                  :placeholder="options.placeholder || 'Enter value...'"></textarea>
         <template v-else-if="isPrompt">
           <input :id="`dialog-input-${entry.id}`"
                  ref="inputRef"
@@ -188,6 +206,10 @@ defineExpose({onEnterKey, onEscapeKey});
   color: var(--ib-text);
 }
 
+.dialog-window.wide {
+  width: min(600px, calc(100vw - 32px));
+}
+
 .dialog-header {
   padding: 14px 18px 0;
 }
@@ -223,6 +245,12 @@ defineExpose({onEnterKey, onEscapeKey});
   border-radius: 5px;
   color: var(--ib-text);
   outline: none;
+}
+
+.dialog-textarea {
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.4;
 }
 
 .dialog-input:focus {
