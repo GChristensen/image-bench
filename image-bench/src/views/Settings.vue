@@ -152,6 +152,8 @@ function setGenerateUiPreset(index, value) {
     >Keep the session filmstrip shown when a batch ends</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.projectReminder"
     >Ask whether to continue the current project before generating</label>
+    <label v-if="isWebUI" class="setting-label"><input type="checkbox" v-model="appConfigStore.showPromptLock"
+    >Show the prompt lock button (covers the WebUI prompts, so that they are edited only here)</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.commonSizesOnly"
     >Show only common sizes in the size picker (1:1, A4, canvas, photo, video, cinema)</label>
     <div class="setting-label generate-setting">

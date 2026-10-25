@@ -144,9 +144,17 @@ function initHostPage() {
   webUI.initializePrompts();
 
   // The WebUI prompts are unlocked when the popup closes; lock them again if the user left them locked
-  if (hostHas("generate", "promptLock") && sdWebUIStateStore.isPromptsLockRemembered())
+  if (hostHas("generate", "promptLock") && appConfigStore.showPromptLock && sdWebUIStateStore.isPromptsLockRemembered())
     webUI.lockWebUIPrompts(true);
 }
+
+// Without its button the lock could not be undone
+watch(() => appConfigStore.showPromptLock, show => {
+  if (!show && sdWebUIStateStore.isPromptsLockRemembered()) {
+    sdWebUIStateStore.setPromptsLockRemembered(false);
+    webUI.lockWebUIPrompts(false);
+  }
+});
 
 // ---------- Host tab (embedded mode) ----------
 

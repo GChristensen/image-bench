@@ -1494,7 +1494,7 @@ const gridStyle = computed(() => ({
               aria-label="PNG Info" @click="openPngInfo()"><AppIcon name="fileSearch" :size="14"/></button>
       <button class="ib danger" :disabled="!connected" title="Clear the prompts" aria-label="Clear the prompts"
               @click="clearPrompts"><AppIcon name="eraser" :size="14"/></button>
-      <button v-if="has('promptLock')" class="ib" :class="{on: sdWebUI.promptsLocked}" :aria-pressed="sdWebUI.promptsLocked"
+      <button v-if="has('promptLock') && config.showPromptLock" class="ib" :class="{on: sdWebUI.promptsLocked}" :aria-pressed="sdWebUI.promptsLocked"
               :disabled="!connected"
               :title="sdWebUI.promptsLocked ? 'WebUI prompts locked: click to allow editing them in WebUI'
                 : 'Lock WebUI prompts: cover them in WebUI, so that they are edited only here'"
@@ -2072,13 +2072,13 @@ const gridStyle = computed(() => ({
   text-overflow: ellipsis;
 }
 
-.status-enter-active,
-.status-leave-active {
+/* No fade on leave: the slot widens as the progress bar goes at the end of a run, and the leaving pill
+   would fade out re-centered there, like another pill */
+.status-enter-active {
   transition: opacity 0.15s;
 }
 
-.status-enter-from,
-.status-leave-to {
+.status-enter-from {
   opacity: 0;
 }
 

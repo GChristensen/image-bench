@@ -94,6 +94,17 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // The prompt lock button in the Generate tab toolbar (disabled unless set to true)
+    const showPromptLock = computed({
+        get() {
+            return _config.showPromptLock ?? false;
+        },
+        set(v) {
+            _config.showPromptLock = v;
+            return persist();
+        }
+    });
+
     // Keep the session filmstrip of the Generate tab shown when a batch ends (disabled unless set to true)
     const keepSessionStrip = computed({
         get() {
@@ -276,6 +287,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         exploreLoraFreeImages,
         flashGeneratedTab,
         keepSessionStrip,
+        showPromptLock,
         projectReminder,
         commonSizesOnly,
         rimOnHover,
