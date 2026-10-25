@@ -408,8 +408,8 @@ const hostOrigin = location.origin;
           to save the project or start a new workspace. When it asks before generating is described under
           <a href="#" @click.prevent="scrollTo('projects')">Projects</a>.</li>
         <li v-if="isWebUI"><b>UI preset buttons</b> switch the Forge UI preset.
-          <AppIcon name="lock" :size="13" class="inline-icon"/> <b>Prompt lock</b> makes the prompts editable only
-          here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
+          <AppIcon name="lock" :size="13" class="inline-icon"/> <b>Prompt lock</b> (shown with its setting in
+          Settings › Generate Tab) makes the prompts editable only here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
         <li><b>Prompt history</b>: the numbered buttons after the prompt label hold the last 20 prompts generated
           from this tab. <b>1</b> is the latest, and a prompt generated again moves to the front. txt2img and
           img2img (including Inpaint) keep separate histories and variants. Click a number to see that prompt and

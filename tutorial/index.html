@@ -892,6 +892,7 @@
       <ul>
         <li>Only one editor can be connected at a time. When a second editor connects, it replaces the first one, which does not reconnect by itself.</li>
         <li>GIMP has no dockable panels, so open the plugin with <em>Tools › Image Bench › Panel</em>. Closing the panel hides it; Quit ends the connection.</li>
+        <li>If the host runs over https, the computer running the editor must trust the host's certificate. The plugins check it on their own, so accepting it in the browser is not enough. Add a self-signed certificate to the system's trusted root certificates (on Windows, <code>certutil -addstore Root &lt;certificate&gt;.crt</code> as an administrator) and restart the editor. The certificate must be issued for the address you enter in the plugin.</li>
       </ul>
     </div>
   </div>
@@ -1022,6 +1023,7 @@
     <ul>
       <li><strong>Images stop arriving, but everything else works:</strong> Image Bench is open at a different address than the host's, or a proxy does not pass WebSocket connections through.</li>
       <li><strong>Restart does nothing over https:</strong> the restart helper's certificate has not been accepted yet.</li>
+      <li><strong>The editor plugin does not connect over https:</strong> the host's certificate is not among the trusted root certificates of the editor's computer, or it was issued for another address (see <a href="#ch11">chapter 11</a>).</li>
       <li><strong>The interface is out of date after an update:</strong> reload the Image Bench window. In ComfyUI, also restart the server.</li>
     </ul>
   </div>
