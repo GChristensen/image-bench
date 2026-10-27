@@ -400,8 +400,8 @@ const hostOrigin = location.origin;
           <AppIcon name="infinity" :size="13" class="inline-icon"/>), it runs a batch in the Generated tab.
           <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
           skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click or a middle click
-          on Stop stops the generation and starts a new one a second later. The keys work in every tab while no
-          text field has the focus: <span class="kbd">Ctrl+Enter</span> generates or stops,
+          on Stop stops the generation and starts a new one a second later. The keys work in every tab, also
+          in text fields: <span class="kbd">Ctrl+Enter</span> generates or stops,
           <span class="kbd">Ctrl+Shift+Enter</span> restarts and <span class="kbd">Ctrl+Backspace</span>
           skips.<template v-if="isWebUI"> A single
           Stop works even right after Generate: the generation ends before its first image (a model that is

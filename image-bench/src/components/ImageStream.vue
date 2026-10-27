@@ -173,6 +173,14 @@
     }
   }
 
+  function getFirstImage() {
+    return filteredImages.value.find(i => !i.separator);
+  }
+
+  function getLastImage() {
+    return filteredImages.value.findLast(i => !i.separator);
+  }
+
   async function onAddComment(image) {
     let comment = await dialog.prompt("Comment:",
       {defaultValue: image.comment || "", storageKey: "imageComment"});
@@ -211,7 +219,7 @@
   // })
 
   defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, unselectAll, clear, removeSelected,
-    isAllSelected, isSomeSelected, selectedCount, getSelectedImages, getNextImage, getPrevImage, revealImage, deleteImage: onDeleteImage, addComment: onAddComment});
+    isAllSelected, isSomeSelected, selectedCount, getSelectedImages, getNextImage, getPrevImage, getFirstImage, getLastImage, revealImage, deleteImage: onDeleteImage, addComment: onAddComment});
 </script>
 
 <template>

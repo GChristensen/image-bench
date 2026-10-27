@@ -621,6 +621,47 @@ const HISTORY_INPAINT_PARAMS = {
     inpaintPadding: 'masked area padding'
 };
 
+// Hires. fix parameters, by the infotext keys of WebUI txt2img
+const HISTORY_HIRES_PARAMS = {
+    hiresScale: 'hires upscale',
+    hiresSteps: 'hires steps',
+    hiresUpscaler: 'hires upscaler',
+    hiresDenoise: 'denoising strength'
+};
+
+/**
+ * Hires. fix parameters of a prompt that ran the Hires. fix pass: its switch (ib:hr) was on, or the workflow has
+ * no switch but a Hires. fix sampler (ib:smp:1), whose pass then always runs. As in a WebUI infotext,
+ * 'hires upscale' marks the image as upscaled (the HR badge of the image cards)
+ * @param {Object} historyPrompt - History prompt object
+ * @param {Object} [executionIds] - Execution ids of the live marker targets
+ * @returns {Object}
+ */
+function extractHiresFromHistory(historyPrompt, executionIds) {
+    const params = {};
+    const hiresSwitch = executionIds?.hiresSwitch;
+    let value = hiresSwitch && historyPrompt[hiresSwitch.executionId]?.inputs?.[hiresSwitch.widget];
+
+    // A switch linked to a primitive ([node id, slot])
+    if (Array.isArray(value))
+        value = historyPrompt[value[0]]?.inputs?.value;
+
+    const ran = hiresSwitch ? value === true : !!historyPrompt[executionIds?.hiresSampler];
+
+    if (!ran)
+        return params;
+
+    for (const [name, key] of Object.entries(HISTORY_HIRES_PARAMS)) {
+        const located = executionIds?.params?.[name];
+        const value = located && historyPrompt[located.executionId]?.inputs?.[located.widget];
+
+        if (value !== undefined && !Array.isArray(value))
+            params[key] = value;
+    }
+
+    return params;
+}
+
 /**
  * Extract checkpoint/model from history prompt
  * Uses marker-based discovery (ib:cp:*) with type-based fallback
@@ -746,6 +787,9 @@ export function extractParametersFromHistory(promptId, historyPrompt, nodeConfig
     try {
         // Extract sampler parameters (seed, steps, cfg, etc.)
         Object.assign(params, extractSamplerFromHistory(nodesObject, nodeConfig, executionIds));
+
+        // Hires. fix, if the pass ran
+        Object.assign(params, extractHiresFromHistory(nodesObject, executionIds));
 
         // Extract checkpoint/model
         Object.assign(params, extractCheckpointFromHistory(nodesObject, nodeConfig, executionIds));

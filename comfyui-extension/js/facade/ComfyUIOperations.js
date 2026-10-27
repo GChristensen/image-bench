@@ -235,6 +235,10 @@ export class ComfyUIOperations {
             ...Object.fromEntries(Object.entries(MARKER_ROLES)
                 .map(([key, role]) => [key, this.getRoleTarget(role)?.executionId])),
             sampler: this.getSamplerTarget()?.executionId,
+            hiresSampler: this.getHiresSamplerTarget()?.executionId,
+            // The Hires. fix switch, whose value in /history tells whether the pass ran
+            hiresSwitch: this.getHiresFixSwitches()
+                .map(({target, widgetName}) => ({executionId: target.executionId, widget: widgetName}))[0] ?? null,
             // Execution ids and widget names of the located generation parameters
             params: this.params.getExecutionIds()
         };

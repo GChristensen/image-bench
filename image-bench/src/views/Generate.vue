@@ -1129,6 +1129,13 @@ function showSessionNeighbour(step) {
     overlayImage.value = neighbour;
 }
 
+function showSessionEnd(end) {
+  const images = sessionImagesStore.images;
+
+  if (images.length)
+    overlayImage.value = images[end < 0 ? 0 : images.length - 1];
+}
+
 function onKeydown(e) {
   if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && showImageOverlay.value && !showParamsOverlay.value
       && !e.ctrlKey && !e.altKey && !e.metaKey) {
@@ -1477,6 +1484,7 @@ const gridStyle = computed(() => ({
 <template>
   <ImageOverlay v-if="showImageOverlay" :image="overlayImage" markable @show-params="onShowParams"
                 :has-prev="overlayHasPrev" :has-next="overlayHasNext" @navigate="showSessionNeighbour"
+                @navigate-end="showSessionEnd"
                 @set-marking="onSetMarking" @hide-overlay="showImageOverlay = false"/>
   <ParametersOverlay v-if="showParamsOverlay" :image="paramsOverlayImage"
                      @hide-overlay="showParamsOverlay = false"/>

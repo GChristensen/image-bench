@@ -540,6 +540,7 @@ onDeactivated(() => {
                 :has-prev="overlayIndex > 0"
                 :has-next="overlayIndex < store.images.length - 1"
                 @navigate="step => overlayIndex += step"
+                @navigate-end="end => overlayIndex = end < 0 ? 0 : store.images.length - 1"
                 @show-params="onShowParams"
                 @add-comment="addComment"
                 @hide-overlay="closeOverlay"

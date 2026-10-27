@@ -303,6 +303,13 @@ function displayNextImage() {
   }
 }
 
+function displayEndImage(end) {
+  const image = end < 0 ? imageStream.value.getFirstImage() : imageStream.value.getLastImage();
+
+  if (image)
+    overlayImage.value = image;
+}
+
 function onShowMarkedClick() {
   if (isShowingMarked.value) {
     isShowingMarked.value = false;
@@ -381,6 +388,7 @@ function isComponentTray(kind) {
                 :has-prev="overlayHasPrev"
                 :has-next="overlayHasNext"
                 @navigate="step => step < 0 ? displayPrevImage() : displayNextImage()"
+                @navigate-end="displayEndImage"
                 @show-params="onShowParams"
                 @upscale-image="onUpscaleImage"
                 @add-comment="image => imageStream.addComment(image)"

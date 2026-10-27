@@ -136,6 +136,23 @@ function step(rowStep, columnStep) {
     overlayPosition.value = next;
 }
 
+// Home / End: the first or last cell with an image in reading order
+function stepToEnd(end) {
+  const columns = sweep.ends.length;
+  const count = sweep.weights.length * columns;
+
+  for (let i = 0; i < count; i++) {
+    const index = end < 0 ? i : count - 1 - i;
+    const row = Math.floor(index / columns);
+    const column = index - row * columns;
+
+    if (imageAt(row, column)) {
+      overlayPosition.value = {row, column};
+      return;
+    }
+  }
+}
+
 function applyOverlay() {
   if (overlayPosition.value && !overlayPosition.value.reference)
     emit("apply", {...overlayValues.value});
@@ -184,6 +201,7 @@ onUnmounted(() => document.removeEventListener("keydown", onKeydown));
   <ImageOverlay v-if="overlayImage" :image="overlayImage" kind="controlnet_sweep" markable
                 :has-prev="hasLeft" :has-next="hasRight" :has-up="hasUp" :has-down="hasDown"
                 @navigate="columnStep => step(0, columnStep)" @navigate-vertical="rowStep => step(rowStep, 0)"
+                @navigate-end="stepToEnd"
                 @show-params="paramsImage = overlayImage" @hide-overlay="closeOverlay">
     <template #info>
       <span class="overlay-values">

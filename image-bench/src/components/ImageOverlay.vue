@@ -9,6 +9,7 @@
   import {useCtrlKey} from "@/composables/useCtrlKey.js";
   import {useShiftKey} from "@/composables/useShiftKey.js";
   import {toast} from "@/toast.js";
+  import {dialogStack} from "@/dialogs/useDialog.js";
   import AppIcon from "@/components/AppIcon.vue";
   import ActionRim from "@/components/ActionRim.vue";
   import GenerationParameters from "@/components/GenerationParameters.vue";
@@ -44,7 +45,8 @@
       type: String,
       default: null
     },
-    // Show the chevrons that emit navigate(-1 / 1), as the arrow keys of the view do
+    // Show the chevrons that emit navigate(-1 / 1), as the arrow keys of the view do; Home / End emit
+    // navigateEnd(-1 / 1) for the first or last image
     hasPrev: {
       type: Boolean,
       default: false
@@ -65,7 +67,7 @@
   });
 
   const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking', 'deleteImage',
-    'showParams', 'upscaleImage', 'addComment', 'filterMarking', 'navigate', 'navigateVertical']);
+    'showParams', 'upscaleImage', 'addComment', 'filterMarking', 'navigate', 'navigateVertical', 'navigateEnd']);
 
   const imageOps = useImageOperations();
 
@@ -502,7 +504,23 @@
   onBeforeUnmount(() => endFlick(false));
 
   // Escape closes the rim before the overlay
+  function isTyping(e) {
+    const element = e.target;
+    return element instanceof HTMLElement
+      && (element.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName));
+  }
+
   function onKeyDown(e) {
+    if ((e.key === "Home" || e.key === "End") && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
+        && !dialogStack.value.length && !isTyping(e)) {
+      const direction = e.key === "Home" ? -1 : 1;
+      e.preventDefault();
+
+      if (direction > 0 ? props.hasNext : props.hasPrev)
+        emit("navigateEnd", direction);
+      return;
+    }
+
     if (e.key !== "Escape" || !rim.value)
       return;
 
