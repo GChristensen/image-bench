@@ -119,7 +119,8 @@ export async function init() {
 }
 
 /**
- * Save txt2img and img2img prompts and parameters when the user starts a generation or opens a project
+ * Save txt2img and img2img prompts and parameters when the user starts a generation (WebUI's Generate button,
+ * or a single image, batch or variations from the Generate tab of the popup) or opens a project
  * The config is reloaded, since the setting may be changed in the popup
  */
 async function saveGenerationParams() {
@@ -492,6 +493,7 @@ async function handleBatchGenerate(options, config) {
     // Started from the Generate tab: its mode, or the shown WebUI tab if it is another one
     if (options.mode !== undefined) {
         await prepareMode(options.mode);
+        await saveGenerationParams();
 
         // The batch strategy randomizes the txt2img seed
         if (uiOperations.isImg2ImgTab())
@@ -538,8 +540,10 @@ async function handleGenerateVariations(options, config) {
     if (!checkReadyToGenerate())
         return;
 
-    if (options.mode !== undefined)
+    if (options.mode !== undefined) {
         await prepareMode(options.mode);
+        await saveGenerationParams();
+    }
 
     setGenerationState("BATCH_GENERATION");
     return await batchStrategy.process({...options, config});
