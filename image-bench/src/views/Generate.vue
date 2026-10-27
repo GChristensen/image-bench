@@ -39,6 +39,7 @@ import PromptHistoryBar from "@/components/generate/PromptHistoryBar.vue";
 import PromptVariantsSelect from "@/components/generate/PromptVariantsSelect.vue";
 import PromptDiff from "@/components/generate/PromptDiff.vue";
 import ProjectCube from "@/components/generate/ProjectCube.vue";
+import {clearGenerationController, setGenerationController} from "@/generationKeys.js";
 import {consoleOpen, toggleConsole} from "@/consoleDrawer.js";
 import {armReminder, reminder} from "@/projectReminder.js";
 import {useProjectsStore} from "@/stores/projects.js";
@@ -793,11 +794,58 @@ const projectCube = ref(null);
  * @param {MouseEvent} e - The click on the button, under which the reminder is shown
  */
 function generateChecked(handler, e) {
-  if (reminder.armed && projects.hasCurrent && projectCube.value && !e.ctrlKey)
+  if (reminderAsks() && !e.ctrlKey)
     projectCube.value.ask(handler, e.currentTarget);
   else
     handler();
 }
+
+function reminderAsks() {
+  return reminder.armed && projects.hasCurrent && !!projectCube.value;
+}
+
+// ---------- Generation keys (generationKeys.js): Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+Backspace in any tab ----------
+
+const generateButton = ref(null);
+
+// Generate as a click on the button does: the reminder is shown under it, in this tab
+async function generateByKey() {
+  if (!reminderAsks())
+    return onGenerate();
+
+  if (!tabShown.value) {
+    await router.push("/generate");
+    await nextTick();
+  }
+
+  if (projectCube.value && generateButton.value)
+    projectCube.value.ask(onGenerate, generateButton.value);
+}
+
+const generationController = {
+  toggle() {
+    if (restarting.value)
+      return;
+
+    if (generating.value)
+      onInterrupt();
+    else if (connected.value && !sdWebUI.restoringParams)
+      generateByKey();
+  },
+  restart() {
+    if (generating.value)
+      onRestart();
+    else
+      this.toggle();
+  },
+  skip() {
+    if (generating.value)
+      webUI.skipGeneration();
+  }
+};
+
+setGenerationController(generationController);
+onBeforeUnmount(() => clearGenerationController(generationController));
 
 function onGenerateButton(e) {
   if (restarting.value)
@@ -1441,10 +1489,11 @@ const gridStyle = computed(() => ({
   <div class="view-container generate">
     <div class="toolbar">
       <div class="toolbar-group">
-        <button class="btn swap" :class="[generating ? 'stop' : 'primary', {joined: projects.hasCurrent}]"
+        <button ref="generateButton" class="btn swap"
+                :class="[generating ? 'stop' : 'primary', {joined: projects.hasCurrent}]"
                 :disabled="!generating && (!connected || sdWebUI.restoringParams)"
-                :title="generating ? 'Stop; Ctrl+click or middle click: stop and generate again'
-                  : projects.hasCurrent ? `Generate (project ${projects.current.name})` : undefined"
+                :title="generating ? 'Stop (Ctrl+Enter); Ctrl+click or middle click: stop and generate again (Ctrl+Shift+Enter)'
+                  : projects.hasCurrent ? `Generate (project ${projects.current.name}) (Ctrl+Enter)` : 'Generate (Ctrl+Enter)'"
                 @click="onGenerateButton" @mousedown.middle.prevent
                 @auxclick="e => e.button === 1 && generating && onRestart()">
           <span :class="{off: generating}"><AppIcon name="play" :size="13"/>Generate</span>
@@ -1452,7 +1501,7 @@ const gridStyle = computed(() => ({
           <span :class="{off: !generating || !(ctrlDown || restarting)}"><AppIcon name="refresh" :size="13"/>Restart</span>
         </button>
         <ProjectCube v-if="projects.hasCurrent" ref="projectCube"/>
-        <button class="btn outline" :disabled="!generating" title="Skip the image being generated"
+        <button class="btn outline" :disabled="!generating" title="Skip the image being generated (Ctrl+Backspace)"
                 @click="webUI.skipGeneration()"><AppIcon name="skip" :size="13"/>Skip</button>
         <label class="toolbar-group-label"><span class="reset-count" title="Reset to 1 image"
               @click.prevent="generateImagesNumber = 1">×</span><NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>

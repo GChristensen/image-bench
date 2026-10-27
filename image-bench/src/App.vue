@@ -27,6 +27,7 @@ import ImageContextMenu from "@/components/ImageContextMenu.vue";
 import ToastHost from "@/components/ToastHost.vue";
 import ProjectChip from "@/components/ProjectChip.vue";
 import {installImageActionKeys} from "@/composables/useImageActionKeys.js";
+import {installGenerationKeys} from "@/generationKeys.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas} from "@/host.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
@@ -312,6 +313,7 @@ onMounted(() => {
     window.imageBenchShowApp = showAppTabs;
   initManualHint();
   installImageActionKeys();
+  installGenerationKeys();
   window.addEventListener("keydown", onSaveKey);
   window.addEventListener("keydown", onConsoleKey);
 });
