@@ -30,7 +30,8 @@ export function closeDialog(entry, value) {
   if (index !== -1) {
     dialogStack.value.splice(index, 1);
     triggerRef(dialogStack);
-    entry.previousFocus?.focus?.();
+    // Without focusVisible: false, Firefox rings the element after a dialog closed by a key
+    entry.previousFocus?.focus?.({focusVisible: false});
     entry.resolve(value);
   }
 }

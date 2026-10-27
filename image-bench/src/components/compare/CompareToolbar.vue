@@ -118,7 +118,7 @@ defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCr
               :title="`Remove the ${imageCount - markedCount} unmarked images (the files stay on disk)`"
               @click="$emit('removeMarked', false)">Unmarked</button>
       <button class="btn small" :disabled="!imageCount"
-              :title="`Remove all ${imageCount} images (the files stay on disk)`"
+              :title="`Remove all ${imageCount} images (the files stay on disk) (Shift+Del)`"
               @click="$emit('clear')">All</button>
     </div>
   </div>

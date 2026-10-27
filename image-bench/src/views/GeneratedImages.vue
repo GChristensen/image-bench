@@ -19,6 +19,7 @@ import {flashTrayTab} from "@/components/utils.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useKeyboardShortcuts} from "@/composables/useKeyboardShortcuts.js";
+import {useClearKey} from "@/composables/useClearKey.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {isStill} from "@/media.js";
 
@@ -255,6 +256,7 @@ useKeyboardShortcuts({
   onArrowRight: displayNextImage,
   onCtrlU: () => imageStream.value.selectAll(false)
 });
+useClearKey(onClearClick, () => showImageOverlay.value || showParamsOverlay.value);
 
 function hideOverlay() {
   closeImageOverlay();

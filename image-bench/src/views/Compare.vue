@@ -5,6 +5,7 @@ import {syncTrayMarkings} from "@/stores/trayMarkings.js";
 import {KIND_COMPARE} from "@/consts.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
+import {useClearKey} from "@/composables/useClearKey.js";
 import {dialog, dialogStack} from "@/dialogs/useDialog.js";
 import {isContextMenuOpen} from "@/contextMenu.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
@@ -163,6 +164,8 @@ async function onClear() {
       {okText: "Remove", danger: true}))
     store.clear();
 }
+
+useClearKey(onClear, () => !!overlayImage.value || showParamsOverlay.value);
 
 const markedCount = computed(() => store.images.filter(image => image.marking).length);
 

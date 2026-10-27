@@ -228,7 +228,7 @@ defineExpose({generateImagesNumber});
     </div>
 
     <!-- Clear action -->
-    <button class="btn" title="Remove all images from this view (the files stay on disk)"
+    <button class="btn" title="Remove all images from this view (the files stay on disk) (Shift+Del)"
             @click="$emit('clear')"><AppIcon name="eraser" :size="14"/>Clear</button>
     <button v-if="kind === KIND_GENERATED" class="ib" :class="{on: autoClear}" :aria-pressed="autoClear"
             :title="`Clear automatically when a new batch starts: ${autoClear ? 'on' : 'off'}`"

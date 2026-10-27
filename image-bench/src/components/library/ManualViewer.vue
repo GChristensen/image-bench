@@ -1457,6 +1457,8 @@ const hostOrigin = location.origin;
         <tr><td><span class="kbd">←</span> <span class="kbd">→</span>, wheel</td><td>Previous or next image in the image view</td></tr>
         <tr><td><span class="kbd">Esc</span></td><td>Close the image view, or the topmost dialog</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">U</span></td><td>Unselect all images</td></tr>
+        <tr><td><span class="kbd">Shift</span>+<span class="kbd">Del</span></td><td>Clear the shown tab (Generated,
+          Upscaled, the trays, Compare), after a confirmation</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>Save the workspace into the
           current project</td></tr>
         <tr><td>Click</td><td>On the image in the image view, switch between full size and fit to screen. Drag to
