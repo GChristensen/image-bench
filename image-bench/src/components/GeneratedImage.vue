@@ -105,6 +105,8 @@
     get kind() { return props.kind; },
     get isTray() { return props.isTray; },
     get upscalable() { return props.upscalable; },
+    // The context menu names the middle click only where it opens the image
+    get middleClickOpens() { return !middleTogglesRim.value; },
     handlers: {
       showParams: () => emit("showParams"),
       upscale: image => emit("upscaleImage", image),
@@ -163,7 +165,7 @@
       rimSize.value = Math.min(frame.clientWidth, frame.clientHeight);
   });
 
-  const rimToggleText = () => rimToggled.value ? "Hide actions" : "Show actions (or hold Ctrl)";
+  const rimToggleText = () => rimToggled.value ? "Hide actions" : "Show actions (or hold Ctrl, or middle-click)";
 
   function openRim() {
     if (!dragging.value)
@@ -239,8 +241,17 @@
     }
   }
 
+  // Middle click toggles the action rim as its button does; it opens the image in a new window where the card has
+  // no rim toggle (rim on hover, no rim)
+  const middleTogglesRim = computed(() => props.rim && !hoverMode.value);
+
   function onImageAuxClick(e) {
-    if (e.button === 1)
+    if (e.button !== 1)
+      return;
+
+    if (middleTogglesRim.value)
+      rimToggled.value = !rimToggled.value;
+    else
       emit("imageOpen");
   }
 

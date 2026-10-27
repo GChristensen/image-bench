@@ -216,9 +216,9 @@ const hostOrigin = location.origin;
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        Hold <span class="kbd">Ctrl</span> over an image to show its action rim, or click the
+        Hold <span class="kbd">Ctrl</span> over an image to show its action rim, or middle-click the image or click the
         <AppIcon name="rim" :size="13" class="inline-icon"/> button at the top right of the image, which keeps the
-        rim shown until you click it again or the pointer leaves the card. The rim is a ring of sectors, one per
+        rim shown until you middle-click or click it again or the pointer leaves the card. The rim is a ring of sectors, one per
         action, colored by the kind of action. The middle of the ring shows the name and key of the sector under
         the pointer. Some sectors have an alternative action, which runs on a middle click or Shift+click; holding
         Shift shows their alternative icons. A click on the image inside or outside the ring opens it as usual.
@@ -287,7 +287,8 @@ const hostOrigin = location.origin;
         full size and fit to screen, the <AppIcon name="params" :size="13" class="inline-icon"/> <b>Show
         generation parameters</b> button at the top left shows the parameters over the image
         (a second click hides them; they stay shown while paging), and <span class="kbd">Esc</span> closes the view.
-        Middle-click an image to open it in a new browser tab.
+        <b>Open in new window</b> of the image menu opens it in a new browser tab (with the rim on hover, so does a
+        middle click on the image).
       </p>
       <p>
         Images can be dragged into the input, reference and ControlNet panes.
@@ -1470,8 +1471,8 @@ const hostOrigin = location.origin;
         <tr><td><span class="kbd">Ctrl</span></td><td>Hold over an image card to show its action rim. Hold in the
           image view to show only the image</td></tr>
         <tr><td>Middle click</td><td>In the image view, open the action rim at the pointer. Release the button on a
-          sector to run it; the button in the center closes the image view. On an image card, open the image in a
-          new tab. On a button, perform its alternative action (place as a new layer in the editor). On a marking,
+          sector to run it; the button in the center closes the image view. On an image card, show or hide its
+          action rim (with the rim on hover: open the image in a new tab). On a button, perform its alternative action (place as a new layer in the editor). On a marking,
           remove it</td></tr>
         <tr><td><span class="kbd">Shift</span>+click</td><td>On a button of an image, perform its alternative
           action</td></tr>

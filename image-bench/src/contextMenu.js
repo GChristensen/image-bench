@@ -68,7 +68,7 @@ function imageMenuItems(image, ctx) {
   const others = [];
 
   if (ctx.handlers.openImage)
-    others.push({icon: "external", label: "Open in new window", hint: "Middle-click",
+    others.push({icon: "external", label: "Open in new window", hint: ctx.middleClickOpens ? "Middle-click" : undefined,
       run: () => ctx.handlers.openImage(image)});
 
   // The clipboard takes PNG only
