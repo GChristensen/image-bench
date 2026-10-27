@@ -143,6 +143,7 @@ onBeforeMount(async () => {
 // Tell a host page the state of the popup it does not know
 function initHostPage() {
   webUI.initializePrompts();
+  webUI.subscribeHiresFix();
 
   // The WebUI prompts are unlocked when the popup closes; lock them again if the user left them locked
   if (hostHas("generate", "promptLock") && appConfigStore.showPromptLock && sdWebUIStateStore.isPromptsLockRemembered())
@@ -156,6 +157,9 @@ watch(() => appConfigStore.showPromptLock, show => {
     webUI.lockWebUIPrompts(false);
   }
 });
+
+// The HR badge of the Generate tab, in every tab: the host's Hires. fix switch is on
+const hiresFixOn = computed(() => hostConnected.value && sdWebUIStateStore.hiresFix === true);
 
 // ---------- Host tab (embedded mode) ----------
 
@@ -393,7 +397,9 @@ async function switchTabAccordingToGenerationMode(e, state) {
 <template>
   <div class="tab-container">
     <nav class="tabs">
-      <RouterLink to="/generate" class="tab" id="generate-tab"><AppIcon name="generate" :size="14"/>Generate</RouterLink>
+      <RouterLink to="/generate" class="tab" id="generate-tab"
+        ><span class="tab-icon" :class="{'hires-on': hiresFixOn}"><AppIcon name="generate" :size="14"
+        /><span v-if="hiresFixOn" class="hires-badge" title="Hires. fix is on">HR</span></span>Generate</RouterLink>
       <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
       <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedCount" class="count">{{ generatedCount }}</span></RouterLink>
@@ -506,6 +512,31 @@ async function switchTabAccordingToGenerationMode(e, state) {
     color: var(--ib-text);
     background: var(--ib-accent-soft);
     box-shadow: inset 0 0 0 1px var(--ib-accent-border);
+  }
+
+  .tab-icon {
+    position: relative;
+    display: inline-flex;
+  }
+
+  /* The badge reaches past the icon: the label moves aside */
+  .tab-icon.hires-on {
+    margin-right: 6px;
+  }
+
+  /* Cut into the top right of the icon by a ring of the bar color; absolute, so the tab keeps its height */
+  .hires-badge {
+    position: absolute;
+    top: -3px;
+    left: 8px;
+    height: 10px;
+    padding: 0 2px;
+    border-radius: 3px;
+    background: var(--ib-accent);
+    box-shadow: 0 0 0 1.5px var(--ib-surface);
+    color: var(--ib-accent-ink);
+    font: 800 7.5px/10px var(--ib-mono);
+    letter-spacing: 0.02em;
   }
 
   .tab-spacer {

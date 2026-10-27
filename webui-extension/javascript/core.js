@@ -24,6 +24,7 @@ import {createHeaderButton} from "./utils_html.js";
 import {createWebUIMirror} from "./mirror.js";
 import {createControlNet} from "./controlnet.js";
 import {createControlNetRecorder} from "./controlnetRecorder.js";
+import {createHiresFixWatch} from "./shared/hiresFixWatch.js";
 
 // Create popup manager instance (no WebSocket integration for WebUI)
 const popupManager = createPopupManager({
@@ -54,6 +55,9 @@ const controlNet = createControlNet(uiOperations, adapter, {sendMessage: sendPop
     showAlert);
 // ControlNet inputs of each generation, read when Generate is clicked and carried by its images
 const controlNetRecorder = createControlNetRecorder(controlNet);
+// The Hires. fix checkbox of txt2img, shown as a badge on the Generate tab of the popup
+const hiresFixWatch = createHiresFixWatch(() => adapter.getElement('HIRES_CHECKBOX')?.checked ?? null,
+    {sendMessage: sendPopupMessage, isOpen: popupManager.isOpen});
 
 let appConfig;
 let modelInfoButton;
@@ -315,6 +319,8 @@ async function onMessage(msg) {
         await handleGenerateImage(payload.mode)
     else if (payload.type === "MIRROR_SUBSCRIBE")
         mirror.subscribe(payload.active)
+    else if (payload.type === "HIRES_FIX_SUBSCRIBE")
+        hiresFixWatch.subscribe()
     else if (payload.type === "SET_WEBUI_PARAMS")
         await mirror.applyParams(payload.params)
     else if (payload.type === "REUSE_SEED")

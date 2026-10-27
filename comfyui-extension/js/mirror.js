@@ -10,6 +10,7 @@ import {MARKER_ROLES, getRoleWidgetName} from "./workflow.js";
 import {getMaskPreview, getTargetImageUrl, uploadInputImage, uploadInputMask} from "./images.js";
 import {captureWorkflows} from "./workflows.js";
 import {checkWorkflow} from "./runErrors.js";
+import {createHiresFixWatch} from "./shared/hiresFixWatch.js";
 
 const POLL_INTERVAL = 600;
 // Lets the widget callbacks run before the values are read back
@@ -28,6 +29,8 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
     let lastInputs = null;
     // Where images sent from the editor go: 'input' or 'reference' (set in the Generate tab)
     let editorTarget = 'input';
+    // The ib:hr switch, shown as a badge on the Generate tab of the popup
+    const hiresFixWatch = createHiresFixWatch(() => ops.getHiresFix(), popup);
 
     /**
      * @returns {'txt2img'|'img2img'|'inpaint'}
@@ -186,6 +189,7 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
 
     const handlers = {
         MIRROR_SUBSCRIBE: payload => subscribe(payload.active),
+        HIRES_FIX_SUBSCRIBE: () => hiresFixWatch.subscribe(),
         SET_WEBUI_PARAMS: payload => applyParams(payload.params),
         SET_INPUT_IMAGE: payload => setInputImage(payload.kind, payload.file),
         EDIT_REFERENCES: payload => editReferences(payload.edit),

@@ -98,6 +98,11 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'MIRROR_SUBSCRIBE', active });
   };
 
+  // Have the host report its Hires. fix switch while the popup is open (HIRES_FIX_STATE messages)
+  const subscribeHiresFix = () => {
+    sendWebUIMessage({ type: 'HIRES_FIX_SUBSCRIBE' });
+  };
+
   // Refresh the checkpoint and LoRA lists of the host UI
   const refreshModels = () => {
     sendWebUIMessage({ type: 'REFRESH_MODELS' });
@@ -155,6 +160,7 @@ export function useWebUIBridge() {
     editReferences,
     setEditorTarget,
     subscribeMirror,
+    subscribeHiresFix,
     subscribeControlNet,
     setControlNetParams,
     controlNetAction,

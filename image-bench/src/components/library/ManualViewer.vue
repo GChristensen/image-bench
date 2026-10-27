@@ -353,7 +353,8 @@ const hostOrigin = location.origin;
           LTX 8n+1) and shows the duration in seconds, and <b>Frame rate</b>, if the workflow has one.</li>
         <li><b>Sampling, Seed and Hires. fix.</b> <AppIcon name="dice" :size="13" class="inline-icon"/> sets a
           random seed (−1), and <AppIcon name="recycle" :size="13" class="inline-icon"/> takes the seed of the Result
-          image.</li>
+          image. While Hires. fix is on ({{ isWebUI ? "the txt2img checkbox" : "the ib:hr switch" }}), the icon of
+          the Generate tab carries an <b>HR</b> badge in the accent color, seen from every tab.</li>
         <li><b>ControlNet</b> (a tab in the header of the Hires. fix or img2img group, shown while a ControlNet unit
           is enabled): the model, weight and timestep range of an enabled unit, chosen by the numbers at the right
           of the header, which also choose the unit that receives <b>Send to ControlNet</b>. The thumbnail shows the

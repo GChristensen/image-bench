@@ -38,6 +38,9 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
     const workflow = ref(null)
     const workflows = ref([])
     const promptsLocked = ref(false)
+    // The Hires. fix switch of the host (WebUI's txt2img checkbox, ComfyUI's ib:hr), reported while the popup
+    // is open (HIRES_FIX_STATE) and by the Generate tab mirror; null if the host has none
+    const hiresFix = ref(null)
 
     // Progress and live preview of the running generation (LIVE_PROGRESS)
     const live = ref({active: false, progress: 0, preview: null})
@@ -63,6 +66,13 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
             promptsLocked.value = e.locked;
             workflow.value = e.workflow ?? null;
             workflows.value = e.workflows ?? [];
+
+            // WebUI reports the checkbox only in txt2img; the mirror polls faster than the watch
+            if (e.params && "hiresFix" in e.params)
+                hiresFix.value = e.params.hiresFix;
+        }
+        else if (e.type === "HIRES_FIX_STATE") {
+            hiresFix.value = e.on;
         }
         else if (e.type === "INPUT_IMAGES") {
             inputs.value = {mode: e.mode, image: e.image, mask: e.mask};
@@ -84,6 +94,6 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
     }
 
     return {prompt, negativePrompt, mode, params, sliderKind, tokens, options, features, references, inputs, busy, switchingUiPreset, restoringParams, workflow, workflows, promptsLocked,
-            live, onSDEvent,
+            hiresFix, live, onSDEvent,
             isPromptsLockRemembered, setPromptsLockRemembered};
 })
