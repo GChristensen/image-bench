@@ -87,7 +87,13 @@ export function parametersToInfotext(parameters) {
   return lines.join("\n");
 }
 
-async function writeClipboard(text) {
+/**
+ * Put text on the clipboard, through the selection of a hidden textarea where the Clipboard API is refused (a page
+ * that is not secure)
+ * @param {string} text
+ * @returns {Promise<boolean>} Whether it was copied
+ */
+export async function writeClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
     return true;

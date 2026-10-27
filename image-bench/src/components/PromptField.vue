@@ -2,7 +2,7 @@
 /**
  * Labelled prompt textarea with the token count reported by the host; the textarea fills the field height.
  * Ctrl+Up/Down changes the attention weight as in WebUI. The label row has a slot after the label
- * (e.g. the prompt history), and the "view" slot takes the place of the textarea (a read-only prompt)
+ * (e.g. the prompt history) and one at its end, before the token count (e.g. the copy button), and the "view" slot takes the place of the textarea (a read-only prompt)
  */
 import {nextTick, ref} from "vue";
 import {editAttention, isEditAttentionKey} from "@/editAttention.js";
@@ -57,7 +57,10 @@ defineExpose({textarea});
     <div class="prompt-label">
       <label :for="id">{{ label }}</label>
       <slot name="after-label"/>
-      <span v-if="tokens" class="tokens" title="Tokens">{{ tokens }}</span>
+      <span class="label-end">
+        <slot name="end"/>
+        <span v-if="tokens" class="tokens" title="Tokens">{{ tokens }}</span>
+      </span>
     </div>
     <slot name="view">
       <textarea :id="id" ref="textarea" v-model="model" :disabled="disabled" spellcheck="false"
@@ -84,8 +87,14 @@ defineExpose({textarea});
   color: var(--ib-text-2);
 }
 
-.tokens {
+.label-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-left: auto;
+}
+
+.tokens {
   padding: 0 6px;
   border-radius: 4px;
   background: var(--ib-elev);

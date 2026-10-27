@@ -23,6 +23,8 @@ export const GESTURES = [
     source: ["views/Generate.vue", "components/RunControl.vue"]},
   {clause: "control", target: "Clear", does: "Choose which images to remove", source: ["components/ClearButton.vue"]},
   {clause: "control", target: "LoRA info", does: "Open its Civitai page", source: ["views/Generate.vue"]},
+  {clause: "control", target: "Copy the prompts", does: "Copy the prompt and the negative prompt, without the menu",
+    source: ["views/Generate.vue"]},
   {clause: "control", target: "Send to the editor", does: "As a new layer",
     source: ["views/ControlNet.vue", "components/projects/ProjectDetail.vue"]},
   {clause: "control", target: "Snippet", does: "Insert only the part of this prompt",

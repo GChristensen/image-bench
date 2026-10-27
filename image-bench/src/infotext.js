@@ -199,3 +199,69 @@ export function infotextToForm(parameters, ctx) {
 
   return groups;
 }
+
+/**
+ * Image parameters of the values of the Generate tab, the inverse of infotextToForm(): those that WebUI writes into
+ * the infotext, in its order. Parameters the host or the workflow does not have are left out.
+ * @param {Object} form - Values of the tab
+ * @param {Object} ctx - {has, mode, sliderKind}
+ * @returns {Object} Lowercase keys of the image trays (for infotextClipboard.js:parametersToInfotext())
+ */
+export function formToParameters(form, {has, mode, sliderKind}) {
+  const parameters = {};
+
+  const set = (key, value, feature) => {
+    if (isSet(value) && (!feature || has(feature)))
+      parameters[key] = value;
+  };
+
+  set("prompt", form.prompt ?? "");
+  set("negative prompt", form.negativePrompt, "negativePrompt");
+  set("steps", form.steps, "steps");
+  set("sampler", form.sampler, "sampler");
+  set("schedule type", form.scheduler, "scheduler");
+  set("cfg scale", form.cfg, "cfg");
+
+  if (sliderKind)
+    set(sliderKind === "distilledCfg" ? "distilled cfg scale" : "shift", form.shift, "shift");
+
+  set("seed", form.seed, "seed");
+
+  if (isSet(form.width) && isSet(form.height))
+    set("size", `${form.width}x${form.height}`, "size");
+
+  // A WebUI checkpoint title is "folder/name.safetensors [hash]", the infotext has the name and the hash
+  if (form.checkpoint && has("checkpoint")) {
+    const [, path, hash] = String(form.checkpoint).match(/^(.*?)(?:\s*\[([0-9a-f]+)\])?$/i);
+
+    set("model hash", hash);
+    set("model", path.split(/[\/]/).pop().replace(/\.(safetensors|ckpt|pt|pth|gguf|sft)$/i, ""));
+  }
+
+  if (mode !== "txt2img")
+    set("denoising strength", form.denoising, "denoising");
+
+  if (has("variationSeed") && Number(form.subseedStrength) > 0) {
+    set("variation seed", form.subseed);
+    set("variation seed strength", form.subseedStrength);
+  }
+
+  if (mode === "txt2img" && form.hiresFix && has("hires")) {
+    set("denoising strength", form.denoising, "denoising");
+    set("hires upscale", form.hiresScale, "hiresScale");
+
+    if (Number(form.hiresSteps) > 0)
+      set("hires steps", form.hiresSteps, "hiresSteps");
+
+    set("hires upscaler", form.hiresUpscaler, "hiresUpscaler");
+  }
+
+  if (mode === "inpaint") {
+    set("mask blur", form.maskBlur, "maskBlur");
+    set("mask mode", form.maskMode, "maskMode");
+    set("inpaint area", form.inpaintArea, "inpaintArea");
+    set("masked area padding", form.inpaintPadding, "inpaintPadding");
+  }
+
+  return parameters;
+}

@@ -67,7 +67,11 @@ import {fetchModules, modulesSummary} from "@/modules.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {requestHost} from "@/hostRequest.js";
 import {onHostReady} from "@/hostWindow.js";
-import {toast} from "@/toast.js";
+import {toast, toastError} from "@/toast.js";
+import {openMenuBelow} from "@/contextMenu.js";
+import {formToParameters} from "@/infotext.js";
+import {parametersToInfotext, writeClipboard} from "@/infotextClipboard.js";
+import {gestureTitle} from "@/gestures.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
 import {imageFilesFromDataTransfer} from "@/imageFiles.js";
 import {isStill, mediaKind, previewUrl} from "@/media.js";
@@ -553,6 +557,56 @@ function usePrompts(entry) {
 
 function currentPrompts() {
   return {prompt: form.prompt ?? "", negativePrompt: has("negativePrompt") ? form.negativePrompt ?? "" : ""};
+}
+
+// Copy menu of the prompt label: the prompts shown (a history entry or variant, else the current ones), the infotext
+// adds the parameters of the tab. The button names what it copied for a moment
+const copyButton = ref(null);
+const copied = ref(null);
+let copiedTimer = null;
+
+function shownPrompts() {
+  const entry = historyEntry.value ?? currentPrompts();
+  return {prompt: entry.prompt ?? "", negativePrompt: has("negativePrompt") ? entry.negativePrompt ?? "" : ""};
+}
+
+async function copyPrompts(what) {
+  const {prompt, negativePrompt} = shownPrompts();
+  const texts = {
+    both: `Prompt:\n${prompt}\n\nNegative prompt:\n${negativePrompt}`,
+    prompt,
+    negative: negativePrompt,
+    infotext: parametersToInfotext({...formToParameters(form, {has, mode: mode.value, sliderKind: sdWebUI.sliderKind}),
+                                    "prompt": prompt, "negative prompt": negativePrompt})
+  };
+
+  if (!await writeClipboard(texts[what])) {
+    toastError("The browser refused to copy the text.", {title: "Copy the prompts"});
+    return;
+  }
+
+  clearTimeout(copiedTimer);
+  copied.value = {both: "Both", prompt: "Prompt", negative: "Negative", infotext: "Infotext"}[what];
+  copiedTimer = setTimeout(() => copied.value = null, 1200);
+}
+
+function openCopyMenu() {
+  const negative = has("negativePrompt");
+
+  openMenuBelow(copyButton.value, [
+    ...negative ? [{icon: "copy", label: "Prompt and negative prompt", hint: "Shift+click", run: () => copyPrompts("both")}] : [],
+    {icon: "plus", label: "Prompt", hint: negative ? "" : "Shift+click", run: () => copyPrompts("prompt")},
+    ...negative ? [{icon: "minus", label: "Negative prompt", run: () => copyPrompts("negative")}] : [],
+    {separator: true},
+    {icon: "fileSearch", label: "Infotext (prompts and parameters)", run: () => copyPrompts("infotext")}
+  ], {alignRight: true});
+}
+
+function onCopyButton(e) {
+  if (e.shiftKey)
+    copyPrompts(has("negativePrompt") ? "both" : "prompt");
+  else
+    openCopyMenu();
 }
 
 const currentForkable = computed(() => !!(form.prompt?.trim()
@@ -1655,6 +1709,17 @@ const gridStyle = computed(() => ({
                     @click="usePrompts(historyEntry)"><AppIcon name="check" :size="11"/>Use</button>
           </template>
         </template>
+        <template #end>
+          <button ref="copyButton" type="button" class="history-btn copy-btn" :class="{copied}"
+                  :title="gestureTitle(historyEntry ? 'Copy the prompts shown' : 'Copy the prompts',
+                                       has('negativePrompt') ? 'copy the prompt and the negative prompt' : 'copy the prompt')"
+                  aria-label="Copy the prompts" aria-haspopup="menu" @click="onCopyButton"
+                  @auxclick="e => e.button === 1 && copyPrompts(has('negativePrompt') ? 'both' : 'prompt')"
+                  @mousedown.middle.prevent>
+            <template v-if="copied"><AppIcon name="check" :size="11"/>{{ copied }}</template>
+            <template v-else><AppIcon name="copy" :size="11"/><AppIcon name="chevron" :size="8"/></template>
+          </button>
+        </template>
         <template v-if="historyEntry" #view>
           <PromptDiff :text="historyEntry.prompt" :base="form.prompt ?? ''" :plain="historyPlain"/>
         </template>
@@ -1963,6 +2028,16 @@ const gridStyle = computed(() => ({
 }
 
 .history-btn.on {
+  border-color: var(--ib-accent-border);
+  color: var(--ib-accent);
+}
+
+.history-btn.copy-btn {
+  gap: 1px;
+}
+
+.history-btn.copy-btn.copied {
+  gap: 3px;
   border-color: var(--ib-accent-border);
   color: var(--ib-accent);
 }
