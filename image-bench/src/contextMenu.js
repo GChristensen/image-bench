@@ -107,14 +107,14 @@ function imageMenuItems(image, ctx) {
     if (items.length)
       items.push({separator: true});
 
-    items.push({icon: "close", label: ctx.removeLabel ?? "Remove", run: () => ctx.handlers.removeImage(image)});
+    items.push({icon: "close", label: ctx.removeLabel ?? "Remove", hint: "Del", run: () => ctx.handlers.removeImage(image)});
   }
 
   if (ctx.handlers.deleteImage) {
     if (items.length)
       items.push({separator: true});
 
-    items.push({icon: "trash", label: "Delete", danger: true, run: () => ctx.handlers.deleteImage(image)});
+    items.push({icon: "trash", label: "Delete", hint: "Del", danger: true, run: () => ctx.handlers.deleteImage(image)});
   }
 
   return items;

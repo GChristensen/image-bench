@@ -73,8 +73,21 @@ function onKeydown(e) {
     return;
   }
 
-  const action = findImageActionByCode(e.code);
   const image = target.getImage();
+
+  // Del deletes the image where the view does (or removes it from a view that only references it)
+  if (e.code === "Delete" && !e.shiftKey) {
+    const remove = target.ctx.handlers.deleteImage ?? target.ctx.handlers.removeImage;
+
+    if (remove && image) {
+      e.preventDefault();
+      remove(image);
+    }
+
+    return;
+  }
+
+  const action = findImageActionByCode(e.code);
 
   if (action && image && action.visible(image, target.ctx)) {
     e.preventDefault();

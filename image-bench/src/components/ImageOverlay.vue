@@ -314,6 +314,8 @@
       get setMarking() {
         return props.isTray || props.markable ? (image, marking) => setMarkingByKey(marking) : null;
       },
+      // As the Delete button of the overlay, shown in the trays
+      get deleteImage() { return props.isTray ? image => emit("deleteImage", image) : null; },
       activeMarkingFilter: () => props.markingFilter
     }
   };

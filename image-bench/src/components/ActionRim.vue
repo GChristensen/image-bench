@@ -105,7 +105,7 @@ const items = computed(() => {
     }
 
     if (group.index === 3 && props.deletable)
-      result.push({id: "delete", group: "delete", color: DELETE_COLOR, icon: "trash", label: props.deleteLabel, strong: true});
+      result.push({id: "delete", group: "delete", color: DELETE_COLOR, icon: "trash", label: props.deleteLabel, key: "Del", strong: true});
   }
 
   return result;

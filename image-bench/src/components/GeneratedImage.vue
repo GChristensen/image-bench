@@ -114,7 +114,8 @@
       get filterMarking() { return filterable.value ? marking => emit("filterMarking", marking) : null; },
       setMarking: (image, marking) => setMarking(marking),
       removeMarking: () => removeMarking(),
-      deleteImage: () => emit("deleteImage"),
+      // Only where the view deletes images (context menu, Del key)
+      get deleteImage() { return props.deletable ? () => emit("deleteImage") : null; },
       activeMarkingFilter: () => props.markingFilter
     }
   };
