@@ -85,11 +85,10 @@ const hostOrigin = location.origin;
       <h1>Image Bench for {{ HOST_NAME }}</h1>
       <p class="lead">
         Image Bench is a generation workspace for
-        {{ isWebUI ? "SD WebUI (Forge / Forge Neo)" : "ComfyUI" }}, laid out so that the frequent steps of image
-        generation take as few actions as possible. It automates the common tasks: generating batches, comparing
-        models,controlnet sweeping, collecting the best images, moving images to and from a graphics editor, and so on. All of it is
-        done from one window, without the file manager, an image browser or hunting for controls in the
-        {{ HOST_NAME }} page.
+        {{ isWebUI ? "SD WebUI (Forge / Forge Neo)" : "ComfyUI" }} that cuts the frequent steps of image generation
+        down to a click or a key. It generates batches, runs one prompt on many models, sweeps ControlNet settings,
+        keeps the best images in trays and moves images to and from a graphics editor. You do all of this in one
+        window, without opening the output folder or searching the {{ HOST_NAME }} page for a control.
       </p>
       <p>
         For example, to upscale an image you usually find it in the filesystem, extract its id and prompt, enable
@@ -97,16 +96,13 @@ const hostOrigin = location.origin;
         on an image saved in a tray, and Image Bench does the rest.
       </p>
       <p>
-        Image Bench does not generate anything itself; it drives {{ HOST_NAME }}. The two stay in sync in both
-        directions: Image Bench shows the
+        Image Bench generates nothing itself; it drives {{ HOST_NAME }}. It shows the
         {{ isWebUI ? "controls of the WebUI page" : "nodes of the open workflow" }}, and a change made on either
-        side appears on the other. You can switch between them at any time. Every image that
-        {{ HOST_NAME }} generates arrives in Image Bench together
-        with its generation parameters.
+        side appears on the other, so you can work in whichever is at hand. Every image that {{ HOST_NAME }}
+        generates arrives in Image Bench with its generation parameters.
       </p>
       <p>
-        You do not need to read this manual from start to finish. Read the parts you need first, and come back to it
-        as you explore the tabs. If you are new to Image Bench, start with the
+        You do not need to read this manual from start to finish. Read the chapters of the tabs as you start using them. If you are new to Image Bench, start with the
         <a href="https://gchristensen.github.io/image-bench/tutorial/" target="_blank" rel="noopener">tutorial</a>,
         which walks through the common workflows with screenshots.
       </p>
@@ -178,7 +174,7 @@ const hostOrigin = location.origin;
     <section id="manual-input">
       <h2>Mouse and keys</h2>
       <p>
-        The middle button and Shift follow one rule, chosen by what is under the pointer. On a <b>button</b>, a middle
+        What the middle button and Shift do depends on what is under the pointer. On a <b>button</b>, a middle
         click or Shift+click runs the alternative of its action (send as a new layer, stop and generate again). On an
         <b>image</b>, a click views it and a middle click shows its action rim. On a <b>tab</b> or a <b>badge</b>, a
         middle click acts on it without going there: it stops the run of the tab, opens the console from the
@@ -190,11 +186,6 @@ const hostOrigin = location.origin;
 
     <section id="manual-workflow">
       <h2>Typical workflow</h2>
-      <p>
-        Most work with Image Bench follows a few patterns: drafting small images and upscaling the good ones,
-        guiding new generations with ControlNet, editing and inpainting images together with a graphics editor, and
-        keeping the results in trays and projects.
-      </p>
       <p>
         Small images generate faster, so drafts are usually made at about 1 megapixel (1024×1024) or 0.5 megapixel,
         and the good ones are upscaled 2× or 4×. The more pixels an image has, the more detail it can hold. Some
@@ -235,13 +226,13 @@ const hostOrigin = location.origin;
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        Middle-click an image card or click the <AppIcon name="rim" :size="13" class="inline-icon"/> button at its
-        top right to show its action rim, which stays shown until you middle-click or click the button again or the
-        pointer leaves the card. Hold <span class="kbd">Ctrl</span> over a card to hide its controls, so that only
-        the image shows; a click then opens it. The rim is a ring of sectors, one per
-        action, colored by the kind of action. The middle of the ring shows the name and key of the sector under
-        the pointer. Some sectors have an alternative action, which runs on a middle click or Shift+click; holding
-        Shift shows their alternative icons. A click on the image inside or outside the ring opens it as usual.
+        The actions of an image are on its action rim, a ring of sectors around the middle of the image, one per
+        action and colored by kind. To show it, middle-click the image card or click the
+        <AppIcon name="rim" :size="13" class="inline-icon"/> button at its top right; do the same again, or move
+        the pointer off the card, to hide it. The middle of the ring shows the name and key of the sector under the
+        pointer. A middle click or Shift+click on a sector runs its alternative action, if it has one; hold Shift
+        to see which sectors do. Clicking the image itself, inside or outside the ring, still opens it. Hold
+        <span class="kbd">Ctrl</span> over a card to hide all of its controls and see only the image.
       </p>
       <p>
         With <b>Show the action rim of an image on hover</b> turned on in the Settings tab, hovering alone opens
@@ -436,8 +427,8 @@ const hostOrigin = location.origin;
           page and ends the run.</template></li>
         <li><b>Project cube</b>: while a project is current, the <AppIcon name="box" :size="13" class="inline-icon"/>
           cube in the project color, joined to Generate, reminds you that you are working in that project. Click it
-          to save the project or start a new workspace. When it asks before generating is described under
-          <a href="#" @click.prevent="scrollTo('projects')">Projects</a>.</li>
+          to save the project or start a new workspace. Before some generations it asks whether you are still
+          working on the project (see <a href="#" @click.prevent="scrollTo('projects')">Projects</a>).</li>
         <li v-if="isWebUI"><b>UI preset buttons</b> switch the Forge UI preset.
           <AppIcon name="lock" :size="13" class="inline-icon"/> <b>Prompt lock</b> (shown with its setting in
           Settings › Generate Tab) makes the prompts editable only here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
@@ -709,12 +700,12 @@ const hostOrigin = location.origin;
         in the <b>image tray</b>.
       </p>
       <p>
-        To put an image into a tray, use the <AppIcon name="concept" :size="13" class="inline-icon"/> <b>Add to
-        concept tray</b> or <AppIcon name="palette" :size="13" class="inline-icon"/> <b>Add to image tray</b>
-        action of its card (middle-click the image to show the action rim), of the action
-        rim in the full image view (opened by a middle click) or of the context menu, or press <span class="kbd">Y</span> or <span class="kbd">T</span> over
-        it. The tray's tab flashes when the image arrives. In a tray, only the action for the other tray is
-        offered; it adds a copy of the image there.
+        To put an image into a tray, press <span class="kbd">Y</span> (concept tray) or
+        <span class="kbd">T</span> (image tray) over it, or choose
+        <AppIcon name="concept" :size="13" class="inline-icon"/> <b>Add to concept tray</b> or
+        <AppIcon name="palette" :size="13" class="inline-icon"/> <b>Add to image tray</b> on its action rim or in
+        its context menu. The tab of the tray flashes when the image arrives. An image already in a tray offers
+        only the other tray, which gets a copy.
       </p>
       <p>
         You can also drag a thumbnail by its image onto the <b>Concept tray</b> or <b>Image tray</b> tab. Images
@@ -724,14 +715,14 @@ const hostOrigin = location.origin;
       </p>
       <p>Both trays offer:</p>
       <ul>
-        <li><b>Markings</b> (👍 👎 🔴 🟠 🟡 🟢 🔵 🟣, and 🏁 for the final choice), available through the action menu's
-          <AppIcon name="tag" :size="13" class="inline-icon"/> button. In the
-          full image view, middle-click to open the action rim and select a marking in the arc above the ring, or
-          press <span class="kbd">1</span>–<span class="kbd">9</span>. To remove the marking, select the current
-          marking again, click the marking in the lower right corner or press <span class="kbd">0</span>. On a thumbnail, click the marking to show only the
-          images that carry it, and click it again to show all; middle-click it to remove it. The
-          <AppIcon name="filter" :size="13" class="inline-icon"/> button shows only marked images, or the marking
-          being shown. The markings of the same images are synchronized across tabs.</li>
+        <li><b>Markings</b>: 👍 👎 🔴 🟠 🟡 🟢 🔵 🟣, and 🏁 for the final choice. On a card, click the
+          button in the middle of the action rim to switch the ring to the markings. In the full image view,
+          middle-click to open the rim and pick a marking from the arc above it, or press
+          <span class="kbd">1</span>–<span class="kbd">9</span>. To remove a marking, pick it again, click it in
+          the lower right corner or press <span class="kbd">0</span>. Clicking the marking on a thumbnail shows only
+          the images that carry it (click again to show all), and a middle click removes it. The
+          <AppIcon name="filter" :size="13" class="inline-icon"/> button shows only the marked images. An image
+          keeps its marking in every tab it appears in.</li>
         <li><b>Batch colors</b>: the colored bar at the left edge of a thumbnail shows where the image comes
           from. Images of the same generation run (one batch, or one run of model exploration, steps, denoising
           strengths, etc.) share a color, and each new run takes the next color.</li>
@@ -1260,7 +1251,7 @@ const hostOrigin = location.origin;
           legacy versions) and the Advanced-ControlNet apply nodes</td><td>ControlNet tab</td><td>The ControlNet
           tab reports that no node is marked</td></tr>
       </table>
-      <p>A few more points to keep in mind when you set up a workflow:</p>
+      <p>More on setting up a workflow:</p>
       <ul>
         <li>The <b>Image Bench Prompt</b> node (category <b>Image Bench</b>) applies the
           <code>&lt;lora:name:weight&gt;</code> tags in its text to the model and CLIP and passes the text on with

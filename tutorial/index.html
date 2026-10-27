@@ -243,12 +243,12 @@
   <div class="chapter-head">
     <div class="kicker chapter-kicker"><span>Chapter 03 · Everyday generation</span><span class="chapter-count">03 / 14</span></div>
     <h2 class="disp">The Generate tab mirrors the host.</h2>
-    <p class="scenario">You write a prompt, pick a model and a size, and generate. Meanwhile, Image Bench keeps every control in sync with the host page, and this explains most of how the tab behaves.</p>
+    <p class="scenario">You write a prompt, pick a model and a size, and generate. While you do, Image Bench keeps every control in sync with the host page; most of the tab's behavior follows from that.</p>
   </div>
 
   <div class="topic">
     <h3>The layout</h3>
-    <p>The Generate tab follows the layout of the SD WebUI txt2img and img2img tabs, so if you know WebUI, you will find the controls where you expect them. The whole tab fits in a 1200×800 window without scrolling, with all the commonly used controls in view. Controls you need less often are hidden behind buttons and switches, which show them in the same place when you click them. Each numbered marker in the screenshot is explained in the list that follows.</p>
+    <p>The Generate tab follows the layout of the SD WebUI txt2img and img2img tabs, so the controls are where a WebUI user expects them. The common controls fit in a 1200×800 window without scrolling; the ones you need less often sit behind buttons and switches and appear in the same place when you click them. The numbers in the screenshot match the list below it.</p>
     <figure class="annotated">
       <svg viewBox="0 0 1196 1010" role="img" aria-label="The Generate tab in Inpaint mode with numbered markers on its controls; under it, the Input and Mask views of the result cell, joined by lines to the Input and Mask buttons">
         <defs>
@@ -331,8 +331,8 @@
 
   <div class="topic">
     <h3>Checkpoint and VAE / text encoders</h3>
-    <p>By default, the model dropdown shows the selected checkpoint <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-box"></use></svg></span>. In the case Forge Neo, the button in front of the model selector switches the dropdown to the VAE and text encoder file selector <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-puzzle"></use></svg></span> and back. Image Bench remembers which of the two you chose. The info button <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-info"></use></svg></span> after the dropdown opens the checkpoint's page on Civitai.</p>
-    <p>The VAE / text encoder dropdown is a checklist where the files grouped into VAE and text encoders sections. It sets the VAE / Text Encoder field of Forge Neo, and each change you make reaches Forge right away. Both dropdowns can be filtered: start typing while a dropdown is closed, and it opens with the list narrowed to the entries that contain every word you typed.</p>
+    <p>By default, the model dropdown shows the selected checkpoint <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-box"></use></svg></span>. In Forge Neo, the button in front of it switches the dropdown to the VAE and text encoder files <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-puzzle"></use></svg></span> and back, and Image Bench remembers your choice. The info button <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-info"></use></svg></span> after the dropdown opens the checkpoint's page on Civitai.</p>
+    <p>The VAE / text encoder dropdown is a checklist with separate VAE and text encoder sections. It sets the VAE / Text Encoder field of Forge Neo, and each change reaches Forge right away. You can filter both dropdowns: start typing while a dropdown is closed, and it opens with only the entries that contain every word you typed.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
       <ul>
@@ -399,7 +399,7 @@
 
   <div class="topic">
     <h3>History, diff and variants</h3>
-    <p>Besides the prompt fields themselves, the Generate tab has additional tools for working with prompts: a prompt history, a diff of any earlier prompt against the current one, named variants, snippets and PNG Info. All of them are in the buttons around the prompt fields.</p>
+    <p>The buttons around the prompt fields give you a prompt history, a diff of any earlier prompt against the current one, named variants, snippets and PNG Info.</p>
     <figure class="shot-mid">
       <img src="../landing/img/screenshots/prompt-diff.webp" width="820" height="215" loading="lazy" alt="The prompt field showing an earlier prompt as a diff: a removed phrase struck through in red, the new phrase highlighted in green">
       <figcaption>An earlier prompt shown as a diff against the current one.</figcaption>
@@ -503,7 +503,7 @@
   <div class="pair">
     <div class="topic">
       <h3>Only masked: reading the crop</h3>
-      <p>With <em>Only masked</em> inpaint setting, WebUI cuts out the area around the mask, generates it at full resolution and pastes it back. The Mask view shows the result in advance: the bounding box of the mask is dashed, and the crop is outlined in orange. Padding and mask blur enlarge the box, and <em>Resize to</em> determines its aspect ratio.</p>
+      <p>With the <em>Only masked</em> inpaint setting, WebUI cuts out the area around the mask, generates it at full resolution and pastes it back. The Mask view shows this crop before you generate: the bounding box of the mask is dashed, and the crop is outlined in orange. Padding and mask blur enlarge the box, and <em>Resize to</em> determines its aspect ratio.</p>
       <p>The factor button sets <em>Resize to</em> once, to the padded box multiplied by the factor and rounded to multiples of 16. It does not update the value later.</p>
     </div>
     <figure class="shot-small">
@@ -555,8 +555,7 @@
 
   <div class="topic">
     <h3>Model and LoRA exploration</h3>
-    <p>Before you settle on a checkpoint or a LoRA, you may want to compare what each of them makes of the same prompt. The Explore tab generates images of the current prompt with every checkpoint or LoRA you select in a single run.</p>
-    <p>Select the checkpoints or LoRAs in the Explore tab and start the run. The prompt is generated with each of them in turn, and the results appear side by side. A LoRA exploration also generates the images without the LoRA for reference, unless you turn off the <em>No LoRA</em> button. When the run ends, your model and parameters are restored.</p>
+    <p>To see what several checkpoints or LoRAs make of the same prompt, select them in the Explore tab and start the run. Image Bench generates the current prompt with each of them in turn and shows the results side by side. A LoRA exploration also generates the images without the LoRA for reference, unless you turn off the <em>No LoRA</em> button. When the run ends, your model and parameters are restored.</p>
     <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Explore</span></div>
       <img src="../landing/img/screenshots/03-explore.webp" width="1194" height="667" loading="lazy" alt="The Explore tab: the same prompt rendered by several checkpoints side by side">
     </div>
@@ -568,8 +567,7 @@
 
   <div class="topic">
     <h3>Seed variations <span class="tag tag-webui">WebUI</span></h3>
-    <p><span class="ui ui-wide"><svg width="14" height="14" aria-hidden="true"><use href="#ic-shuffle"></use></svg>Variations…</span> next to Generate makes a batch of variations of the current seed. Each image keeps the seed and mixes in a random variation seed at the variation strength you enter; small strengths stay close to the original. The batch count sets the number of images.
-    While using this button you don't need to set and clear variation strength or seed in the UI, Image Bench does this for you.</p>
+    <p><span class="ui ui-wide"><svg width="14" height="14" aria-hidden="true"><use href="#ic-shuffle"></use></svg>Variations…</span> next to Generate makes a batch of variations of the current seed. Each image keeps the seed and mixes in a random variation seed at the variation strength you enter; small strengths stay close to the original. The batch count sets the number of images. You do not need to set the variation seed and strength in the UI and clear them afterwards; the button does both.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
       <p>Set the image seed before you start. With a seed of -1, every image gets a new random seed, and there is no original image to vary. Enter the seed of the image you want variations of; you can find it in the image's generation parameters (<kbd>I</kbd>).</p>
@@ -577,7 +575,7 @@
   </div>
   <div class="topic">
     <h3>Automated sweeps from one image</h3>
-    <p>Once you have an image you like, you often want to know whether it gets better with more steps, another denoising strength or other text encoders. Testing this by hand means restoring the image's parameters and changing one value before each generation. Image Bench can do this for you in a single run.</p>
+    <p>Once you have an image you like, you may want to see whether more steps, another denoising strength or other text encoders improve it. By hand, that means restoring the image's parameters and changing one value before each generation; Image Bench runs the whole series at once.</p>
     <p>These image actions start from the parameters of an existing image, including its seed, and generate a series in which only one setting changes. You find them on the left side of the action rim: middle-click an image card, or hold <kbd>Ctrl</kbd> over the result in the Generate tab, and point at the icons below (see <a href="#ch08">chapter 8</a>). With the pointer over the card or in the overlay, the keys run them directly.</p>
     <div class="keys">
       <div class="key"><kbd>G</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-steps"></use></svg></span><span>Generate with steps: the same image at different step counts.</span></div>
@@ -609,7 +607,7 @@
 
   <div class="topic">
     <h3>Setting up a unit</h3>
-    <p>The ControlNet tab works exactly like the ControlNet built into Forge Neo. It has the same units, control types, preprocessors, models and parameters, and it shows one unit at a time. Every change you make in the tab goes to the unit on the WebUI page, and every change on the page shows up in the tab, so what you know about Forge's ControlNet applies here unchanged.</p>
+    <p>The ControlNet tab has the same units, control types, preprocessors, models and parameters as the ControlNet built into Forge Neo, and shows one unit at a time. Changes in the tab go to the unit on the WebUI page and changes on the page show up in the tab, so what you know about Forge's ControlNet applies here.</p>
     <ol class="steps">
       <li>Select the unit. In WebUI, also select txt2img or img2img in the toolbar.</li>
       <li>Add a control image: drop or paste it, use <em>Send to ControlNet</em> (<kbd>N</kbd>) on any image, or send it from your editor.</li>
@@ -685,8 +683,8 @@
 
   <div class="topic">
     <h3>The action rim</h3>
-    <p>Most of the work with a generated image starts from its card: you look at its parameters, send it to img2img or your editor, upscale it, or put it in a tray. A card has room for only a few buttons, and they would cover the thumbnail, so Image Bench puts all these actions on a ring that you show only when you need it. The same actions are also in the card's context menu and on single keys, which work while the pointer is over the card.</p>
-    <p>Image cards have no visible action buttons. To show the actions, middle-click a card or click the rim toggle in its top right corner. The ring stays shown until you middle-click again or the pointer leaves the card. Holding <kbd>Ctrl</kbd> over a card does the opposite: it hides the toggle, the badges and the other controls, so you see only the image, and a click opens it. A ring of actions appears around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer.</p>
+    <p>Most of what you do with an image starts from its card: you look at its parameters, send it to img2img or your editor, upscale it, or put it in a tray. Buttons for all of these would cover the thumbnail, so the card has none. The actions are on a ring that you show when you need it, and also in the card's context menu and on single keys that work while the pointer is over the card.</p>
+    <p>To show the ring, middle-click the card or click the rim toggle in its top right corner; it stays until you middle-click again or the pointer leaves the card. The actions sit around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer. Holding <kbd>Ctrl</kbd> over a card hides the toggle, the badges and the other controls, so you see only the image, and a click opens it.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
       <ul>
@@ -699,7 +697,7 @@
 
   <div class="topic">
     <h3>The image view</h3>
-    <p>To open the image view, click a card or press <kbd>V</kbd> while the pointer is over it. The image view shows the image over the whole window. It has no toolbars, so the image uses the full window area, which matters most in a small window such as 1200×800. </p>
+    <p>Click a card, or press <kbd>V</kbd> while the pointer is over it, to open the image view over the whole window. The view has no toolbars, so the image gets the full window area, which helps most in a small window such as 1200×800.</p>
     <figure>
       <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — image view</span></div>
         <img src="../landing/img/screenshots/image-view.webp" width="1198" height="683" loading="lazy" alt="An image in the image view with the action rim open at the pointer. The close button is in the center of the rim, the markings are in an arc above it, and Reuse seed and Reuse all are in an arc below it">
@@ -769,8 +767,8 @@
 
   <div class="topic">
     <h3>Two trays</h3>
-    <p>The Generated tab keeps its images in memory only, so you move the images you want to keep into one of the two trays. Both trays work the same way, and how you divide images between them is up to you. You can use both as long-term collections, or keep one for the images you want to keep and use the other as a scratch area for images you only need for a while, for example to compare them or to run them through img2img once, and then delete.</p>
-    <p>The trays are persistent: they survive reloads and restarts, and a project saves their contents. A common way to use both as collections:</p>
+    <p>The Generated tab keeps its images in memory only, so move the ones you want to keep into one of the two trays. The trays work the same way, and how you divide images between them is up to you. You can use both as long-term collections, or use one for keepers and the other as a scratch area for images you need only briefly, for example to compare them or run them through img2img once before you delete them.</p>
+    <p>The trays survive reloads and restarts, and a project saves their contents. One way to use both as collections:</p>
     <ul>
       <li><strong>Concept tray</strong> (<kbd>Y</kbd>): ideas worth keeping, such as compositions, styles and happy accidents.</li>
       <li><strong>Image tray</strong> (<kbd>T</kbd>): the best images, the ones you will upscale, pass on or finish.</li>
@@ -882,7 +880,7 @@
 
   <div class="topic">
     <h3>Setting up</h3>
-    <p>Generated images often need work that is easier to do by hand: a mask for inpainting, a fix painted over a flawed area, a collage for img2img. Without a bridge, each round trip means saving a file in one program and loading it in the other. Image Bench has plugins for Photoshop, Krita and GIMP that do this transfer for you. From the editor you send the document or the selection to the input image, the inpaint mask, a ControlNet unit or the Compare tab, and from Image Bench you send any image to the editor, where it opens as a document or a layer.</p>
+    <p>Some work on a generated image is easier by hand: a mask for inpainting, a fix painted over a flawed area, a collage for img2img. The plugins for Photoshop, Krita and GIMP move images between the editor and Image Bench, so you do not have to save a file in one program and load it in the other. From the editor you send the document or the selection to the input image, the inpaint mask, a ControlNet unit or the Compare tab, and from Image Bench you send any image to the editor, where it opens as a document or a layer.</p>
     <ol class="steps">
       <li>Download the plugin from <em>Library › Manual › Editors</em> and install it.</li>
       <li>In the plugin panel, enter the host address (the one you open Image Bench from) and connect.</li>
@@ -949,7 +947,7 @@
 
   <div class="topic">
     <h3>Docs</h3>
-    <p>While you write prompts, you often need to look something up: how a model expects to be prompted, how a tag is spelled, or the wording of a style you used before. The Library tab keeps this material inside Image Bench, so you do not have to switch to a browser or a file manager. It has three sections, switched at the top of the tab: Docs for Markdown notes and tag lists, Snippets for reusable prompt fragments, and Manual for the Image Bench manual.</p>
+    <p>The Library tab lets you look up how a model expects to be prompted, how a tag is spelled or the wording of a style you used before, without switching to a browser or a file manager. It has three sections, switched at the top of the tab: Docs for Markdown notes and tag lists, Snippets for reusable prompt fragments, and Manual for the Image Bench manual.</p>
     <p>The Docs section lists the Markdown files under the docs root as a tree and displays them read-only, including their images and the links between them. You set the docs root in <em>Settings › Library</em>; when it is empty, Image Bench shows the model docs that ship with the extension. Point the root to your own notes folder to read your notes here.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
@@ -974,7 +972,7 @@
   <div class="chapter-head">
     <div class="kicker chapter-kicker"><span>Chapter 13 · Troubleshooting</span><span class="chapter-count">13 / 14</span></div>
     <h2 class="disp">When the host goes away.</h2>
-    <p class="scenario">The host crashes, hangs or restarts, or it runs on another computer. Image Bench keeps your work and reconnects when the host is back. This chapter describes what happens in the meantime.</p>
+    <p class="scenario">The host crashes, hangs or restarts, or it runs on another computer. Image Bench keeps your work while the host is gone and reconnects when it is back.</p>
   </div>
 
   <div class="topic">
