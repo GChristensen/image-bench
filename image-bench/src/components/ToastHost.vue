@@ -1,16 +1,24 @@
 <script setup>
 /**
- * Notices of toast.js at the bottom of the popup; a click dismisses one
+ * Notices of toast.js at the bottom of the popup; a click dismisses one, or opens its details
  */
 import AppIcon from "@/components/AppIcon.vue";
 import {dismissToast, toasts} from "@/toast.js";
+
+function onClick(item) {
+  if (item.kind === "pending")
+    return;
+
+  dismissToast(item.id);
+  item.open?.();
+}
 </script>
 
 <template>
   <Teleport to="body">
     <TransitionGroup name="toast" tag="div" class="toast-host" aria-live="polite">
       <div v-for="item in toasts" :key="item.id" class="toast" :class="item.kind" role="status"
-           @click="item.kind !== 'pending' && dismissToast(item.id)">
+           :title="item.open ? 'Click for details' : null" @click="onClick(item)">
         <span v-if="item.kind === 'pending'" class="spinner" aria-hidden="true"></span>
         <AppIcon v-else :name="item.kind === 'error' ? 'alert' : 'check'" :size="14"/>
         <span>{{ item.message }}</span>

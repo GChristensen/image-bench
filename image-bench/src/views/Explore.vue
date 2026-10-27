@@ -19,6 +19,7 @@ import AppIcon from "@/components/AppIcon.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
 import ScrollTopButton from "@/components/ScrollTopButton.vue";
+import EmptyState from "@/components/EmptyState.vue";
 import {createLoraPrompt, getLoraDefaults, getLoraWeight} from "@/loras.js";
 
 const TAB_CHECKPOINTS = "checkpoints";
@@ -40,6 +41,12 @@ const LORA_PARAM_LABELS = {
 };
 
 const exploreImagesStore = useExploreImagesStore();
+
+// What to do in the empty results
+const EMPTY_WAYS = [
+  {text: "Check checkpoints on the left, and LoRAs for a model × LoRA matrix"},
+  {text: "Press Explore to render the current prompt with each checked model"}
+];
 const storage = useLocalStorage();
 const appConfigStore = useAppConfigStore();
 
@@ -591,9 +598,8 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
                                @image-open="() => onImageOpen(image)"></GeneratedImage>
             </div>
           </section>
-          <div v-if="!modelImages.length && !exploreImagesStore.generationInProgress" class="empty-state">
-            Check models (and optionally LoRAs) on the left, then press <b>Explore</b>.
-          </div>
+          <EmptyState v-if="!modelImages.length && !exploreImagesStore.generationInProgress" icon="flask"
+                      title="No results yet" chapter="explore" :ways="EMPTY_WAYS"/>
         </div>
       </div>
     </div>
@@ -800,13 +806,4 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
   border-radius: 6px;
 }
 
-.empty-state {
-  margin: auto;
-  color: var(--ib-muted);
-}
-
-.empty-state b {
-  color: var(--ib-text-2);
-  font-weight: 600;
-}
 </style>

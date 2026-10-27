@@ -10,6 +10,7 @@ import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
+import {toastError} from "@/toast.js";
 import {HOST_NAME, hostHas, isComfy, isWebUI} from "@/host.js";
 import {createImageLink, ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
 import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
@@ -35,7 +36,7 @@ async function sendToControlNet(image) {
   const error = await useImageOperations().sendToControlNet(image);
 
   if (error)
-    await dialog.alert(error, {title: "Send to ControlNet"});
+    toastError(error, {title: "Send to ControlNet"});
   else
     flashTrayTab("controlnet-tab");
 }
@@ -52,7 +53,7 @@ export async function sendToInpaint(image) {
   const error = await useImageOperations().sendToInpaint(image);
 
   if (error)
-    await dialog.alert(error, {title: INPAINT_LABEL});
+    toastError(error, {title: INPAINT_LABEL});
   else
     flashTrayTab("generate-tab");
 }
@@ -61,7 +62,7 @@ export async function sendToImg2Img(image) {
   const error = await useImageOperations().sendToImg2Img(image);
 
   if (error)
-    await dialog.alert(error, {title: "Send to img2img"});
+    toastError(error, {title: "Send to img2img"});
   else
     flashTrayTab("generate-tab");
 }
@@ -70,7 +71,7 @@ async function sendToEditor(image, newDocument) {
   const error = await useImageOperations().sendToEditor(image, newDocument);
 
   if (error)
-    await dialog.alert(error, {title: `Send to ${editorName.value}`});
+    toastError(error, {title: `Send to ${editorName.value}`});
 }
 
 async function generateVaryingSteps(image) {
@@ -342,6 +343,13 @@ export function imageActionHint(action, alt = false) {
     result += ` · Middle: ${action.alt.label[0].toLowerCase()}${action.alt.label.slice(1)}`;
 
   return result;
+}
+
+/**
+ * Action of an id, for texts that name its key
+ */
+export function findImageAction(id) {
+  return IMAGE_ACTIONS.find(action => action.id === id);
 }
 
 /**

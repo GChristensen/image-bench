@@ -2,11 +2,14 @@
   import GeneratedImage from "@/components/GeneratedImage.vue";
   import {computed, nextTick, ref, shallowRef, toRaw} from "vue";
   import ScrollTopButton from "@/components/ScrollTopButton.vue";
+  import EmptyState from "@/components/EmptyState.vue";
   import {KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
   import {reorderImages} from "@/imageDrag.js";
   import {useImageSelection} from "@/composables/useImageSelection.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {dialog} from "@/dialogs/useDialog.js";
+  import {findImageAction} from "@/imageActions.js";
+  import {HOST_NAME} from "@/host.js";
 
   const props = defineProps({
     kind: {
@@ -37,6 +40,35 @@
   const images = computed(() => props.imageStore.images);
 
   const imageStreamElement = ref();
+
+  // Batch separators are entries of the Generated store too
+  const isEmpty = computed(() => !images.value.some(image => !image.separator));
+
+  const keyOf = id => findImageAction(id)?.key;
+
+  // How images get into an empty view
+  const EMPTY_STATES = {
+    [KIND_GENERATED]: {icon: "images", title: "No generated images yet", chapter: "generated", ways: [
+      {text: "Generate in the Generate tab", key: "Ctrl+Enter"},
+      {text: `Images ${HOST_NAME} generates while Image Bench is open arrive here too`}
+    ]},
+    [KIND_IMAGE_TRAY]: {icon: "palette", title: "The image tray is empty", chapter: "trays", ways: [
+      {text: "Drag image cards onto the Image tray tab"},
+      {text: "Hover a card and press", key: keyOf("imageTray")},
+      {text: "Use the tray sector of a card's action rim"},
+      {text: "Import images or a tray archive (.png, .zip) with the upload button"}
+    ]},
+    [KIND_CONCEPT_TRAY]: {icon: "concept", title: "The concept tray is empty", chapter: "trays", ways: [
+      {text: "Drag image cards onto the Concept tray tab"},
+      {text: "Hover a card and press", key: keyOf("conceptTray")},
+      {text: "Use the tray sector of a card's action rim"},
+      {text: "Import images or a tray archive (.png, .zip) with the upload button"}
+    ]},
+    [KIND_UPSCALED]: {icon: "upscale", title: "No upscaled images yet", chapter: "upscaled", ways: [
+      {text: "Hover a Generated or tray card and press", key: keyOf("upscale")},
+      {text: "Check images in a tray and press Upscale selected"}
+    ]}
+  };
 
   // Filter function for determining which images to show
   function shouldShowImage(image) {
@@ -227,6 +259,7 @@
     <ScrollTopButton v-if="kind === KIND_GENERATED" :target="imageStreamElement"
                      :content="filteredImages.length"/>
     <div class="image-stream scrollable" ref="imageStreamElement">
+      <EmptyState v-if="isEmpty && EMPTY_STATES[kind]" v-bind="EMPTY_STATES[kind]"/>
       <GeneratedImage v-for="(image, index) in images"
                        :key="image.imagePath || index"
                        :kind="kind"

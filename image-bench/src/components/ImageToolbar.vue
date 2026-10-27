@@ -1,8 +1,7 @@
 <script setup>
-import {computed, ref, watch} from 'vue';
+import {computed} from 'vue';
 import {KIND_GENERATED, KIND_UPSCALED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
 import AppIcon from "@/components/AppIcon.vue";
-import NumberStepper from "@/components/NumberStepper.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
 
 /**
@@ -74,11 +73,6 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  // Number of images of the count button, also the initial number of images to generate
-  presetImages: {
-    type: Number,
-    default: 128
-  },
   // Clear the Generated tab when a new batch starts
   autoClear: {
     type: Boolean,
@@ -91,9 +85,6 @@ const emit = defineEmits([
   'open',
   'select-all',
   'show-marked',
-  'batch-generate',
-  'generate-variations',
-  'stop-generation',
   'upscale-selected',
   'compare-selected',
   'tray-selected',
@@ -105,31 +96,6 @@ const emit = defineEmits([
 ]);
 
 const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Select all');
-const generateImagesNumber = ref(props.presetImages);
-const generateForever = computed(() => generateImagesNumber.value === -1);
-let finiteImagesNumber = generateImagesNumber.value;
-
-// The setting arrives after the toolbar is created, or is changed: follow it unless the number was edited
-watch(() => props.presetImages, (images, previous) => {
-  if (generateImagesNumber.value === previous)
-    generateImagesNumber.value = images;
-});
-
-function setPresetImages() {
-  generateImagesNumber.value = props.presetImages;
-}
-
-// -1 images: generate until stopped
-function toggleGenerateForever() {
-  if (generateForever.value)
-    generateImagesNumber.value = finiteImagesNumber;
-  else {
-    finiteImagesNumber = generateImagesNumber.value;
-    generateImagesNumber.value = -1;
-  }
-}
-
-defineExpose({generateImagesNumber});
 </script>
 
 <template>
@@ -142,32 +108,8 @@ defineExpose({generateImagesNumber});
       <button class="ib" title="Import images (.png, .zip)" aria-label="Import images" @click="$emit('open')"><AppIcon name="upload"/></button>
     </template>
 
-    <!-- Generated images actions; before the selection bar, so that it does not move the Generate button -->
-    <template v-if="kind === KIND_GENERATED">
-      <div class="toolbar-group">
-        <button class="btn swap" :class="generationInProgress ? 'stop' : 'primary'"
-                @click="$emit(generationInProgress ? 'stop-generation' : 'batch-generate')">
-          <span :class="{off: generationInProgress}"><AppIcon name="play" :size="13"/>Generate</span>
-          <span :class="{off: !generationInProgress}"><AppIcon name="stop" :size="13"/>Stop</span>
-        </button>
-        <label class="toolbar-group-label"><span class="reset-count" title="Reset to 1 image"
-              @click.prevent="generateImagesNumber = 1">×</span><NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
-        <button class="btn preset-count" :class="{on: generateImagesNumber === presetImages}"
-                :disabled="generationInProgress" :title="`Generate ${presetImages} images (set in the settings)`"
-                @click="setPresetImages">{{ presetImages }}</button>
-        <button class="ib" :class="{on: generateForever}" :aria-pressed="generateForever"
-                :disabled="generationInProgress"
-                :title="generateForever ? 'Generating forever: click to restore the number of images' : 'Generate forever (until stopped)'"
-                aria-label="Generate forever" @click="toggleGenerateForever"><AppIcon name="infinity" :size="14"/></button>
-      </div>
-      <button class="btn outline" :disabled="generationInProgress"
-              title="Generate variations of the current seed; the variation seed and strength are set for the batch and cleared afterwards automatically"
-              @click="$emit('generate-variations')"
-        ><AppIcon name="shuffle" :size="14"/>Variations…</button>
-    </template>
-
     <!-- Selection and marking filter of all views (no filter in the Upscaled tab) -->
-    <div class="vsep"></div>
+    <div v-if="kind !== KIND_GENERATED" class="vsep"></div>
     <button class="btn outline select-all" title="Ctrl+U unselects all"
             @click="$emit('select-all')"><AppIcon name="checks" :size="14"/>{{ selectAllText }}</button>
     <button v-if="kind !== KIND_UPSCALED" class="ib" :class="{on: isShowingMarked}" :aria-pressed="isShowingMarked"
@@ -195,7 +137,7 @@ defineExpose({generateImagesNumber});
                 :title="upscaleInProgress ? 'An upscale is in progress' : 'Upscale the selected images'"
                 @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
         <button class="btn outline" title="Add the selected images to the Compare tab"
-                @click="$emit('compare-selected')"><AppIcon name="compare" :size="14"/>Compare selected</button>
+                @click="$emit('compare-selected')"><AppIcon name="compare" :size="14"/>Add to compare</button>
       </template>
       <!-- No removal from the Generated tab -->
       <button v-if="kind !== KIND_GENERATED" class="btn outline remove-selected"
@@ -209,9 +151,8 @@ defineExpose({generateImagesNumber});
     <button v-if="kind === KIND_UPSCALED && upscaleInProgress" class="btn stop" @click="$emit('upscale-selected')"
       ><AppIcon name="stop" :size="13"/>Stop</button>
 
-    <!-- Progress indicator -->
-    <ProgressIndicator v-if="generationInProgress" :value="generateForever ? 100 : generationProgress || 0"
-                       :label="generateForever ? '∞' : ''"
+    <!-- Progress of a batch started from the Generate tab -->
+    <ProgressIndicator v-if="generationInProgress" :value="generationProgress || 0"
                        :completed="generationCompleted" :total="generationTotal"/>
 
     <div class="toolbar-spacer"></div>
@@ -246,18 +187,6 @@ defineExpose({generateImagesNumber});
 
 .select-all {
   min-width: 112px;
-}
-
-.preset-count {
-  min-width: 26px;
-  padding: 0 6px;
-  font-family: var(--ib-mono);
-  font-size: 12px;
-}
-
-.preset-count.on {
-  background: var(--ib-accent-soft);
-  color: var(--ib-accent);
 }
 
 .selection-count {

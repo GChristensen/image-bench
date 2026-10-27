@@ -23,6 +23,7 @@ import {HOST_NAME, isComfy} from "@/host.js";
 import {copyImageToClipboard, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {dialog} from "@/dialogs/useDialog.js";
+import {toastError} from "@/toast.js";
 import {useDragSize} from "@/composables/useDragSize.js";
 import {ensureOpenposeEditor} from "@/openposeEditor.js";
 import {onHostReady} from "@/hostWindow.js";
@@ -195,7 +196,7 @@ async function onCopyPreview() {
   try {
     await copyImageToClipboard(images.value.preview);
   } catch (error) {
-    await dialog.alert(`Unable to copy the preview: ${error.message}`, {title: "Copy"});
+    toastError(`Unable to copy the preview: ${error.message}`, {title: "Copy"});
   }
 }
 
@@ -220,7 +221,7 @@ async function onToEditor(e, url, name) {
   const error = await sendUrlToEditor(url, name, !newLayer);
 
   if (error)
-    await dialog.alert(error, {title: `Send to ${editorName.value}`});
+    toastError(error, {title: `Send to ${editorName.value}`});
 }
 
 function onSavePreview() {

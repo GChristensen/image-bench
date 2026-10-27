@@ -1,22 +1,36 @@
 import {shallowRef} from "vue";
+import {dialog} from "@/dialogs/useDialog.js";
 
 const DURATION = 3000;
+const ERROR_DURATION = 8000;
 let nextId = 1;
 
 /**
- * Short notices shown at the bottom of the popup by ToastHost.vue (mounted once in App.vue): [{id, message, kind}]
+ * Short notices shown at the bottom of the popup by ToastHost.vue (mounted once in App.vue):
+ * [{id, message, kind, open?}]; open() runs on a click instead of dismissing the notice
  */
 export const toasts = shallowRef([]);
 
 /**
  * Show a notice for a few seconds
  * @param {string} message
- * @param {{kind?: "success"|"error", duration?: number}} options
+ * @param {{kind?: "success"|"error", duration?: number, open?: () => void}} options
  */
-export function toast(message, {kind = "success", duration = DURATION} = {}) {
+export function toast(message, {kind = "success", duration = DURATION, open} = {}) {
   const id = nextId++;
-  toasts.value = [...toasts.value, {id, message, kind}];
+  toasts.value = [...toasts.value, {id, message, kind, open}];
   setTimeout(() => dismissToast(id), duration);
+}
+
+/**
+ * Show a failure that needs no decision; a click shows the details in a dialog
+ * @param {string|Error} error
+ * @param {{title?: string, details?: string}} options
+ */
+export function toastError(error, {title, details} = {}) {
+  const message = String(error?.message ?? error);
+
+  toast(message, {kind: "error", duration: ERROR_DURATION, open: () => dialog.alert(details ?? message, {title})});
 }
 
 /**

@@ -109,17 +109,16 @@ const hostOrigin = location.origin;
         <a href="https://gchristensen.github.io/image-bench/tutorial/" target="_blank" rel="noopener">tutorial</a>,
         which walks through the common workflows with screenshots.
       </p>
-      <p>The window has the following tabs:</p>
+      <p>The tabs of the window are grouped by task, with a thin line between the groups:</p>
       <ul>
-        <li><b>Generate</b> and <b>ControlNet</b>: compact editors for the generation parameters and the
-          ControlNet units.</li>
-        <li><b>Explore</b> runs one prompt on many checkpoints and LoRAs and shows the results side by side.</li>
-        <li><b>Generated</b> holds batches, variations and endless generation. Images appear as they
-          finish.</li>
-        <li><b>Compare</b> shows chosen images side by side, and the same region of each of them, so you can pick
-          the best of several variants.</li>
-        <li><b>Concept tray</b> and <b>Image tray</b> are permanent collections of the images worth keeping.</li>
-        <li><b>Upscaled</b> holds upscaled (Hires. fix) versions of the images you choose.</li>
+        <li><b>Create</b>: <b>Generate</b> and <b>ControlNet</b> are compact editors for the generation parameters
+          and the ControlNet units; <b>Explore</b> runs one prompt on many checkpoints and LoRAs and shows the
+          results side by side.</li>
+        <li><b>Results</b>: <b>Generated</b> receives the images of batches, variations and endless generation as
+          they finish; <b>Upscaled</b> holds upscaled (Hires. fix) versions of the images you choose.</li>
+        <li><b>Curate</b>: <b>Compare</b> shows chosen images side by side, and the same region of each of them, so
+          you can pick the best of several variants; <b>Concept tray</b> and <b>Image tray</b> are permanent
+          collections of the images worth keeping.</li>
         <li><b>Library</b> holds docs (your Markdown notes), snippets (prompt text inserted from the Generate tab)
           and this manual.</li>
         <li><AppIcon name="box" :size="13" class="inline-icon"/> <b>Project</b> (the chip at the right of the tab
@@ -397,8 +396,9 @@ const hostOrigin = location.origin;
           the window is open, grouped by batch. It is shown during a batch of several images. Click an image to
           open it, or middle-click it to show it in the Result pane.</li>
         <li><b>Generate</b> makes one image with a live preview. With a count above 1 (or
-          <AppIcon name="infinity" :size="13" class="inline-icon"/>), it runs a batch in the Generated tab.
-          <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
+          <AppIcon name="infinity" :size="13" class="inline-icon"/>, generating until you stop it), it runs a batch
+          whose images arrive in the Generated tab. The count button sets the number chosen in <b>Settings › Images
+          set by the count button</b>, and clicking <b>×</b> resets the count to 1. <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
           skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click or a middle click
           on Stop stops the generation and starts a new one a second later. The keys work in every tab, also
           in text fields: <span class="kbd">Ctrl+Enter</span> generates or stops,
@@ -600,12 +600,9 @@ const hostOrigin = location.origin;
       </p>
       <p>The toolbar and the results offer the following:</p>
       <ul>
-        <li><b>Generate × N</b> runs a batch with the current parameters and a random seed for each image. The
-          count button beside it sets the number chosen in <b>Settings › Images set by the count button</b>,
-          clicking <b>×</b> resets the count to 1, and
-          <AppIcon name="infinity" :size="13" class="inline-icon"/> keeps generating until you stop it.</li>
-        <li v-if="isWebUI"><b>Variations…</b> generates variations of the current seed. The variation seed and
-          strength are set for the batch and cleared when it is done.</li>
+        <li>Batches, variations and endless generation are started from the
+          <a href="#" @click.prevent="scrollTo('generate')">Generate</a> tab; their images arrive here, and the
+          toolbar shows the progress of a running batch.</li>
         <!--li v-if="isWebUI"><b>Apply preset</b> — applies a preset of the Config Presets extension before the
           batch (shown only when that extension is installed).</li-->
         <li>Move the images worth keeping to a tray with
@@ -915,7 +912,7 @@ const hostOrigin = location.origin;
           <li><b>UI preset buttons</b>: the Forge UI presets that the buttons of the Generate tab switch to. The
             other presets remain available in the menu next to them.</li>
           <li><b>Images set by the count button</b>: the number of images that one click of the count button sets in
-            the Generate and Generated tabs. WebUI allows at most 100 images per batch. To go beyond that, raise
+            the Generate tab. WebUI allows at most 100 images per batch. To go beyond that, raise
             <code>"txt2img/Batch count/maximum"</code> and <code>"img2img/Batch count/maximum"</code> in
             <code>ui-config.json</code> in the WebUI folder, then restart WebUI.</li>
         </template>

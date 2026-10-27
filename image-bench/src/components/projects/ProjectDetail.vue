@@ -20,7 +20,7 @@ import {useCompareStore} from "@/stores/compare.js";
 import {HOST_LABELS, summarizeParams} from "@/projectParams.js";
 import {HOST, isComfy} from "@/host.js";
 import {openContextMenu} from "@/contextMenu.js";
-import {dialog} from "@/dialogs/useDialog.js";
+import {toastError} from "@/toast.js";
 import {imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {flashTrayTab} from "@/components/utils.js";
@@ -389,7 +389,7 @@ async function addToCompare(url, name) {
     await compareStore.addImage(result);
     flashTrayTab("compare-tab");
   } catch (error) {
-    await dialog.alert(error.message, {title: "Add to compare"});
+    toastError(error.message, {title: "Add to compare"});
   }
 }
 
@@ -402,7 +402,7 @@ async function sendToEditor(url, name, e) {
   const error = await sendUrlToEditor(url, baseName(name), !newLayer);
 
   if (error)
-    await dialog.alert(error, {title: editorName.value});
+    toastError(error, {title: editorName.value});
 }
 
 function onItemMenu(e, item) {

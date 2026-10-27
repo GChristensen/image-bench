@@ -21,6 +21,7 @@ import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useKeyboardShortcuts} from "@/composables/useKeyboardShortcuts.js";
 import {useClearKey} from "@/composables/useClearKey.js";
 import {dialog} from "@/dialogs/useDialog.js";
+import {toastError} from "@/toast.js";
 import {isStill} from "@/media.js";
 
 const props = defineProps({
@@ -42,7 +43,6 @@ const configPresetsStore = useConfigPresetsStore();
 const generationSettings = useGenerationSettingsStore();
 const imageStore = getImageStore();
 
-const imageToolbar = ref();
 const imageStream = ref(null);
 const showImageOverlay = ref(false);
 // const overlayImageLink = ref(null);
@@ -132,45 +132,6 @@ async function onUpscaleImage(imageProxy) {
   upscaledImageStore.startingGeneration();
 
   webUI.upscaleImages([image]);
-}
-
-async function onBatchGenerateClick() {
-  if (imageStore.generationInProgress) {
-    webUI.stopGeneration();
-  }
-  else if (await ensureGenerationIdle()) {
-    if (config.automaticallyClearGeneratedImages)
-      generatedImagesStore.clear();
-
-    generatedImagesStore.startingGeneration();
-
-    const nImagesToGenerate = imageToolbar.value.generateImagesNumber;
-    webUI.batchGenerate(nImagesToGenerate);
-  }
-}
-
-async function onGenerateVariationsClick() {
-  if (!await ensureGenerationIdle())
-    return;
-
-  const strength = await dialog.prompt("Variation strength:",
-    {defaultValue: generationSettings.settings.variationStrength, storageKey: "variationStrength"});
-
-  if (strength) {
-    if (config.automaticallyClearGeneratedImages)
-      generatedImagesStore.clear();
-
-    generatedImagesStore.startingGeneration();
-
-    const nImagesToGenerate = imageToolbar.value.generateImagesNumber;
-
-    generationSettings.set("variationStrength", strength);
-    webUI.generateVariations(strength, nImagesToGenerate);
-  }
-}
-
-function onStopGenerationClick() {
-  webUI.stopGeneration();
 }
 
 // Tray persist replaces all image objects with the ones returned by the server:
@@ -343,7 +304,7 @@ async function onOpenFileInputChange(e) {
       const result = await response.json();
 
       if (result.error) {
-        await dialog.alert(result.error, {title: "Upload failed"});
+        toastError(result.error, {title: "Upload failed"});
       } else {
         imageStream.value.beforeAddImage();
 
@@ -407,7 +368,6 @@ function isComponentTray(kind) {
     
     <!-- Presentational toolbar component -->
     <ImageToolbar
-      ref="imageToolbar"
       :kind="kind"
       :is-tray="isComponentTray(kind)"
       :is-all-selected="isAllSelected"
@@ -422,14 +382,10 @@ function isComponentTray(kind) {
       :upscale-in-progress="upscaledImageStore.generationInProgress"
       :apply-preset="imageStore.applyPreset"
       :presets="configPresetsStore.presets"
-      :preset-images="config.generatePresetImages"
       @save="onSaveClick"
       @open="onOpenClick"
       @select-all="onSelectAllClick"
       @show-marked="onShowMarkedClick"
-      @batch-generate="onBatchGenerateClick"
-      @generate-variations="onGenerateVariationsClick"
-      @stop-generation="onStopGenerationClick"
       @upscale-selected="onUpscaleSelectedClick"
       @clear="onClearClick"
       @remove-selected="onRemoveSelectedClick"

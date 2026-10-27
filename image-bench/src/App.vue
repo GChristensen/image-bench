@@ -402,7 +402,10 @@ async function switchTabAccordingToGenerationMode(e, state) {
         /><span v-if="hiresFixOn" class="hires-badge" title="Hires. fix is on">HR</span></span>Generate</RouterLink>
       <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
       <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
+      <span class="tab-sep" aria-hidden="true"></span>
       <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedCount" class="count">{{ generatedCount }}</span></RouterLink>
+      <RouterLink to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
+      <span class="tab-sep" aria-hidden="true"></span>
       <RouterLink to="/compare" class="tab" id="compare-tab"
                   :class="{'drop-target': dropTargetKind === KIND_COMPARE}"
                   @dragover="onTrayDragOver($event, KIND_COMPARE)" @dragleave="onTrayDragLeave"
@@ -415,7 +418,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
                   :class="{'drop-target': dropTargetKind === KIND_IMAGE_TRAY}"
                   @dragover="onTrayDragOver($event, KIND_IMAGE_TRAY)" @dragleave="onTrayDragLeave"
                   @drop.prevent="onTrayDrop(KIND_IMAGE_TRAY)" ref="imageTrayTab"><AppIcon name="palette" :size="14"/>Image tray<span v-if="imageTrayStore.images.length" class="count">{{ imageTrayStore.images.length }}</span></RouterLink>
-      <RouterLink to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
+      <span class="tab-sep" aria-hidden="true"></span>
       <RouterLink to="/library" class="tab" id="library-tab"><AppIcon name="library" :size="14"/>Library</RouterLink>
       <button v-if="!backendConnected && canRestart" type="button" class="backend-down restartable"
               :class="{restarting}" :title="backendDownTitle" :aria-label="backendDownTitle" :disabled="restarting"
@@ -537,6 +540,15 @@ async function switchTabAccordingToGenerationMode(e, state) {
     color: var(--ib-accent-ink);
     font: 800 7.5px/10px var(--ib-mono);
     letter-spacing: 0.02em;
+  }
+
+  /* Between the groups of tabs: create, results, curate, library */
+  .tab-sep {
+    flex: none;
+    width: 1px;
+    height: 18px;
+    margin: 0 4px;
+    background: var(--ib-border-2);
   }
 
   .tab-spacer {

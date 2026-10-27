@@ -7,6 +7,7 @@ import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useClearKey} from "@/composables/useClearKey.js";
 import {dialog, dialogStack} from "@/dialogs/useDialog.js";
+import {toastError} from "@/toast.js";
 import {isContextMenuOpen} from "@/contextMenu.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {
@@ -18,6 +19,8 @@ import CompareItem from "@/components/compare/CompareItem.vue";
 import CropGrid from "@/components/compare/CropGrid.vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
+import EmptyState from "@/components/EmptyState.vue";
+import {findImageAction} from "@/imageActions.js";
 
 const REGION_KEY = "imageBench_compareRegion";
 const ASPECT_KEY = "imageBench_compareAspect";
@@ -37,6 +40,14 @@ const ZOOM_STEP = 1.25;
 const WHEEL_LINE = 40;
 
 const store = useCompareStore();
+
+// How images get into the empty tab
+const emptyWays = [
+  {text: "Drag image cards onto the Compare tab"},
+  {text: "Hover a card and press", key: findImageAction("compare").key},
+  {text: "Add image files with the upload button"},
+  {text: "Send from the editor (Photoshop, Krita, GIMP) to Compare"}
+];
 const storage = useLocalStorage();
 const imageOps = useImageOperations();
 
@@ -188,11 +199,11 @@ async function onFilesChosen(e) {
       const result = response.ok ? await response.json() : {error: await response.text()};
 
       if (result.error)
-        await dialog.alert(result.error, {title: "Upload failed"});
+        toastError(result.error, {title: "Upload failed"});
       else
         await store.addImage(result);
     } catch (error) {
-      await dialog.alert(error.message, {title: "Upload failed"});
+      toastError(error.message, {title: "Upload failed"});
     }
   }
 
@@ -425,7 +436,7 @@ async function renderCrops() {
     return await renderCropGrid(store.images.map(image => image.imageUrl), region.value,
       cropGrid.value?.grid.cols || 1, resolvedSeparatorColor());
   } catch (error) {
-    await dialog.alert(error.message, {title: "Export failed"});
+    toastError(error.message, {title: "Export failed"});
     return null;
   } finally {
     exporting.value = false;
@@ -457,7 +468,7 @@ async function onSendToEditor() {
   URL.revokeObjectURL(url);
 
   if (error)
-    await dialog.alert(error, {title: `Send to ${editorName.value}`});
+    toastError(error, {title: `Send to ${editorName.value}`});
 }
 
 // ---------- Keys ----------
@@ -574,10 +585,8 @@ onDeactivated(() => {
                     @remove-marked="onRemoveMarked"
                     @clear="onClear"/>
 
-    <div v-if="!store.images.length" class="empty-hint">
-      Add images with the <b>Add to compare</b> button of an image (key A), by dragging images onto the Compare tab,
-      from files with the upload button, or from the editor (Photoshop, Krita, GIMP).
-    </div>
+    <EmptyState v-if="!store.images.length" icon="compare" title="Nothing to compare yet" chapter="compare"
+                :ways="emptyWays"/>
 
     <CropGrid v-if="cropView && region"
               ref="cropGrid"
@@ -618,14 +627,6 @@ onDeactivated(() => {
 <style scoped>
 .file-input {
   display: none;
-}
-
-.empty-hint {
-  margin: 40px auto;
-  max-width: 520px;
-  color: var(--ib-text-2);
-  text-align: center;
-  line-height: 1.6;
 }
 
 .compare-strip {
