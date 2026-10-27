@@ -1,22 +1,16 @@
 <script setup>
   import {computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
-  import {useImageTrayStore} from "@/stores/imageTray.js";
-  import {useConceptTrayStore} from "@/stores/conceptTray.js";
-  import {useCompareStore} from "@/stores/compare.js";
   import {syncTrayMarkings} from "@/stores/trayMarkings.js";
-  import {flashTrayTab} from "@/components/utils.js";
-  import {animateColors} from "@/utils_html.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
-  import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE, MARKINGS} from "@/consts.js";
-  import {dialog} from "@/dialogs/useDialog.js";
-  import {HOST_NAME, hostHas, isWebUI} from "@/host.js";
+  import {HOST_NAME} from "@/host.js";
   import {openImageMenu} from "@/contextMenu.js";
-  import {INPAINT_LABEL, canReuseParameters, reuseParameters, sendToImg2Img, sendToInpaint} from "@/imageActions.js";
+  import {canReuseParameters, reuseParameters, rimActionGroups, runImageAction} from "@/imageActions.js";
   import {setOverlayImageTarget, clearOverlayImageTarget} from "@/composables/useImageActionKeys.js";
   import {useCtrlKey} from "@/composables/useCtrlKey.js";
+  import {useShiftKey} from "@/composables/useShiftKey.js";
   import {toast} from "@/toast.js";
-  import {editorIcon, editorName} from "@/editor.js";
   import AppIcon from "@/components/AppIcon.vue";
+  import ActionRim from "@/components/ActionRim.vue";
   import GenerationParameters from "@/components/GenerationParameters.vue";
   import GenerationParametersHeader from "@/components/GenerationParametersHeader.vue";
   import ControlNetUnits from "@/components/ControlNetUnits.vue";
@@ -73,9 +67,6 @@
   const emit = defineEmits(['hideOverlay', 'imageSelect', 'addToTray', 'setMarking', 'deleteImage',
     'showParams', 'upscaleImage', 'addComment', 'filterMarking', 'navigate', 'navigateVertical']);
 
-  const canSendToControlNet = hostHas("images", "sendToControlNet");
-  const imageTrayStore = useImageTrayStore();
-  const conceptTrayStore = useConceptTrayStore();
   const imageOps = useImageOperations();
 
   const imageLink = computed(() => imageOps.getImageLink(props.image));
@@ -138,12 +129,6 @@
   let dragged = false;
 
   function onImageMouseDown(e) {
-    // Middle click opens the image on auxclick; no autoscroll
-    if (e.button === 1) {
-      e.preventDefault();
-      return;
-    }
-
     dragged = false;
 
     if (e.button !== 0 || !isFullSize.value)
@@ -177,6 +162,40 @@
 
   onBeforeUnmount(onDragEnd);
 
+  // The wheel steps through the images as ←/→ do, at fit and in full size alike (full size pans by dragging).
+  // Deltas add up to a step, so that a high-resolution wheel does not skip images; a step at most every WHEEL_GAP ms
+  const WHEEL_STEP = 40;
+  const WHEEL_LINE = 16;
+  const WHEEL_GAP = 60;
+  let wheelDelta = 0;
+  let lastWheelStep = 0;
+
+  function onWheel(e) {
+    // The parameters panel scrolls
+    if (e.target.closest(".params-panel"))
+      return;
+
+    e.preventDefault();
+
+    // Shift+wheel arrives as a horizontal delta
+    const delta = (e.deltaY || e.deltaX) * (e.deltaMode === WheelEvent.DOM_DELTA_LINE ? WHEEL_LINE : 1);
+
+    if (Math.sign(delta) !== Math.sign(wheelDelta))
+      wheelDelta = 0;
+
+    wheelDelta += delta;
+
+    if (Math.abs(wheelDelta) < WHEEL_STEP || e.timeStamp - lastWheelStep < WHEEL_GAP)
+      return;
+
+    const direction = Math.sign(wheelDelta);
+    wheelDelta = 0;
+    lastWheelStep = e.timeStamp;
+
+    if (direction > 0 ? props.hasNext : props.hasPrev)
+      emit("navigate", direction);
+  }
+
   async function toggleFullSize(e) {
     const container = containerElement.value;
     const img = e.target;
@@ -199,68 +218,6 @@
     container.scrollTop += fullRect.top + fy * fullRect.height - e.clientY;
   }
 
-  // The overlay covers the tab bar, so the add buttons flash as the tabs do to show that the image was added
-  function flashButton(e) {
-    animateColors(e.currentTarget, 0.7);
-  }
-
-  function onAddToCompare(e) {
-    e.preventDefault();
-
-    useCompareStore().addImage(props.image);
-
-    flashTrayTab("compare-tab");
-    flashButton(e);
-  }
-
-  function onPlaceToImageTray(e) {
-    e.preventDefault();
-
-    imageTrayStore.addImage(props.image);
-
-    flashTrayTab("image-tray-tab");
-    flashButton(e);
-  }
-
-  function onPlaceToConceptTray(e) {
-    e.preventDefault();
-
-    conceptTrayStore.addImage(props.image);
-
-    flashTrayTab("concept-tray-tab");
-    flashButton(e);
-  }
-
-  async function onSendToControlNet(e) {
-    e.preventDefault();
-
-    const error = await imageOps.sendToControlNet(props.image);
-
-    if (error)
-      await dialog.alert(error, {title: "Send to ControlNet"});
-    else
-      flashTrayTab("controlnet-tab");
-  }
-
-  async function onSendToEditor(e, newDocument) {
-    e.preventDefault();
-
-    const error = await imageOps.sendToEditor(props.image, newDocument);
-
-    if (error)
-      await dialog.alert(error, {title: `Send to ${editorName.value}`});
-  }
-
-  function onImageAuxClick(e) {
-    if (e.button === 1)
-      window.open(imageLink.value, "_blank");
-  }
-
-  function onEditorAuxClick(e) {
-    if (e.button === 1)
-      onSendToEditor(e, false);
-  }
-
   // Clicking the current marking removes it
   function onMarkingClick(marking) {
     if (props.image.marking === marking)
@@ -275,9 +232,6 @@
     syncTrayMarkings(image, props.kind, props.isTray);
     emit("setMarking", image);
   }
-
-  // The marking bar opens on hover, or on a click on the current marking
-  const markingBarOpen = ref(false);
 
   // The parameters panel is shown over the image, and stays shown while navigating between images
   const showParamsPanel = ref(false);
@@ -341,11 +295,203 @@
     }
   }
 
-  // Holding Ctrl hides all chrome, so the image is seen unobstructed
+  // The overlay has no fixed chrome, the image gets all the space. A middle press shows the action rim at the
+  // pointer: released on a sector it runs it, released in the center the rim stays for clicks (its center closes
+  // the overlay). Holding Ctrl hides everything but the image
   const ctrlDown = useCtrlKey();
+  const shiftDown = useShiftKey();
+  const rootElement = ref(null);
+  const rimElement = ref(null);
+  // {x, y, sticky} while the rim is shown; sticky once the middle button was released in its center
+  const rim = ref(null);
+  const rimGroups = computed(() => rimActionGroups(props.image, actionContext));
+  const rimExtras = computed(() => canReuse.value ? [
+    {id: "reuseSeed", icon: "seed", label: "Reuse seed"},
+    {id: "reuseAll", icon: "sliders", label: "Reuse all parameters"}
+  ] : []);
 
-  onMounted(() => setOverlayImageTarget(keyTarget));
-  onBeforeUnmount(() => clearOverlayImageTarget(keyTarget));
+  // Half the extent of the rim with its arcs (ActionRim at its largest), kept inside the window
+  const RIM_EXTENT = 132;
+
+  function showRim(x, y) {
+    rim.value = {
+      sticky: false,
+      x: Math.min(Math.max(x, RIM_EXTENT), window.innerWidth - RIM_EXTENT),
+      y: Math.min(Math.max(y, RIM_EXTENT), window.innerHeight - RIM_EXTENT)
+    };
+    hintShown.value = false;
+
+    try {
+      localStorage.setItem(HINT_KEY, "1");
+    }
+    catch {
+      // The hint shows again next time
+    }
+  }
+
+  function hideRim() {
+    rim.value = null;
+  }
+
+  // The middle button is held since it showed the rim
+  let gesture = false;
+  // A left press that only dismissed the rim: its click neither zooms nor closes
+  let suppressClick = false;
+  // A middle release that ran a sector: its auxclick (on the sector, where a browser targets the release)
+  // does not run the alternative as well
+  let suppressAuxClick = false;
+
+  function onMouseDown(e) {
+    suppressClick = false;
+    suppressAuxClick = false;
+
+    if (!rootElement.value?.contains(e.target))
+      return;
+
+    // Clicks on the shown rim are its own (a middle click runs the alternative of a sector)
+    if (rim.value && rimElement.value?.$el.contains(e.target))
+      return;
+
+    if (rim.value) {
+      hideRim();
+
+      if (e.button === 0) {
+        suppressClick = true;
+        e.preventDefault();
+        return;
+      }
+    }
+
+    if (e.button !== 1)
+      return;
+
+    // No autoscroll
+    e.preventDefault();
+    gesture = true;
+    showRim(e.clientX, e.clientY);
+  }
+
+  function onMouseUp(e) {
+    if (e.button !== 1 || !gesture)
+      return;
+
+    gesture = false;
+    const target = rimElement.value?.releaseAt(e.clientX, e.clientY, e.shiftKey);
+
+    if (target === "center" && rim.value)
+      rim.value.sticky = true;
+    else
+      hideRim();
+
+    suppressAuxClick = target === "item";
+  }
+
+  function onAuxClick(e) {
+    if (!suppressAuxClick)
+      return;
+
+    suppressAuxClick = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function onClick(e) {
+    if (!suppressClick)
+      return;
+
+    suppressClick = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Escape closes the rim before the overlay
+  function onKeyDown(e) {
+    if (e.key !== "Escape" || !rim.value)
+      return;
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    hideRim();
+  }
+
+  function onWindowBlur() {
+    gesture = false;
+
+    if (rim.value && !rim.value.sticky)
+      hideRim();
+  }
+
+  // The parameters sector shows the panel of the overlay; the trays flash their tabs, which the overlay covers.
+  // The rim closes after each action
+  function onRimRun(action, alt) {
+    hideRim();
+
+    if (action.id === "params") {
+      showParamsPanel.value = !showParamsPanel.value;
+      return;
+    }
+
+    runImageAction(action, props.image, actionContext, alt);
+
+    if (action.group === 3)
+      toast(action.label.replace(/^Add to/, "Added to"));
+  }
+
+  function onRimExtra(id) {
+    hideRim();
+    onReuse(id === "reuseAll");
+  }
+
+  function onRimMarking(marking) {
+    hideRim();
+    setMarkingByKey(marking);
+  }
+
+  function onRimDelete() {
+    hideRim();
+    emit("deleteImage", props.image);
+  }
+
+  // How to reach the actions, on each opening until the rim was shown once
+  const HINT_KEY = "imageBench_overlayRimUsed";
+  const HINT_DURATION = 6000;
+  const hintShown = ref(false);
+  let hintTimer = 0;
+
+  function showHint() {
+    try {
+      if (localStorage.getItem(HINT_KEY))
+        return;
+    }
+    catch {
+      return;
+    }
+
+    hintShown.value = true;
+    hintTimer = setTimeout(() => hintShown.value = false, HINT_DURATION);
+  }
+
+  onMounted(() => {
+    setOverlayImageTarget(keyTarget);
+    window.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("mouseup", onMouseUp, true);
+    window.addEventListener("click", onClick, true);
+    window.addEventListener("auxclick", onAuxClick, true);
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("blur", onWindowBlur);
+    showHint();
+  });
+
+  onBeforeUnmount(() => {
+    clearOverlayImageTarget(keyTarget);
+    window.removeEventListener("mousedown", onMouseDown, true);
+    window.removeEventListener("mouseup", onMouseUp, true);
+    window.removeEventListener("click", onClick, true);
+    window.removeEventListener("auxclick", onAuxClick, true);
+    window.removeEventListener("keydown", onKeyDown, true);
+    window.removeEventListener("blur", onWindowBlur);
+    clearTimeout(hintTimer);
+  });
 
 </script>
 
@@ -353,21 +499,18 @@
   <!-- Using Teleport to render overlay at body level for better z-index control -->
   <Teleport to="body">
     <Transition name="fade">
-      <div class="image-overlay-container" :class="{'chrome-hidden': ctrlDown}">
+      <div ref="rootElement" class="image-overlay-container" :class="{'chrome-hidden': ctrlDown}" @wheel="onWheel">
         <div class="image-overlay" @click="$emit('hideOverlay')">
         </div>
-        <button class="ib close-button" title="Close" aria-label="Close"
-                @click="$emit('hideOverlay')"><AppIcon name="close" :size="22"/></button>
         <Transition name="zoom">
           <div class="overlay-image-container" ref="containerElement"
                :class="{ 'full-size': isFullSize }"
                @click="onContainerClick">
             <MediaView v-if="!still" class="overlay-media" :src="imageLink" :kind="fileKind"
-                       @mousedown.middle.prevent @auxclick="onImageAuxClick"
                        @contextmenu="openImageMenu($event, image, actionContext)"/>
             <img v-else class="overlay-image" :src="imageLink" draggable="false"
                  :title="isFullSize ? 'Click to fit to screen, drag to pan' : 'Click to view in full size'"
-                 @mousedown="onImageMouseDown" @auxclick="onImageAuxClick" @load="onImageLoad"
+                 @mousedown="onImageMouseDown" @load="onImageLoad"
                  @contextmenu="openImageMenu($event, image, actionContext)">
           </div>
         </Transition>
@@ -381,10 +524,6 @@
                 @click="$emit('navigateVertical', 1)"><AppIcon name="chevron" :size="36"/></button>
         <!-- What the view tells about the image, at the top center (e.g. the values of a sweep cell) -->
         <div v-if="$slots.info" class="overlay-info"><slot name="info"/></div>
-        <button v-if="hasParameters" class="ib params-button" :class="{on: showParamsPanel}"
-                :title="showParamsPanel ? 'Hide generation parameters' : 'Show generation parameters'"
-                aria-label="Generation parameters" :aria-pressed="showParamsPanel"
-                @click="showParamsPanel = !showParamsPanel"><AppIcon name="params" :size="20"/></button>
         <Transition name="fade">
           <div v-if="showParamsPanel && hasParameters" class="params-panel">
             <GenerationParametersHeader :reusable="canReuse" close-title="Hide generation parameters"
@@ -395,44 +534,22 @@
             </div>
           </div>
         </Transition>
-        <div v-if="isTray || markable" class="overlay-markings" :class="{open: markingBarOpen}"
-             @mouseleave="markingBarOpen = false">
-          <span class="marking-current" :title="image.marking ? 'Marking (keys 1-9, 0 removes)' : 'Set a marking (keys 1-9)'"
-                @click="markingBarOpen = !markingBarOpen">
-            <template v-if="image.marking">{{ image.marking }}</template>
-            <AppIcon v-else name="tag" :size="20"/>
-          </span>
-          <div class="marking-bar">
-            <span v-for="(marking, index) in MARKINGS" :key="marking" class="emoji-button"
-                  :class="{active: image.marking === marking}"
-                  :title="(image.marking === marking ? 'Remove marking' : 'Set marking') + ` (${index + 1})`"
-                  @click="onMarkingClick(marking)">{{ marking }}</span>
+        <!-- A box without size at the pointer: the rim centers itself on it -->
+        <div v-if="rim" class="overlay-rim" :style="{left: rim.x + 'px', top: rim.y + 'px'}">
+          <ActionRim ref="rimElement" :groups="rimGroups" :size="1000" hub="close" :marking="image.marking ?? null"
+                     :marking-arc="isTray || markable" :extras="rimExtras" :show-alt="shiftDown" :deletable="isTray"
+                     @run="onRimRun" @delete="onRimDelete" @set-marking="onRimMarking"
+                     @extra="onRimExtra" @close="$emit('hideOverlay')"/>
+        </div>
+        <!-- The marking of the image; a click removes it -->
+        <button v-if="image.marking && (isTray || markable)" type="button" class="overlay-marking"
+                title="Remove marking (0)" aria-label="Remove marking"
+                @click="setMarkingByKey(null)">{{ image.marking }}</button>
+        <Transition name="fade">
+          <div v-if="hintShown" class="overlay-hint">
+            Middle click for the actions, their center closes the image · hold Ctrl to see only the image
           </div>
-        </div>
-        <div class="overlay-actions">
-          <template v-if="isTray">
-            <button class="ib danger" title="Delete" aria-label="Delete"
-                    @click="$emit('deleteImage', image)"><AppIcon name="trash" :size="20"/></button>
-            <span class="actions-separator"></span>
-          </template>
-          <template v-if="still">
-          <button v-if="isWebUI" class="ib" title="Send to img2img" aria-label="Send to img2img"
-                  @click="sendToImg2Img(image)"><AppIcon name="imageIn" :size="20"/></button>
-          <button class="ib" :title="INPAINT_LABEL" :aria-label="INPAINT_LABEL"
-                  @click="sendToInpaint(image)"><AppIcon name="brush" :size="20"/></button>
-          <button v-if="canSendToControlNet" class="ib" title="Send to the control image of the ControlNet tab" aria-label="Send to ControlNet"
-                  @click="onSendToControlNet"><AppIcon name="controlnet" :size="20"/></button>
-          <button class="ib" :title="`Left: send to ${editorName} as a new image, Middle/Shift: send to ${editorName} as a new layer`" :aria-label="`Send to ${editorName}`"
-                  @click="onSendToEditor($event, !$event.shiftKey)" @mousedown.middle.prevent @auxclick="onEditorAuxClick"><AppIcon :name="editorIcon()" :size="20"/></button>
-          <span class="actions-separator"></span>
-          </template>
-          <button v-if="kind !== KIND_COMPARE && still" class="ib" title="Add to compare" aria-label="Add to compare"
-                  @click="onAddToCompare"><AppIcon name="compare" :size="20"/></button>
-          <button v-if="!isTray || kind === KIND_IMAGE_TRAY" class="ib" title="Add to concept tray" aria-label="Add to concept tray"
-                  @click="onPlaceToConceptTray"><AppIcon name="concept" :size="20"/></button>
-          <button v-if="!isTray || kind === KIND_CONCEPT_TRAY" class="ib" title="Add to image tray" aria-label="Add to image tray"
-                  @click="onPlaceToImageTray"><AppIcon name="palette" :size="20"/></button>
-        </div>
+        </Transition>
       </div>
     </Transition>
   </Teleport>
@@ -448,38 +565,9 @@
   z-index: 1000;
 }
 
-/* Everything but the dimmed background and the image */
+/* Ctrl: everything but the dimmed background and the image */
 .chrome-hidden > :not(.image-overlay):not(.overlay-image-container) {
   visibility: hidden;
-}
-
-.close-button {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1003;
-}
-
-/* Larger variant of the thumbnail action buttons (GeneratedImage.vue) */
-.image-overlay-container .ib {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  background: rgba(17, 19, 23, 0.85);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: var(--ib-text);
-}
-
-.image-overlay-container .ib:hover {
-  background: var(--ib-elev-2);
-  border-color: var(--ib-border-2);
-  color: #fff;
-}
-
-.image-overlay-container .ib.danger:hover {
-  color: var(--ib-danger-text);
-  border-color: #5b2d30;
-  background: #2a1a1c;
 }
 
 .image-overlay {
@@ -615,19 +703,7 @@
   white-space: nowrap;
 }
 
-.params-button {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  z-index: 1004;
-}
-
-.image-overlay-container .ib.on {
-  border-color: var(--ib-accent-border);
-  color: var(--ib-accent);
-}
-
-/* Over the image, between the top buttons and the bottom bars */
+/* Over the image, below the top center info */
 .params-panel {
   position: fixed;
   top: 68px;
@@ -657,78 +733,51 @@
   padding: 4px 16px 14px;
 }
 
-.overlay-actions {
+/* A box without size at the pointer, which the rim centers itself on */
+.overlay-rim {
   position: fixed;
-  bottom: 20px;
+  width: 0;
+  height: 0;
+  z-index: 1005;
+}
+
+.overlay-marking {
+  position: fixed;
   right: 20px;
-  z-index: 1003;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.actions-separator {
-  align-self: stretch;
-  margin: 4px 4px;
-  border-left: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.overlay-markings {
-  position: fixed;
   bottom: 20px;
-  left: 20px;
   z-index: 1003;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  box-sizing: border-box;
-  padding: 4px 8px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
   background: rgba(17, 19, 23, 0.6);
-}
-
-.marking-current {
-  display: flex;
-  align-items: center;
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.overlay-marking:hover {
+  background: rgba(17, 19, 23, 0.9);
+  transform: scale(1.08);
+}
+
+.overlay-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 1004;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(17, 19, 23, 0.85);
   color: var(--ib-text);
-  cursor: pointer;
-}
-
-.marking-bar {
-  display: none;
-  gap: 6px;
-  padding-left: 6px;
-  border-left: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.overlay-markings:hover .marking-bar,
-.overlay-markings.open .marking-bar {
-  display: flex;
-}
-
-.overlay-markings .emoji-button {
-  font-size: 20px;
-  opacity: 0.45;
-}
-
-.overlay-markings .emoji-button.active {
-  opacity: 1;
-  transform: scale(1.2);
-}
-
-.emoji-button {
-  font-size: 24px;
-  cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-  opacity: 0.9;
-}
-
-.emoji-button:hover {
-  transform: scale(1.2);
-  opacity: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* Vue 3 Transition animations */

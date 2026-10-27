@@ -8,6 +8,8 @@ import {MARKINGS} from "@/consts.js";
  * (imageActions.js) plus Delete at the bottom. The center button switches the ring to the markings and back.
  * The hovered sector or the center shows its label in the hole. Mounted while it is shown on the card,
  * so it starts with the actions each time.
+ * In the image overlay (hub "close") the center closes it, and outer arcs hold the markings (top) and the
+ * extra actions (bottom, e.g. reuse seed / all), so no mode switch is needed.
  */
 const props = defineProps({
   // Visible actions per group in rim order, as returned by rimActionGroups()
@@ -50,10 +52,25 @@ const props = defineProps({
   dimFar: {
     type: Boolean,
     default: false
+  },
+  // What the center button does: "markings" switches the ring to the markings, "close" emits close
+  hub: {
+    type: String,
+    default: "markings"
+  },
+  // The markings as an arc outside the ring, at the top
+  markingArc: {
+    type: Boolean,
+    default: false
+  },
+  // Actions as an arc outside the ring, at the bottom: [{id, icon, label}], emitted as extra(id)
+  extras: {
+    type: Array,
+    default: () => []
   }
 });
 
-const emit = defineEmits(["run", "delete", "setMarking", "filterMarking"]);
+const emit = defineEmits(["run", "delete", "setMarking", "filterMarking", "close", "extra"]);
 
 // By the group index of the action registry
 const GROUP_COLORS = ["#7aa2ff", "#ffb547", "#c084fc", "#34d399"];
@@ -66,6 +83,11 @@ const GROUP_GAP = 4;
 const ITEM_GAP = 1.2;
 // The hit area reaches beyond the outer edge
 const HIT_OUTSIDE = 12;
+// Outer arcs: distance from the ring, width, and the span of one item in degrees
+const ARC_GAP = 5;
+const ARC_WIDTH = 26;
+const MARKING_SPAN = 15;
+const EXTRA_SPAN = 26;
 
 // Two rims may coexist while one fades out; their filters are the same
 const shadowId = "action-rim-shadow";
@@ -76,11 +98,18 @@ const centerHovered = ref(false);
 const far = ref(false);
 const root = ref(null);
 
+const hasArcs = computed(() => props.markingArc || props.extras.length > 0);
+
 const geometry = computed(() => {
   const outer = Math.max(58, Math.min(84, Math.floor(props.size / 2) - 8));
   const inner = outer - (outer >= 72 ? 28 : 24);
-  const pad = HIT_OUTSIDE + 4;
-  return {outer, inner, pad, center: outer + pad, box: 2 * (outer + pad), icon: outer >= 66 ? 16 : 14};
+  const arcInner = outer + ARC_GAP;
+  const arcOuter = arcInner + ARC_WIDTH;
+  const pad = hasArcs.value ? ARC_GAP + ARC_WIDTH + HIT_OUTSIDE : HIT_OUTSIDE + 4;
+  // With arcs the hit areas of the ring end halfway to them
+  const hitOuter = hasArcs.value ? outer + ARC_GAP / 2 : outer + HIT_OUTSIDE;
+  return {outer, inner, arcInner, arcOuter, hitOuter, pad, center: outer + pad, box: 2 * (outer + pad),
+    icon: outer >= 66 ? 16 : 14};
 });
 
 const items = computed(() => {
@@ -159,6 +188,33 @@ const sectors = computed(() => {
   return result;
 });
 
+// The arcs outside the ring: the markings centered at the top, the extras at the bottom
+const arcSectors = computed(() => {
+  const result = [];
+
+  if (props.markingArc) {
+    const first = -MARKINGS.length * MARKING_SPAN / 2;
+
+    MARKINGS.forEach((marking, index) => {
+      const active = props.marking === marking;
+      const start = first + index * MARKING_SPAN;
+      result.push({item: {id: "m" + index, arc: "marking", color: MARKING_COLORS[marking] ?? CLEAR_COLOR, emoji: marking,
+        label: active ? "Remove marking" : "Mark " + marking, key: String(index + 1), marking, strong: active},
+        start: start + ITEM_GAP / 2, end: start + MARKING_SPAN - ITEM_GAP / 2});
+    });
+  }
+
+  const first = 180 - props.extras.length * EXTRA_SPAN / 2;
+
+  props.extras.forEach((extra, index) => {
+    const start = first + index * EXTRA_SPAN;
+    result.push({item: {...extra, arc: "extra", color: GROUP_COLORS[0]},
+      start: start + ITEM_GAP / 2, end: start + EXTRA_SPAN - ITEM_GAP / 2});
+  });
+
+  return result;
+});
+
 function point(radius, angle) {
   const {center} = geometry.value;
   const t = angle * Math.PI / 180;
@@ -184,9 +240,9 @@ function rgba(hex, alpha) {
 
 // Dark glass behind the ring, colored edges per group; the hovered sector is brighter and grows outwards
 const drawn = computed(() => {
-  const {outer, inner, icon} = geometry.value;
+  const {outer, inner, icon, hitOuter} = geometry.value;
 
-  return sectors.value.map(({item, start, end}) => {
+  const ring = sectors.value.map(({item, start, end}) => {
     const hovered = hoveredId.value === item.id;
     const radius = outer + (hovered ? 4 : 0);
     const [x, y] = point((outer + inner) / 2 + (hovered ? 2 : 0), (start + end) / 2);
@@ -196,7 +252,32 @@ const drawn = computed(() => {
       fill: rgba(item.color, hovered ? 0.5 : item.strong ? 0.34 : 0.14),
       shape: sectorPath(inner, radius, start, end),
       edge: edgePath(radius - 1.5, start, end),
-      hit: sectorPath(inner - 4, outer + HIT_OUTSIDE, start - 0.6, end + 0.6),
+      hit: sectorPath(inner - 4, hitOuter, start - 0.6, end + 0.6),
+      x, y,
+      iconTransform: `translate(${x - icon / 2} ${y - icon / 2}) scale(${icon / 24})`
+    };
+  });
+
+  return [...ring, ...drawnArcs.value];
+});
+
+// The arcs have no glass behind them, so each sector gets a dark underlay of its own
+const drawnArcs = computed(() => {
+  const {arcInner, arcOuter, icon} = geometry.value;
+
+  return arcSectors.value.map(({item, start, end}) => {
+    const hovered = hoveredId.value === item.id;
+    const radius = arcOuter + (hovered ? 3 : 0);
+    const [x, y] = point((arcInner + arcOuter) / 2 + (hovered ? 1.5 : 0), (start + end) / 2);
+    const shape = sectorPath(arcInner, radius, start, end);
+
+    return {
+      item,
+      under: shape,
+      fill: rgba(item.color, hovered ? 0.5 : item.strong ? 0.42 : 0.16),
+      shape,
+      edge: edgePath(radius - 1.5, start, end),
+      hit: sectorPath(arcInner - ARC_GAP / 2, arcOuter + HIT_OUTSIDE, start - 0.6, end + 0.6),
       x, y,
       iconTransform: `translate(${x - icon / 2} ${y - icon / 2}) scale(${icon / 24})`
     };
@@ -221,25 +302,80 @@ const labelStyle = computed(() => {
   return {left: center - diameter / 2 + "px", top: center - diameter / 2 + "px", width: diameter + "px", height: diameter + "px"};
 });
 
-const hoveredItem = computed(() => items.value.find(item => item.id === hoveredId.value) ?? null);
+const hoveredItem = computed(() => items.value.find(item => item.id === hoveredId.value)
+  ?? arcSectors.value.find(sector => sector.item.id === hoveredId.value)?.item ?? null);
 
-const centerText = computed(() => mode.value === "markings" ? "Back to actions"
+const closeHub = computed(() => props.hub === "close");
+
+const centerText = computed(() => closeHub.value ? "Close" : mode.value === "markings" ? "Back to actions"
   : props.marking ? "Change marking" : "Add marking");
 
-const centerNote = computed(() => mode.value !== "actions" || !props.marking || !props.filterable ? null
+const centerKey = computed(() => closeHub.value ? "Esc" : mode.value === "actions" ? "1–9" : null);
+
+const centerNote = computed(() => closeHub.value || mode.value !== "actions" || !props.marking || !props.filterable ? null
   : props.filterActive ? "Middle: show all images" : "Middle: show only " + props.marking);
 
 function onSectorClick(item, e) {
+  activate(item, e.shiftKey);
+}
+
+function activate(item, shift) {
   if (item.id === "delete")
     emit("delete");
+  else if (item.arc === "marking")
+    emit("setMarking", item.marking);
+  else if (item.arc === "extra")
+    emit("extra", item.id);
   else if (mode.value === "markings") {
     emit("setMarking", item.marking);
     mode.value = "actions";
     hoveredId.value = null;
   }
   else
-    emit("run", item.action, e.shiftKey);
+    emit("run", item.action, shift);
 }
+
+/**
+ * The center ("center"), the item at a point of the window, or null. Found by the geometry, not by the hover,
+ * since a rim that appears under a resting pointer gets no pointerenter until the pointer moves
+ */
+function itemAt(clientX, clientY) {
+  const rect = root.value?.getBoundingClientRect();
+
+  if (!rect)
+    return null;
+
+  const dx = clientX - (rect.left + rect.width / 2);
+  const dy = clientY - (rect.top + rect.height / 2);
+  const distance = Math.hypot(dx, dy);
+  const {inner, hitOuter, arcOuter} = geometry.value;
+
+  if (distance < inner - 4)
+    return "center";
+
+  const list = distance <= hitOuter ? sectors.value
+    : hasArcs.value && distance <= arcOuter + HIT_OUTSIDE ? arcSectors.value : [];
+  const angle = Math.atan2(dx, -dy) * 180 / Math.PI;
+  const within = ({start, end}) => ((angle - start + 0.6) % 360 + 360) % 360 <= end - start + 1.2;
+
+  return list.find(within)?.item ?? null;
+}
+
+/**
+ * The end of a press-and-release gesture: runs the item at a point of the window, as a click on it would.
+ * The center runs nothing (the gesture is cancelled or the rim stays for clicks)
+ * @returns {"center"|"item"|null} what was at the point
+ */
+function releaseAt(clientX, clientY, shift = false) {
+  const target = itemAt(clientX, clientY);
+
+  if (target && target !== "center")
+    activate(target, shift);
+
+  return target === "center" ? "center" : target ? "item" : null;
+}
+
+defineExpose({releaseAt});
 
 function onSectorAuxClick(item, e) {
   if (e.button === 1 && item.action?.alt)
@@ -252,6 +388,11 @@ function onSectorLeave(item) {
 }
 
 function onCenterClick() {
+  if (closeHub.value) {
+    emit("close");
+    return;
+  }
+
   mode.value = mode.value === "actions" ? "markings" : "actions";
   hoveredId.value = null;
 }
@@ -298,6 +439,7 @@ onBeforeUnmount(() => pointerSource?.removeEventListener("pointermove", onPointe
         </filter>
       </defs>
       <g v-for="sector in drawn" :key="sector.item.id">
+        <path v-if="sector.under" :d="sector.under" fill="rgba(10, 12, 18, 0.55)"/>
         <path :d="sector.shape" :fill="sector.fill"/>
         <path :d="sector.edge" :stroke="sector.item.color" stroke-width="3" fill="none"/>
         <text v-if="sector.item.emoji" :x="sector.x" :y="sector.y + 1" text-anchor="middle" dominant-baseline="central"
@@ -318,7 +460,7 @@ onBeforeUnmount(() => pointerSource?.removeEventListener("pointermove", onPointe
       <template v-if="centerHovered">
         <span>{{ centerText }}</span>
         <span class="rim-label-gap"></span>
-        <kbd v-if="mode === 'actions'">1–9</kbd>
+        <kbd v-if="centerKey">{{ centerKey }}</kbd>
         <span v-if="centerNote" class="rim-label-note">{{ centerNote }}</span>
       </template>
       <template v-else-if="hoveredItem">
@@ -328,14 +470,16 @@ onBeforeUnmount(() => pointerSource?.removeEventListener("pointermove", onPointe
       </template>
     </div>
 
-    <button class="rim-center" :class="{back: mode === 'markings'}"
+    <button class="rim-center" :class="{back: mode === 'markings', close: closeHub}"
             :aria-label="centerText"
             @click.stop="onCenterClick"
             @mousedown.middle.prevent
             @auxclick="onCenterAuxClick"
             @pointerenter="centerHovered = true"
             @pointerleave="centerHovered = false">
-      <span v-if="mode === 'actions' && marking" class="rim-center-marking">{{ marking }}</span>
+      <svg v-if="closeHub" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" v-html="ICON_PATHS.close"></svg>
+      <span v-else-if="mode === 'actions' && marking" class="rim-center-marking">{{ marking }}</span>
       <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <g v-if="mode === 'actions'" v-html="ICON_PATHS.tag"></g>
@@ -465,6 +609,19 @@ onBeforeUnmount(() => pointerSource?.removeEventListener("pointermove", onPointe
 
 .rim-center.back:hover {
   background: rgba(10, 12, 18, 0.85);
+}
+
+/* Closes the image overlay: larger, plain */
+.rim-center.close {
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 1.5px solid rgba(255, 255, 255, 0.75);
+  background: rgba(10, 12, 18, 0.7);
+}
+
+.rim-center.close:hover {
+  background: rgba(10, 12, 18, 0.9);
 }
 
 .action-rim.labelled:not(.center-hovered) .rim-center {
