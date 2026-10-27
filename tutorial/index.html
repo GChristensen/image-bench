@@ -578,7 +578,7 @@
   <div class="topic">
     <h3>Automated sweeps from one image</h3>
     <p>Once you have an image you like, you often want to know whether it gets better with more steps, another denoising strength or other text encoders. Testing this by hand means restoring the image's parameters and changing one value before each generation. Image Bench can do this for you in a single run.</p>
-    <p>These image actions start from the parameters of an existing image, including its seed, and generate a series in which only one setting changes. You find them on the left side of the action rim: hold <kbd>Ctrl</kbd> over an image card, or over the result in the Generate tab, and point at the icons below (see <a href="#ch08">chapter 8</a>). With the pointer over the card or in the overlay, the keys run them directly.</p>
+    <p>These image actions start from the parameters of an existing image, including its seed, and generate a series in which only one setting changes. You find them on the left side of the action rim: middle-click an image card, or hold <kbd>Ctrl</kbd> over the result in the Generate tab, and point at the icons below (see <a href="#ch08">chapter 8</a>). With the pointer over the card or in the overlay, the keys run them directly.</p>
     <div class="keys">
       <div class="key"><kbd>G</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-steps"></use></svg></span><span>Generate with steps: the same image at different step counts.</span></div>
       <div class="key"><kbd>E</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-puzzle"></use></svg></span><span>Generate with text encoders: the same image with different VAE and text encoder sets <span class="tag tag-webui">Forge Neo</span>.</span></div>
@@ -686,13 +686,13 @@
   <div class="topic">
     <h3>The action rim</h3>
     <p>Most of the work with a generated image starts from its card: you look at its parameters, send it to img2img or your editor, upscale it, or put it in a tray. A card has room for only a few buttons, and they would cover the thumbnail, so Image Bench puts all these actions on a ring that you show only when you need it. The same actions are also in the card's context menu and on single keys, which work while the pointer is over the card.</p>
-    <p>Image cards have no visible action buttons. To show the actions, hold <kbd>Ctrl</kbd> over a card, middle-click it, or click the rim toggle in its top right corner. A middle click or the toggle keeps the ring shown until you middle-click again or the pointer leaves the card. A ring of actions appears around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer.</p>
+    <p>Image cards have no visible action buttons. To show the actions, middle-click a card or click the rim toggle in its top right corner. The ring stays shown until you middle-click again or the pointer leaves the card. Holding <kbd>Ctrl</kbd> over a card does the opposite: it hides the toggle, the badges and the other controls, so you see only the image, and a click opens it. A ring of actions appears around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
       <ul>
         <li>The center button switches the ring to the markings and back. Middle-clicking it turns the view's marking filter on or off.</li>
         <li>Some actions have an alternative version, which runs on a middle click, <kbd>Shift</kbd>+click or <kbd>Shift</kbd>+key. While you hold <kbd>Shift</kbd>, the ring shows the alternative icons; for example, Send to editor becomes Send as a new layer.</li>
-        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. In this mode, holding <kbd>Ctrl</kbd> hides the ring, so a click opens the image. A middle click opens the image in a new browser tab instead of showing the ring.</li>
+        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. Holding <kbd>Ctrl</kbd> hides the ring too, so a click opens the image. A middle click opens the image in a new browser tab instead of showing the ring.</li>
       </ul>
     </div>
   </div>
@@ -1062,7 +1062,7 @@
   <div class="topic">
     <h3>Anywhere in the app</h3>
     <div class="keys">
-      <div class="key"><kbd>Ctrl</kbd><span>Hold over a card to show the action rim. Hold in the image view to show only the image</span></div>
+      <div class="key"><kbd>Ctrl</kbd><span>Hold over a card or in the image view to show only the image. Hold over the Generate tab's result or a Compare image to show its action rim</span></div>
       <div class="key"><kbd>Shift</kbd><span>Run the alternative action (as does a middle click)</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save the project</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>`</kbd><span>Open or close the console drawer</span></div>
@@ -1090,7 +1090,7 @@
         <tbody>
           <tr><td>Open Image Bench from the host interface</td><td>The 🔬 button opens the app as a popup instead of showing its link</td><td>Off</td></tr>
           <tr><td>Open Image Bench in a popup window</td><td>The app opens in a window of its own instead of a browser tab</td><td>Off</td></tr>
-          <tr><td>Show the action rim on hover</td><td>The ring appears on hover; <kbd>Ctrl</kbd> hides it</td><td>Off</td></tr>
+          <tr><td>Show the action rim on hover</td><td>The ring of a card appears on hover</td><td>Off</td></tr>
           <tr><td>Keep the session filmstrip shown</td><td>The filmstrip stays open after a batch ends</td><td>Off</td></tr>
           <tr><td>Ask whether to continue the current project</td><td>The project reminder before Generate</td><td>On</td></tr>
           <tr><td>Remember prompts and parameters across WebUI reloads</td><td>The host page restores your values after it loads <span class="tag tag-webui">WebUI</span></td><td>On</td></tr>

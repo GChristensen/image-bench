@@ -216,17 +216,18 @@ const hostOrigin = location.origin;
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        Hold <span class="kbd">Ctrl</span> over an image to show its action rim, or middle-click the image or click the
-        <AppIcon name="rim" :size="13" class="inline-icon"/> button at the top right of the image, which keeps the
-        rim shown until you middle-click or click it again or the pointer leaves the card. The rim is a ring of sectors, one per
+        Middle-click an image card or click the <AppIcon name="rim" :size="13" class="inline-icon"/> button at its
+        top right to show its action rim, which stays shown until you middle-click or click the button again or the
+        pointer leaves the card. Hold <span class="kbd">Ctrl</span> over a card to hide its controls, so that only
+        the image shows; a click then opens it. The rim is a ring of sectors, one per
         action, colored by the kind of action. The middle of the ring shows the name and key of the sector under
         the pointer. Some sectors have an alternative action, which runs on a middle click or Shift+click; holding
         Shift shows their alternative icons. A click on the image inside or outside the ring opens it as usual.
       </p>
       <p>
-        With <b>Show the action rim of an image on hover (without holding Ctrl)</b> turned on in the Settings tab,
-        hovering alone opens the ring. In this mode, holding <span class="kbd">Ctrl</span> hides the
-        ring and all other controls, so a click anywhere on the image opens it.
+        With <b>Show the action rim of an image on hover</b> turned on in the Settings tab, hovering alone opens
+        the ring. Holding <span class="kbd">Ctrl</span> hides it too, with the other controls, and a middle click
+        opens the image in a new tab.
       </p>
       <p>
         The button in the middle of the ring shows the marking of the image; click it to switch the ring to the
@@ -683,7 +684,7 @@ const hostOrigin = location.origin;
       <p>
         To put an image into a tray, use the <AppIcon name="concept" :size="13" class="inline-icon"/> <b>Add to
         concept tray</b> or <AppIcon name="palette" :size="13" class="inline-icon"/> <b>Add to image tray</b>
-        action of its card (hold <span class="kbd">Ctrl</span> over the image to show the action rim), of the action
+        action of its card (middle-click the image to show the action rim), of the action
         rim in the full image view (opened by a middle click) or of the context menu, or press <span class="kbd">Y</span> or <span class="kbd">T</span> over
         it. The tray's tab flashes when the image arrives. In a tray, only the action for the other tray is
         offered; it adds a copy of the image there.
@@ -900,10 +901,9 @@ const hostOrigin = location.origin;
           {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }} opens Image Bench from that
           page. Off by default; Image Bench is then opened by its <code>/image-bench/app</code> link, which the
           button shows.</li>
-        <li><b>Show the action rim of an image on hover (without holding Ctrl)</b>: opens the action rim of an image
+        <li><b>Show the action rim of an image on hover</b>: opens the action rim of an image
           when the pointer is over it, as described in <a href="#" @click.prevent="scrollTo('images')">Working with images</a>.
-          Off by default; the rim then shows while
-          <span class="kbd">Ctrl</span> is held or through its toggle button.</li>
+          Off by default; the rim of a card then shows on a middle click or through its toggle button.</li>
         <li><b>Open Image Bench in a popup window instead of a browser tab</b>: the 🔬 button and the
           <code>/image-bench/app</code> link open Image Bench in a popup window (without bookmarks and extension
           buttons) instead of a regular browser tab. The change takes effect the next time Image Bench is opened.</li>
@@ -1468,8 +1468,8 @@ const hostOrigin = location.origin;
           current project</td></tr>
         <tr><td>Click</td><td>On the image in the image view, switch between full size and fit to screen. Drag to
           pan the image</td></tr>
-        <tr><td><span class="kbd">Ctrl</span></td><td>Hold over an image card to show its action rim. Hold in the
-          image view to show only the image</td></tr>
+        <tr><td><span class="kbd">Ctrl</span></td><td>Hold over an image card or in the image view to show only the
+          image. Hold over the Generate tab's result or a Compare image to show its action rim</td></tr>
         <tr><td>Middle click</td><td>In the image view, open the action rim at the pointer. Release the button on a
           sector to run it; the button in the center closes the image view. On an image card, show or hide its
           action rim (with the rim on hover: open the image in a new tab). On a button, perform its alternative action (place as a new layer in the editor). On a marking,

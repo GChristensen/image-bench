@@ -131,12 +131,12 @@
   const showAlt = computed(() => hovered.value && shiftDown.value);
   // The card is dragged by its image, so that the rim and the markings do not start drags
   const dragging = ref(false);
-  // The rim shows while Ctrl is held over the card or its rim toggle is on. With the rimOnHover setting it opens
-  // on hover instead, and Ctrl hides all chrome, so that a click on the bare image opens the overlay
+  // The rim shows while its toggle is on (the button or a middle click). With the rimOnHover setting it opens on
+  // hover instead. Ctrl held over the card hides all chrome, so that a click on the bare image opens the overlay
   const config = useAppConfigStore();
   const hoverMode = computed(() => config.rimOnHover);
   const ctrlDown = useCtrlKey();
-  const bare = computed(() => hoverMode.value && hovered.value && ctrlDown.value);
+  const bare = computed(() => hovered.value && ctrlDown.value);
   const rimToggled = ref(false);
   // Badges and markings show their description in the same place instead of a tooltip;
   // a function keeps it current while the pointer stays (e.g. after toggling the marking filter)
@@ -155,8 +155,8 @@
   const rimSize = ref(0);
   let rimTimer = 0;
 
-  const rimShown = computed(() => props.rim && (hoverMode.value ? rimOpen.value && !bare.value
-    : hovered.value && !dragging.value && (ctrlDown.value || rimToggled.value)));
+  const rimShown = computed(() => props.rim && !bare.value && (hoverMode.value ? rimOpen.value
+    : hovered.value && !dragging.value && rimToggled.value));
 
   watch(rimShown, shown => {
     const frame = frameElement.value;
@@ -165,7 +165,7 @@
       rimSize.value = Math.min(frame.clientWidth, frame.clientHeight);
   });
 
-  const rimToggleText = () => rimToggled.value ? "Hide actions" : "Show actions (or hold Ctrl, or middle-click)";
+  const rimToggleText = () => rimToggled.value ? "Hide actions" : "Show actions (or middle-click)";
 
   function openRim() {
     if (!dragging.value)
@@ -417,7 +417,7 @@
   transform: scale(0.92);
 }
 
-/* Ctrl held with the rim on hover: the bare image (but the batch color bar), a click opens the overlay */
+/* Ctrl held: the bare image (but the batch color bar), a click opens the overlay */
 .image-frame.bare .select-box,
 .image-frame.bare .corner-button,
 .image-frame.bare .image-comment,

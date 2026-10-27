@@ -140,7 +140,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
-    // Show the action rim of an image on hover, not only while Ctrl is held (disabled unless set to true)
+    // Show the action rim of an image card on hover, not only through its toggle (disabled unless set to true)
     const rimOnHover = computed({
         get() {
             return _config.rimOnHover ?? false;

@@ -143,7 +143,7 @@ function setGenerateUiPreset(index, value) {
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.openFromHostUI"
     >Open Image Bench from the {{ HOST_NAME }} interface</label>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.rimOnHover"
-    >Show the action rim of an image on hover (without holding Ctrl)</label>
+    >Show the action rim of an image on hover</label>
     <h3>Generation</h3>
     <label class="setting-label"><input type="checkbox" v-model="appConfigStore.flashGeneratedTab"
     >Flash the Generated tab when an image arrives while another tab is shown</label>
