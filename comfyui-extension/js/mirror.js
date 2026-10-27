@@ -190,6 +190,7 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
     const handlers = {
         MIRROR_SUBSCRIBE: payload => subscribe(payload.active),
         HIRES_FIX_SUBSCRIBE: () => hiresFixWatch.subscribe(),
+        LIVE_PROGRESS_SUBSCRIBE: () => progress.watch(),
         SET_WEBUI_PARAMS: payload => applyParams(payload.params),
         SET_INPUT_IMAGE: payload => setInputImage(payload.kind, payload.file),
         EDIT_REFERENCES: payload => editReferences(payload.edit),

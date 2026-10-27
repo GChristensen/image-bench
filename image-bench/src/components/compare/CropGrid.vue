@@ -55,6 +55,8 @@ const rootElement = ref(null);
 const gridElement = ref(null);
 const area = ref({width: 0, height: 0});
 const hoveredIndex = ref(-1);
+// The cell whose action rim a middle click toggled on, until the pointer leaves it
+const rimIndex = ref(-1);
 const panning = ref(false);
 
 const aspect = computed(() => cropAspect(props.region, props.images.map(image => props.sizes[image.imageUrl])));
@@ -149,7 +151,7 @@ let removePanListeners = null;
 let suppressClick = false;
 
 function onMouseDown(e) {
-  // Middle click opens the image on auxclick; no autoscroll
+  // Middle click toggles the action rim on auxclick; no autoscroll
   if (e.button === 1) {
     e.preventDefault();
     return;
@@ -210,10 +212,11 @@ function onCellEnter(e, image, index) {
 
 function onCellLeave(e) {
   hoveredIndex.value = -1;
+  rimIndex.value = -1;
   clearHoveredImageTarget(e.currentTarget);
 }
 
-// A click or a middle click opens the image in the overlay
+// A click opens the image in the overlay, a middle click toggles its action rim
 function onCellClick(index) {
   if (!suppressClick)
     emit("open", index);
@@ -221,7 +224,7 @@ function onCellClick(index) {
 
 function onCellAuxClick(e, index) {
   if (e.button === 1)
-    emit("open", index);
+    rimIndex.value = rimIndex.value === index ? -1 : index;
 }
 
 defineExpose({grid, nativeZoom, setZoom});
@@ -237,6 +240,7 @@ defineExpose({grid, nativeZoom, setZoom});
            @contextmenu="openImageMenu($event, image, ctx)">
         <img :src="image.imageUrl" :style="imageStyle" draggable="false" alt="">
         <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
+                       :rim-toggled="rimIndex === index"
                        @set-marking="marking => emit('setMarking', image, marking)"
                        @open="emit('open', index)"/>
       </div>

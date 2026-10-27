@@ -9,10 +9,10 @@ import AppIcon from "@/components/AppIcon.vue";
 import FileViewer from "@/components/projects/FileViewer.vue";
 import MediaPlayback from "@/components/MediaPlayback.vue";
 import {AUDIO_PLACEHOLDER, KIND_AUDIO, KIND_IMAGE, KIND_VIDEO, mediaKindOfName} from "@/media.js";
-import ImageActionButtons from "@/components/ImageActionButtons.vue";
 import {canPasteInfotext, copyInfotext, pasteInfotext} from "@/infotextClipboard.js";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
-import {canReuseParameters, reuseParameters, runImageAction, visibleActionGroups} from "@/imageActions.js";
+import {canReuseParameters, reuseParameters, rimActionGroups, runImageAction} from "@/imageActions.js";
+import ActionRim from "@/components/ActionRim.vue";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import {baseName, fetchTray, formatSavedAt, PROJECT_TRAYS, projectFileUrl, trayImageUrl, useProjectsStore} from "@/stores/projects.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
@@ -20,11 +20,10 @@ import {useCompareStore} from "@/stores/compare.js";
 import {HOST_LABELS, summarizeParams} from "@/projectParams.js";
 import {HOST, isComfy} from "@/host.js";
 import {openContextMenu} from "@/contextMenu.js";
-import {toastError} from "@/toast.js";
+import {toast, toastError} from "@/toast.js";
 import {imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {flashTrayTab} from "@/components/utils.js";
-import {animateColors} from "@/utils_html.js";
 import {startBlankWorkspace} from "@/workspace.js";
 
 const props = defineProps({
@@ -288,12 +287,63 @@ const actionContext = {
   handlers: {showParams: image => paramsImage.value = image}
 };
 
-const actionGroups = (image, side) => visibleActionGroups(image, actionContext, side)
-  .map(group => group.filter(action => CARD_ACTIONS.includes(action.id)))
-  .filter(group => group.length);
-
 function onImageAction(item, action, alt) {
   runImageAction(action, item.image, actionContext, alt);
+}
+
+// A middle click on a file or its corner button toggles its action rim, as on the image cards, until the pointer
+// leaves the file. Project files have no markings: the center closes the rim, and the arc below holds reuse all,
+// the final image and Add to compare (a copy of the file, addToCompare())
+const rimKey = ref(null);
+const rimSize = ref(0);
+
+const rimGroups = item => rimActionGroups(item.image, actionContext)
+  .map(group => ({...group, actions: group.actions.filter(action => CARD_ACTIONS.includes(action.id))}));
+
+const rimExtras = item => [
+  ...canReuseAll(item) ? [{id: "reuseAll", icon: "sliders", label: "Reuse the prompts and all parameters"}] : [],
+  {id: "final", icon: "star", label: "Set as the final image"},
+  ...item.kind === KIND_IMAGE ? [{id: "compare", icon: "compare", label: "Add to compare"}] : []
+];
+
+// The rim of the file viewer (FileViewer.vue), for the files of the grid
+const viewerRim = file => file?.item ? {groups: rimGroups(file.item), extras: rimExtras(file.item)} : null;
+
+function toggleRim(item, element) {
+  rimSize.value = element.closest(".file")?.querySelector(".file-image")?.clientWidth ?? 0;
+  rimKey.value = rimKey.value === item.key ? null : item.key;
+}
+
+function onItemAuxClick(e, item) {
+  if (e.button === 1)
+    toggleRim(item, e.currentTarget);
+}
+
+function onItemLeave(item) {
+  if (rimKey.value === item.key)
+    rimKey.value = null;
+}
+
+function onRimExtra(item, id) {
+  if (id === "reuseAll")
+    reuseAll(item);
+  else if (id === "final")
+    store.setFinal(project.value.path, item.final);
+  else if (id === "compare")
+    addToCompare(item.url, item.name);
+}
+
+// The viewer covers the tab bar, whose tabs would flash: a notice tells that the action was taken
+function onViewerAction(file, action, alt) {
+  onImageAction(file.item, action, alt);
+
+  if (action.id !== "params")
+    toast(alt && action.alt ? action.alt.label : action.label);
+}
+
+function onViewerExtra(file, id, label) {
+  onRimExtra(file.item, id);
+  toast(label);
 }
 
 // Prompts and all the parameters the host can set
@@ -356,11 +406,6 @@ async function refreshFiles() {
 const viewerIndex = ref(null);
 const viewerFiles = ref([]);
 
-// The viewer covers the tab bar, so its buttons flash as the tabs do to show that the action was taken
-function flashButton(e) {
-  animateColors(e.currentTarget, 0.7);
-}
-
 function viewFiles(list, index) {
   viewerFiles.value = list;
   viewerIndex.value = index;
@@ -416,7 +461,7 @@ function onItemMenu(e, item) {
       {icon: "layers", label: `Send to ${editorName.value} as a new layer`, run: () => sendToEditor(item.url, item.name, {button: 1})}
     ] : [],
     {separator: true},
-    {icon: "external", label: "Open in new window", hint: "Middle-click", run: () => window.open(item.url, "_blank")},
+    {icon: "external", label: "Open in new window", run: () => window.open(item.url, "_blank")},
     ...still ? [{icon: "params", label: "Copy infotext", run: () => copyInfotext(item.image)}] : [],
     ...canPasteInfotext(item.image, actionContext)
       ? [{icon: "paste", label: "Paste infotext…", run: () => pasteInfotext(item.image)}] : []
@@ -430,10 +475,6 @@ function onItemMenu(e, item) {
   openContextMenu(e, items);
 }
 
-function onItemAuxClick(e, item) {
-  if (e.button === 1)
-    window.open(item.url, "_blank");
-}
 
 async function copyText(text) {
   try {
@@ -630,30 +671,27 @@ const unitDetails = unit => [
           ><AppIcon name="refresh" :size="13"/></button>
       </div>
       <div v-if="gridItems.length" class="file-grid">
-        <div v-for="(item, index) in gridItems" :key="item.key" class="file" :title="item.title"
+        <div v-for="(item, index) in gridItems" :key="item.key" class="file" :class="{'rim-open': rimKey === item.key}"
+             :title="item.title"
              @click="openItem(index)" @mousedown.middle.prevent @auxclick="e => onItemAuxClick(e, item)"
-             @contextmenu.prevent="e => onItemMenu(e, item)">
+             @mouseleave="onItemLeave(item)" @contextmenu.prevent="e => onItemMenu(e, item)">
           <div class="file-image">
             <img :src="item.thumb" alt="" loading="lazy" draggable="false">
             <span v-if="item.kind !== KIND_IMAGE" class="file-kind" :title="item.kind === KIND_VIDEO ? 'Video' : 'Audio'"
               ><AppIcon :name="item.kind" :size="12"/></span>
             <span v-if="item.marking" class="file-marking">{{ item.marking }}</span>
-            <div class="file-actions left" @click.stop>
-              <ImageActionButtons :groups="actionGroups(item.image, 'left')" :show-alt="shiftKey"
-                                  @run="(action, alt) => onImageAction(item, action, alt)"/>
-            </div>
-            <div class="file-actions right" @click.stop>
-              <button v-if="canReuseAll(item)" class="ib sm" title="Reuse the prompts and all parameters"
-                      aria-label="Reuse the prompts and all parameters" @click="reuseAll(item)"
-                ><AppIcon name="sliders" :size="12"/></button>
-              <button class="ib sm" title="Set as the final image" aria-label="Set as the final image"
-                      @click="store.setFinal(project.path, item.final)"><AppIcon name="star" :size="12"/></button>
-            </div>
-            <div class="file-actions bottom" @click.stop>
-              <button v-if="item.kind === KIND_IMAGE" class="ib sm" title="Add to compare" aria-label="Add to compare"
-                      @click="addToCompare(item.url, item.name)"><AppIcon name="compare" :size="12"/></button>
-              <ImageActionButtons :groups="actionGroups(item.image, 'right')" :show-alt="shiftKey"
-                                  @run="(action, alt) => onImageAction(item, action, alt)"/>
+            <button type="button" class="rim-toggle" :class="{on: rimKey === item.key}"
+                    :aria-pressed="rimKey === item.key" aria-label="Show actions"
+                    :title="rimKey === item.key ? 'Hide actions' : 'Show actions (or middle-click)'"
+                    @click.stop="e => toggleRim(item, e.currentTarget)"><AppIcon name="rim" :size="18"/></button>
+            <!-- Its clicks stay here, so that they do not open the file -->
+            <div class="file-rim" @click.stop @auxclick.stop>
+              <Transition name="rim">
+                <ActionRim v-if="rimKey === item.key" :groups="rimGroups(item)" :size="rimSize" hub="close"
+                           :extras="rimExtras(item)" :show-alt="shiftKey"
+                           @run="(action, alt) => onImageAction(item, action, alt)"
+                           @extra="id => onRimExtra(item, id)" @close="rimKey = null"/>
+              </Transition>
             </div>
           </div>
           <span class="file-name">{{ baseName(item.name) }}</span>
@@ -663,28 +701,7 @@ const unitDetails = unit => [
     </section>
 
     <FileViewer v-if="viewerIndex !== null" v-model:index="viewerIndex" :files="viewerFiles" :paused="!!paramsImage"
-                @close="viewerIndex = null">
-      <!-- The buttons of the cards in one row: parameters | final | compare and send -->
-      <template #actions="{file}">
-        <template v-if="file?.item">
-          <ImageActionButtons :groups="actionGroups(file.item.image, 'left')" :show-alt="shiftKey" flash
-                              @run="(action, alt) => onImageAction(file.item, action, alt)"/>
-          <button v-if="canReuseAll(file.item)" class="ib sm viewer-button" title="Reuse the prompts and all parameters"
-                  aria-label="Reuse the prompts and all parameters" @click="flashButton($event); reuseAll(file.item)"
-            ><AppIcon name="sliders" :size="13"/></button>
-          <span v-if="file.item.image.parameters" class="viewer-sep"></span>
-          <button class="ib sm viewer-button" title="Set as the final image" aria-label="Set as the final image"
-                  @click="flashButton($event); store.setFinal(project.path, file.item.final)"
-            ><AppIcon name="star" :size="13"/></button>
-          <span v-if="file.item.kind === KIND_IMAGE" class="viewer-sep"></span>
-          <button v-if="file.item.kind === KIND_IMAGE" class="ib sm viewer-button" title="Add to compare" aria-label="Add to compare"
-                  @click="flashButton($event); addToCompare(file.item.url, file.item.name)"
-            ><AppIcon name="compare" :size="13"/></button>
-          <ImageActionButtons :groups="actionGroups(file.item.image, 'right')" :show-alt="shiftKey" flash
-                              @run="(action, alt) => onImageAction(file.item, action, alt)"/>
-        </template>
-      </template>
-    </FileViewer>
+                :rim="viewerRim" @run="onViewerAction" @extra="onViewerExtra" @close="viewerIndex = null"/>
     <ParametersOverlay v-if="paramsImage" :image="paramsImage"
                        @hide-overlay="paramsImage = null"/>
   </div>
@@ -1206,19 +1223,6 @@ h2 {
   gap: 10px;
 }
 
-.viewer-button {
-  background: rgba(17, 19, 23, 0.85);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: var(--ib-text);
-}
-
-.viewer-sep {
-  width: 1px;
-  height: 18px;
-  margin: 0 4px;
-  background: rgba(255, 255, 255, 0.25);
-}
-
 .file-image {
   position: relative;
 }
@@ -1313,35 +1317,58 @@ h2 {
   line-height: 18px;
 }
 
-.file-actions {
+/* Rim toggle at the top right, on hover. No background: white with a shadow, like on the image cards */
+.rim-toggle {
   position: absolute;
-  display: none;
-  gap: 3px;
-}
-
-.file-actions.left {
-  top: 4px;
-  left: 4px;
-}
-
-.file-actions.right {
-  top: 4px;
-  right: 4px;
-}
-
-.file-actions.bottom {
-  bottom: 6px;
-  right: 4px;
-}
-
-.file:hover .file-actions {
+  top: 1px;
+  right: 1px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: normal;
+  cursor: pointer;
+  opacity: 0;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  transition: opacity 0.15s, transform 0.15s;
 }
 
-.file-actions.right .ib,
-.file-actions.bottom > .ib {
-  background: rgba(17, 19, 23, 0.85);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: var(--ib-text);
+.rim-toggle:hover {
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.rim-toggle.on {
+  color: var(--ib-accent);
+}
+
+.file:hover .rim-toggle {
+  opacity: 1;
+}
+
+/* The action rim of a small file reaches over its neighbors */
+.file:hover {
+  z-index: 2;
+}
+
+.file.rim-open .file-marking {
+  display: none;
+}
+
+.file-rim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.rim-enter-from,
+.rim-leave-to {
+  opacity: 0;
+  transform: scale(0.92);
 }
 </style>

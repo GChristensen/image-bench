@@ -686,7 +686,7 @@ watch(generating, isGenerating => {
     stopping.value = false;
 });
 
-// Ctrl+click or middle click on Stop: stop, then generate again once the host is idle
+// Ctrl+click, Shift+click or middle click on Stop: stop, then generate again once the host is idle
 const ctrlDown = useCtrlKey();
 const restarting = ref(false);
 
@@ -842,7 +842,7 @@ function onGenerateButton(e) {
 
   if (!generating.value)
     generateChecked(onGenerate, e);
-  else if (e.ctrlKey)
+  else if (e.ctrlKey || e.shiftKey)
     onRestart();
   else
     onInterrupt();
@@ -958,7 +958,7 @@ const promptTextarea = name => (name === "negativePrompt" ? negativeField : prom
 /**
  * Insert a snippet at the caret of the target prompt; on click its other part is added to the other prompt
  * @param {Object} snippet - {prompt, negative}
- * @param {'click'|'middle'|'wrap'} mode
+ * @param {'click'|'middle'} mode - middle (a middle click or Shift+click): only the part of the target prompt
  */
 async function onSnippetInsert(snippet, mode) {
   if (historyEntry.value) {
@@ -973,7 +973,7 @@ async function onSnippetInsert(snippet, mode) {
   const textarea = promptTextarea(target);
 
   if (own && textarea && !textarea.disabled)
-    insertIntoTextarea(textarea, own, mode === "wrap");
+    insertIntoTextarea(textarea, own);
 
   if (mode !== "middle" && rest && (other === "prompt" || has("negativePrompt")))
     setParam(other, appendToPrompt(form[other] ?? "", rest));
@@ -1487,7 +1487,7 @@ const gridStyle = computed(() => ({
     <div class="toolbar">
       <RunControl ref="runControl" label="Generate" :running="generating"
                   :disabled="!generating && (!connected || sdWebUI.restoringParams)"
-                  :title="generating ? 'Stop (Ctrl+Enter); Ctrl+click or middle click: stop and generate again (Ctrl+Shift+Enter)'
+                  :title="generating ? 'Stop (Ctrl+Enter)\nMiddle, Shift or Ctrl+click: stop and generate again (Ctrl+Shift+Enter)'
                     : projects.hasCurrent ? `Generate (project ${projects.current.name}) (Ctrl+Enter)` : 'Generate (Ctrl+Enter)'"
                   :alt="{label: 'Restart', icon: 'refresh'}" :alt-shown="ctrlDown || restarting"
                   :button-class="{joined: projects.hasCurrent}"
@@ -1497,10 +1497,13 @@ const gridStyle = computed(() => ({
         <ProjectCube v-if="projects.hasCurrent" ref="projectCube"/>
         <button class="btn outline" :disabled="!generating" title="Skip the image being generated (Ctrl+Backspace)"
                 @click="webUI.skipGeneration()"><AppIcon name="skip" :size="13"/>Skip</button>
+        <!-- In the group, so that the progress of the run follows it and nothing moves when a run starts -->
+        <template #after>
+          <button v-if="has('variations')" class="btn outline" :disabled="generating || !connected"
+                  title="Generate variations of the current seed in the Generated tab; the variation seed and strength are set for the batch and cleared afterwards automatically"
+                  @click="e => generateChecked(onGenerateVariations, e)"><AppIcon name="shuffle" :size="14"/>Variations…</button>
+        </template>
       </RunControl>
-      <button v-if="has('variations')" class="btn outline" :disabled="generating || !connected"
-              title="Generate variations of the current seed in the Generated tab; the variation seed and strength are set for the batch and cleared afterwards automatically"
-              @click="e => generateChecked(onGenerateVariations, e)"><AppIcon name="shuffle" :size="14"/>Variations…</button>
 
       <!-- The free space of the toolbar, with the status centered in it -->
       <div class="status-slot">

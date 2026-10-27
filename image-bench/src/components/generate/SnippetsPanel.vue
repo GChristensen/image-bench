@@ -2,7 +2,8 @@
 /**
  * Floating, non-modal panel of the Generate tab with the snippets of the Library. Clicks do not take the focus,
  * so a snippet goes to the caret of the prompt last focused. Click: insert (the other part goes to the other
- * prompt), middle-click: only this prompt, Shift+click: wrap the selection. Dragged by its header, resized
+ * prompt), middle-click or Shift+click: only this prompt. A snippet with a placeholder wraps the selected prompt
+ * text. Dragged by its header, resized
  * by its corner; the position and size are kept.
  */
 import {computed, onBeforeUnmount, onMounted, reactive, ref} from "vue";
@@ -125,7 +126,7 @@ function onSelect(node, e) {
   selected.value = node.key;
 
   if (!node.children)
-    emit("insert", node.item, e.shiftKey ? "wrap" : "click");
+    emit("insert", node.item, e.shiftKey ? "middle" : "click");
 }
 
 function onMiddle(node) {
@@ -164,7 +165,7 @@ const snippetTitle = item => [item.prompt, item.negative && `Negative: ${item.ne
         </template>
       </TreeView>
     </div>
-    <div class="hints">Click: insert · Middle: this prompt only · Shift: wrap</div>
+    <div class="hints">Click: insert · Middle or Shift: this prompt only · {} wraps the selection</div>
     <footer>
       <button class="btn outline small" title="Make a snippet of the selected text of the prompt"
               @mousedown.prevent @click="emit('from-selection', store.folderFor(selected))"

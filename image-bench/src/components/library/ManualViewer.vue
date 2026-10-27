@@ -5,6 +5,7 @@
 import {nextTick, onActivated, onMounted, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import PluginCard from "@/components/library/PluginCard.vue";
+import ShortcutTables from "@/components/ShortcutTables.vue";
 import {HOST_NAME, isComfy, isWebUI} from "@/host.js";
 import {ADDON_URL} from "@/hostRestart.js";
 import {EMBEDDED} from "@/hostWindow.js";
@@ -134,10 +135,6 @@ const hostOrigin = location.origin;
         to see the progress; a <b>middle click</b> on a ringed tab stops the run from any tab.
       </p>
       <p>
-        Rest the pointer on a tab for a moment to see a card with what the tab is for, its fastest keys and a link
-        to its chapter of this manual. The card never shows while a button is held or an image is dragged.
-      </p>
-      <p>
         Image Bench has plugins for Photoshop, Krita and GIMP. They send images from the editor to {{ HOST_NAME }}
         and open any image from Image Bench in the editor as a new document or a layer (see
         <a href="#" @click.prevent="scrollTo('editors')">Editors</a>).
@@ -150,8 +147,8 @@ const hostOrigin = location.origin;
         The URL <a :href="`${hostOrigin}/image-bench/app`" target="_blank">{{ hostOrigin }}/image-bench/app</a> (bookmark
         it) opens Image Bench in a browser tab and loads {{ HOST_NAME }} in the background. The
         <AppIcon name="appWindow" :size="13" class="inline-icon"/> icon shows the {{ HOST_NAME }} page. When that
-        page reloads or {{ HOST_NAME }} restarts, Image Bench shows <span class="kbd warn"><AppIcon name="alert" :size="12" class="inline-icon"/>
-        Connecting to {{ HOST_NAME }}</span> until the page is back, then carries on.
+        page reloads or {{ HOST_NAME }} restarts, a small amber <span class="kbd warn">● {{ HOST_NAME }}</span> pill with a
+        pulsing dot shows in the tab bar until the page is back, and Image Bench then carries on.
       </p>
       <p>
         The <b>🔬 Image Bench</b> button {{ isWebUI ? "in the header of the WebUI page" : "in the ComfyUI toolbar" }}
@@ -176,6 +173,19 @@ const hostOrigin = location.origin;
           </p>
         </div>
       </div>
+    </section>
+
+    <section id="manual-input">
+      <h2>Mouse and keys</h2>
+      <p>
+        The middle button and Shift follow one rule, chosen by what is under the pointer. On a <b>button</b>, a middle
+        click or Shift+click runs the alternative of its action (send as a new layer, stop and generate again). On an
+        <b>image</b>, a click views it and a middle click shows its action rim. On a <b>tab</b> or a <b>badge</b>, a
+        middle click acts on it without going there: it stops the run of the tab, opens the console from the
+        {{ HOST_NAME }} tab or removes a marking. Press <span class="kbd">?</span> anywhere for this sheet; over an
+        image it starts at the image actions.
+      </p>
+      <ShortcutTables/>
     </section>
 
     <section id="manual-workflow">
@@ -236,7 +246,7 @@ const hostOrigin = location.origin;
       <p>
         With <b>Show the action rim of an image on hover</b> turned on in the Settings tab, hovering alone opens
         the ring. Holding <span class="kbd">Ctrl</span> hides it too, with the other controls, and a middle click
-        opens the image in a new tab.
+        hides it until the pointer leaves the card.
       </p>
       <p>
         The button in the middle of the ring shows the marking of the image; click it to switch the ring to the
@@ -302,8 +312,7 @@ const hostOrigin = location.origin;
         full size and fit to screen, the <AppIcon name="params" :size="13" class="inline-icon"/> <b>Show
         generation parameters</b> button at the top left shows the parameters over the image
         (a second click hides them; they stay shown while paging), and <span class="kbd">Esc</span> closes the view.
-        <b>Open in new window</b> of the image menu opens it in a new browser tab (with the rim on hover, so does a
-        middle click on the image).
+        <b>Open in new window</b> of the image menu opens it in a new browser tab.
       </p>
       <p>
         Images can be dragged into the input, reference and ControlNet panes.
@@ -341,7 +350,8 @@ const hostOrigin = location.origin;
           snippets of the <a href="#" @click.prevent="scrollTo('library')">Library</a>. Clicking a snippet inserts it
           into the prompt you last clicked in, and inserts its negative part (marked
           <span class="snippet-badge negative">−</span> when there is one) into the negative prompt. Middle-click
-          inserts only the part for that prompt; Shift+click wraps the selection. <b>From selection</b> saves the
+          or Shift+click inserts only the part for that prompt. A snippet with a placeholder wraps the selected text.
+          <b>From selection</b> saves the
           selected text as a new snippet.</li>
         <li><b>Checkpoint</b>: typing in the open dropdown (or on the closed one) narrows the list down to the
           names containing every typed word; ↑/↓ and Enter pick one. The VAE / Text Encoder and workflow dropdowns
@@ -414,8 +424,8 @@ const hostOrigin = location.origin;
           <AppIcon name="infinity" :size="13" class="inline-icon"/>, generating until you stop it), it runs a batch
           whose images arrive in the Generated tab. The count button sets the number chosen in <b>Settings › Images
           set by the count button</b>, and clicking <b>×</b> resets the count to 1. <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
-          skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click or a middle click
-          on Stop stops the generation and starts a new one a second later. The keys work in every tab, also
+          skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click, Shift+click or a
+          middle click on Stop stops the generation and starts a new one a second later. The keys work in every tab, also
           in text fields: <span class="kbd">Ctrl+Enter</span> generates or stops,
           <span class="kbd">Ctrl+Shift+Enter</span> restarts and <span class="kbd">Ctrl+Backspace</span>
           skips.<template v-if="isWebUI"> A single
@@ -678,11 +688,10 @@ const hostOrigin = location.origin;
           their native resolution, and <AppIcon name="photoshop" :size="13" class="inline-icon"/> opens that image in
           the editor as a new document.</li>
         <li><b>Image actions</b>: images and crops show only their number, comment and marking. Hold
-          <span class="kbd">Ctrl</span> over one to show its action rim (parameters, ControlNet, editor, the trays,
-          a comment, Remove from compare at the bottom, and the markings in the middle), right-click it for its
-          actions, or use the keys. Middle-click or Shift+click an image to view it large (in Crops, click or
-          middle-click it).</li>
-        <li><b>Clear</b> removes all images; its arrow or a middle click removes only the unmarked or marked
+          <span class="kbd">Ctrl</span> over one or middle-click it to show its action rim (parameters, ControlNet,
+          editor, the trays, a comment, Remove from compare at the bottom, and the markings in the middle),
+          right-click it for its actions, or use the keys. Click an image without dragging to view it large.</li>
+        <li><b>Clear</b> removes all images; its arrow, a middle click or Shift+click removes only the unmarked or marked
           ones, or those of one marking. The files stay on disk, and the notice has <b>Undo</b>.</li>
       </ul>
     </section>
@@ -812,9 +821,9 @@ const hostOrigin = location.origin;
       <p>
         Snippets are pieces of prompt text with an optional negative part, organised in folders. You insert them
         from the Snippets panel of the Generate tab. <code>{}</code> or <code>{prompt}</code> (as in WebUI styles) in a
-        snippet stands for the selected prompt text, which Shift+click wraps. For example, with the snippet
+        snippet stands for the selected prompt text, which the snippet wraps. For example, with the snippet
         <code>watercolor painting of {}, soft pastel colors</code>, selecting <code>a cat on a windowsill</code> in
-        the prompt and Shift+clicking the snippet turns the selection into <code>watercolor painting of a cat on a
+        the prompt and clicking the snippet turns the selection into <code>watercolor painting of a cat on a
         windowsill, soft pastel colors</code>. Edit a snippet in the right pane; changes
         are saved as you type. Drag snippets to reorder them or to move them into a folder.
       </p>
@@ -908,8 +917,12 @@ const hostOrigin = location.origin;
         <li>The tabs under the parameters, <b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b>, <b>Upscaled</b> and <b>Files</b>,
           contain the images of the trays as of the last save, and the image files of the project folder.
           Click an image to view it
-          (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click to open it in
-          a new tab, or right-click for the menu (final image, Compare, editor, and deleting a file of the project folder).</li>
+          (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click it or click
+          <AppIcon name="rim" :size="13" class="inline-icon"/> at its top right to show its action rim (reuse all, the
+          final image and Add to compare in the arc below), or right-click for the menu (also Open in new window and
+          deleting a file of the project folder). In the full view, a middle press shows the rim at the pointer, as in
+          the image view, and the <AppIcon name="rim" :size="13" class="inline-icon"/> button at the lower right shows
+          it in the middle.</li>
       </ul>
     </section>
 
@@ -925,7 +938,8 @@ const hostOrigin = location.origin;
           button shows.</li>
         <li><b>Show the action rim of an image on hover</b>: opens the action rim of an image
           when the pointer is over it, as described in <a href="#" @click.prevent="scrollTo('images')">Working with images</a>.
-          Off by default; the rim of a card then shows on a middle click or through its toggle button.</li>
+          Off by default; the rim of a card then shows on a middle click or through its toggle button. With it on, a
+          middle click hides the open rim.</li>
         <li><b>Open Image Bench in a popup window instead of a browser tab</b>: the 🔬 button and the
           <code>/image-bench/app</code> link open Image Bench in a popup window (without bookmarks and extension
           buttons) instead of a regular browser tab. The change takes effect the next time Image Bench is opened.</li>
@@ -1492,10 +1506,10 @@ const hostOrigin = location.origin;
           image. Hold over the Generate tab's result or a Compare image to show its action rim</td></tr>
         <tr><td>Middle click</td><td>In the image view, open the action rim at the pointer. Release the button on a
           sector to run it; the button in the center closes the image view. On an image card, show or hide its
-          action rim (with the rim on hover: open the image in a new tab). On a button, perform its alternative action (place as a new layer in the editor). On a marking,
+          action rim (with the rim on hover: hide it), as on a Compare image and a project file. On a button, perform its alternative action (place as a new layer in the editor). On a marking,
           remove it</td></tr>
-        <tr><td><span class="kbd">Shift</span>+click</td><td>On a button of an image, perform its alternative
-          action</td></tr>
+        <tr><td><span class="kbd">Shift</span>+click</td><td>On a button, perform its alternative action, as a
+          middle click does</td></tr>
         <tr><td>Right click</td><td>Open the menu of an image</td></tr>
         <tr><td>Right drag down</td><td>Close the image view: the image follows the pointer, released far enough
           down it closes</td></tr>

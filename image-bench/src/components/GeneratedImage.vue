@@ -132,7 +132,8 @@
   // The card is dragged by its image, so that the rim and the markings do not start drags
   const dragging = ref(false);
   // The rim shows while its toggle is on (the button or a middle click). With the rimOnHover setting it opens on
-  // hover instead. Ctrl held over the card hides all chrome, so that a click on the bare image opens the overlay
+  // hover instead, and the toggle (a middle click) hides it until the pointer leaves the card.
+  // Ctrl held over the card hides all chrome, so that a click on the bare image opens the overlay
   const config = useAppConfigStore();
   const hoverMode = computed(() => config.rimOnHover);
   const ctrlDown = useCtrlKey();
@@ -155,7 +156,7 @@
   const rimSize = ref(0);
   let rimTimer = 0;
 
-  const rimShown = computed(() => props.rim && !bare.value && (hoverMode.value ? rimOpen.value
+  const rimShown = computed(() => props.rim && !bare.value && (hoverMode.value ? rimOpen.value && !rimToggled.value
     : hovered.value && !dragging.value && rimToggled.value));
 
   watch(rimShown, shown => {
@@ -241,9 +242,9 @@
     }
   }
 
-  // Middle click toggles the action rim as its button does; it opens the image in a new window where the card has
-  // no rim toggle (rim on hover, no rim)
-  const middleTogglesRim = computed(() => props.rim && !hoverMode.value);
+  // Middle click toggles the action rim as its button does (with rimOnHover it hides the open rim); it opens the
+  // image in a new window where the card has no rim (the ControlNet sweep)
+  const middleTogglesRim = computed(() => props.rim);
 
   function onImageAuxClick(e) {
     if (e.button !== 1)

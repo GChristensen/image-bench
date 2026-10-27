@@ -6,7 +6,7 @@
  * Rows may be dragged onto folders (inside) or other rows (before), as canDrop() allows; the move is emitted.
  * With keepFocus, clicks do not take the focus (the Snippets panel inserts at the caret of a prompt).
  */
-import {computed, ref, watch} from "vue";
+import {computed, nextTick, ref, watch} from "vue";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
 
 const INDENT = 16;
@@ -81,13 +81,23 @@ function setOpen(node, open) {
 
 const toggle = node => setOpen(node, !isOpen(node));
 
+const treeElement = ref(null);
+
 /**
  * Unfold the folders above a node, so that it is shown
  * @param {string} key
+ * @param {{scroll?: boolean}} options - scroll: also scroll its row into view
  */
-function reveal(key) {
+async function reveal(key, {scroll = false} = {}) {
   const path = findPath(props.nodes, key);
   path?.slice(0, -1).forEach(node => setOpen(node, true));
+
+  if (!path || !scroll)
+    return;
+
+  await nextTick();
+  const index = rows.value.findIndex(row => row.node.key === key);
+  treeElement.value?.querySelectorAll(":scope > .row")[index]?.scrollIntoView({block: "nearest"});
 }
 
 function findPath(nodes, key) {
@@ -252,7 +262,7 @@ defineExpose({reveal, setOpen});
 </script>
 
 <template>
-  <div class="tree" role="tree" :class="{'drop-root': dropTarget && dropTarget.key === null}"
+  <div ref="treeElement" class="tree" role="tree" :class="{'drop-root': dropTarget && dropTarget.key === null}"
        @dragover="e => onDragOver(null, e)" @drop="e => onDrop(null, e)" @dragleave.self="dropTarget = null">
     <div v-for="row in rows" :key="row.node.key" class="row" role="treeitem" tabindex="-1"
          :class="[{folder: !!row.node.children, selected: selectedKey === row.node.key}, dropClass(row)]"

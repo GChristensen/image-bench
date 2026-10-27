@@ -5,12 +5,13 @@ import ComboInput from '@/dialogs/ComboInput.vue';
 import FilterChecklist from '@/components/FilterChecklist.vue';
 import ModelInfoContent from '@/dialogs/ModelInfoContent.vue';
 import HostErrorsContent from '@/dialogs/HostErrorsContent.vue';
+import ShortcutTables from '@/components/ShortcutTables.vue';
 
 const props = defineProps({
   entry: {
     type: Object,
     required: true,
-    validator: (value) => ['alert', 'confirm', 'prompt', 'checklist', 'modelInfo', 'hostErrors'].includes(value.kind)
+    validator: (value) => ['alert', 'confirm', 'prompt', 'checklist', 'modelInfo', 'hostErrors', 'shortcuts'].includes(value.kind)
   }
 });
 
@@ -71,7 +72,7 @@ function confirm() {
   else if (props.entry.kind === 'modelInfo') {
     emit('close', 'open');
   }
-  else if (props.entry.kind === 'hostErrors') {
+  else if (props.entry.kind === 'hostErrors' || props.entry.kind === 'shortcuts') {
     emit('close', null);
   }
   else if (isChecklist.value) {
@@ -143,7 +144,7 @@ defineExpose({onEnterKey, onEscapeKey, keepsKey});
 <template>
   <div class="dialog-container">
     <div class="dialog-backdrop" @click="cancel"></div>
-    <div class="dialog-window" :class="{wide: isPrompt && options.multiline}" role="dialog" aria-modal="true" :aria-label="title || entry.message">
+    <div class="dialog-window" :class="{wide: isPrompt && options.multiline, sheet: entry.kind === 'shortcuts'}" role="dialog" aria-modal="true" :aria-label="title || entry.message">
       <div v-if="title" class="dialog-header">
         <h3>{{ title }}</h3>
       </div>
@@ -152,6 +153,7 @@ defineExpose({onEnterKey, onEscapeKey, keepsKey});
         <ModelInfoContent v-else-if="entry.kind === 'modelInfo'" :info="options.info"/>
         <HostErrorsContent v-else-if="entry.kind === 'hostErrors'" :error="options.error" :problems="options.problems"
                            @show="id => emit('close', id)"/>
+        <ShortcutTables v-else-if="entry.kind === 'shortcuts'" :section="options.section"/>
         <p v-else-if="entry.message" class="dialog-message">{{ entry.message }}</p>
         <div v-if="isPrompt && options.choices" class="dialog-choices" role="radiogroup">
           <button v-for="item in options.choices.items" :key="item.value" type="button" role="radio"
@@ -192,7 +194,7 @@ defineExpose({onEnterKey, onEscapeKey, keepsKey});
       <div class="dialog-footer">
         <button v-for="action in options.actions || []" :key="action.id" class="btn outline"
                 @click="emit('close', action.id)">{{ action.label }}</button>
-        <button v-if="entry.kind !== 'alert' && entry.kind !== 'hostErrors'" class="btn outline" @click="cancel">{{ options.cancelText || 'Cancel' }}</button>
+        <button v-if="!['alert', 'hostErrors', 'shortcuts'].includes(entry.kind)" class="btn outline" @click="cancel">{{ options.cancelText || 'Cancel' }}</button>
         <button ref="okRef" class="btn" :class="options.danger ? 'stop' : 'primary'"
                 :disabled="isChecklist && !checked.length" @click="confirm">{{ okText }}</button>
       </div>
@@ -228,6 +230,17 @@ defineExpose({onEnterKey, onEscapeKey, keepsKey});
 
 .dialog-window.wide {
   width: min(600px, calc(100vw - 32px));
+}
+
+/* The cheat sheet: wide, its body scrolls */
+.dialog-window.sheet {
+  width: min(900px, calc(100vw - 32px));
+  max-width: min(900px, calc(100vw - 32px));
+}
+
+.dialog-window.sheet .dialog-body {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
 }
 
 .dialog-header {

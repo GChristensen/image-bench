@@ -56,6 +56,11 @@ publish-comfy: release-comfy
 plugins-release:
     python tools/plugins_release.py
 
+# Check that every file of the Vue app with a middle click or Shift handler is named in src/gestures.js or
+# src/shortcuts.js, the registries of the cheat sheet and the manual
+check-gestures:
+    python tools/check_gestures.py
+
 _require name value:
     @{{ if value == "" { error(name + " is not set: copy .env.example to .env and set it") } else { "echo " + name + "=" + value } }}
 

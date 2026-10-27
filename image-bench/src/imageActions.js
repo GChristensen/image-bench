@@ -29,7 +29,8 @@ import {KIND_AUDIO, KIND_VIDEO, isStill, mediaKind} from "@/media.js";
  *   filterMarking(marking), removeMarking(image), activeMarkingFilter(), deleteImage(image)
  *
  * An action with `alt` has an alternative that runs on a middle click, a Shift+click or Shift+key.
- * visible(image, ctx) must cover both hosts.
+ * visible(image, ctx) must cover both hosts. An action of one host only has `available` false on the other, so that
+ * the cheat sheet (ShortcutTables.vue) leaves it out.
  * An action with `rim: false` is left out of the action rim (it stays in the context menu and on its key).
  * An action with `bulk(images, ctx)` is also a button of the toolbar of the checked images (bulkActions()), labelled
  * `bulkLabel`; it gets only the checked images its visible() accepts.
@@ -242,7 +243,7 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "textEncoders", side: "left", group: 1, icon: "puzzle", label: "Generate with text encoders", key: "E",
-    rim: false,
+    rim: false, available: isWebUI,
     visible: (image, ctx) => isWebUI && ctx.isTray && !image.img2img && hasParameters(image)
       && mediaKind(image) !== KIND_AUDIO,
     run: image => generateVaryingTextEncoders(image)
@@ -261,6 +262,7 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "img2img", side: "right", group: 2, icon: "imageIn", label: "Send to img2img", key: "M",
+    available: isWebUI,
     visible: image => isWebUI && isStill(image),
     run: image => sendToImg2Img(image)
   },
@@ -271,11 +273,13 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "controlnet", side: "right", group: 2, icon: "controlnet", label: "Send to ControlNet", key: "N",
+    get available() { return hostHas("images", "sendToControlNet"); },
     visible: image => hostHas("images", "sendToControlNet") && isStill(image),
     run: image => sendToControlNet(image)
   },
   {
     id: "extend", side: "right", group: 2, icon: "video", label: "Extend video", key: "X",
+    available: isComfy,
     visible: image => isComfy && mediaKind(image) === KIND_VIDEO,
     run: image => extendVideo(image)
   },
@@ -393,7 +397,7 @@ export function imageActionHint(action, alt = false) {
   let result = `${action.label} · ${action.key}`;
 
   if (action.alt)
-    result += ` · Middle: ${action.alt.label[0].toLowerCase()}${action.alt.label.slice(1)}`;
+    result += ` · Middle/Shift: ${action.alt.label[0].toLowerCase()}${action.alt.label.slice(1)}`;
 
   return result;
 }

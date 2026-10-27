@@ -1,12 +1,13 @@
 import {dialogStack} from "@/dialogs/useDialog.js";
 import {isContextMenuOpen} from "@/contextMenu.js";
+import {findKey, matchesKey} from "@/shortcuts.js";
 
 /**
  * Generation keys in any tab, text inputs included (so Ctrl+Backspace does not delete a word there): Ctrl+Enter
  * generates or stops, Ctrl+Shift+Enter stops and generates again, Ctrl+Backspace skips the image being generated.
  * Listened in the capture phase, before the handlers of the inputs. The Generate tab (kept alive) is the controller
  * {toggle(), restart(), skip()}; until it has been shown the keys do nothing. Not installed in the host iframe,
- * where WebUI and ComfyUI have their own Ctrl+Enter.
+ * where WebUI and ComfyUI have their own Ctrl+Enter. The keys are the entries of shortcuts.js.
  */
 let controller = null;
 let installed = false;
@@ -20,26 +21,22 @@ export function clearGenerationController(value) {
     controller = null;
 }
 
+const KEYS = [
+  [findKey("generate"), () => controller.toggle()],
+  [findKey("restart"), () => controller.restart()],
+  [findKey("skip"), () => controller.skip()]
+];
+
 function onKeydown(e) {
-  const enter = e.code === "Enter" || e.code === "NumpadEnter";
+  const run = KEYS.find(([entry]) => matchesKey(entry, e))?.[1];
 
-  if (!enter && e.code !== "Backspace" || !(e.ctrlKey || e.metaKey) || e.altKey)
-    return;
-
-  if (!controller || dialogStack.value.length || isContextMenuOpen())
+  if (!run || !controller || dialogStack.value.length || isContextMenuOpen())
     return;
 
   e.preventDefault();
 
-  if (e.repeat)
-    return;
-
-  if (!enter)
-    controller.skip();
-  else if (e.shiftKey)
-    controller.restart();
-  else
-    controller.toggle();
+  if (!e.repeat)
+    run();
 }
 
 /**

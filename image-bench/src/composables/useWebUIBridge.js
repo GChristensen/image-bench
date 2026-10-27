@@ -103,6 +103,11 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'HIRES_FIX_SUBSCRIBE' });
   };
 
+  // Have the host report the live progress while the popup is open, in any tab (LIVE_PROGRESS messages)
+  const subscribeLiveProgress = () => {
+    sendWebUIMessage({ type: 'LIVE_PROGRESS_SUBSCRIBE' });
+  };
+
   // Refresh the checkpoint and LoRA lists of the host UI
   const refreshModels = () => {
     sendWebUIMessage({ type: 'REFRESH_MODELS' });
@@ -161,6 +166,7 @@ export function useWebUIBridge() {
     setEditorTarget,
     subscribeMirror,
     subscribeHiresFix,
+    subscribeLiveProgress,
     subscribeControlNet,
     setControlNetParams,
     controlNetAction,

@@ -28,7 +28,7 @@ const props = defineProps({
   },
   chapterText: {
     type: String,
-    default: "How it works"
+    default: "More in the manual"
   }
 });
 
@@ -48,7 +48,7 @@ function openChapter() {
     <ul v-if="ways.length" class="empty-ways">
       <li v-for="way in ways" :key="way.text">{{ way.text }}<span v-if="way.key" class="key">{{ way.key }}</span></li>
     </ul>
-    <a v-if="chapter" href="#" class="empty-link" @click.prevent="openChapter">{{ chapterText }} →</a>
+    <a v-if="chapter" href="#" class="empty-link" @click.prevent="openChapter">{{ chapterText }}</a>
   </div>
 </template>
 

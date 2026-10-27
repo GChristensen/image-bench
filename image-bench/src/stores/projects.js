@@ -780,14 +780,19 @@ export const useProjectsStore = defineStore("projects", () => {
    * Select a project for the Projects tab (the router is switched by the caller)
    * @param {string|null} path - null keeps the selection
    */
+  // Incremented by show(): the tree scrolls to the selection (ProjectsBrowser.vue)
+  const revealRequest = ref(0);
+
   async function show(path = null) {
     if (path !== null)
       await select(path);
+
+    revealRequest.value++;
   }
 
   return {
     tree, treeLoading, treeError, current, selectedPath, selectedFolder, project, projectError, busy, fileVersion,
-    recent, hasCurrent, unsaved, selectedKey, folderShown, targetFolder,
+    recent, hasCurrent, unsaved, selectedKey, folderShown, targetFolder, revealRequest,
     init, loadTree, loadCurrent, loadProject, select, selectFolder, findNode, show,
     save, saveInto, saveAs, open, close,
     createProject, createFolder, rename, move, remove, reveal,

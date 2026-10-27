@@ -59,6 +59,8 @@ const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
 const rootElement = ref(null);
 const hovered = ref(false);
+// A middle click toggles the action rim, as on the image cards
+const rimToggled = ref(false);
 // Side of this item where a dragged item would be inserted
 const dropSide = ref(null);
 
@@ -89,7 +91,13 @@ function onMouseEnter() {
 
 function onMouseLeave() {
   hovered.value = false;
+  rimToggled.value = false;
   clearHoveredImageTarget(rootElement.value);
+}
+
+function onAuxClick(e) {
+  if (e.button === 1)
+    rimToggled.value = !rimToggled.value;
 }
 
 function onGripDragStart(e) {
@@ -135,7 +143,7 @@ function onDrop(e) {
 <template>
   <div ref="rootElement" class="compare-item" :class="[direction, dropSide && 'drop-' + dropSide, {selecting}]"
        :style="{aspectRatio: `${size.w} / ${size.h}`}" :data-index="index"
-       @mouseenter="onMouseEnter" @mouseleave="onMouseLeave"
+       @mouseenter="onMouseEnter" @mouseleave="onMouseLeave" @auxclick="onAuxClick"
        @contextmenu="openImageMenu($event, image, ctx)"
        @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
     <div class="compare-stage" :style="stageStyle">
@@ -147,7 +155,7 @@ function onDrop(e) {
       </div>
     </div>
 
-    <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hovered"
+    <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hovered" :rim-toggled="rimToggled"
                    @set-marking="marking => emit('setMarking', marking)"
                    @open="emit('open')">
       <template #lead>

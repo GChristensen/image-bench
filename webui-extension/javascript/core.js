@@ -321,6 +321,8 @@ async function onMessage(msg) {
         mirror.subscribe(payload.active)
     else if (payload.type === "HIRES_FIX_SUBSCRIBE")
         hiresFixWatch.subscribe()
+    else if (payload.type === "LIVE_PROGRESS_SUBSCRIBE")
+        mirror.watchProgress()
     else if (payload.type === "SET_WEBUI_PARAMS")
         await mirror.applyParams(payload.params)
     else if (payload.type === "REUSE_SEED")

@@ -50,24 +50,24 @@
   // How images get into an empty view
   const EMPTY_STATES = {
     [KIND_GENERATED]: {icon: "images", title: "No generated images yet", chapter: "generated", ways: [
-      {text: "Generate in the Generate tab", key: "Ctrl+Enter"},
-      {text: `Images ${HOST_NAME} generates while Image Bench is open arrive here too`}
+      {text: "Start a generation from the Generate tab", key: "Ctrl+Enter"},
+      {text: `Images that ${HOST_NAME} generates while Image Bench is open also appear here`}
     ]},
     [KIND_IMAGE_TRAY]: {icon: "palette", title: "The image tray is empty", chapter: "trays", ways: [
       {text: "Drag image cards onto the Image tray tab"},
-      {text: "Hover a card and press", key: keyOf("imageTray")},
+      {text: "Add the card under the pointer", key: keyOf("imageTray")},
       {text: "Use the tray sector of a card's action rim"},
-      {text: "Import images or a tray archive (.png, .zip) with the upload button"}
+      {text: "Import PNG images or a tray .zip with the upload button"}
     ]},
     [KIND_CONCEPT_TRAY]: {icon: "concept", title: "The concept tray is empty", chapter: "trays", ways: [
       {text: "Drag image cards onto the Concept tray tab"},
-      {text: "Hover a card and press", key: keyOf("conceptTray")},
+      {text: "Add the card under the pointer", key: keyOf("conceptTray")},
       {text: "Use the tray sector of a card's action rim"},
-      {text: "Import images or a tray archive (.png, .zip) with the upload button"}
+      {text: "Import PNG images or a tray .zip with the upload button"}
     ]},
     [KIND_UPSCALED]: {icon: "upscale", title: "No upscaled images yet", chapter: "upscaled", ways: [
-      {text: "Hover a Generated or tray card and press", key: keyOf("upscale")},
-      {text: "Check images in the Generated tab or a tray and press Upscale"}
+      {text: "Upscale a Generated or tray card under the pointer", key: keyOf("upscale")},
+      {text: "Check images in the Generated tab or a tray, then click Upscale"}
     ]}
   };
 

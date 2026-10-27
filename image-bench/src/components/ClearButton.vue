@@ -7,6 +7,7 @@
 import {computed, ref} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import {openMenuBelow} from "@/contextMenu.js";
+import {gestureTitle} from "@/gestures.js";
 import {MARKINGS} from "@/consts.js";
 
 const props = defineProps({
@@ -43,8 +44,12 @@ const splitElement = ref(null);
 const shown = computed(() => props.images.filter(image => !image.separator));
 const hasMenu = computed(() => props.markable || props.selectable);
 
-function removeAll() {
-  emit("remove", () => true);
+// Shift+click chooses which images, as a middle click does
+function onClick(e) {
+  if (e.shiftKey && hasMenu.value)
+    openMenu();
+  else
+    emit("remove", () => true);
 }
 
 function count(predicate) {
@@ -86,8 +91,8 @@ function onAuxClick(e) {
 <template>
   <div ref="splitElement" class="clear-split" :class="{split: hasMenu}">
     <button class="btn clear-main" :disabled="disabled || !shown.length"
-            :title="hasMenu ? `${allTitle}\nMiddle click or the arrow: choose which images` : allTitle"
-            @click="removeAll" @auxclick="onAuxClick" @mousedown.middle.prevent
+            :title="hasMenu ? gestureTitle(allTitle, 'choose which images (or the arrow)') : allTitle"
+            @click="onClick" @auxclick="onAuxClick" @mousedown.middle.prevent
       ><AppIcon name="eraser" :size="14"/>Clear</button>
     <button v-if="hasMenu" class="btn clear-more" :disabled="disabled || !shown.length"
             title="Choose which images to remove" aria-label="Choose which images to remove" aria-haspopup="menu"

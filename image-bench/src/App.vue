@@ -27,6 +27,7 @@ import ToastHost from "@/components/ToastHost.vue";
 import ProjectChip from "@/components/ProjectChip.vue";
 import {installImageActionKeys} from "@/composables/useImageActionKeys.js";
 import {installGenerationKeys} from "@/generationKeys.js";
+import {installShortcutSheetKey} from "@/shortcutSheet.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {hostHas} from "@/host.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
@@ -46,7 +47,6 @@ import ConsoleDrawer from "@/components/ConsoleDrawer.vue";
 import {consoleOpen, onConsoleKey, toggleConsole} from "@/consoleDrawer.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import RunRing from "@/components/RunRing.vue";
-import TabHoverCard from "@/components/TabHoverCard.vue";
 import {useActiveRun} from "@/runState.js";
 
 // Messages too frequent to log
@@ -100,10 +100,10 @@ function hideManualHint() {
 
 watch(() => manualStore.opened, opened => opened && hideManualHint());
 
-// The manual is a section of the Library; chapter: an id of MANUAL_SECTIONS
-function openManual(chapter) {
+// The manual is a section of the Library
+function openManual() {
   hideManualHint();
-  manualStore.reveal(chapter);
+  manualStore.reveal();
   router.push("/library");
 }
 
@@ -145,6 +145,7 @@ onBeforeMount(async () => {
 function initHostPage() {
   webUI.initializePrompts();
   webUI.subscribeHiresFix();
+  webUI.subscribeLiveProgress();
 
   // The WebUI prompts are unlocked when the popup closes; lock them again if the user left them locked
   if (hostHas("generate", "promptLock") && appConfigStore.showPromptLock && sdWebUIStateStore.isPromptsLockRemembered())
@@ -221,8 +222,9 @@ function onHostTabDragLeave(e) {
     clearTimeout(hostTabDragTimer);
 }
 
-// A middle click or Shift+click on the host tab toggles the console instead; its icon shows that only while the tab
-// is hovered with Shift held, since Shift is held all the time while typing
+// A middle click or Shift+click on the host tab toggles the console instead (it opens over the shown tab, without
+// going to the host), as does the terminal glyph in its corner on hover; its icon turns into the terminal only while
+// the tab is hovered with Shift held, since Shift is held all the time while typing
 const shiftDown = useShiftKey();
 const hostTabHovered = ref(false);
 
@@ -232,6 +234,12 @@ function onHostTabClick(e) {
     e.preventDefault();
     toggleConsole();
   }
+}
+
+function onConsoleGlyphClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleConsole();
 }
 
 function onHostTabAuxClick(e) {
@@ -346,6 +354,7 @@ onMounted(() => {
   initManualHint();
   installImageActionKeys();
   installGenerationKeys();
+  installShortcutSheetKey(router);
   window.addEventListener("keydown", onSaveKey);
   window.addEventListener("keydown", onConsoleKey);
 });
@@ -426,7 +435,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
   <div class="tab-container">
     <nav class="tabs" @auxclick="onTabAuxClick">
       <RouterLink to="/generate" class="tab" id="generate-tab" :title="runTitle('generate-tab')"
-        ><span class="tab-icon" :class="{'hires-on': hiresFixOn}"><AppIcon name="generate" :size="14"
+        ><span class="tab-icon"><AppIcon name="generate" :size="14"
         /><RunRing v-if="runOn('generate-tab')" :run="runOn('generate-tab')"
         /><span v-if="hiresFixOn" class="hires-badge" title="Hires. fix is on">HR</span></span>Generate</RouterLink>
       <RouterLink to="/controlnet" class="tab" id="controlnet-tab" :title="runTitle('controlnet-tab')"
@@ -461,14 +470,14 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <span v-else-if="!backendConnected" class="backend-down" role="status" :title="backendDownTitle"
             :aria-label="`${HOST_NAME} is not running`"><AppIcon name="unplug" :size="15"/></span>
       <div class="tab-spacer"></div>
-      <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual()"
+      <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
         ><AppIcon name="help" :size="13"/>New to Image Bench? Read the manual</a>
-      <RouterLink v-if="!hostConnected && EMBEDDED" :to="HOST_ROUTE" class="chip window-warning"
-                  :title="`${HOST_NAME} is loading in the ${HOST_NAME} tab`"
-        ><AppIcon name="alert" :size="13"/>Connecting to {{ HOST_NAME }}</RouterLink>
-      <span v-else-if="!hostConnected" class="chip window-warning"
-            :title="`The opener ${HOST_NAME} window is closed or was reloaded`"
-        ><AppIcon name="alert" :size="13"/>Disconnected from {{ HOST_NAME }}</span>
+      <RouterLink v-if="!hostConnected && EMBEDDED" :to="HOST_ROUTE" class="host-pill connecting" role="status"
+                  :title="`Connecting to ${HOST_NAME}: the page is loading in the ${HOST_NAME} tab`"
+        ><span class="host-dot"></span>{{ HOST_NAME }}</RouterLink>
+      <span v-else-if="!hostConnected" class="host-pill" role="status"
+            :title="`Disconnected from ${HOST_NAME}: the opener window is closed or was reloaded`"
+        ><span class="host-dot"></span>{{ HOST_NAME }}</span>
       <ProjectChip/>
       <RouterLink to="/settings" class="tab icon-tab" ref="settingsTab" title="Settings" aria-label="Settings"
         ><AppIcon name="settings" :size="15"/></RouterLink>
@@ -476,7 +485,9 @@ async function switchTabAccordingToGenerationMode(e, state) {
                   :aria-label="HOST_NAME" @dragenter="onHostTabDragEnter" @dragleave="onHostTabDragLeave"
                   @click="onHostTabClick" @auxclick="onHostTabAuxClick" @mousedown.middle.prevent
                   @mouseenter="hostTabHovered = true" @mouseleave="hostTabHovered = false"
-        ><AppIcon :name="hostTabHovered && shiftDown ? 'terminal' : 'appWindow'" :size="15"/></RouterLink>
+        ><AppIcon :name="hostTabHovered && shiftDown ? 'terminal' : 'appWindow'" :size="15"
+        /><span v-if="hostTabHovered && !shiftDown" class="console-glyph" title="Console (Ctrl+`)"
+                @click="onConsoleGlyphClick"><AppIcon name="terminal" :size="9"/></span></RouterLink>
     </nav>
     <div id="tab-content">
       <RouterView v-slot="{ Component }">
@@ -487,7 +498,6 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <HostFrame v-if="EMBEDDED" :active="hostTabActive"/>
       <ConsoleDrawer v-if="consoleOpen" @close="toggleConsole"/>
     </div>
-  <TabHoverCard @open-manual="openManual"/>
   <ImageContextMenu />
   <DialogHost />
   <ToastHost />
@@ -533,6 +543,26 @@ async function switchTabAccordingToGenerationMode(e, state) {
     padding: 0 8px;
   }
 
+  /* The console glyph in the corner of the host tab, on hover; it takes no width of the full tab bar */
+  #host-tab {
+    position: relative;
+  }
+
+  .console-glyph {
+    position: absolute;
+    top: 3px;
+    right: 1px;
+    display: flex;
+    padding: 1px;
+    border-radius: 3px;
+    background: var(--ib-surface);
+    color: var(--ib-accent);
+  }
+
+  .console-glyph:hover {
+    background: var(--ib-border-2);
+  }
+
   .tab:hover {
     color: var(--ib-text);
     background: rgba(255, 255, 255, 0.03);
@@ -554,16 +584,12 @@ async function switchTabAccordingToGenerationMode(e, state) {
     display: inline-flex;
   }
 
-  /* The badge reaches past the icon: the label moves aside */
-  .tab-icon.hires-on {
-    margin-right: 6px;
-  }
-
-  /* Cut into the top right of the icon by a ring of the bar color; absolute, so the tab keeps its height */
+  /* Cut into the top left of the icon by a ring of the bar color; absolute and reaching into the padding of the tab,
+     so the tab keeps its size */
   .hires-badge {
     position: absolute;
-    top: -3px;
-    left: 8px;
+    top: -4px;
+    right: 7px;
     height: 10px;
     padding: 0 2px;
     border-radius: 3px;
@@ -636,15 +662,47 @@ async function switchTabAccordingToGenerationMode(e, state) {
     to { opacity: 0.35; }
   }
 
-  .window-warning {
+  /* Host page not attached: a dot and the host name, the dot pulsing while connecting */
+  .host-pill {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 5px;
+    height: 18px;
     margin-right: 6px;
-    background: #3a2a12;
+    padding: 0 8px 0 6px;
+    border: 1px solid color-mix(in srgb, var(--ib-warn) 40%, transparent);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--ib-warn) 12%, transparent);
     color: var(--ib-warn);
+    font-size: 11px;
+    white-space: nowrap;
+    text-decoration: none;
     cursor: default;
   }
 
-  a.window-warning {
-    text-decoration: none;
+  a.host-pill {
     cursor: pointer;
+  }
+
+  .host-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .connecting .host-dot {
+    animation: host-dot-pulse 1s ease-in-out infinite alternate;
+  }
+
+  @keyframes host-dot-pulse {
+    to { opacity: 0.25; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .connecting .host-dot {
+      animation: none;
+    }
   }
 </style>

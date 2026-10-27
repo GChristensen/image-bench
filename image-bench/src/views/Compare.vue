@@ -45,9 +45,9 @@ const store = useCompareStore();
 // How images get into the empty tab
 const emptyWays = [
   {text: "Drag image cards onto the Compare tab"},
-  {text: "Hover a card and press", key: findImageAction("compare").key},
+  {text: "Add the card under the pointer", key: findImageAction("compare").key},
   {text: "Add image files with the upload button"},
-  {text: "Send from the editor (Photoshop, Krita, GIMP) to Compare"}
+  {text: "Send an image from Photoshop, Krita or GIMP to Compare"}
 ];
 const storage = useLocalStorage();
 const imageOps = useImageOperations();
@@ -323,7 +323,7 @@ function trackDrag(onMove, onEnd) {
 }
 
 function onStripMouseDown(e) {
-  // Middle click opens the overlay on auxclick; no autoscroll
+  // Middle click toggles the action rim of the item (CompareItem.vue); no autoscroll
   if (e.button === 1) {
     e.preventDefault();
     return;
@@ -334,12 +334,6 @@ function onStripMouseDown(e) {
 
   const item = e.target.closest(".compare-item");
 
-  if (item && e.shiftKey) {
-    e.preventDefault();
-    openOverlay(Number(item.dataset.index));
-    return;
-  }
-
   e.preventDefault();
 
   if (item && selecting.value)
@@ -348,22 +342,24 @@ function onStripMouseDown(e) {
     startPan(e, item);
 }
 
-function onStripAuxClick(e) {
-  const item = e.target.closest(".compare-item");
+// Moves shorter than this are a click, which opens the image in the overlay
+const DRAG_THRESHOLD = 4;
 
-  if (e.button === 1 && item && !e.target.closest(".compare-chrome"))
-    openOverlay(Number(item.dataset.index));
-}
-
-// Zoomed images pan together, otherwise the strip scrolls
+// Zoomed images pan together, otherwise the strip scrolls; a click without a drag opens the item
 function startPan(e, item) {
   const strip = stripElement.value;
   const start = {x: e.clientX, y: e.clientY, left: strip.scrollLeft, top: strip.scrollTop, center: center.value};
   const box = item?.getBoundingClientRect();
+  let moved = false;
 
   trackDrag(ev => {
     const dx = ev.clientX - start.x;
     const dy = ev.clientY - start.y;
+
+    if (!moved && Math.hypot(dx, dy) < DRAG_THRESHOLD)
+      return;
+
+    moved = true;
 
     if (zoom.value > 1 && box)
       center.value = clampCenter({
@@ -374,6 +370,9 @@ function startPan(e, item) {
       strip.scrollLeft = start.left - dx;
       strip.scrollTop = start.top - dy;
     }
+  }, () => {
+    if (!moved && item)
+      openOverlay(Number(item.dataset.index));
   });
 }
 
@@ -593,7 +592,7 @@ onDeactivated(() => {
     <!-- Kept while the crops are shown, so that the zoom and scroll position stay -->
     <div v-show="!cropView && store.images.length" ref="stripElement" class="compare-strip"
          :class="[direction, {dragging, selecting}]"
-         @mousedown="onStripMouseDown" @auxclick="onStripAuxClick" @wheel="onStripWheel"
+         @mousedown="onStripMouseDown" @wheel="onStripWheel"
          @mouseover="onStripMouseOver" @mouseleave="hoveredIndex = -1">
       <template v-for="(image, index) in store.images" :key="image.imageUrl">
         <div v-if="index" class="compare-separator" :style="{background: separatorInfo.color}"></div>

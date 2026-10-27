@@ -109,6 +109,20 @@ export const dialog = {
    */
   hostErrors(options) {
     return open('hostErrors', '', {okText: 'Close', ...options}, null);
+  },
+
+  /**
+   * The cheat sheet of the mouse and the keys (ShortcutTables.vue)
+   * @param {{section?: string}} options - Section shown first ("mouse", "image" or a key scope of shortcuts.js)
+   * @returns {Promise<string|null>} "manual" to show the chapter of the manual, null if closed
+   */
+  shortcuts(options = {}) {
+    return open('shortcuts', '', {
+      title: 'Mouse and keys',
+      okText: 'Close',
+      actions: [{id: 'manual', label: 'Open in the manual'}],
+      ...options
+    }, null);
   }
 };
 

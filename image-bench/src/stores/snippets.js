@@ -290,13 +290,12 @@ export function parseStylesCsv(text) {
 /**
  * Insert snippet text into a prompt textarea at its caret, as typing would, so that Ctrl+Z undoes it.
  * Commas separate it from the neighbouring text. The placeholder ("{}" or "{prompt}") in the text is replaced by
- * the selected text (wrap) or removed, the caret then stands there
+ * the selected text, which the text then wraps, or removed if nothing is selected; the caret then stands there.
+ * A text without a placeholder is inserted after the selection, which is kept
  * @param {HTMLTextAreaElement} textarea
  * @param {string} text
- * @param {boolean} wrap - Wrap the selected text with the text around the placeholder; else the selection is kept
- *                          and the text inserted after it
  */
-export function insertIntoTextarea(textarea, text, wrap) {
+export function insertIntoTextarea(textarea, text) {
   textarea.focus();
 
   const value = textarea.value;
@@ -308,7 +307,7 @@ export function insertIntoTextarea(textarea, text, wrap) {
   let insert = text;
   let caret = null;
 
-  if (wrap && match) {
+  if (selected && match) {
     insert = text.replace(PLACEHOLDER, () => selected);
     caret = placeholder + selected.length;
   }

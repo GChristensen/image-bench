@@ -4,7 +4,7 @@
  * words, #tag and host:, the tags of the shown projects with their counts, and the file operations
  * (context menu, dragging onto folders, F2, Delete). Double-click or Enter opens a project.
  */
-import {computed, nextTick, ref, watch} from "vue";
+import {computed, nextTick, onActivated, onDeactivated, ref, watch} from "vue";
 import {useRouter} from "vue-router";
 import AppIcon from "@/components/AppIcon.vue";
 import TreeView from "@/components/TreeView.vue";
@@ -165,6 +165,33 @@ watch(() => store.selectedKey, path => {
   if (path)
     treeView.value?.reveal(path);
 });
+
+// Show in Projects (store.show()): the selection is scrolled into view once the tab is shown
+let active = false;
+let revealPending = false;
+
+async function revealRequested() {
+  if (!active || !revealPending)
+    return;
+
+  revealPending = false;
+  await nextTick();
+
+  if (store.selectedKey)
+    treeView.value?.reveal(store.selectedKey, {scroll: true});
+}
+
+watch(() => store.revealRequest, () => {
+  revealPending = true;
+  revealRequested();
+});
+
+onActivated(() => {
+  active = true;
+  revealRequested();
+});
+
+onDeactivated(() => active = false);
 
 // ---------- File operations ----------
 

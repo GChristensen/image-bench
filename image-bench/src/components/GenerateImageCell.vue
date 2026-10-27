@@ -143,8 +143,9 @@ const rimGroups = computed(() => rimImage.value ? rimActionGroups(rimImage.value
 const shiftDown = useShiftKey();
 const hovered = ref(false);
 const showAlt = computed(() => hovered.value && shiftDown.value);
-// As on an image card, the rim shows while Ctrl is held over the result or its toggle is on. With the rimOnHover
-// setting it opens on hover instead, and Ctrl hides all chrome, so that a click on the bare image opens the overlay
+// As on an image card, the rim shows while Ctrl is held over the result or its toggle is on (the button or a middle
+// click). With the rimOnHover setting it opens on hover instead, the toggle hides it until the pointer leaves, and Ctrl
+// hides all chrome, so that a click on the bare image opens the overlay
 const config = useAppConfigStore();
 const hoverMode = computed(() => config.rimOnHover);
 const ctrlDown = useCtrlKey();
@@ -161,8 +162,14 @@ const rimSize = ref(0);
 const rimMarking = ref(null);
 let rimTimer = 0;
 
-const rimShown = computed(() => !!rimGroups.value.length && (hoverMode.value ? rimOpen.value && !bare.value
+const rimShown = computed(() => !!rimGroups.value.length && (hoverMode.value
+  ? rimOpen.value && !bare.value && !rimToggled.value
   : hovered.value && (ctrlDown.value || rimToggled.value)));
+
+function onResultAuxClick(e) {
+  if (e.button === 1 && rimGroups.value.length)
+    rimToggled.value = !rimToggled.value;
+}
 
 watch(rimShown, shown => {
   const cell = cellElement.value;
@@ -366,7 +373,7 @@ onBeforeUnmount(() => {
 
     <button v-if="shownView === 'result'" type="button" class="view" :class="{clickable: resultClickable}"
             :title="liveProgress !== null ? 'Live preview' : resultClickable ? 'Click to view' : ''"
-            @click="emit('result-click')">
+            @click="emit('result-click')" @mousedown.middle.prevent @auxclick="onResultAuxClick">
       <img v-if="resultUrl" :src="resultUrl" alt="">
       <span v-else class="empty">The generated image appears here</span>
       <span v-if="liveProgress !== null" class="live-progress"><i :style="{width: `${liveProgress}%`}"></i></span>
@@ -464,7 +471,7 @@ onBeforeUnmount(() => {
 
     <button v-if="!hoverMode && rimGroups.length" type="button" class="overlay-button icon-only rim-toggle"
             :class="{on: rimToggled}" :aria-pressed="rimToggled" aria-label="Show actions"
-            :title="rimToggled ? 'Hide actions' : 'Show actions (or hold Ctrl)'"
+            :title="rimToggled ? 'Hide actions' : 'Show actions (or middle-click, or hold Ctrl)'"
             @click="rimToggled = !rimToggled"><AppIcon name="rim" :size="14"/></button>
 
     <!-- Last, so that it stays above the input thumbnail and the controls -->

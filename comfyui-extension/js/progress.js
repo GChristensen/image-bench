@@ -1,7 +1,7 @@
 /**
  * Progress of the running generation from the ComfyUI api events: whether ComfyUI is busy (running or with
- * queued prompts), the sampling progress and the latent preview. While the Generate tab is shown the progress
- * goes to the popup (LIVE_PROGRESS), as in SD WebUI.
+ * queued prompts), the sampling progress and the latent preview. While the popup is open (watch(), for the run
+ * indicator of its tab bar) or the Generate tab is shown, the progress goes to the popup (LIVE_PROGRESS), as in SD WebUI.
  */
 
 /**
@@ -13,6 +13,7 @@ export function createProgress({api, popup}) {
     let progress = null;
     let preview = null;
     let subscribed = false;
+    let watching = false;
     let lastLive = null;
     // A run started since the mirror last read the busy state: a cached run may end between two polls
     let unreported = false;
@@ -88,11 +89,12 @@ export function createProgress({api, popup}) {
      * Send the progress to the popup while the Generate tab is shown; one final message when ComfyUI is idle
      */
     function send() {
-        if (!subscribed)
+        if (!subscribed && !watching)
             return;
 
         if (!popup.isOpen()) {
             subscribed = false;
+            watching = false;
             return;
         }
 
@@ -125,5 +127,14 @@ export function createProgress({api, popup}) {
         }
     }
 
-    return {isBusy, takeBusy, getProgress, subscribe};
+    /**
+     * Send the progress while the popup is open, in any of its tabs
+     */
+    function watch() {
+        watching = true;
+        lastLive = {active: true};
+        send();
+    }
+
+    return {isBusy, takeBusy, getProgress, subscribe, watch};
 }

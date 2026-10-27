@@ -79,6 +79,8 @@ export const useSDWebUIStateStore = defineStore('sdWebUIState', () => {
         }
         else if (e.type === "LIVE_PROGRESS") {
             live.value = {active: e.active, progress: e.progress, preview: e.preview};
+            // Reported in every tab, while the parameters (with busy) only come while the Generate tab is shown
+            busy.value = e.active;
         }
         else if (e.type === "WEBUI_PROMPTS_UNLOCKED") {
             setPromptsLockRemembered(false);

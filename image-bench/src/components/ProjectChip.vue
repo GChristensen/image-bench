@@ -14,6 +14,7 @@ import {cleanUpItems} from "@/cleanUp.js";
 import {copyToProject, openContextMenu, openMenuBelow} from "@/contextMenu.js";
 import {canDropOn, KIND_PROJECT, takeDraggedImages} from "@/imageDrag.js";
 import {reminder} from "@/projectReminder.js";
+import {showShortcuts} from "@/shortcutSheet.js";
 
 const PROJECTS_ROUTE = "/projects";
 
@@ -63,7 +64,8 @@ function menuItems() {
   }
 
   items.push({icon: "folder", label: "All projects…", run: () => router.push(PROJECTS_ROUTE)});
-  return [...items, ...cleanUpItems()];
+  return [...items, ...cleanUpItems(), {separator: true},
+    {icon: "help", label: "Mouse and keys", hint: "?", run: () => showShortcuts("mouse")}];
 }
 
 function openMenu(event) {

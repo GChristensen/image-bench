@@ -30,7 +30,14 @@ export function clearOverlayImageTarget(target) {
     overlayTarget = null;
 }
 
-function isTyping(e) {
+/**
+ * What the keys would act on now: "overlay", "image" (a hovered card) or null; the cheat sheet starts there
+ */
+export function imageTargetKind() {
+  return overlayTarget?.element?.isConnected ? "overlay" : isShown(hoveredTarget?.element) ? "image" : null;
+}
+
+export function isTyping(e) {
   const element = e.target;
   return element instanceof HTMLElement
     && (element.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName));

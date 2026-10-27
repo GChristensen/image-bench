@@ -45,8 +45,8 @@ const exploreImagesStore = useExploreImagesStore();
 
 // What to do in the empty results
 const EMPTY_WAYS = [
-  {text: "Check checkpoints on the left, and LoRAs for a model × LoRA matrix"},
-  {text: "Press Explore to render the current prompt with each checked model"}
+  {text: "Check checkpoints on the left. Check LoRAs too for a model × LoRA matrix."},
+  {text: "Click Explore to render the current prompt with each checked model."}
 ];
 const storage = useLocalStorage();
 const appConfigStore = useAppConfigStore();
