@@ -1477,6 +1477,8 @@ const hostOrigin = location.origin;
         <tr><td><span class="kbd">Shift</span>+click</td><td>On a button of an image, perform its alternative
           action</td></tr>
         <tr><td>Right click</td><td>Open the menu of an image</td></tr>
+        <tr><td>Right drag down</td><td>Close the image view: the image follows the pointer, released far enough
+          down it closes</td></tr>
         <tr><td>Letter keys</td><td>Actions of the image under the pointer or in the image view (see <a href="#"
           @click.prevent="scrollTo('images')">Working with images</a>)</td></tr>
         <tr><td><span class="kbd">1</span>–<span class="kbd">9</span>, <span class="kbd">0</span></td><td>Set or

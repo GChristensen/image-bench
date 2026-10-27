@@ -368,6 +368,7 @@
   <div class="topic">
     <h3>Stop and Skip buttons</h3>
     <p>While a generation runs, the Generate button turns into Stop, and Skip next to it becomes active. Skip ends the image that is being generated and continues with the rest of the batch. Stop ends the whole run. To stop and immediately generate again with the current parameters, <kbd>Ctrl</kbd>+click or middle-click Stop; while you hold <kbd>Ctrl</kbd>, the button reads Restart.</p>
+    <p>The same commands have keys that work in every tab, as long as no text field has the focus: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> generates, or stops a running generation; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> restarts it; <kbd>Ctrl</kbd>+<kbd>Backspace</kbd> skips the current image. They take effect once the Generate tab has been opened in the window, and they don't work in the host tab, where WebUI and ComfyUI have their own <kbd>Ctrl</kbd>+<kbd>Enter</kbd>.</p>
     <div class="app-demo" role="img" aria-label="The Generate, Stop and Skip buttons in their three states">
       <div class="app-row"><span class="app-btns"><span class="app-btn primary"><svg width="13" height="13" aria-hidden="true"><use href="#ic-play"></use></svg>Generate</span><span class="app-btn outline off"><svg width="13" height="13" aria-hidden="true"><use href="#ic-skip"></use></svg>Skip</span></span><span class="app-note">Idle</span></div>
       <div class="app-row"><span class="app-btns"><span class="app-btn stop"><svg width="13" height="13" aria-hidden="true"><use href="#ic-stop"></use></svg>Stop</span><span class="app-btn outline"><svg width="13" height="13" aria-hidden="true"><use href="#ic-skip"></use></svg>Skip</span></span><span class="app-note">Generating</span></div>
@@ -685,13 +686,13 @@
   <div class="topic">
     <h3>The action rim</h3>
     <p>Most of the work with a generated image starts from its card: you look at its parameters, send it to img2img or your editor, upscale it, or put it in a tray. A card has room for only a few buttons, and they would cover the thumbnail, so Image Bench puts all these actions on a ring that you show only when you need it. The same actions are also in the card's context menu and on single keys, which work while the pointer is over the card.</p>
-    <p>Image cards have no visible action buttons. To show the actions, hold <kbd>Ctrl</kbd> over a card or click the rim toggle in its top right corner. A ring of actions appears around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer.</p>
+    <p>Image cards have no visible action buttons. To show the actions, hold <kbd>Ctrl</kbd> over a card, middle-click it, or click the rim toggle in its top right corner. A middle click or the toggle keeps the ring shown until you middle-click again or the pointer leaves the card. A ring of actions appears around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
       <ul>
         <li>The center button switches the ring to the markings and back. Middle-clicking it turns the view's marking filter on or off.</li>
         <li>Some actions have an alternative version, which runs on a middle click, <kbd>Shift</kbd>+click or <kbd>Shift</kbd>+key. While you hold <kbd>Shift</kbd>, the ring shows the alternative icons; for example, Send to editor becomes Send as a new layer.</li>
-        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. In this mode, holding <kbd>Ctrl</kbd> hides the ring, so a click opens the image.</li>
+        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. In this mode, holding <kbd>Ctrl</kbd> hides the ring, so a click opens the image. A middle click opens the image in a new browser tab instead of showing the ring.</li>
       </ul>
     </div>
   </div>
@@ -711,6 +712,7 @@
       <li>The ring has the same actions as the rim of a card. In the trays, it also has Delete. The arc above the ring sets a marking. The arc below the ring has Reuse seed and Reuse all, which copy the seed or all parameters of the image to WebUI or ComfyUI. The parameters sector shows the generation parameters over the image. The parameters stay visible when you move to another image.</li>
     </ol>
     <p>Click the image to show it at full size. The point that you clicked stays under the pointer. Drag the image to pan it, and click it again to fit it to the window. To close the image view, click the dark area around a fitted image or press <kbd>Esc</kbd>.</p>
+    <p>When the image fills the window and there is no dark area to click, close the view with the right mouse button: press it, drag down and release. The image follows the pointer and the background fades. Released far enough down, the view closes; released earlier, the image returns to its place. A right click without dragging still opens the context menu.</p>
     <p>To go to the previous or next image, turn the mouse wheel or press <kbd>←</kbd> or <kbd>→</kbd>. At full size, the next image also opens at full size and shows the same area. This lets you compare one detail across a series of images. The rim always applies to the image that is currently shown, even if you scroll to another image while the rim is open.</p>
     <p>If the image has a marking, the marking is shown in the lower right corner. Click it to remove the marking. A right click opens the same context menu as on a card, which includes Open in new window. The action keys and the digit keys work in the same way as over a card.</p>
     <div class="callout non-obvious">
@@ -1065,7 +1067,18 @@
       <div class="key"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save the project</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>`</kbd><span>Open or close the console drawer</span></div>
       <div class="key"><kbd>Ctrl</kbd>+click<span>Generate without the project reminder</span></div>
-      <div class="key"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>Confirm a multi-line dialog</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>Generate, or stop the running generation. In a multi-line dialog: confirm it</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd><span>Stop and generate again</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+<kbd>Backspace</kbd><span>Skip the image being generated</span></div>
+    </div>
+  </div>
+
+  <div class="topic">
+    <h3>Mouse</h3>
+    <div class="keys">
+      <div class="key">Middle click<span>On a card: show or hide its action rim. In the image view: open the rim at the pointer</span></div>
+      <div class="key">Right drag down<span>Close the image view</span></div>
+      <div class="key">Wheel<span>Previous or next image in the image view</span></div>
     </div>
   </div>
 

@@ -362,6 +362,11 @@
       }
     }
 
+    if (e.button === 2) {
+      startFlick(e);
+      return;
+    }
+
     if (e.button !== 1)
       return;
 
@@ -372,6 +377,8 @@
   }
 
   function onMouseUp(e) {
+    onFlickUp(e);
+
     if (e.button !== 1 || !gesture)
       return;
 
@@ -404,6 +411,96 @@
     e.stopPropagation();
   }
 
+  // A right drag downwards closes the overlay: the image follows the pointer down and the background fades,
+  // released past FLICK_DISTANCE it closes, before it the image returns. A right drag opens no context menu
+  // (on Windows contextmenu follows the release)
+  const FLICK_DISTANCE = 80;
+  // {x, y} of the right press, null without one
+  let flickStart = null;
+  let flickMoved = false;
+  let suppressContextMenu = false;
+  // Downward offset of the image while dragged
+  const flickOffset = ref(0);
+  const flickReturning = ref(false);
+  const flickProgress = computed(() => Math.min(flickOffset.value / FLICK_DISTANCE, 1));
+
+  const flickImageStyle = computed(() => flickOffset.value ? {
+    transform: `translateY(${flickOffset.value}px) scale(${1 - flickProgress.value * 0.06})`,
+    opacity: 1 - flickProgress.value * 0.35
+  } : null);
+
+  const flickBackdropStyle = computed(() => flickOffset.value ? {
+    opacity: (0.7 * (1 - flickProgress.value * 0.6)).toFixed(3)
+  } : null);
+
+  function startFlick(e) {
+    // The parameters panel keeps the native menu of its text
+    if (e.target.closest(".params-panel"))
+      return;
+
+    flickStart = {x: e.clientX, y: e.clientY};
+    flickMoved = false;
+    suppressContextMenu = false;
+    flickReturning.value = false;
+    window.addEventListener("mousemove", onFlickMove, true);
+  }
+
+  function onFlickMove(e) {
+    // The button was released outside the window
+    if (!(e.buttons & 2)) {
+      endFlick(false);
+      return;
+    }
+
+    const dx = e.clientX - flickStart.x;
+    const dy = e.clientY - flickStart.y;
+
+    if (!flickMoved && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD)
+      return;
+
+    flickMoved = true;
+    flickOffset.value = Math.max(dy, 0);
+  }
+
+  function onFlickUp(e) {
+    if (e.button !== 2 || !flickStart)
+      return;
+
+    suppressContextMenu = flickMoved;
+    endFlick(flickMoved && e.clientY - flickStart.y >= FLICK_DISTANCE);
+  }
+
+  function endFlick(close) {
+    window.removeEventListener("mousemove", onFlickMove, true);
+    flickStart = null;
+    flickMoved = false;
+
+    if (close) {
+      emit("hideOverlay");
+      return;
+    }
+
+    if (flickOffset.value) {
+      flickReturning.value = true;
+      flickOffset.value = 0;
+    }
+  }
+
+  function onContextMenu(e) {
+    // Where the menu opens on the press, it takes the drag
+    if (flickStart && !flickMoved)
+      endFlick(false);
+
+    if (!suppressContextMenu)
+      return;
+
+    suppressContextMenu = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  onBeforeUnmount(() => endFlick(false));
+
   // Escape closes the rim before the overlay
   function onKeyDown(e) {
     if (e.key !== "Escape" || !rim.value)
@@ -416,6 +513,9 @@
 
   function onWindowBlur() {
     gesture = false;
+
+    if (flickStart)
+      endFlick(false);
 
     if (rim.value && !rim.value.sticky)
       hideRim();
@@ -477,6 +577,7 @@
     window.addEventListener("mouseup", onMouseUp, true);
     window.addEventListener("click", onClick, true);
     window.addEventListener("auxclick", onAuxClick, true);
+    window.addEventListener("contextmenu", onContextMenu, true);
     window.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("blur", onWindowBlur);
     showHint();
@@ -488,6 +589,7 @@
     window.removeEventListener("mouseup", onMouseUp, true);
     window.removeEventListener("click", onClick, true);
     window.removeEventListener("auxclick", onAuxClick, true);
+    window.removeEventListener("contextmenu", onContextMenu, true);
     window.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("blur", onWindowBlur);
     clearTimeout(hintTimer);
@@ -500,11 +602,12 @@
   <Teleport to="body">
     <Transition name="fade">
       <div ref="rootElement" class="image-overlay-container" :class="{'chrome-hidden': ctrlDown}" @wheel="onWheel">
-        <div class="image-overlay" @click="$emit('hideOverlay')">
+        <div class="image-overlay" :class="{'flick-return': flickReturning}" :style="flickBackdropStyle"
+             @click="$emit('hideOverlay')">
         </div>
         <Transition name="zoom">
           <div class="overlay-image-container" ref="containerElement"
-               :class="{ 'full-size': isFullSize }"
+               :class="{ 'full-size': isFullSize, 'flick-return': flickReturning }" :style="flickImageStyle"
                @click="onContainerClick">
             <MediaView v-if="!still" class="overlay-media" :src="imageLink" :kind="fileKind"
                        @contextmenu="openImageMenu($event, image, actionContext)"/>
@@ -547,7 +650,7 @@
                 @click="setMarkingByKey(null)">{{ image.marking }}</button>
         <Transition name="fade">
           <div v-if="hintShown" class="overlay-hint">
-            Middle click for the actions, their center closes the image · hold Ctrl to see only the image
+            Middle click for the actions · right-drag down to close · hold Ctrl to see only the image
           </div>
         </Transition>
       </div>
@@ -608,6 +711,11 @@
 
 .overlay-image-container.full-size {
   overflow: auto;
+}
+
+/* The image and the background back in place after a right drag too short to close */
+.flick-return {
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .full-size .overlay-image {
