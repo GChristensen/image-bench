@@ -47,6 +47,7 @@
   <symbol id="ic-denoise" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m22 17-8.5-8.5-5 5L2 7"></path><path d="M16 17h6v-6"></path></symbol>
   <symbol id="ic-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="m3.3 7 8.7 5 8.7-5M12 22V12"></path></symbol>
   <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
   <symbol id="i-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>
   </symbol>
@@ -697,26 +698,24 @@
 
   <div class="topic">
     <h3>The image view</h3>
-    <p>Clicking a card, or pressing <kbd>V</kbd> over it, opens the image view, the overlay that shows the image over the whole window. The buttons at the lower right are the same send and tray actions you find on the action rim: Send to img2img, inpaint, ControlNet and your editor, and Add to compare, concept tray and image tray. The button at the top left opens the generation parameters, and the tag at the lower left sets a marking. The action and digit keys work here just as they do over a card.</p>
-    <p>Click the image to see it at full size; the point you clicked stays under the pointer. Drag to pan, and click the image again to fit it back to the window. Clicking the dark area around a fitted image closes the view.</p>
-    <p>Use <kbd>←</kbd> and <kbd>→</kbd> to move to the previous and next image. At full size, the zoom is kept as you move: the next image opens at full size, showing the same area, so you can step through a series and compare one detail across all of it.</p>
-    <div class="shots-row">
-      <figure>
-        <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — image view</span></div>
-          <img src="../landing/img/screenshots/image-view.webp" width="1198" height="683" loading="lazy" alt="An image in the image view: the parameters button at the top left, the close button at the top right, the marking tag at the lower left, and the action buttons at the lower right">
-        </div>
-        <figcaption>The image view, fitted to the window.</figcaption>
-      </figure>
-      <figure>
-        <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — image view at full size</span></div>
-          <img src="../landing/img/screenshots/image-view-zoom.webp" width="1195" height="682" loading="lazy" alt="The same image view at full size, showing a detail of the flowers and the vase">
-        </div>
-        <figcaption>At full size, the arrow keys keep showing this area on every image.</figcaption>
-      </figure>
-    </div>
+    <p>To open the image view, click a card or press <kbd>V</kbd> while the pointer is over it. The image view shows the image over the whole window. It has no toolbars, so the image uses the full window area, which matters most in a small window such as 1200×800. </p>
+    <figure>
+      <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — image view</span></div>
+        <img src="../landing/img/screenshots/image-view.webp" width="1198" height="683" loading="lazy" alt="An image in the image view with the action rim open at the pointer. The close button is in the center of the rim, the markings are in an arc above it, and Reuse seed and Reuse all are in an arc below it">
+      </div>
+      <figcaption>The image view with the action rim open. A middle click opens the rim.</figcaption>
+    </figure>
+    <ol class="steps">
+      <li>Press and hold the middle mouse button anywhere on the image. The rim opens around the pointer. Move the pointer to a sector and release the button to run that action. If you release the button outside the rim, nothing happens and the rim closes.</li>
+      <li>If you release the button without moving the pointer, the rim stays open. You can then click a sector with the left button. To close the image view, click <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-close"></use></svg></span> in the center of the rim. To close only the rim, click anywhere outside it or press <kbd>Esc</kbd>.</li>
+      <li>The ring has the same actions as the rim of a card. In the trays, it also has Delete. The arc above the ring sets a marking. The arc below the ring has Reuse seed and Reuse all, which copy the seed or all parameters of the image to WebUI or ComfyUI. The parameters sector shows the generation parameters over the image. The parameters stay visible when you move to another image.</li>
+    </ol>
+    <p>Click the image to show it at full size. The point that you clicked stays under the pointer. Drag the image to pan it, and click it again to fit it to the window. To close the image view, click the dark area around a fitted image or press <kbd>Esc</kbd>.</p>
+    <p>To go to the previous or next image, turn the mouse wheel or press <kbd>←</kbd> or <kbd>→</kbd>. At full size, the next image also opens at full size and shows the same area. This lets you compare one detail across a series of images. The rim always applies to the image that is currently shown, even if you scroll to another image while the rim is open.</p>
+    <p>If the image has a marking, the marking is shown in the lower right corner. Click it to remove the marking. A right click opens the same context menu as on a card, which includes Open in new window. The action keys and the digit keys work in the same way as over a card.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
-      <p>Hold <kbd>Ctrl</kbd> to hide all buttons of the image view and see the whole image unobstructed. They come back when you release the key.</p>
+      <p>Hold <kbd>Ctrl</kbd> to show only the image. This hides the arrows, the marking, the parameters and the rim until you release the key.</p>
     </div>
   </div>
 
@@ -786,7 +785,7 @@
   <div class="topic">
     <h3>Compare</h3>
     <ol class="steps">
-      <li>Add images with <kbd>A</kbd> or the overlay button, by dropping files on the tab, or from your editor.</li>
+      <li>To add images, press <kbd>A</kbd>, use the action rim (on a card or in the image view), drop files on the tab, or send them from your editor.</li>
       <li>Zoom with the mouse wheel and pan by dragging. All images follow and show the same area, even if their resolutions differ.</li>
       <li>In select mode, drag to draw a region; it applies to every image. The crop grid then shows only these regions, side by side.</li>
       <li>Export the crops as a single PNG.</li>
@@ -1061,7 +1060,7 @@
   <div class="topic">
     <h3>Anywhere in the app</h3>
     <div class="keys">
-      <div class="key"><kbd>Ctrl</kbd><span>Hold over a card to show the action rim</span></div>
+      <div class="key"><kbd>Ctrl</kbd><span>Hold over a card to show the action rim. Hold in the image view to show only the image</span></div>
       <div class="key"><kbd>Shift</kbd><span>Run the alternative action (as does a middle click)</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save the project</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>`</kbd><span>Open or close the console drawer</span></div>

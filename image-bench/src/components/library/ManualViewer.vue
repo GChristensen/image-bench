@@ -678,8 +678,8 @@ const hostOrigin = location.origin;
       <p>
         To put an image into a tray, use the <AppIcon name="concept" :size="13" class="inline-icon"/> <b>Add to
         concept tray</b> or <AppIcon name="palette" :size="13" class="inline-icon"/> <b>Add to image tray</b>
-        action of its card (hold <span class="kbd">Ctrl</span> over the image to show the action rim), of the full
-        image view or of its context menu, or press <span class="kbd">Y</span> or <span class="kbd">T</span> over
+        action of its card (hold <span class="kbd">Ctrl</span> over the image to show the action rim), of the action
+        rim in the full image view (opened by a middle click) or of the context menu, or press <span class="kbd">Y</span> or <span class="kbd">T</span> over
         it. The tray's tab flashes when the image arrives. In a tray, only the action for the other tray is
         offered; it adds a copy of the image there.
       </p>
@@ -693,9 +693,9 @@ const hostOrigin = location.origin;
       <ul>
         <li><b>Markings</b> (👍 👎 🔴 🟠 🟡 🟢 🔵 🟣, and 🏁 for the final choice), available through the action menu's
           <AppIcon name="tag" :size="13" class="inline-icon"/> button. In the
-          full image view, hover over the badge at the bottom left (or the current marking) and click a marking, or
-          press <span class="kbd">1</span>–<span class="kbd">9</span>; clicking the current marking or pressing
-          <span class="kbd">0</span> removes it. On a thumbnail, click the marking to show only the
+          full image view, middle-click to open the action rim and select a marking in the arc above the ring, or
+          press <span class="kbd">1</span>–<span class="kbd">9</span>. To remove the marking, select the current
+          marking again, click the marking in the lower right corner or press <span class="kbd">0</span>. On a thumbnail, click the marking to show only the
           images that carry it, and click it again to show all; middle-click it to remove it. The
           <AppIcon name="filter" :size="13" class="inline-icon"/> button shows only marked images, or the marking
           being shown. The markings of the same images are synchronized across tabs.</li>
@@ -1454,14 +1454,19 @@ const hostOrigin = location.origin;
       <p>The window has these shortcuts:</p>
       <table>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">↑</span> / <span class="kbd">↓</span></td><td>Raise or lower the attention in a prompt</td></tr>
-        <tr><td><span class="kbd">←</span> <span class="kbd">→</span></td><td>Previous or next image in the image view</td></tr>
+        <tr><td><span class="kbd">←</span> <span class="kbd">→</span>, wheel</td><td>Previous or next image in the image view</td></tr>
         <tr><td><span class="kbd">Esc</span></td><td>Close the image view, or the topmost dialog</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">U</span></td><td>Unselect all images</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>Save the workspace into the
           current project</td></tr>
-        <tr><td><span class="kbd">Ctrl</span>+click</td><td>Switch between full size and fit to screen in the image view</td></tr>
-        <tr><td>Middle click</td><td>On an image, open it in a new tab. On a button, perform its alternative action
-          (place as a new layer in the editor). On a marking, remove it</td></tr>
+        <tr><td>Click</td><td>On the image in the image view, switch between full size and fit to screen. Drag to
+          pan the image</td></tr>
+        <tr><td><span class="kbd">Ctrl</span></td><td>Hold over an image card to show its action rim. Hold in the
+          image view to show only the image</td></tr>
+        <tr><td>Middle click</td><td>In the image view, open the action rim at the pointer. Release the button on a
+          sector to run it; the button in the center closes the image view. On an image card, open the image in a
+          new tab. On a button, perform its alternative action (place as a new layer in the editor). On a marking,
+          remove it</td></tr>
         <tr><td><span class="kbd">Shift</span>+click</td><td>On a button of an image, perform its alternative
           action</td></tr>
         <tr><td>Right click</td><td>Open the menu of an image</td></tr>
