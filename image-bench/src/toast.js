@@ -3,22 +3,27 @@ import {dialog} from "@/dialogs/useDialog.js";
 
 const DURATION = 3000;
 const ERROR_DURATION = 8000;
+// Long enough to notice what was removed and reach the button
+export const ACTION_DURATION = 6000;
 let nextId = 1;
 
 /**
  * Short notices shown at the bottom of the popup by ToastHost.vue (mounted once in App.vue):
- * [{id, message, kind, open?}]; open() runs on a click instead of dismissing the notice
+ * [{id, message, kind, open?, action?}]; open() runs on a click instead of dismissing the notice, action
+ * ({label, run}) is a button of the notice (Undo)
  */
 export const toasts = shallowRef([]);
 
 /**
  * Show a notice for a few seconds
  * @param {string} message
- * @param {{kind?: "success"|"error", duration?: number, open?: () => void}} options
+ * @param {{kind?: "success"|"error", duration?: number, open?: () => void,
+ *   action?: {label: string, run: () => void}}} options
  */
-export function toast(message, {kind = "success", duration = DURATION, open} = {}) {
+export function toast(message, {kind = "success", duration, open, action} = {}) {
   const id = nextId++;
-  toasts.value = [...toasts.value, {id, message, kind, open}];
+  duration ??= action ? ACTION_DURATION : DURATION;
+  toasts.value = [...toasts.value, {id, message, kind, open, action}];
   setTimeout(() => dismissToast(id), duration);
 }
 

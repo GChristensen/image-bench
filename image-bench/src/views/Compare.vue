@@ -1,5 +1,5 @@
 <script setup>
-import {computed, nextTick, onActivated, onDeactivated, reactive, ref, watch} from "vue";
+import {computed, nextTick, onActivated, onDeactivated, reactive, ref, toRaw, watch} from "vue";
 import {useCompareStore} from "@/stores/compare.js";
 import {syncTrayMarkings} from "@/stores/trayMarkings.js";
 import {KIND_COMPARE} from "@/consts.js";
@@ -8,6 +8,7 @@ import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useClearKey} from "@/composables/useClearKey.js";
 import {dialog, dialogStack} from "@/dialogs/useDialog.js";
 import {toastError} from "@/toast.js";
+import {imageCount, removeWithUndo} from "@/undo.js";
 import {isContextMenuOpen} from "@/contextMenu.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {
@@ -141,9 +142,14 @@ const actionContext = {
     addComment: image => addComment(image),
     openImage: image => imageOps.openImageInNewWindow(image),
     setMarking: (image, marking) => setMarking(image, marking),
-    removeImage: image => store.removeImage(image)
+    removeImage: image => removeImages(i => toRaw(i) === toRaw(image))
   }
 };
+
+// Removals are undone from their notice
+function removeImages(predicate) {
+  removeWithUndo(store, predicate, count => `Removed ${imageCount(count)} from the Compare tab.`);
+}
 
 async function addComment(image) {
   const comment = await dialog.prompt("Comment:", {defaultValue: image.comment || "", storageKey: "imageComment"});
@@ -168,26 +174,12 @@ function onMove(from, insertBefore) {
   store.moveImage(from, insertBefore > from ? insertBefore - 1 : insertBefore);
 }
 
-async function onClear() {
-  const count = store.images.length;
-
-  if (count && await dialog.confirm(`Remove all ${count} images from the Compare tab? The files stay on disk.`,
-      {okText: "Remove", danger: true}))
-    store.clear();
+function onClear() {
+  removeImages(() => true);
 }
 
 useClearKey(onClear, () => !!overlayImage.value || showParamsOverlay.value);
 
-const markedCount = computed(() => store.images.filter(image => image.marking).length);
-
-async function onRemoveMarked(marked) {
-  const count = marked ? markedCount.value : store.images.length - markedCount.value;
-  const which = marked ? "marked" : "unmarked";
-
-  if (count && await dialog.confirm(`Remove ${count} ${which} images from the Compare tab? The files stay on disk.`,
-      {okText: "Remove", danger: true}))
-    store.removeImages(image => !!image.marking === marked);
-}
 
 async function onFilesChosen(e) {
   for (const file of e.target.files) {
@@ -563,8 +555,7 @@ onDeactivated(() => {
     <input type="file" class="file-input" ref="fileInput" accept=".png, .jpg, .jpeg, .webp" multiple
            @change="onFilesChosen">
 
-    <CompareToolbar :image-count="store.images.length"
-                    :marked-count="markedCount"
+    <CompareToolbar :images="store.images"
                     :selecting="selecting"
                     :has-region="!!region"
                     :crop-view="cropView"
@@ -582,8 +573,7 @@ onDeactivated(() => {
                     @cycle-separator="cycleSeparator"
                     @save-png="onSavePng"
                     @send-to-editor="onSendToEditor"
-                    @remove-marked="onRemoveMarked"
-                    @clear="onClear"/>
+                    @remove="removeImages"/>
 
     <EmptyState v-if="!store.images.length" icon="compare" title="Nothing to compare yet" chapter="compare"
                 :ways="emptyWays"/>

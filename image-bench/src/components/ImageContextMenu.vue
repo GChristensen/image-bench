@@ -1,6 +1,7 @@
 <script setup>
 /**
- * Context menu of an image, opened through openImageMenu() of contextMenu.js; mounted once in App.vue
+ * Context menu of an image, opened through openImageMenu() of contextMenu.js, or another menu (openContextMenu(),
+ * openMenuBelow()); mounted once in App.vue
  */
 import {nextTick, onBeforeUnmount, ref, watch} from "vue";
 import {contextMenu, closeContextMenu} from "@/contextMenu.js";
@@ -24,8 +25,9 @@ watch(contextMenu, async menu => {
 
   // Keep the menu within the window
   const rect = menuElement.value.getBoundingClientRect();
+  const left = menu.alignRight ? menu.x - rect.width : menu.x;
   position.value = {
-    left: Math.max(EDGE, Math.min(menu.x, window.innerWidth - rect.width - EDGE)),
+    left: Math.max(EDGE, Math.min(left, window.innerWidth - rect.width - EDGE)),
     top: Math.max(EDGE, Math.min(menu.y, window.innerHeight - rect.height - EDGE))
   };
   flipSubmenus.value = position.value.left + rect.width * 2 > window.innerWidth;
@@ -47,8 +49,9 @@ function removeListeners() {
 
 onBeforeUnmount(removeListeners);
 
+// A press on the button of the menu is left to its click, which closes the menu (openMenuBelow)
 function onPointerDown(e) {
-  if (!menuElement.value?.contains(e.target))
+  if (!menuElement.value?.contains(e.target) && !contextMenu.value?.anchor?.contains(e.target))
     closeContextMenu();
 }
 
@@ -85,6 +88,7 @@ function onItemClick(item) {
          :style="{left: position.left + 'px', top: position.top + 'px'}" @contextmenu.prevent>
       <template v-for="(item, index) in contextMenu.items" :key="index">
         <hr v-if="item.separator">
+        <div v-else-if="item.heading" class="item-heading" role="presentation">{{ item.heading }}</div>
         <div v-else-if="item.submenu" class="submenu-item" @mouseenter="fitSubmenu">
           <button role="menuitem" aria-haspopup="menu">
             <AppIcon v-if="item.icon" :name="item.icon" :size="14" class="item-icon"/>
@@ -104,7 +108,8 @@ function onItemClick(item) {
             </template>
           </div>
         </div>
-        <button v-else role="menuitem" :class="{danger: item.danger}" @click="onItemClick(item)">
+        <button v-else role="menuitem" :class="{danger: item.danger}" :title="item.title" :disabled="item.disabled"
+                @click="onItemClick(item)">
           <AppIcon v-if="item.icon" :name="item.icon" :size="14" class="item-icon"/>
           <span v-else class="item-icon"></span>
           <span class="item-label">{{ item.label }}</span>
@@ -138,6 +143,15 @@ function onItemClick(item) {
   color: var(--ib-muted);
   font-size: 11px;
   white-space: nowrap;
+}
+
+.item-heading {
+  padding: 6px 10px 3px;
+  color: var(--ib-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .submenu-item {

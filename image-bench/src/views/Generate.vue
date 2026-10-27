@@ -9,14 +9,15 @@
  * One image is generated in place with a live preview; more images are a batch shown in the Generated tab
  * and, while it runs, in the session filmstrip, which takes the place of the parameter groups.
  */
-import {computed, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch} from "vue";
+import {computed, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, toRef, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import CheckTree from "@/components/CheckTree.vue";
 import GenerateImageCell from "@/components/GenerateImageCell.vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
-import ProgressIndicator from "@/components/ProgressIndicator.vue";
+import RunControl from "@/components/RunControl.vue";
+import {generateRun} from "@/runState.js";
 import PromptField from "@/components/PromptField.vue";
 import ReferencesPanel from "@/components/ReferencesPanel.vue";
 import ModulesSelect from "@/components/ModulesSelect.vue";
@@ -596,35 +597,23 @@ function recordPrompts() {
 // ---------- Generation ----------
 
 const generateImagesNumber = ref(1);
-const generateForever = computed(() => generateImagesNumber.value === -1);
-let finiteImagesNumber = 1;
 
-// A single image generated from this tab, shown with its live preview
-const singleInProgress = ref(false);
+// A single image generated from this tab, shown with its live preview, and whether a batch runs until stopped;
+// shared with the run indicator of the tab bar (runState.js)
+const singleInProgress = toRef(generateRun, "single");
 const batchInProgress = computed(() => generatedImagesStore.generationInProgress);
-let batchForever = false;
 
 const generating = computed(() => singleInProgress.value || batchInProgress.value || sdWebUI.busy);
 
 const progress = computed(() => {
   if (batchInProgress.value)
-    return batchForever
+    return generateRun.forever
       ? {value: 100, label: "∞"}
       : {value: generatedImagesStore.generationProgress || 0, label: "",
          completed: generatedImagesStore.generationCompleted, total: generatedImagesStore.generationTotal};
 
   return {value: sdWebUI.live.active ? sdWebUI.live.progress : 0, label: ""};
 });
-
-// -1 images: generate until stopped
-function toggleGenerateForever() {
-  if (generateForever.value)
-    generateImagesNumber.value = finiteImagesNumber;
-  else {
-    finiteImagesNumber = generateImagesNumber.value;
-    generateImagesNumber.value = -1;
-  }
-}
 
 async function onGenerate() {
   if (!await ensureGenerationIdle())
@@ -641,7 +630,7 @@ async function onGenerate() {
     if (config.automaticallyClearGeneratedImages)
       generatedImagesStore.clear();
 
-    batchForever = nImages === -1;
+    generateRun.forever = nImages === -1;
     generatedImagesStore.startingGeneration();
     selectedImage.value = null;
     autoShowStrip();
@@ -676,7 +665,7 @@ async function onGenerateVariations() {
 
   const nImages = Number(generateImagesNumber.value);
 
-  batchForever = nImages === -1;
+  generateRun.forever = nImages === -1;
   generatedImagesStore.startingGeneration();
   selectedImage.value = null;
   autoShowStrip();
@@ -806,7 +795,7 @@ function reminderAsks() {
 
 // ---------- Generation keys (generationKeys.js): Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+Backspace in any tab ----------
 
-const generateButton = ref(null);
+const runControl = ref(null);
 
 // Generate as a click on the button does: the reminder is shown under it, in this tab
 async function generateByKey() {
@@ -818,8 +807,8 @@ async function generateByKey() {
     await nextTick();
   }
 
-  if (projectCube.value && generateButton.value)
-    projectCube.value.ask(onGenerate, generateButton.value);
+  if (projectCube.value && runControl.value)
+    projectCube.value.ask(onGenerate, runControl.value.buttonElement);
 }
 
 const generationController = {
@@ -1496,36 +1485,22 @@ const gridStyle = computed(() => ({
 
   <div class="view-container generate">
     <div class="toolbar">
-      <div class="toolbar-group">
-        <button ref="generateButton" class="btn swap"
-                :class="[generating ? 'stop' : 'primary', {joined: projects.hasCurrent}]"
-                :disabled="!generating && (!connected || sdWebUI.restoringParams)"
-                :title="generating ? 'Stop (Ctrl+Enter); Ctrl+click or middle click: stop and generate again (Ctrl+Shift+Enter)'
-                  : projects.hasCurrent ? `Generate (project ${projects.current.name}) (Ctrl+Enter)` : 'Generate (Ctrl+Enter)'"
-                @click="onGenerateButton" @mousedown.middle.prevent
-                @auxclick="e => e.button === 1 && generating && onRestart()">
-          <span :class="{off: generating}"><AppIcon name="play" :size="13"/>Generate</span>
-          <span :class="{off: !generating || ctrlDown || restarting}"><AppIcon name="stop" :size="13"/>Stop</span>
-          <span :class="{off: !generating || !(ctrlDown || restarting)}"><AppIcon name="refresh" :size="13"/>Restart</span>
-        </button>
+      <RunControl ref="runControl" label="Generate" :running="generating"
+                  :disabled="!generating && (!connected || sdWebUI.restoringParams)"
+                  :title="generating ? 'Stop (Ctrl+Enter); Ctrl+click or middle click: stop and generate again (Ctrl+Shift+Enter)'
+                    : projects.hasCurrent ? `Generate (project ${projects.current.name}) (Ctrl+Enter)` : 'Generate (Ctrl+Enter)'"
+                  :alt="{label: 'Restart', icon: 'refresh'}" :alt-shown="ctrlDown || restarting"
+                  :button-class="{joined: projects.hasCurrent}"
+                  v-model:count="generateImagesNumber" :preset-count="config.generatePresetImages" forever
+                  :progress="progress"
+                  @click="onGenerateButton" @auxclick="e => e.button === 1 && generating && onRestart()">
         <ProjectCube v-if="projects.hasCurrent" ref="projectCube"/>
         <button class="btn outline" :disabled="!generating" title="Skip the image being generated (Ctrl+Backspace)"
                 @click="webUI.skipGeneration()"><AppIcon name="skip" :size="13"/>Skip</button>
-        <label class="toolbar-group-label"><span class="reset-count" title="Reset to 1 image"
-              @click.prevent="generateImagesNumber = 1">×</span><NumberStepper v-model="generateImagesNumber" label="Images to generate"/></label>
-        <button class="btn preset-count" :class="{on: generateImagesNumber === config.generatePresetImages}"
-                :disabled="generating" :title="`Generate ${config.generatePresetImages} images (set in the settings)`"
-                @click="generateImagesNumber = config.generatePresetImages">{{ config.generatePresetImages }}</button>
-        <button class="ib" :class="{on: generateForever}" :aria-pressed="generateForever" :disabled="generating"
-                :title="generateForever ? 'Generating forever: click to restore the number of images' : 'Generate forever (until stopped)'"
-                aria-label="Generate forever" @click="toggleGenerateForever"><AppIcon name="infinity" :size="14"/></button>
-      </div>
+      </RunControl>
       <button v-if="has('variations')" class="btn outline" :disabled="generating || !connected"
               title="Generate variations of the current seed in the Generated tab; the variation seed and strength are set for the batch and cleared afterwards automatically"
               @click="e => generateChecked(onGenerateVariations, e)"><AppIcon name="shuffle" :size="14"/>Variations…</button>
-
-      <ProgressIndicator v-if="generating" :value="progress.value" :label="progress.label"
-                         :completed="progress.completed || 0" :total="progress.total || 0"/>
 
       <!-- The free space of the toolbar, with the status centered in it -->
       <div class="status-slot">
@@ -2036,7 +2011,7 @@ const gridStyle = computed(() => ({
 }
 
 /* The Generate button joined to the project cube (ProjectCube.vue) */
-.btn.joined {
+:deep(.btn.joined) {
   border-radius: 5px 0 0 5px;
 }
 
@@ -2469,18 +2444,6 @@ const gridStyle = computed(() => ({
 
 .inline-field :deep(.stepper input) {
   height: 24px;
-}
-
-.preset-count {
-  min-width: 26px;
-  padding: 0 6px;
-  font-family: var(--ib-mono);
-  font-size: 12px;
-}
-
-.preset-count.on {
-  background: var(--ib-accent-soft);
-  color: var(--ib-accent);
 }
 
 .toolbar-divider {

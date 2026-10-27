@@ -2,6 +2,7 @@
 import {computed, onBeforeUnmount, onMounted, ref} from "vue";
 import {ICON_PATHS} from "@/components/icons.js";
 import {MARKINGS} from "@/consts.js";
+import {ACTION_GROUP_COLORS as GROUP_COLORS} from "@/imageActions.js";
 
 /**
  * Action rim of an image card: a hollow ring of sectors around the image center, one per image action
@@ -37,7 +38,7 @@ const props = defineProps({
   // Label of the Delete sector, e.g. for a view that only references the image
   deleteLabel: {
     type: String,
-    default: "Delete"
+    default: "Remove"
   },
   // The view filters by markings; filterActive tells that it is filtered by this marking
   filterable: {
@@ -72,8 +73,6 @@ const props = defineProps({
 
 const emit = defineEmits(["run", "delete", "setMarking", "filterMarking", "close", "extra"]);
 
-// By the group index of the action registry
-const GROUP_COLORS = ["#7aa2ff", "#ffb547", "#c084fc", "#34d399"];
 const DELETE_COLOR = "#ef4444";
 const MARKING_COLORS = {"👍": "#4ade80", "👎": "#fb7185", "🔴": "#ef4444", "🟠": "#f97316", "🟡": "#eab308",
   "🟢": "#22c55e", "🔵": "#3b82f6", "🟣": "#a855f7", "🏁": "#e5e7eb"};

@@ -1,6 +1,6 @@
 <script setup>
 
-import {computed, ref, toRaw, watch} from "vue";
+import {computed, ref, watch} from "vue";
 import ImageOverlay from "@/components/ImageOverlay.vue";
 import ImageStream from "@/components/ImageStream.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
@@ -14,15 +14,13 @@ import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
 import {createImageLink, ensureGenerationIdle, getGenerationState} from "@/sdwebui.js";
 import {useAppConfigStore} from "@/stores/appConfig.js";
 import {useConceptTrayStore} from "@/stores/conceptTray.js";
-import {useCompareStore} from "@/stores/compare.js";
-import {flashTrayTab} from "@/components/utils.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useKeyboardShortcuts} from "@/composables/useKeyboardShortcuts.js";
 import {useClearKey} from "@/composables/useClearKey.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {toastError} from "@/toast.js";
-import {isStill} from "@/media.js";
+import {bulkActions} from "@/imageActions.js";
 
 const props = defineProps({
   kind: {
@@ -87,40 +85,26 @@ function onRemoveSelectedClick() {
   imageStream.value.removeSelected();
 }
 
-// All checked images of the view, including those hidden by the marking filter, as dragging them does
-async function onCompareSelectedClick() {
-  const compareStore = useCompareStore();
+// The image actions for all checked images of the view, including those hidden by the marking filter, as dragging
+// them does; an upscale waits for the running one
+const actionContext = computed(() => ({kind: props.kind, isTray: isComponentTray(props.kind),
+  upscalable: isComponentTray(props.kind) || props.kind === KIND_GENERATED, handlers: {}}));
+const selectedImages = computed(() => imageStore.images.filter(i => i.selected && !i.separator));
+const bulk = computed(() => selectedCount.value ? bulkActions(selectedImages.value, actionContext.value) : []);
 
-  for (const image of imageStore.images.filter(i => i.selected && !i.separator && isStill(i)))
-    await compareStore.addImage(toRaw(image));
+const bulkItems = computed(() => bulk.value.map(({action, images, color}) => ({
+  id: action.id,
+  icon: action.icon,
+  label: action.bulkLabel,
+  color,
+  title: images.length < selectedImages.value.length
+    ? `${action.label}: ${images.length} of the ${selectedImages.value.length} checked images` : action.label,
+  disabled: action.id === "upscale" && upscaledImageStore.generationInProgress
+})));
 
-  flashTrayTab("compare-tab");
-}
-
-const TRAY_TAB_IDS = {[KIND_IMAGE_TRAY]: "image-tray-tab", [KIND_CONCEPT_TRAY]: "concept-tray-tab"};
-
-async function onTraySelectedClick(trayKind) {
-  const trayStore = trayKind === KIND_IMAGE_TRAY ? imageTrayStore : upscaleTrayStore;
-
-  for (const image of imageStore.images.filter(i => i.selected && !i.separator))
-    await trayStore.addImage(toRaw(image));
-
-  flashTrayTab(TRAY_TAB_IDS[trayKind]);
-}
-
-async function onUpscaleSelectedClick() {
-  const selectedImages = imageStream.value.getSelectedImages().filter(isStill);
-
-  if (upscaledImageStore.generationInProgress) {
-    webUI.stopGeneration();
-  }
-  else {
-    if (selectedImages.length && await ensureGenerationIdle()) {
-      upscaledImageStore.startingGeneration();
-
-      webUI.upscaleImages(selectedImages);
-    }
-  }
+function onBulkAction(id) {
+  const item = bulk.value.find(entry => entry.action.id === id);
+  item?.action.bulk(item.images, actionContext.value);
 }
 
 async function onUpscaleImage(imageProxy) {
@@ -172,10 +156,10 @@ function onImageSelectOverlay(evt, image) {
 }
 
 // After deleting, the overlay moves on to the neighbouring image, or closes if there is none
-async function onDeleteImageOverlay(image) {
+function onDeleteImageOverlay(image) {
   const neighbour = imageStream.value.getNextImage(image) || imageStream.value.getPrevImage(image);
 
-  if (!await imageStream.value.deleteImage(image))
+  if (!imageStream.value.deleteImage(image))
     return;
 
   if (neighbour)
@@ -370,27 +354,22 @@ function isComponentTray(kind) {
     <ImageToolbar
       :kind="kind"
       :is-tray="isComponentTray(kind)"
+      :images="imageStore.images"
       :is-all-selected="isAllSelected"
       :selected-count="selectedCount"
       :auto-clear="config.automaticallyClearGeneratedImages"
       :is-showing-marked="isShowingMarked"
       :marking-filter="markingFilter"
-      :generation-in-progress="imageStore.generationInProgress"
-      :generation-progress="imageStore.generationProgress"
-      :generation-completed="imageStore.generationCompleted"
-      :generation-total="imageStore.generationTotal"
-      :upscale-in-progress="upscaledImageStore.generationInProgress"
       :apply-preset="imageStore.applyPreset"
       :presets="configPresetsStore.presets"
       @save="onSaveClick"
       @open="onOpenClick"
       @select-all="onSelectAllClick"
       @show-marked="onShowMarkedClick"
-      @upscale-selected="onUpscaleSelectedClick"
-      @clear="onClearClick"
+      @remove="predicate => imageStream.removeWhere(predicate)"
       @remove-selected="onRemoveSelectedClick"
-      @compare-selected="onCompareSelectedClick"
-      @tray-selected="onTraySelectedClick"
+      :bulk-items="bulkItems"
+      @bulk="onBulkAction"
       @unselect-all="imageStream.unselectAll()"
       @update:autoClear="value => config.automaticallyClearGeneratedImages = value"
       @preset-change="onConfigPresetChange"

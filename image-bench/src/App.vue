@@ -20,7 +20,6 @@ import {useCompareStore} from "@/stores/compare.js";
 import {useControlNetSweepStore} from "@/stores/controlnetSweep.js";
 import {useSessionImagesStore} from "@/stores/session.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
-import ActionsModal from "@/components/ActionsModal.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
 import ImageContextMenu from "@/components/ImageContextMenu.vue";
@@ -46,6 +45,9 @@ import {toast} from "@/toast.js";
 import ConsoleDrawer from "@/components/ConsoleDrawer.vue";
 import {consoleOpen, onConsoleKey, toggleConsole} from "@/consoleDrawer.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
+import RunRing from "@/components/RunRing.vue";
+import TabHoverCard from "@/components/TabHoverCard.vue";
+import {useActiveRun} from "@/runState.js";
 
 // Messages too frequent to log
 const QUIET_EVENTS = ["WEBUI_PARAMS", "LIVE_PROGRESS", "INPUT_IMAGES", "CONTROLNET_STATE", "CONTROLNET_IMAGES"];
@@ -75,7 +77,6 @@ const manualStore = useManualStore();
 
 // Composables
 const webUI = useWebUIBridge();
-const showActionsModal = ref(false);
 
 // A link to the manual is shown for a minute on the first opening after installation
 const MANUAL_HINT_KEY = "imageBench_manualHintShown";
@@ -99,10 +100,10 @@ function hideManualHint() {
 
 watch(() => manualStore.opened, opened => opened && hideManualHint());
 
-// The manual is a section of the Library
-function openManual() {
+// The manual is a section of the Library; chapter: an id of MANUAL_SECTIONS
+function openManual(chapter) {
   hideManualHint();
-  manualStore.reveal();
+  manualStore.reveal(chapter);
   router.push("/library");
 }
 
@@ -157,6 +158,33 @@ watch(() => appConfigStore.showPromptLock, show => {
     webUI.lockWebUIPrompts(false);
   }
 });
+
+// The run in progress has a ring on the icon of the tab that started it; a middle click on that tab stops it
+const activeRun = useActiveRun();
+
+function runOn(tabId) {
+  return activeRun.value?.tabId === tabId ? activeRun.value : null;
+}
+
+function runTitle(tabId) {
+  const run = runOn(tabId);
+
+  if (!run)
+    return null;
+
+  const done = run.forever ? "Generating until stopped" : run.total ? `${run.completed} / ${run.total} images`
+    : run.progress !== null ? `${Math.round(run.progress)}%` : "Running";
+  return `${done}. Middle click: stop`;
+}
+
+function onTabAuxClick(e) {
+  const tab = e.button === 1 && e.target.closest(".tab");
+
+  if (tab && runOn(tab.id)) {
+    e.preventDefault();
+    webUI.stopGeneration();
+  }
+}
 
 // The HR badge of the Generate tab, in every tab: the host's Hires. fix switch is on
 const hiresFixOn = computed(() => hostConnected.value && sdWebUIStateStore.hiresFix === true);
@@ -396,15 +424,22 @@ async function switchTabAccordingToGenerationMode(e, state) {
 
 <template>
   <div class="tab-container">
-    <nav class="tabs">
-      <RouterLink to="/generate" class="tab" id="generate-tab"
+    <nav class="tabs" @auxclick="onTabAuxClick">
+      <RouterLink to="/generate" class="tab" id="generate-tab" :title="runTitle('generate-tab')"
         ><span class="tab-icon" :class="{'hires-on': hiresFixOn}"><AppIcon name="generate" :size="14"
+        /><RunRing v-if="runOn('generate-tab')" :run="runOn('generate-tab')"
         /><span v-if="hiresFixOn" class="hires-badge" title="Hires. fix is on">HR</span></span>Generate</RouterLink>
-      <RouterLink to="/controlnet" class="tab" id="controlnet-tab"><AppIcon name="controlnet" :size="14"/>ControlNet</RouterLink>
-      <RouterLink to="/explore" class="tab" ref="exploreTab"><AppIcon name="flask" :size="14"/>Explore</RouterLink>
+      <RouterLink to="/controlnet" class="tab" id="controlnet-tab" :title="runTitle('controlnet-tab')"
+        ><span class="tab-icon"><AppIcon name="controlnet" :size="14"
+        /><RunRing v-if="runOn('controlnet-tab')" :run="runOn('controlnet-tab')"/></span>ControlNet</RouterLink>
+      <RouterLink to="/explore" class="tab" id="explore-tab" ref="exploreTab" :title="runTitle('explore-tab')"
+        ><span class="tab-icon"><AppIcon name="flask" :size="14"
+        /><RunRing v-if="runOn('explore-tab')" :run="runOn('explore-tab')"/></span>Explore</RouterLink>
       <span class="tab-sep" aria-hidden="true"></span>
       <RouterLink to="/generated-images" class="tab" id="generated-images-tab" ref="generatedImagesTab"><AppIcon name="images" :size="14"/>Generated<span v-if="generatedCount" class="count">{{ generatedCount }}</span></RouterLink>
-      <RouterLink to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"><AppIcon name="upscale" :size="14"/>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
+      <RouterLink to="/upscaled-images" class="tab" id="upscaled-images-tab" ref="upscaledImagesTab"
+                  :title="runTitle('upscaled-images-tab')"><span class="tab-icon"><AppIcon name="upscale" :size="14"
+        /><RunRing v-if="runOn('upscaled-images-tab')" :run="runOn('upscaled-images-tab')"/></span>Upscaled<span v-if="upscaledImageStore.images.length" class="count">{{ upscaledImageStore.images.length }}</span></RouterLink>
       <span class="tab-sep" aria-hidden="true"></span>
       <RouterLink to="/compare" class="tab" id="compare-tab"
                   :class="{'drop-target': dropTargetKind === KIND_COMPARE}"
@@ -426,7 +461,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <span v-else-if="!backendConnected" class="backend-down" role="status" :title="backendDownTitle"
             :aria-label="`${HOST_NAME} is not running`"><AppIcon name="unplug" :size="15"/></span>
       <div class="tab-spacer"></div>
-      <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual"
+      <a v-if="showManualHint" href="#" class="manual-hint" @click.prevent="openManual()"
         ><AppIcon name="help" :size="13"/>New to Image Bench? Read the manual</a>
       <RouterLink v-if="!hostConnected && EMBEDDED" :to="HOST_ROUTE" class="chip window-warning"
                   :title="`${HOST_NAME} is loading in the ${HOST_NAME} tab`"
@@ -442,9 +477,6 @@ async function switchTabAccordingToGenerationMode(e, state) {
                   @click="onHostTabClick" @auxclick="onHostTabAuxClick" @mousedown.middle.prevent
                   @mouseenter="hostTabHovered = true" @mouseleave="hostTabHovered = false"
         ><AppIcon :name="hostTabHovered && shiftDown ? 'terminal' : 'appWindow'" :size="15"/></RouterLink>
-      <button class="ib flat actions-button" @click="showActionsModal = true"
-              title="Clean up (clear images, delete outputs, reset parameters)" aria-label="Clean up"
-        ><AppIcon name="broom" :size="16"/></button>
     </nav>
     <div id="tab-content">
       <RouterView v-slot="{ Component }">
@@ -455,7 +487,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <HostFrame v-if="EMBEDDED" :active="hostTabActive"/>
       <ConsoleDrawer v-if="consoleOpen" @close="toggleConsole"/>
     </div>
-  <ActionsModal :show="showActionsModal" @close="showActionsModal = false" />
+  <TabHoverCard @open-manual="openManual"/>
   <ImageContextMenu />
   <DialogHost />
   <ToastHost />
@@ -560,10 +592,6 @@ async function switchTabAccordingToGenerationMode(e, state) {
     isolation: isolate;
     flex-grow: 1;
     min-height: 0;
-  }
-
-  .actions-button {
-    margin-left: 2px;
   }
 
   .manual-hint {

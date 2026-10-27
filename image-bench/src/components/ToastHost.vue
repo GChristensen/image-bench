@@ -12,6 +12,11 @@ function onClick(item) {
   dismissToast(item.id);
   item.open?.();
 }
+
+function onAction(item) {
+  dismissToast(item.id);
+  item.action.run();
+}
 </script>
 
 <template>
@@ -22,6 +27,7 @@ function onClick(item) {
         <span v-if="item.kind === 'pending'" class="spinner" aria-hidden="true"></span>
         <AppIcon v-else :name="item.kind === 'error' ? 'alert' : 'check'" :size="14"/>
         <span>{{ item.message }}</span>
+        <button v-if="item.action" type="button" class="toast-action" @click.stop="onAction(item)">{{ item.action.label }}</button>
       </div>
     </TransitionGroup>
   </Teleport>
@@ -60,6 +66,21 @@ function onClick(item) {
 
 .toast.success :deep(.app-icon) {
   color: var(--ib-accent);
+}
+
+.toast-action {
+  margin-left: 4px;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--ib-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  text-decoration: underline;
 }
 
 .toast.pending {

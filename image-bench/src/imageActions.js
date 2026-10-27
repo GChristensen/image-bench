@@ -8,6 +8,7 @@ import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
 import {flashTrayTab} from "@/components/utils.js";
+import {toRaw} from "vue";
 import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {toastError} from "@/toast.js";
@@ -30,7 +31,12 @@ import {KIND_AUDIO, KIND_VIDEO, isStill, mediaKind} from "@/media.js";
  * An action with `alt` has an alternative that runs on a middle click, a Shift+click or Shift+key.
  * visible(image, ctx) must cover both hosts.
  * An action with `rim: false` is left out of the action rim (it stays in the context menu and on its key).
+ * An action with `bulk(images, ctx)` is also a button of the toolbar of the checked images (bulkActions()), labelled
+ * `bulkLabel`; it gets only the checked images its visible() accepts.
  */
+
+// Colors of the action groups (by group index) on the action rim and the buttons of the checked images
+export const ACTION_GROUP_COLORS = ["#7aa2ff", "#ffb547", "#c084fc", "#34d399"];
 
 async function sendToControlNet(image) {
   const error = await useImageOperations().sendToControlNet(image);
@@ -146,6 +152,23 @@ async function generateVaryingTextEncoders(image) {
   useWebUIBridge().generateVaryingModules(useImageOperations().cloneImage(image), moduleSets);
 }
 
+// The checked images of a view are upscaled one after another into the Upscaled tab
+async function upscaleImages(images) {
+  if (!await ensureGenerationIdle())
+    return;
+
+  useUpscaledImagesStore().startingGeneration();
+  useWebUIBridge().upscaleImages(images.map(image => useImageOperations().cloneImage(image)));
+}
+
+// Images are added to a collection one by one, as they would be from their cards
+async function addImages(store, images, tabId) {
+  for (const image of images)
+    await store.addImage(toRaw(image));
+
+  flashTrayTab(tabId);
+}
+
 async function upscaleVaryingDenoising(image) {
   if (!await ensureGenerationIdle())
     return;
@@ -226,8 +249,10 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "upscale", side: "left", group: 1, icon: "upscale", label: `Upscale with the current ${HOST_NAME} settings`, key: "U",
+    bulkLabel: "Upscale",
     visible: (image, ctx) => ctx.upscalable && !image.img2img && isStill(image),
-    run: (image, ctx) => ctx.handlers.upscale?.(image)
+    run: (image, ctx) => ctx.handlers.upscale?.(image),
+    bulk: images => upscaleImages(images)
   },
   {
     id: "denoising", side: "left", group: 1, icon: "denoise", label: "Upscale with denoising", key: "D",
@@ -265,27 +290,33 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "compare", side: "right", group: 3, icon: "compare", label: "Add to compare", key: "A",
+    bulkLabel: "Add to compare",
     visible: (image, ctx) => ctx.kind !== KIND_COMPARE && isStill(image),
     run: image => {
       useCompareStore().addImage(image);
       flashTrayTab("compare-tab");
-    }
+    },
+    bulk: images => addImages(useCompareStore(), images, "compare-tab")
   },
   {
     id: "conceptTray", side: "right", group: 3, icon: "concept", label: "Add to concept tray", key: "Y",
+    bulkLabel: "Concept tray",
     visible: (image, ctx) => !ctx.isTray || ctx.kind === KIND_IMAGE_TRAY,
     run: image => {
       useConceptTrayStore().addImage(image);
       flashTrayTab("concept-tray-tab");
-    }
+    },
+    bulk: images => addImages(useConceptTrayStore(), images, "concept-tray-tab")
   },
   {
     id: "imageTray", side: "right", group: 3, icon: "palette", label: "Add to image tray", key: "T",
+    bulkLabel: "Image tray",
     visible: (image, ctx) => !ctx.isTray || ctx.kind === KIND_CONCEPT_TRAY,
     run: image => {
       useImageTrayStore().addImage(image);
       flashTrayTab("image-tray-tab");
-    }
+    },
+    bulk: images => addImages(useImageTrayStore(), images, "image-tray-tab")
   }
 ];
 
@@ -328,6 +359,28 @@ export function rimActionGroups(image, ctx) {
       (groups[action.group] ??= []).push(action);
 
   return RIM_GROUP_ORDER.map(index => ({index, actions: groups[index] ?? []}));
+}
+
+/**
+ * The actions of the toolbar of the checked images, in rim order: those with bulk() that accept one of the images
+ * at least, each with the images it accepts
+ * @returns {Array<{action: Object, images: Object[], color: string}>}
+ */
+export function bulkActions(images, ctx) {
+  const result = [];
+
+  for (const index of RIM_GROUP_ORDER)
+    for (const action of IMAGE_ACTIONS) {
+      if (action.group !== index || !action.bulk)
+        continue;
+
+      const accepted = images.filter(image => action.visible(image, ctx));
+
+      if (accepted.length)
+        result.push({action, images: accepted, color: ACTION_GROUP_COLORS[index]});
+    }
+
+  return result;
 }
 
 /**

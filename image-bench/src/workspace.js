@@ -13,21 +13,17 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {HOST_NAME, isWebUI} from "@/host.js";
 
 /**
- * Clearing the workspace: the clean-up actions (ActionsModal.vue) and closing the current project (ProjectChip.vue)
+ * Clearing the workspace: the clean-up actions of the project chip's menu (cleanUp.js)
  */
 
 // The views that are not trays, as named in the confirmations
 export const VIEWS = "Generated, Explore and Upscaled tabs and the ControlNet sweep";
 
-export function clearViews() {
+export function clearViewsAndTrays() {
   useExploreImagesStore().clear();
   useGeneratedImagesStore().clear();
   useUpscaledImagesStore().clear();
   useControlNetSweepStore().clear();
-}
-
-export function clearViewsAndTrays() {
-  clearViews();
   useImageTrayStore().clear();
   useConceptTrayStore().clear();
   useCompareStore().clear();

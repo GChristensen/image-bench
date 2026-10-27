@@ -128,6 +128,16 @@ const hostOrigin = location.origin;
           bar) holds the application options.</li>
       </ul>
       <p>
+        While a run goes on, a ring around the icon of the tab that started it shows its progress: Generate for
+        batches, variations and the generations of image actions, Explore, ControlNet for the sweep and Upscaled
+        for upscales. The ring spins while the progress is unknown or the run goes on until stopped. Hover the tab
+        to see the progress; a <b>middle click</b> on a ringed tab stops the run from any tab.
+      </p>
+      <p>
+        Rest the pointer on a tab for a moment to see a card with what the tab is for, its fastest keys and a link
+        to its chapter of this manual. The card never shows while a button is held or an image is dragged.
+      </p>
+      <p>
         Image Bench has plugins for Photoshop, Krita and GIMP. They send images from the editor to {{ HOST_NAME }}
         and open any image from Image Bench in the editor as a new document or a layer (see
         <a href="#" @click.prevent="scrollTo('editors')">Editors</a>).
@@ -234,6 +244,11 @@ const hostOrigin = location.origin;
         images with that marking and a middle click removes it. Keys act on the image under the pointer:
         <span class="kbd">1</span>–<span class="kbd">9</span> set its marking (<span class="kbd">0</span> removes it) and
         <span class="kbd">V</span> views it large.
+      </p>
+      <p>
+        <b>Remove</b> (the red sector, <span class="kbd">Del</span> or the menu) takes the image out of the tab at
+        once; the file stays on disk. Removing and clearing never ask first: the notice at the bottom of the window
+        has <b>Undo</b> for a few seconds, which puts the images back where they were.
       </p>
 
       <h3>The menu actions</h3>
@@ -567,8 +582,8 @@ const hostOrigin = location.origin;
           generates one image per model and LoRA, all with the same seed, and lays them out as a grid with a row
           per model and a column per LoRA (plus the No LoRA column). When you switch back to By model, the number
           of images is 3 again.</li>
-        <li><b>Save results</b> stores the whole comparison as a single HTML page; <b>Clear results</b> empties
-          the tab.</li>
+        <li><b>Save results</b> stores the whole comparison as a single HTML page; <b>Clear</b> empties
+          the tab (Undo in the notice).</li>
         <li>The <AppIcon name="info" :size="13" class="inline-icon"/> button shows the Civitai information of the
           focused model or LoRA: preview, version, base model and trained words, with buttons to open its Civitai
           page and, for a LoRA, to use the trained words as its activation text. If Civitai does not know a model,
@@ -602,7 +617,7 @@ const hostOrigin = location.origin;
       <ul>
         <li>Batches, variations and endless generation are started from the
           <a href="#" @click.prevent="scrollTo('generate')">Generate</a> tab; their images arrive here, and the
-          toolbar shows the progress of a running batch.</li>
+          ring around the Generate tab icon shows the progress of a running batch.</li>
         <!--li v-if="isWebUI"><b>Apply preset</b> — applies a preset of the Config Presets extension before the
           batch (shown only when that extension is installed).</li-->
         <li>Move the images worth keeping to a tray with
@@ -610,15 +625,17 @@ const hostOrigin = location.origin;
           <AppIcon name="palette" :size="13" class="inline-icon"/>. While the
           <AppIcon name="recycle" :size="13" class="inline-icon"/> <b>Clear automatically when a
           new batch starts</b> toggle is on, the tab is emptied whenever a new batch starts; turn it off to keep
-          the images of successive runs. <b>Clear</b> removes all images
-          from the tab (the files stay on disk).</li>
+          the images of successive runs.</li>
+        <li><b>Clear</b>, at the right end of the toolbar of the Generated, Upscaled, tray and Compare tabs,
+          removes all images from the tab. Its arrow, or a middle click on it, lists what else it can remove,
+          with counts: the checked images, the unmarked or marked ones, or those of one marking. The files stay
+          on disk, and the notice that follows has <b>Undo</b>.</li>
         <li><b>Selecting images</b>: check images with the circle at the top left of the thumbnail, or all of them
-          with <b>Select all</b> in the toolbar. While images are checked, the toolbar can add them all at once to
-          the Compare tab
-          (<AppIcon name="compare" :size="13" class="inline-icon"/>), the concept tray
-          (<AppIcon name="concept" :size="13" class="inline-icon"/>) or the image tray
-          (<AppIcon name="palette" :size="13" class="inline-icon"/>), and dragging a checked thumbnail takes them
-          all along. <span class="kbd">Ctrl</span>+<span class="kbd">U</span> unchecks them.</li>
+          with <b>Select all</b> in the toolbar. While images are checked, the toolbar shows the image actions that
+          work on many images, in every image tab the same and colored as on the action rim: <b>Add to
+          compare</b>, the trays, <b>Upscale</b> where the tab offers it, then <b>Remove</b> (with Undo). An
+          action that does not apply to some of the checked images (a video, for one) skips them, and its tooltip
+          tells how many it takes. Dragging a checked thumbnail takes them all along. <span class="kbd">Ctrl</span>+<span class="kbd">U</span> unchecks them.</li>
         <li><b>Filtering by markings</b>: as in the trays, <AppIcon name="filter" :size="13" class="inline-icon"/>
           shows only the marked images, and clicking the marking of an image shows only the images with that
           marking (click it again to show all).</li>
@@ -665,8 +682,8 @@ const hostOrigin = location.origin;
           a comment, Remove from compare at the bottom, and the markings in the middle), right-click it for its
           actions, or use the keys. Middle-click or Shift+click an image to view it large (in Crops, click or
           middle-click it).</li>
-        <li><b>Clear</b>: <b>Marked</b> / <b>Unmarked</b> remove the images with or without a marking, and
-          <b>All</b> removes all of them. The files stay on disk.</li>
+        <li><b>Clear</b> removes all images; its arrow or a middle click removes only the unmarked or marked
+          ones, or those of one marking. The files stay on disk, and the notice has <b>Undo</b>.</li>
       </ul>
     </section>
 
@@ -706,10 +723,11 @@ const hostOrigin = location.origin;
           from. Images of the same generation run (one batch, or one run of model exploration, steps, denoising
           strengths, etc.) share a color, and each new run takes the next color.</li>
         <li><b>Comments</b> <AppIcon name="comment" :size="13" class="inline-icon"/> on images, shown at the top of the image.</li>
-        <li><b>Removing images</b>: check them and use <b>Remove selected</b>, which appears in the toolbar
+        <li><b>Removing images</b>: check them and use <b>Remove</b>, which appears in the toolbar
           while images are checked, or use the <AppIcon name="trash" :size="13" class="inline-icon"/> button of the
-          full image view. <b>Clear</b> removes all images of the tray. In both cases the files stay on disk.</li>
-        <li><b>Compare selected</b> adds the checked images to the Compare tab.</li>
+          full image view. <b>Clear</b> removes all images of the tray. In both cases the files stay on disk, and
+          the notice that follows has <b>Undo</b>, which puts the images back.</li>
+        <li><b>Upscale</b> upscales the checked images one after another into the Upscaled tab.</li>
         <li><b>Generate with steps</b> <AppIcon name="steps" :size="13" class="inline-icon"/> asks for a list of
           step counts and generates the image again with each of them in the Generated tab.</li>
         <li v-if="isWebUI"><b>Generate with text encoders</b> <AppIcon name="puzzle" :size="13" class="inline-icon"/>
@@ -756,8 +774,11 @@ const hostOrigin = location.origin;
       </p>
       <p>
         Select images as in the <a href="#" @click.prevent="scrollTo('generated')">Generated</a> tab, which has the
-        same buttons to add them to the Compare tab or a tray. <b>Remove selected</b> removes them from the tab
-        (the files stay on disk).
+        same buttons to add them to the Compare tab or a tray. <b>Remove</b> removes them from the tab
+        (the files stay on disk, Undo in the notice).
+      </p>
+      <p>
+        A running upscale shows its progress in the ring around the tab icon; a middle click on the tab stops it.
       </p>
     </section>
 
@@ -847,7 +868,11 @@ const hostOrigin = location.origin;
           automatically. Image Bench remembers the current project across restarts. Without a current project the
           chip reads <i>No project</i>, and its <AppIcon name="plus" :size="13" class="inline-icon"/> button
           creates a new project. When a folder is selected in the Projects tab, or a project inside a folder, a switch
-          in the dialog lets you choose between that folder and the root. Right-click the chip to open one of the recent projects.
+          in the dialog lets you choose between that folder and the root. The <AppIcon name="chevron" :size="13" class="inline-icon"/>
+          arrow of the chip, or a right-click on it, opens its menu: <b>Save</b> (or <b>New project…</b>),
+          <b>Show in Projects</b>, the recent projects and <b>All projects…</b>, and the clean-up actions (see
+          <a href="#" @click.prevent="scrollTo('settings')">Settings and actions</a>), among them <b>Close and start a
+          blank workspace</b>.
           Drop image cards on the chip to copy them into the folder of the current project.</li>
         <li><b>The project reminder</b>: while a project is current, a cube in the project color is joined to the
           Generate button. Click it for <b>Save project</b> and <b>New workspace…</b>. The cube turns striped and
@@ -932,26 +957,24 @@ const hostOrigin = location.origin;
         </template>
       </ul>
       <p>
-        The <AppIcon name="broom" :size="13" class="inline-icon"/> button at the right end of the tab bar opens the
-        clean-up actions. Each one asks for confirmation first. The number of
-        <AppIcon name="nuke" :size="13" class="inline-icon"/> signs shows how much an action destroys:
+        The clean-up actions are at the end of the menu of the project chip (its
+        <AppIcon name="chevron" :size="13" class="inline-icon"/> arrow, or a right-click on the chip):
       </p>
       <ul>
-        <li><b>Clear generated images</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> removes all
-          images from the Generated, Upscaled and Explore tabs and the ControlNet sweep. The trays, the
-          Compare tab, the prompts and the parameters are kept, and no files are deleted.</li>
-        <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
-          name="nuke" :size="13" class="inline-icon"/> is for starting a new project. It also empties both trays and
+        <li><b>Clear generated images</b> <AppIcon name="broom" :size="13" class="inline-icon"/> removes all
+          images from the Generated, Upscaled and Explore tabs and the ControlNet sweep at once, with Undo in the
+          notice. The trays, the Compare tab, the prompts and the parameters are kept, and no files are deleted.</li>
+        <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> (with a current
+          project: <b>Close and start a blank workspace</b>) asks first and is for starting a new project. It also empties both trays and
           the Compare tab, clears the prompts, sets a random seed<template v-if="isWebUI"> (and clears the variation
           seed)</template>, and closes the current project, whose saved state is kept. The other
           parameters are kept, and the image files stay on disk.</li>
-        <li><b>Delete all output files</b> <AppIcon name="nuke" :size="13" class="inline-icon"/><AppIcon
-          name="nuke" :size="13" class="inline-icon"/><AppIcon name="nuke" :size="13" class="inline-icon"/>
+        <li><b>Delete all output files…</b> <AppIcon name="trash" :size="13" class="inline-icon"/> asks first, then
           clears all tabs and trays and permanently deletes every file and folder in the {{ HOST_NAME }} output
           folder, including tray and upscaled images. This cannot be
           undone.</li>
-        <li v-if="isWebUI"><b>Reset saved generation parameters</b> <AppIcon name="reset" :size="13"
-          class="inline-icon"/> forgets the prompts and parameters saved by <b>Remember prompts and generation
+        <li v-if="isWebUI"><b>Reset saved generation parameters…</b> <AppIcon name="reset" :size="13"
+          class="inline-icon"/> asks first, then forgets the prompts and parameters saved by <b>Remember prompts and generation
           parameters across WebUI reloads</b>, so that nothing is restored at the next reload.</li>
       </ul>
     </section>
@@ -1460,7 +1483,7 @@ const hostOrigin = location.origin;
         <tr><td><span class="kbd">Esc</span></td><td>Close the image view, or the topmost dialog</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">U</span></td><td>Unselect all images</td></tr>
         <tr><td><span class="kbd">Shift</span>+<span class="kbd">Del</span></td><td>Clear the shown tab (Generated,
-          Upscaled, the trays, Compare), after a confirmation</td></tr>
+          Upscaled, the trays, Compare); the notice that follows has Undo</td></tr>
         <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>Save the workspace into the
           current project</td></tr>
         <tr><td>Click</td><td>On the image in the image view, switch between full size and fit to screen. Drag to

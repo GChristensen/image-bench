@@ -1,4 +1,4 @@
-import { computed, toRaw } from 'vue'
+import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { KIND_COMPARE } from "@/consts.js";
 import { useTrayStoreState } from "@/stores/composables/useTrayStoreState.js";
@@ -24,17 +24,6 @@ export const useCompareStore = defineStore('compare', () => {
     state.persist();
   }
 
-  function removeImage(image) {
-    image = toRaw(image);
-    state.images.value = state.images.value.filter(i => toRaw(i) !== image);
-    state.persist();
-  }
-
-  function removeImages(predicate) {
-    state.images.value = state.images.value.filter(image => !predicate(image));
-    state.persist();
-  }
-
   // Images uploaded or sent from the editor are already in the compare directory
   function onSDEvent(e) {
     if (e.type === "COMPARE_IMAGE" && e.image)
@@ -45,8 +34,6 @@ export const useCompareStore = defineStore('compare', () => {
     ...state,
     imageCount,
     moveImage,
-    removeImage,
-    removeImages,
     onSDEvent
   };
 });

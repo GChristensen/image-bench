@@ -65,6 +65,21 @@ export const useControlNetSweepStore = defineStore("controlNetSweep", () => {
     state.clear();
   }
 
+  // The whole sweep, for Undo of a clean-up (undo.js)
+  function snapshot() {
+    return {weights: weights.value, ends: ends.value, unit: unit.value, reference: reference.value,
+      cells: cells.value, images: state.images.value};
+  }
+
+  function restoreSnapshot(saved) {
+    weights.value = saved.weights;
+    ends.value = saved.ends;
+    unit.value = saved.unit;
+    reference.value = saved.reference;
+    cells.value = saved.cells;
+    state.images.value = saved.images;
+  }
+
   function onSDEvent(e) {
     if (e.type === "SAVED_IMAGE" && e.sweepCell) {
       const image = createImageData(e);
@@ -102,6 +117,8 @@ export const useControlNetSweepStore = defineStore("controlNetSweep", () => {
     hasSweep,
     begin,
     clear,
+    snapshot,
+    restoreSnapshot,
     onSDEvent,
     cellAt
   };

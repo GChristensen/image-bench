@@ -13,8 +13,9 @@ import {canPasteInfotext, copyInfotext, imageFileName, pasteInfotext} from "@/in
  * Context menu of an image (card or overlay) or of another item (openContextMenu), rendered by ImageContextMenu.vue,
  * which is mounted once in App.vue.
  * The state is module-level, so that one menu is open at a time.
- * {x, y, items}: items are {icon, label, hint, danger, run}, {separator: true} or {icon, label, submenu: [items]}
- * (submenu items are {icon, label, hint, run} or {separator: true})
+ * {x, y, items, anchor?, alignRight?}: items are {icon, label, hint, title, danger, disabled, run}, {separator: true}, {heading} or
+ * {icon, label, submenu: [items]} (submenu items are {icon, label, hint, run} or {separator: true}).
+ * A menu opened by a button (openMenuBelow) has the button as its anchor, whose click closes it again
  */
 export const contextMenu = shallowRef(null);
 
@@ -34,6 +35,22 @@ export function isContextMenuOpen() {
 export function openContextMenu(event, items) {
   event.preventDefault();
   contextMenu.value = {x: event.clientX, y: event.clientY, items};
+}
+
+/**
+ * Open a menu under a button, or close it if it is the button's menu; alignRight puts its right edge at the button's
+ * @param {Element} element
+ * @param {Object[]} items - as for openContextMenu
+ * @param {{alignRight?: boolean}} options
+ */
+export function openMenuBelow(element, items, {alignRight = false} = {}) {
+  if (contextMenu.value?.anchor === element) {
+    closeContextMenu();
+    return;
+  }
+
+  const rect = element.getBoundingClientRect();
+  contextMenu.value = {x: alignRight ? rect.right : rect.left, y: rect.bottom + 2, items, anchor: element, alignRight};
 }
 
 /**
@@ -114,7 +131,8 @@ function imageMenuItems(image, ctx) {
     if (items.length)
       items.push({separator: true});
 
-    items.push({icon: "trash", label: "Delete", hint: "Del", danger: true, run: () => ctx.handlers.deleteImage(image)});
+    // Takes the image out of the view, the file stays (Undo in its notice)
+    items.push({icon: "trash", label: "Remove", hint: "Del", danger: true, run: () => ctx.handlers.deleteImage(image)});
   }
 
   return items;

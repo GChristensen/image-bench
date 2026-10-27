@@ -9,6 +9,7 @@
   import {useImageOperations} from "@/composables/useImageOperations.js";
   import {dialog} from "@/dialogs/useDialog.js";
   import {findImageAction} from "@/imageActions.js";
+  import {imageCount, removeWithUndo} from "@/undo.js";
   import {HOST_NAME} from "@/host.js";
 
   const props = defineProps({
@@ -66,7 +67,7 @@
     ]},
     [KIND_UPSCALED]: {icon: "upscale", title: "No upscaled images yet", chapter: "upscaled", ways: [
       {text: "Hover a Generated or tray card and press", key: keyOf("upscale")},
-      {text: "Check images in a tray and press Upscale selected"}
+      {text: "Check images in the Generated tab or a tray and press Upscale"}
     ]}
   };
 
@@ -122,47 +123,24 @@
   // The checked images of the whole view, including those hidden by the marking filter
   const selectedCount = computed(() => images.value.filter(i => i.selected).length);
 
-  async function clear() {
-    const count = images.value.filter(i => !i.separator).length;
+  // Removals are undone from their notice; trays and the upscaled images are saved on the server
+  const removedText = count => `Removed ${imageCount(count)}. The files stay on disk.`;
 
-    if (!images.value.length || !await dialog.confirm(`Remove all ${count} images from this view? The files stay on disk.`,
-        {title: "Clear", okText: "Remove", danger: true}))
-      return;
-
-    props.imageStore.images.length = 0;
-
-    // Trays and the upscaled images are saved on the server
-    props.imageStore.persist?.();
+  function clear() {
+    removeWithUndo(props.imageStore, () => true, removedText);
   }
 
-  async function removeSelected() {
-    const count = selectedCount.value;
-
-    if (!count || !await dialog.confirm(`Remove ${count} selected image${count === 1 ? "" : "s"} from this view? `
-        + "The files stay on disk.", {title: "Remove selected", okText: "Remove", danger: true}))
-      return;
-
-    props.imageStore.images = props.imageStore.images.filter(i => !i.selected);
-    props.imageStore.persist?.();
+  function removeSelected() {
+    removeWithUndo(props.imageStore, image => image.selected, removedText);
   }
 
-  // Resolves to true if the image was deleted
-  async function onDeleteImage(image) {
-    const from = isTray ? "the tray" : "the list";
+  function removeWhere(predicate) {
+    removeWithUndo(props.imageStore, predicate, removedText);
+  }
 
-    if (!await dialog.confirm(`Remove this image from ${from}?`, {okText: "Remove", danger: true}))
-      return false;
-
-    const removedImage = images.value.find(i => i.imagePath === image.imagePath);
-
-    if (removedImage) {
-      const removedImageIndex = images.value.indexOf(removedImage);
-      images.value.splice(removedImageIndex, 1);
-
-      props.imageStore.persist?.();
-    }
-
-    return !!removedImage;
+  // Returns whether the image was removed
+  function onDeleteImage(image) {
+    return removeWithUndo(props.imageStore, i => !i.separator && i.imagePath === image.imagePath, removedText) > 0;
   }
 
 
@@ -250,7 +228,7 @@
   // onBeforeMount(() => {
   // })
 
-  defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, unselectAll, clear, removeSelected,
+  defineExpose({beforeAddImage, afterAddImage, getImageLink, selectImage, selectAll, unselectAll, clear, removeSelected, removeWhere,
     isAllSelected, isSomeSelected, selectedCount, getSelectedImages, getNextImage, getPrevImage, getFirstImage, getLastImage, revealImage, deleteImage: onDeleteImage, addComment: onAddComment});
 </script>
 

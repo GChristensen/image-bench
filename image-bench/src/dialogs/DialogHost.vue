@@ -58,7 +58,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* Above ActionsModal, ExploreParamsModal and ImageOverlay (z-index up to 1005) */
+/* Above ExploreParamsModal and ImageOverlay (z-index up to 1005) */
 .dialog-layer {
   position: fixed;
   inset: 0;

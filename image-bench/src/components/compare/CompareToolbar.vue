@@ -1,6 +1,7 @@
 <script setup>
 import {computed} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
+import ClearButton from "@/components/ClearButton.vue";
 import {editorIcon, editorName} from "@/editor.js";
 import {REGION_ASPECTS} from "@/components/compare/compareGeometry.js";
 
@@ -8,13 +9,10 @@ import {REGION_ASPECTS} from "@/components/compare/compareGeometry.js";
  * Presentational toolbar of the Compare tab
  */
 const props = defineProps({
-  imageCount: {
-    type: Number,
-    default: 0
-  },
-  markedCount: {
-    type: Number,
-    default: 0
+  // The images of the tab, for the Clear button
+  images: {
+    type: Array,
+    default: () => []
   },
   selecting: {
     type: Boolean,
@@ -57,9 +55,10 @@ const props = defineProps({
 
 // The image the zoom presets and the label refer to
 const pixelsOf = computed(() => props.cropView ? "largest crop" : "first image");
+const imageCount = computed(() => props.images.length);
 
 defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCrop", "zoom",
-  "cycleSeparator", "savePng", "sendToEditor", "removeMarked", "clear"]);
+  "cycleSeparator", "savePng", "sendToEditor", "remove"]);
 </script>
 
 <template>
@@ -109,18 +108,9 @@ defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCr
 
     <div class="toolbar-spacer"></div>
 
-    <div class="toolbar-group">
-      <span class="toolbar-group-label"><AppIcon name="eraser" :size="14"/>Clear</span>
-      <button class="btn small" :disabled="!markedCount"
-              :title="`Remove the ${markedCount} marked images (the files stay on disk)`"
-              @click="$emit('removeMarked', true)">Marked</button>
-      <button class="btn small" :disabled="markedCount === imageCount"
-              :title="`Remove the ${imageCount - markedCount} unmarked images (the files stay on disk)`"
-              @click="$emit('removeMarked', false)">Unmarked</button>
-      <button class="btn small" :disabled="!imageCount"
-              :title="`Remove all ${imageCount} images (the files stay on disk) (Shift+Del)`"
-              @click="$emit('clear')">All</button>
-    </div>
+    <ClearButton :images="images" :selectable="false"
+                 all-title="Remove all images from the Compare tab (Shift+Del); the files stay on disk"
+                 @remove="predicate => $emit('remove', predicate)"/>
   </div>
 </template>
 

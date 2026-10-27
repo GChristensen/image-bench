@@ -16,10 +16,11 @@ import ExploreParamsModal from "@/components/ExploreParamsModal.vue";
 import LoraParamsModal from "@/components/LoraParamsModal.vue";
 import ExploreListPanel from "@/components/ExploreListPanel.vue";
 import AppIcon from "@/components/AppIcon.vue";
-import NumberStepper from "@/components/NumberStepper.vue";
-import ProgressIndicator from "@/components/ProgressIndicator.vue";
+import RunControl from "@/components/RunControl.vue";
 import ScrollTopButton from "@/components/ScrollTopButton.vue";
 import EmptyState from "@/components/EmptyState.vue";
+import ClearButton from "@/components/ClearButton.vue";
+import {removeWithUndo} from "@/undo.js";
 import {createLoraPrompt, getLoraDefaults, getLoraWeight} from "@/loras.js";
 
 const TAB_CHECKPOINTS = "checkpoints";
@@ -256,10 +257,10 @@ async function onExploreClick() {
   }
 }
 
-async function onClearResultsClick() {
-  if (await dialog.confirm(`Remove all ${modelImages.value.length} results? The files stay on disk.`,
-      {title: "Clear results", okText: "Remove", danger: true}))
-    exploreImagesStore.clear();
+// The results are groups of images per model; the clear is undone from its notice
+function onClearResultsClick() {
+  removeWithUndo(exploreImagesStore, () => true,
+    count => `Removed the results of ${count} model${count === 1 ? "" : "s"}. The files stay on disk.`);
 }
 
 async function onCreateClick() {
@@ -491,37 +492,33 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
                      @hide-overlay="showParamsOverlay = false"/>
   <div class="wrapper">
     <div class="toolbar">
-      <div class="toolbar-group">
-        <button id="explore-selected" class="btn swap"
-                :class="exploreImagesStore.generationInProgress ? 'stop' : 'primary'" @click="onExploreClick">
-          <span :class="{off: exploreImagesStore.generationInProgress}"><AppIcon name="play" :size="13"/>Explore</span>
-          <span :class="{off: !exploreImagesStore.generationInProgress}"><AppIcon name="stop" :size="13"/>Stop</span>
-        </button>
-        <label class="toolbar-group-label" title="Images per model">×<NumberStepper v-model="generateImagesNumber"
-          label="Images per model" :disabled="matrixMode"/></label>
-        <div class="seg layout-switch" role="radiogroup" aria-label="Exploration layout"
-             :title="loras.selected.value.size ? '' : 'Select LoRAs to explore a model × LoRA matrix'">
-          <button :class="{on: !matrixMode}" :disabled="!loras.selected.value.size" role="radio"
-                  :aria-checked="!matrixMode" @click="matrixMode = false">By model</button>
-          <button :class="{on: matrixMode}" :disabled="!loras.selected.value.size" role="radio"
-                  :aria-checked="matrixMode" title="One image per model and LoRA, with the same seed"
-                  @click="matrixMode = true">Matrix</button>
-        </div>
-        <button class="btn lora-free" :class="{on: appConfigStore.exploreLoraFreeImages}"
-                :aria-pressed="appConfigStore.exploreLoraFreeImages" :disabled="!loras.selected.value.size"
-                :title="loras.selected.value.size ? 'Also generate the images of each model without LoRAs, for comparison'
-                  : 'Select LoRAs to generate LoRA-free images for comparison'"
-                @click="appConfigStore.exploreLoraFreeImages = !appConfigStore.exploreLoraFreeImages">No LoRA</button>
-      </div>
-      <ProgressIndicator v-if="exploreImagesStore.generationInProgress"
-                         :value="exploreImagesStore.generationProgress" :label="progressLabel"/>
-      <span v-else class="explore-summary">{{ exploreSummary }}</span>
+      <RunControl label="Explore" :running="exploreImagesStore.generationInProgress" @click="onExploreClick"
+                  v-model:count="generateImagesNumber" count-label="Images per model" :count-disabled="matrixMode"
+                  :progress="{value: exploreImagesStore.generationProgress, label: progressLabel}">
+        <template #after>
+          <div class="seg layout-switch" role="radiogroup" aria-label="Exploration layout"
+               :title="loras.selected.value.size ? '' : 'Select LoRAs to explore a model × LoRA matrix'">
+            <button :class="{on: !matrixMode}" :disabled="!loras.selected.value.size" role="radio"
+                    :aria-checked="!matrixMode" @click="matrixMode = false">By model</button>
+            <button :class="{on: matrixMode}" :disabled="!loras.selected.value.size" role="radio"
+                    :aria-checked="matrixMode" title="One image per model and LoRA, with the same seed"
+                    @click="matrixMode = true">Matrix</button>
+          </div>
+          <button class="btn lora-free" :class="{on: appConfigStore.exploreLoraFreeImages}"
+                  :aria-pressed="appConfigStore.exploreLoraFreeImages" :disabled="!loras.selected.value.size"
+                  :title="loras.selected.value.size ? 'Also generate the images of each model without LoRAs, for comparison'
+                    : 'Select LoRAs to generate LoRA-free images for comparison'"
+                  @click="appConfigStore.exploreLoraFreeImages = !appConfigStore.exploreLoraFreeImages">No LoRA</button>
+        </template>
+      </RunControl>
+      <span v-if="!exploreImagesStore.generationInProgress" class="explore-summary">{{ exploreSummary }}</span>
       <div class="toolbar-spacer"></div>
       <button class="btn" :disabled="exploreImagesStore.generationInProgress || !modelImages.length"
               title="Save the results as a single HTML page"
               @click="onSaveResults"><AppIcon name="download" :size="14"/>Save results</button>
-      <button class="btn" :disabled="exploreImagesStore.generationInProgress || !modelImages.length"
-              @click="onClearResultsClick"><AppIcon name="eraser" :size="14"/>Clear results</button>
+      <ClearButton :images="modelImages" :markable="false" :selectable="false"
+                   :disabled="exploreImagesStore.generationInProgress"
+                   all-title="Remove all results; the files stay on disk" @remove="onClearResultsClick"/>
     </div>
     <div ref="containerElement" class="explore-container">
       <div class="model-list" :style="{width: `${listWidth.size}px`}">

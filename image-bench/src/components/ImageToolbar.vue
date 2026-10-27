@@ -1,8 +1,8 @@
 <script setup>
 import {computed} from 'vue';
-import {KIND_GENERATED, KIND_UPSCALED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY} from "@/consts.js";
+import {KIND_GENERATED, KIND_UPSCALED} from "@/consts.js";
 import AppIcon from "@/components/AppIcon.vue";
-import ProgressIndicator from "@/components/ProgressIndicator.vue";
+import ClearButton from "@/components/ClearButton.vue";
 
 /**
  * Presentational component for the image toolbar
@@ -23,6 +23,16 @@ const props = defineProps({
     type: Boolean,
     required: true
   },
+  // The entries of the view, for the counts of the Clear button
+  images: {
+    type: Array,
+    default: () => []
+  },
+  // Buttons of the image actions for the checked images: [{id, icon, label, title, color, disabled}]
+  bulkItems: {
+    type: Array,
+    default: () => []
+  },
   isAllSelected: {
     type: Boolean,
     default: false
@@ -40,26 +50,6 @@ const props = defineProps({
   markingFilter: {
     type: String,
     default: null
-  },
-  generationInProgress: {
-    type: Boolean,
-    default: false
-  },
-  generationProgress: {
-    type: Number,
-    default: 0
-  },
-  generationCompleted: {
-    type: Number,
-    default: 0
-  },
-  generationTotal: {
-    type: Number,
-    default: 0
-  },
-  upscaleInProgress: {
-    type: Boolean,
-    default: false
   },
   applyPreset: {
     type: String,
@@ -85,10 +75,8 @@ const emit = defineEmits([
   'open',
   'select-all',
   'show-marked',
-  'upscale-selected',
-  'compare-selected',
-  'tray-selected',
-  'clear',
+  'bulk',
+  'remove',
   'remove-selected',
   'unselect-all',
   'preset-change',
@@ -123,37 +111,18 @@ const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Sel
     <template v-if="selectedCount">
       <div class="vsep"></div>
       <span class="selection-count">{{ selectedCount }} selected</span>
-      <!-- Compact add buttons in the Generated and Upscaled tabs, which feed the trays -->
-      <template v-if="!isTray">
-        <button class="ib" title="Add the selected images to the Compare tab" aria-label="Add the selected images to compare"
-                @click="$emit('compare-selected')"><AppIcon name="compare" :size="14"/></button>
-        <button class="ib" title="Add the selected images to the concept tray" aria-label="Add the selected images to the concept tray"
-                @click="$emit('tray-selected', KIND_CONCEPT_TRAY)"><AppIcon name="concept" :size="14"/></button>
-        <button class="ib" title="Add the selected images to the image tray" aria-label="Add the selected images to the image tray"
-                @click="$emit('tray-selected', KIND_IMAGE_TRAY)"><AppIcon name="palette" :size="14"/></button>
-      </template>
-      <template v-else>
-        <button class="btn primary" :disabled="upscaleInProgress"
-                :title="upscaleInProgress ? 'An upscale is in progress' : 'Upscale the selected images'"
-                @click="$emit('upscale-selected')"><AppIcon name="upscale" :size="14"/>Upscale selected</button>
-        <button class="btn outline" title="Add the selected images to the Compare tab"
-                @click="$emit('compare-selected')"><AppIcon name="compare" :size="14"/>Add to compare</button>
-      </template>
-      <!-- No removal from the Generated tab -->
-      <button v-if="kind !== KIND_GENERATED" class="btn outline remove-selected"
-              title="Remove the selected images from this view (the files stay on disk)"
-              @click="$emit('remove-selected')"><AppIcon name="trash" :size="14"/>Remove selected</button>
+      <!-- The image actions that take many images (imageActions.js:bulkActions()) -->
+      <button v-for="item in bulkItems" :key="item.id" class="btn outline bulk-action" :disabled="item.disabled"
+              :title="item.title" @click="$emit('bulk', item.id)"
+        ><AppIcon :name="item.icon" :size="14" :style="{color: item.color}"/>{{ item.label }}</button>
+      <button class="btn outline remove-selected"
+              title="Remove the checked images from this view; the files stay on disk (Undo in the notice)"
+              @click="$emit('remove-selected')"><AppIcon name="trash" :size="14"/>Remove</button>
       <button class="ib" title="Unselect all (Ctrl+U)" aria-label="Unselect all" @click="$emit('unselect-all')"
         ><AppIcon name="close" :size="14"/></button>
     </template>
 
-    <!-- Upscale stop -->
-    <button v-if="kind === KIND_UPSCALED && upscaleInProgress" class="btn stop" @click="$emit('upscale-selected')"
-      ><AppIcon name="stop" :size="13"/>Stop</button>
 
-    <!-- Progress of a batch started from the Generate tab -->
-    <ProgressIndicator v-if="generationInProgress" :value="generationProgress || 0"
-                       :completed="generationCompleted" :total="generationTotal"/>
 
     <div class="toolbar-spacer"></div>
 
@@ -168,9 +137,7 @@ const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Sel
       </div>
     </div>
 
-    <!-- Clear action -->
-    <button class="btn" title="Remove all images from this view (the files stay on disk) (Shift+Del)"
-            @click="$emit('clear')"><AppIcon name="eraser" :size="14"/>Clear</button>
+    <ClearButton :images="images" @remove="predicate => $emit('remove', predicate)"/>
     <button v-if="kind === KIND_GENERATED" class="ib" :class="{on: autoClear}" :aria-pressed="autoClear"
             :title="`Clear automatically when a new batch starts: ${autoClear ? 'on' : 'off'}`"
             aria-label="Clear automatically when a new batch starts"
