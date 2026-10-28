@@ -696,7 +696,7 @@
       "id": 16,
       "type": "ACN_ControlNetLoaderAdvanced",
       "pos": [
-        720,
+        1440,
         700
       ],
       "size": [
@@ -736,7 +736,7 @@
       "id": 17,
       "type": "LoadImage",
       "pos": [
-        720,
+        1440,
         800
       ],
       "size": [
@@ -776,7 +776,7 @@
       "id": 18,
       "type": "AIO_Preprocessor",
       "pos": [
-        720,
+        1440,
         1160
       ],
       "size": [
@@ -817,7 +817,7 @@
       "id": 19,
       "type": "LoadImageMask",
       "pos": [
-        1070,
+        1790,
         800
       ],
       "size": [
@@ -852,7 +852,7 @@
       "id": 20,
       "type": "ACN_AdvancedControlNetApply_v2",
       "pos": [
-        1070,
+        1790,
         1160
       ],
       "size": [
@@ -928,13 +928,13 @@
         0,
         0.8
       ],
-      "title": "ControlNet Depth ib:cn:0"
+      "title": "ControlNet Depth ib:cn:1"
     },
     {
       "id": 21,
       "type": "ACN_ControlNetLoaderAdvanced",
       "pos": [
-        1440,
+        720,
         700
       ],
       "size": [
@@ -974,7 +974,7 @@
       "id": 22,
       "type": "LoadImage",
       "pos": [
-        1440,
+        720,
         800
       ],
       "size": [
@@ -1014,7 +1014,7 @@
       "id": 23,
       "type": "AIO_Preprocessor",
       "pos": [
-        1440,
+        720,
         1160
       ],
       "size": [
@@ -1055,7 +1055,7 @@
       "id": 24,
       "type": "LoadImageMask",
       "pos": [
-        1790,
+        1070,
         800
       ],
       "size": [
@@ -1090,7 +1090,7 @@
       "id": 25,
       "type": "ACN_AdvancedControlNetApply_v2",
       "pos": [
-        1790,
+        1070,
         1160
       ],
       "size": [
@@ -1168,7 +1168,7 @@
         0,
         0.8
       ],
-      "title": "ControlNet Canny ib:cn:1"
+      "title": "ControlNet Canny ib:cn:0"
     },
     {
       "id": 26,
@@ -1783,7 +1783,7 @@
         "Node name for S&R": "MarkdownNote"
       },
       "widgets_values": [
-        "## Anima: text-to-image, VACE depth and canny ControlNet, reference, Hires. fix\n\n[Anima](https://huggingface.co/circlestone-labs/Anima) base v1.0 (Qwen3 0.6B text encoder, Qwen Image VAE): anime and\nillustration. Tags or natural language, quality tags first; see the negative prompt for the score tags.\n\n**Settings**: 30 steps, CFG 4, er_sde, simple, Shift 3 (the model's own; the VACE models were trained at 5),\n1024×1024 (multiples of 16, which VACE requires).\n\n## Image Bench\n\n| Marker | Node | Generate / ControlNet tab |\n|--------|------|---------------------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` / `ib:np` | Image Bench Prompt / Negative Prompt | prompts and LoRA list |\n| `ib:smp` | KSampler | seed, steps, CFG, sampler, scheduler; Shift (ModelSamplingAuraFlow); size (Width / Height) |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler, scale, steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; Upscale button |\n| `ib:cn:0` | ControlNet Depth | ControlNet tab, unit 1 |\n| `ib:cn:1` | ControlNet Canny | ControlNet tab, unit 2 |\n| `ib:ref:0` | Reference (bypassed) | References panel (one slot) |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**CFG** feeds both KSamplers, so the Hires. fix pass follows the CFG scale of the Generate tab.\n\n**ControlNet** (VACE): each unit is an **Apply Advanced ControlNet** node, bypassed while the unit is disabled; Enable\nin the ControlNet tab turns it on. The tab sets weight (strength, 0.7) and guidance range (0-0.8), the model, the control\nimage (**Send to ControlNet**, a drop, or Photoshop: *ControlNet: preprocess* runs the preprocessor and sends the map\nback) and the preprocessor of its **AIO Aux Preprocessor** (Depth Anything V2 and Canny here; set it to *none* for a\nready-made map). **Use Mask** enables the effect mask, which limits the control to an area. Both units can run\ntogether; the Hires. fix pass keeps the control.\n\n**Reference** (one image): the References panel puts it into **Reference ib:ref:0**; it is scaled to the generation\nsize and concatenated to the latent (ComfyUI-Cosmos-Reference), which keeps its details closely but slows sampling.\nIt applies to the first pass only.\n\n**Hires. fix**: upscaler model (Hires. fix upscaler), resized to *Upscale by*, then a second KSampler at denoising\n0.45 with its own sampler settings.\n\n**Upscaler**: **Hires. fix upscaler** (`Load Upscale Model`, the Upscaler list of the Generate tab)\nenlarges the first pass by its own factor, and **Resize to the hires size** brings it to the first pass size ×\n*Upscale by* (**Hires. fix scale** only computes that size). Put any ESRGAN-type model into\n`models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here). The loader must name an installed model\neven while Hires. fix is off, since ComfyUI checks every node before running.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: on, it saves the\nHires. fix image; off, the first pass image, and the Hires. fix nodes do not run (its inputs are lazy). The\n**Upscale** button of the image lists switches it on, generates the image again with its seed and parameters, and\nswitches it back, so drafts made with Hires. fix off can be upscaled later (keep the size the same).\n\n## Required custom nodes\n\n- **ComfyUI-Advanced-ControlNet, Anima VACE fork**: `git clone -b fix/anima-vace-hardening\n  https://github.com/PineCookie/ComfyUI-Advanced-ControlNet.git` in `custom_nodes` (rename an installed original to\n  `.disabled`; update with `git pull`, not the Manager). The original package does not load VACE models.\n- **comfyui_controlnet_aux** for the preprocessors.\n- **ComfyUI-Cosmos-Reference** for the reference (delete the Reference group if you do not want it).\n- For the 2.9B / 40- and 52-block Anima models, put **Anima VACE ControlNet Remap** (ComfyUI-Anima-Remap) between each\n  VACE model loader and its apply node, with the diffusion model on its `model` input.\n\n## Troubleshooting\n\n- **ControlNet models**: the VACE models go into a `controlnet` model folder. A subfolder is listed with its path\n  (`vace/anima-vace-depth.safetensors`); with `extra_model_paths.yaml`, the folder must be among the `controlnet`\n  paths (or its parent), else the loaders list only the other models. Choose them in the loaders or in the Model\n  select of the ControlNet tab, and save the workflow.\n- **\"could not detect control model type\" / \"ControlNet is None\"** when a unit is enabled: the installed\n  Advanced-ControlNet is the original package, which does not load VACE models. The fork has the same package name\n  and version, so the Manager may put the original back when it updates or installs missing nodes: disable the\n  original folder, clone the fork again and restart ComfyUI.\n- **\"'NoneType' object is not iterable\" in the KSampler** when a unit is enabled: the ControlNet nodes are\n  placeholders of another pack (e.g. ComfyUI-Dummy_Node_Pack, which the Manager may install for missing nodes) that\n  pass nothing on. Remove that pack and restart. The loaders show a `cnet` dropdown when the real nodes are loaded.\n- With both units disabled, their nodes do not run, so these problems show only once a unit is enabled.\n\n## Model Links\n\n**diffusion_models**: [anima-base-v1.0.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/diffusion_models/anima-base-v1.0.safetensors)\n**text_encoders**: [qwen_3_06b_base.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors)\n**vae**: [qwen_image_vae.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/vae/qwen_image_vae.safetensors)\n**controlnet**: [anima-vace-depth.safetensors](https://huggingface.co/TaihoC/Anima-ControlNet-VACE-Depth/resolve/main/anima-vace-depth.safetensors) (TaihoC),\n[anima_controlnet_vace_canny_v1.safetensors](https://huggingface.co/khanghy1000/Anima-ControlNet-VACE-Canny/resolve/main/anima_controlnet_vace_canny_v1.safetensors) (khanghy1000)\n\nAnima and the VACE models are under the CircleStone Labs non-commercial license.\n"
+        "## Anima: text-to-image, VACE canny and depth ControlNet, reference, Hires. fix\n\n[Anima](https://huggingface.co/circlestone-labs/Anima) base v1.0 (Qwen3 0.6B text encoder, Qwen Image VAE): anime and\nillustration. Tags or natural language, quality tags first; see the negative prompt for the score tags.\n\n**Settings**: 30 steps, CFG 4, er_sde, simple, Shift 3 (the model's own; the VACE models were trained at 5),\n1024×1024 (multiples of 16, which VACE requires).\n\n## Image Bench\n\n| Marker | Node | Generate / ControlNet tab |\n|--------|------|---------------------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:pp` / `ib:np` | Image Bench Prompt / Negative Prompt | prompts and LoRA list |\n| `ib:smp` | KSampler | seed, steps, CFG, sampler, scheduler; Shift (ModelSamplingAuraFlow); size (Width / Height) |\n| `ib:smp:1` | Hires. fix KSampler | Hires. fix: upscaler, scale, steps, denoising |\n| `ib:hr` | Hires. fix (If/Else Switch) | Hires. fix checkbox; Upscale button |\n| `ib:cn:0` | ControlNet Canny | ControlNet tab, unit 1 |\n| `ib:cn:1` | ControlNet Depth | ControlNet tab, unit 2 |\n| `ib:ref:0` | Reference (bypassed) | References panel (one slot) |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**CFG** feeds both KSamplers, so the Hires. fix pass follows the CFG scale of the Generate tab.\n\n**ControlNet** (VACE): each unit is an **Apply Advanced ControlNet** node, bypassed while the unit is disabled; Enable\nin the ControlNet tab turns it on. The tab sets weight (strength, 0.7) and guidance range (0-0.8), the model, the control\nimage (**Send to ControlNet**, a drop, or Photoshop: *ControlNet: preprocess* runs the preprocessor and sends the map\nback) and the preprocessor of its **AIO Aux Preprocessor** (Canny and Depth Anything V2 here; set it to *none* for a\nready-made map). **Use Mask** enables the effect mask, which limits the control to an area. Both units can run\ntogether; the Hires. fix pass keeps the control.\n\n**Reference** (one image): the References panel puts it into **Reference ib:ref:0**; it is scaled to the generation\nsize and concatenated to the latent (ComfyUI-Cosmos-Reference), which keeps its details closely but slows sampling.\nIt applies to the first pass only.\n\n**Hires. fix**: upscaler model (Hires. fix upscaler), resized to *Upscale by*, then a second KSampler at denoising\n0.45 with its own sampler settings.\n\n**Upscaler**: **Hires. fix upscaler** (`Load Upscale Model`, the Upscaler list of the Generate tab)\nenlarges the first pass by its own factor, and **Resize to the hires size** brings it to the first pass size ×\n*Upscale by* (**Hires. fix scale** only computes that size). Put any ESRGAN-type model into\n`models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here). The loader must name an installed model\neven while Hires. fix is off, since ComfyUI checks every node before running.\n\n**Hires. fix ib:hr** (`If/Else Switch`) is the Hires. fix checkbox of the Generate tab: on, it saves the\nHires. fix image; off, the first pass image, and the Hires. fix nodes do not run (its inputs are lazy). The\n**Upscale** button of the image lists switches it on, generates the image again with its seed and parameters, and\nswitches it back, so drafts made with Hires. fix off can be upscaled later (keep the size the same).\n\n## Required custom nodes\n\n- **ComfyUI-Advanced-ControlNet, Anima VACE fork**: `git clone -b fix/anima-vace-hardening\n  https://github.com/PineCookie/ComfyUI-Advanced-ControlNet.git` in `custom_nodes` (rename an installed original to\n  `.disabled`; update with `git pull`, not the Manager). The original package does not load VACE models.\n- **comfyui_controlnet_aux** for the preprocessors.\n- **ComfyUI-Cosmos-Reference** for the reference (delete the Reference group if you do not want it).\n- For the 2.9B / 40- and 52-block Anima models, put **Anima VACE ControlNet Remap** (ComfyUI-Anima-Remap) between each\n  VACE model loader and its apply node, with the diffusion model on its `model` input.\n\n## Troubleshooting\n\n- **ControlNet models**: the VACE models go into a `controlnet` model folder. A subfolder is listed with its path\n  (`vace/anima-vace-depth.safetensors`); with `extra_model_paths.yaml`, the folder must be among the `controlnet`\n  paths (or its parent), else the loaders list only the other models. Choose them in the loaders or in the Model\n  select of the ControlNet tab, and save the workflow.\n- **\"could not detect control model type\" / \"ControlNet is None\"** when a unit is enabled: the installed\n  Advanced-ControlNet is the original package, which does not load VACE models. The fork has the same package name\n  and version, so the Manager may put the original back when it updates or installs missing nodes: disable the\n  original folder, clone the fork again and restart ComfyUI.\n- **\"'NoneType' object is not iterable\" in the KSampler** when a unit is enabled: the ControlNet nodes are\n  placeholders of another pack (e.g. ComfyUI-Dummy_Node_Pack, which the Manager may install for missing nodes) that\n  pass nothing on. Remove that pack and restart. The loaders show a `cnet` dropdown when the real nodes are loaded.\n- With both units disabled, their nodes do not run, so these problems show only once a unit is enabled.\n\n## Model Links\n\n**diffusion_models**: [anima-base-v1.0.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/diffusion_models/anima-base-v1.0.safetensors)\n**text_encoders**: [qwen_3_06b_base.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors)\n**vae**: [qwen_image_vae.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/vae/qwen_image_vae.safetensors)\n**controlnet**: [anima-vace-depth.safetensors](https://huggingface.co/TaihoC/Anima-ControlNet-VACE-Depth/resolve/main/anima-vace-depth.safetensors) (TaihoC),\n[anima_controlnet_vace_canny_v1.safetensors](https://huggingface.co/khanghy1000/Anima-ControlNet-VACE-Canny/resolve/main/anima_controlnet_vace_canny_v1.safetensors) (khanghy1000)\n\nAnima and the VACE models are under the CircleStone Labs non-commercial license.\n"
       ],
       "title": "Note: Anima (Image Bench, all features)",
       "color": "#432",
@@ -2297,8 +2297,21 @@
       "flags": {}
     },
     {
-      "id": 2,
-      "title": "ControlNet unit 1: Depth (ib:cn:0)",
+      "id": 4,
+      "title": "Hires. fix (ib:smp:1)",
+      "bounding": [
+        2180,
+        330,
+        980,
+        720
+      ],
+      "color": "#88a",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "ControlNet unit 1: Canny (ib:cn:0)",
       "bounding": [
         700,
         650,
@@ -2310,8 +2323,8 @@
       "flags": {}
     },
     {
-      "id": 3,
-      "title": "ControlNet unit 2: Canny (ib:cn:1)",
+      "id": 2,
+      "title": "ControlNet unit 2: Depth (ib:cn:1)",
       "bounding": [
         1420,
         650,
@@ -2319,19 +2332,6 @@
         720
       ],
       "color": "#3f789e",
-      "font_size": 24,
-      "flags": {}
-    },
-    {
-      "id": 4,
-      "title": "Hires. fix (ib:smp:1)",
-      "bounding": [
-        2180,
-        330,
-        980,
-        720
-      ],
-      "color": "#88a",
       "font_size": 24,
       "flags": {}
     }
