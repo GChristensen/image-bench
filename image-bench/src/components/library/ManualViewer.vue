@@ -236,8 +236,8 @@ const hostOrigin = location.origin;
       </ul>
       <ul v-else>
         <li>Load a workflow with reference slots (<code>ib:ref:N</code>). The bundled ones are
-          <code>image_flux2_klein_full</code>, <code>image_flux2_dev_full</code>,
-          <code>image_qwen_image_2_1_full</code> and <code>image_fibo2_edit_turbo</code>.</li>
+          <code>image_flux2_klein_txt2img</code>, <code>image_flux2_dev_txt2img</code>,
+          <code>image_qwen_image_2_1_txt2img</code> and <code>image_fibo2_edit_turbo</code>.</li>
         <li>Add the image in the <b>References</b> panel (browse, paste or drag a card), or set
           <span class="kbd">Ps</span> <b>sends to</b> to references for images from the editor. The prompt refers
           to the images in slot order: Image 1, Image 2, ...</li>
@@ -259,7 +259,7 @@ const hostOrigin = location.origin;
           (<span class="kbd">B</span>). They pass the image of the Load Image marked <code>ib:img</code> through
           <b>Resize to</b> (Image Scale, the Resize to size of the Generate tab; <b>Use size</b> in the Input cell
           takes the size of the image) and VAE Encode into the latent of the sampler, at denoising 0.6. They have no
-          Hires. fix pass: upscale the result with the <code>_full</code> workflow.</li>
+          Hires. fix pass: upscale the result with the <code>_txt2img</code> workflow.</li>
         <li>In your own workflow, mark a Load Image <code>ib:img</code> (and no node <code>ib:mask</code>) and feed its
           image through VAE Encode into the latent of the sampler, with a denoise below 1.</li>
       </ul>
