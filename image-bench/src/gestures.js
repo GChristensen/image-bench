@@ -34,6 +34,8 @@ export const GESTURES = [
 
   {clause: "image", target: "Image card, Generate result", does: "Toggle the action rim (with rim on hover: hide it)",
     source: ["components/GeneratedImage.vue", "components/GenerateImageCell.vue", "components/MediaPlayback.vue"]},
+  {clause: "image", target: "Session filmstrip image", does: "Toggle the action rim (over its neighbors)",
+    source: ["components/generate/SessionStrip.vue"]},
   {clause: "image", target: "Image view", does: "Press: the rim at the pointer, release on a sector to run it",
     source: ["components/ImageOverlay.vue"]},
   {clause: "image", target: "Compare image, crop", does: "Toggle the action rim (Ctrl held shows it too)",
@@ -43,15 +45,13 @@ export const GESTURES = [
   {clause: "image", target: "Project file view", does: "Press: the rim at the pointer, as in the image view",
     source: ["components/projects/FileViewer.vue"]},
 
-  {clause: "tab", target: "Tab of a run", does: "Stop the run", source: ["App.vue"]},
+  {clause: "tab", target: "Tab of a run", does: "Stop the run (Shift+click too)", source: ["App.vue"]},
   {clause: "tab", target: "Host tab", does: "Show or hide the console (Shift+click too)", source: ["App.vue"]},
   {clause: "tab", target: "Marking badge", does: "Remove the marking",
     source: ["components/GeneratedImage.vue", "components/compare/CompareChrome.vue"]}
 ];
 
 export const EXCEPTIONS = [
-  {target: "Session filmstrip", does: "Middle click shows the image in the result pane (too small for a rim)",
-    source: ["components/generate/SessionStrip.vue"]},
   {target: "ControlNet sweep cell", does: "Middle click opens the image in a new window (no rim)",
     source: ["components/GeneratedImage.vue"]}
 ];

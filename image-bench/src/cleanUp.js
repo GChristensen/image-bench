@@ -7,15 +7,11 @@ import {useProjectsStore} from "@/stores/projects.js";
 import {clearWithUndo} from "@/undo.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {toast} from "@/toast.js";
-import {useLocalStorage} from "@/composables/useLocalStorage.js";
-import {HOST_NAME, isWebUI} from "@/host.js";
+import {HOST_NAME} from "@/host.js";
 
 /**
  * The clean-up actions, the last group of the project chip's menu (ProjectChip.vue)
  */
-
-// Key used by webui-extension/javascript/persistence.js; the popup shares the WebUI origin
-const GENERATION_PARAMS_KEY = "image-bench-generation-params";
 
 function clearGeneratedImages() {
   const stores = [useGeneratedImagesStore(), useExploreImagesStore(), useUpscaledImagesStore(),
@@ -34,14 +30,6 @@ async function deleteOutputs() {
   }
 }
 
-async function resetSavedParams() {
-  if (await dialog.confirm("Forgets the prompts and parameters Image Bench saved after each generation, so they are "
-      + "not restored when the WebUI page is reloaded. Images and settings are not affected.",
-      {title: "Reset saved parameters", okText: "Reset"})) {
-    useLocalStorage().removeItem(GENERATION_PARAMS_KEY);
-  }
-}
-
 /**
  * @returns {Object[]} Context menu items (contextMenu.js), with their heading
  */
@@ -55,8 +43,6 @@ export function cleanUpItems() {
     {icon: "nuke", label: projects.hasCurrent ? "Close and start a blank workspace" : "Start a blank workspace",
      title: "Clears all images, trays and prompts, randomizes the seed and closes the project; files stay on disk",
      run: () => startBlankWorkspace()},
-    ...(isWebUI ? [{icon: "reset", label: "Reset saved generation parameters…",
-      title: "Forgets the prompts and parameters restored on a reload of the WebUI page", run: resetSavedParams}] : []),
     {icon: "trash", label: "Delete all output files…", danger: true,
      title: `Deletes the ${HOST_NAME} outputs directory; cannot be undone`, run: deleteOutputs}
   ];

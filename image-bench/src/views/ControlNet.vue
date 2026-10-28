@@ -28,6 +28,7 @@ import {useDragSize} from "@/composables/useDragSize.js";
 import {ensureOpenposeEditor} from "@/openposeEditor.js";
 import {onHostReady} from "@/hostWindow.js";
 import SweepSettings from "@/components/controlnet/SweepSettings.vue";
+import {useTabRun} from "@/runState.js";
 import SweepMatrix from "@/components/controlnet/SweepMatrix.vue";
 import ProgressIndicator from "@/components/ProgressIndicator.vue";
 import {useControlNetSweepStore} from "@/stores/controlnetSweep.js";
@@ -268,9 +269,8 @@ watch(panel, value => storage.setItem(PANEL_KEY, value));
 const sweep = useControlNetSweepStore();
 const sweepCurrent = computed(() => ({weight: form.weight, end: form.guidanceEnd}));
 
-const sweepProgressLabel = computed(() => sweep.generationTotal > 0
-  ? `${sweep.generationCompleted}/${sweep.generationTotal} · ${Math.round(sweep.generationProgress)}%`
-  : `${Math.round(sweep.generationProgress)}%`);
+// The progress of a running sweep
+const sweepRun = useTabRun("controlnet-tab");
 
 async function onSweepStart({weights, ends, seed}) {
   flushParams();
@@ -362,8 +362,7 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
                 @click="onUnitSelect(index - 1)">Unit {{ index }}<i v-if="cn.units[index - 1]?.enabled" class="dot"></i></button>
       </div>
 
-      <ProgressIndicator v-if="sweep.generationInProgress" class="sweep-progress" :value="sweep.generationProgress"
-                         :label="sweepProgressLabel"/>
+      <ProgressIndicator v-if="sweep.generationInProgress && sweepRun" :run="sweepRun"/>
 
       <div class="toolbar-spacer"></div>
 
@@ -653,6 +652,11 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
 
 /* ---------- Toolbar ---------- */
 
+.toolbar {
+  /* The line of the run progress is on its bottom edge (ProgressIndicator) */
+  position: relative;
+}
+
 .toolbar-divider {
   width: 1px;
   height: 20px;
@@ -681,10 +685,6 @@ const gridStyle = computed(() => ({gridTemplateColumns: `minmax(0, 1fr) ${contro
 
 .chip.warn {
   color: var(--ib-warn);
-}
-
-.sweep-progress {
-  margin-left: 6px;
 }
 
 /* ---------- Images ---------- */

@@ -17,6 +17,7 @@ import LoraParamsModal from "@/components/LoraParamsModal.vue";
 import ExploreListPanel from "@/components/ExploreListPanel.vue";
 import AppIcon from "@/components/AppIcon.vue";
 import RunControl from "@/components/RunControl.vue";
+import {useTabRun} from "@/runState.js";
 import ScrollTopButton from "@/components/ScrollTopButton.vue";
 import EmptyState from "@/components/EmptyState.vue";
 import ClearButton from "@/components/ClearButton.vue";
@@ -137,12 +138,11 @@ const exploreSummary = computed(() => {
 
 const imageCount = computed(() => modelImages.value.reduce((n, model) => n + model.images.length, 0));
 
+const run = useTabRun("explore-tab");
+
+// Progress text while the number of images is unknown
 const progressLabel = computed(() => {
-  const percent = `${Math.round(exploreImagesStore.generationProgress)}%`;
-
-  if (exploreImagesStore.generationTotal > 0)
-    return `${exploreImagesStore.generationCompleted}/${exploreImagesStore.generationTotal} · ${percent}`;
-
+  const percent = `${Math.floor(run.value?.progress ?? 0)}%`;
   const images = imageCount.value;
   return `${percent} · ${images} image${images === 1 ? "" : "s"}`;
 });
@@ -494,7 +494,7 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
     <div class="toolbar">
       <RunControl label="Explore" :running="exploreImagesStore.generationInProgress" @click="onExploreClick"
                   v-model:count="generateImagesNumber" count-label="Images per model" :count-disabled="matrixMode"
-                  :progress="{value: exploreImagesStore.generationProgress, label: progressLabel}">
+                  :run="run" :progress-label="progressLabel">
         <template #after>
           <div class="seg layout-switch" role="radiogroup" aria-label="Exploration layout"
                :title="loras.selected.value.size ? '' : 'Select LoRAs to explore a model × LoRA matrix'">
@@ -604,6 +604,11 @@ const listWidth = reactive(useDragSize(LIST_WIDTH_KEY, {
 </template>
 
 <style scoped>
+.toolbar {
+  /* The line of the run progress is on its bottom edge (ProgressIndicator) */
+  position: relative;
+}
+
 .wrapper {
   width: 100%;
   height: 100%;

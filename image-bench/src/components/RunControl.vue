@@ -3,7 +3,7 @@
  * Controls of a run in a tab toolbar (Generate, Explore): the start button, which turns into Stop while running (and
  * into the alternative label, e.g. Restart, while `altShown`), the controls of the slot (e.g. Skip), the number of
  * images with × resetting it to 1 (then the "after" slot), optionally the count button setting the preset number and ∞ (-1, until stopped),
- * and the progress of the run. The button's own clicks are the view's: it emits them as they come
+ * and the progress of the run (ProgressIndicator). The button's own clicks are the view's: it emits them as they come
  */
 import {ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
@@ -64,10 +64,15 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  // {value, label, completed, total} while running, null hides the progress
-  progress: {
+  // The run of the tab (runState.js:useTabRun()), null hides the progress
+  run: {
     type: Object,
     default: null
+  },
+  // Text of the progress when the number of images is unknown
+  progressLabel: {
+    type: String,
+    default: ""
   }
 });
 
@@ -113,8 +118,7 @@ defineExpose({buttonElement});
     </template>
     <slot name="after"/>
   </div>
-  <ProgressIndicator v-if="running && progress" :value="progress.value" :label="progress.label ?? ''"
-                     :completed="progress.completed || 0" :total="progress.total || 0"/>
+  <ProgressIndicator v-if="running && run" :run="run" :label="progressLabel"/>
 </template>
 
 <style scoped>

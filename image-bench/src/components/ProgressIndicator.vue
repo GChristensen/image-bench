@@ -15,79 +15,169 @@ watchEffect(() => {
   const labels = [...activeLabels.values()];
   document.title = labels.length ? `[${labels[labels.length - 1]}] ${APP_TITLE}` : APP_TITLE;
 });
+
+function formatTime(seconds) {
+  const s = Math.max(0, Math.round(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
 </script>
 
 <script setup>
 /**
- * Compact inline progress bar with a monospace label
+ * Progress of a run in a toolbar: the text (images done, overall percent, time left) where it is mounted, and lines
+ * along the bottom edge of the toolbar, which must be positioned: the run, and in runs of several images a faint one
+ * above it for the image being generated
  */
-import {computed, onUnmounted, watch} from "vue";
+import {computed, onMounted, onUnmounted, ref, watch} from "vue";
 
 const props = defineProps({
-  value: {
-    type: Number,
-    default: 0
+  // The run of runState.js:useActiveRun()
+  run: {
+    type: Object,
+    required: true
   },
+  // Text shown instead of the percent when the number of images is unknown
   label: {
     type: String,
     default: ""
-  },
-  // Completed/total images, shown when the total is known
-  completed: {
-    type: Number,
-    default: 0
-  },
-  total: {
-    type: Number,
-    default: 0
   }
 });
 
-const defaultLabel = computed(() => {
-  const percent = `${Math.round(props.value)}%`;
-  return props.total > 0 ? `${props.completed}/${props.total} · ${percent}` : percent;
+const percent = computed(() => props.run.progress === null ? null : Math.max(0, Math.min(100, props.run.progress)));
+
+// Time left: the average time per finished image times the images left, less the time spent on the current one.
+// Mounted in the middle of a run (the popup opened later), timing starts at the first image finished
+let startedAt = Date.now();
+let startCompleted = props.run.completed;
+let timed = startCompleted === 0;
+const lastCompletedAt = ref(startedAt);
+const now = ref(Date.now());
+let tick = null;
+
+watch(() => props.run.completed, (completed, previous) => {
+  if (completed <= previous)
+    return;
+
+  lastCompletedAt.value = Date.now();
+
+  if (!timed) {
+    timed = true;
+    startedAt = lastCompletedAt.value;
+    startCompleted = completed;
+  }
+});
+
+onMounted(() => tick = setInterval(() => now.value = Date.now(), 1000));
+onUnmounted(() => clearInterval(tick));
+
+const eta = computed(() => {
+  const {completed, total, forever} = props.run;
+  const timedImages = completed - startCompleted;
+
+  if (forever || !total || !timed || timedImages <= 0 || completed >= total)
+    return "";
+
+  const average = (lastCompletedAt.value - startedAt) / timedImages;
+  return `~${formatTime((average * (total - completed) - (now.value - lastCompletedAt.value)) / 1000)}`;
+});
+
+const text = computed(() => {
+  const {completed, total, forever, multi} = props.run;
+  const pct = `${Math.floor(percent.value ?? 0)}%`;
+
+  if (forever)
+    return `${completed} · ∞`;
+
+  if (multi && total > 0)
+    return [`${completed}/${total}`, pct, eta.value].filter(Boolean).join(" · ");
+
+  return multi && props.label || pct;
 });
 
 const titleKey = Symbol();
-watch(() => props.label || defaultLabel.value, label => activeLabels.set(titleKey, label), {immediate: true});
+watch(text, label => activeLabels.set(titleKey, label), {immediate: true});
 onUnmounted(() => activeLabels.delete(titleKey));
 </script>
 
 <template>
-  <div class="progress-indicator" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.round(value)">
-    <div class="bar"><i :style="{width: `${Math.min(100, Math.max(0, value))}%`}"></i></div>
-    <span class="label">{{ label || defaultLabel }}</span>
-  </div>
+  <span class="progress-text" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+        :aria-valuenow="percent === null ? undefined : Math.floor(percent)">{{ text }}</span>
+  <Transition name="run-edge" appear>
+    <div class="run-edge" :class="{forever: run.forever}"><i :style="{width: `${percent ?? 0}%`}"></i></div>
+  </Transition>
+  <div v-if="run.multi && run.image !== null" class="run-edge image"><i :style="{width: `${run.image}%`}"></i></div>
 </template>
 
 <style scoped>
-.progress-indicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.progress-text {
+  min-width: 15ch;
   margin-left: 6px;
-}
-
-.bar {
-  width: 200px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ib-elev-2);
-  overflow: hidden;
-}
-
-.bar i {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--ib-accent);
-  transition: width 0.3s;
-}
-
-.label {
   font-family: var(--ib-mono);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
   color: var(--ib-text-2);
   white-space: nowrap;
+}
+
+/* Over the bottom border of the toolbar, as wide as the toolbar */
+.run-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  pointer-events: none;
+}
+
+.run-edge i {
+  display: block;
+  height: 100%;
+  background: var(--ib-accent);
+  transition: width 0.3s linear;
+}
+
+/* The image being generated: 1px above the run */
+.run-edge.image {
+  bottom: 2px;
+  height: 1px;
+}
+
+.run-edge.image i {
+  background: var(--ib-text-2);
+  opacity: 0.55;
+  transition: width 0.25s linear;
+}
+
+/* Until stopped: no proportion, a slow sweep */
+.run-edge.forever i {
+  width: 100% !important;
+  background: linear-gradient(90deg, transparent, var(--ib-accent) 45%, var(--ib-accent) 55%, transparent) no-repeat;
+  background-size: 40% 100%;
+  animation: run-sweep 2.4s ease-in-out infinite;
+}
+
+@keyframes run-sweep {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-edge.forever i {
+    animation: none;
+    background: var(--ib-accent);
+    opacity: 0.5;
+  }
+}
+
+.run-edge-enter-active {
+  transition: opacity 0.4s;
+}
+
+.run-edge-enter-from {
+  opacity: 0;
 }
 </style>

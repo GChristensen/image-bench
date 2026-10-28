@@ -10,6 +10,7 @@ import {usePromptHistoryStore} from "@/stores/promptHistory.js";
 import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import {ensureGenerationIdle} from "@/sdwebui.js";
 import {dialog} from "@/dialogs/useDialog.js";
+import {useLocalStorage} from "@/composables/useLocalStorage.js";
 import {HOST_NAME, isWebUI} from "@/host.js";
 
 /**
@@ -18,6 +19,27 @@ import {HOST_NAME, isWebUI} from "@/host.js";
 
 // The views that are not trays, as named in the confirmations
 export const VIEWS = "Generated, Explore and Upscaled tabs and the ControlNet sweep";
+
+// Key used by webui-extension/javascript/persistence.js; the popup shares the WebUI origin
+const GENERATION_PARAMS_KEY = "image-bench-generation-params";
+
+/**
+ * Clear the prompts of both tabs in the parameters WebUI restores on a page reload, keeping the other parameters
+ * (the seeds are not saved there)
+ */
+function clearSavedPrompts() {
+  const storage = useLocalStorage();
+  const params = storage.getJsonItem(GENERATION_PARAMS_KEY);
+
+  if (!params)
+    return;
+
+  for (const tab of ["txt2img", "img2img"])
+    if (params[tab])
+      Object.assign(params[tab], {prompt: "", negativePrompt: ""});
+
+  storage.setJsonItem(GENERATION_PARAMS_KEY, params);
+}
 
 export function clearViewsAndTrays() {
   useExploreImagesStore().clear();
@@ -64,9 +86,13 @@ export async function startBlankWorkspace({keepParams = false} = {}) {
   clearViewsAndTrays();
   usePromptHistoryStore().clear();
 
-  if (!keepParams)
+  if (!keepParams) {
     useWebUIBridge().setWebUIParams({prompt: "", negativePrompt: "", seed: -1,
                                      ...(isWebUI ? {subseed: -1, subseedStrength: 0} : {})});
+
+    if (isWebUI)
+      clearSavedPrompts();
+  }
 
   if (projects.hasCurrent)
     await projects.close();

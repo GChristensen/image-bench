@@ -1,11 +1,12 @@
 <script setup>
 /**
- * What an empty view shows: how images get there, with the keys of the fast ways, and a link to its chapter of the
- * manual
+ * What an empty view shows: how images get there, with the keys of the fast ways, and a book button after the title
+ * that opens its chapter of the manual
  */
+import {computed} from "vue";
 import {useRouter} from "vue-router";
 import AppIcon from "@/components/AppIcon.vue";
-import {useManualStore} from "@/stores/manual.js";
+import {MANUAL_SECTIONS, useManualStore} from "@/stores/manual.js";
 
 const props = defineProps({
   icon: {
@@ -25,15 +26,16 @@ const props = defineProps({
   chapter: {
     type: String,
     default: null
-  },
-  chapterText: {
-    type: String,
-    default: "More in the manual"
   }
 });
 
 const router = useRouter();
 const manual = useManualStore();
+
+const chapterTitle = computed(() => {
+  const section = MANUAL_SECTIONS.find(s => s.id === props.chapter);
+  return section ? `Manual: ${section.title}` : "Manual";
+});
 
 function openChapter() {
   manual.reveal(props.chapter);
@@ -44,11 +46,16 @@ function openChapter() {
 <template>
   <div class="empty-state">
     <AppIcon :name="icon" :size="30" class="empty-icon"/>
-    <div class="empty-title">{{ title }}</div>
+    <div class="empty-title">
+      {{ title }}
+      <button v-if="chapter" type="button" class="empty-manual" :title="chapterTitle" :aria-label="chapterTitle"
+              @click="openChapter">
+        <AppIcon name="book" :size="14"/>
+      </button>
+    </div>
     <ul v-if="ways.length" class="empty-ways">
       <li v-for="way in ways" :key="way.text">{{ way.text }}<span v-if="way.key" class="key">{{ way.key }}</span></li>
     </ul>
-    <a v-if="chapter" href="#" class="empty-link" @click.prevent="openChapter">{{ chapterText }}</a>
   </div>
 </template>
 
@@ -97,13 +104,21 @@ function openChapter() {
   font: 11px/16px var(--ib-mono);
 }
 
-.empty-link {
-  color: var(--ib-accent);
-  font-size: 12.5px;
-  text-decoration: none;
+.empty-manual {
+  margin-left: 4px;
+  padding: 2px;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--ib-text-2);
+  opacity: 0.55;
+  vertical-align: -2px;
+  cursor: pointer;
 }
 
-.empty-link:hover {
-  text-decoration: underline;
+.empty-manual:hover,
+.empty-manual:focus-visible {
+  color: var(--ib-accent);
+  opacity: 1;
 }
 </style>

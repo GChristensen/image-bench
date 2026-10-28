@@ -39,13 +39,16 @@ _deploy_docs dest: (_deploy "model-docs/docs" (dest + "/model_docs") "*")
 webui_release := env("WEBUI_RELEASE_REPO", "")
 comfy_release := env("COMFY_RELEASE_REPO", "")
 
-# Build and assemble the release tree into the checkout of the WebUI build repository (commit and push by hand)
+# Build and assemble the release tree into the checkout of the WebUI build repository, then commit it as
+# "v<version.txt>", tag it v<version.txt> and push both to GitHub (gh auth login first)
 release-webui: (_require "WEBUI_RELEASE_REPO" webui_release) webui
     python tools/assemble.py webui "{{webui_release}}"
+    python tools/commit_release.py "{{webui_release}}"
 
-# Build and assemble the release tree into the checkout of the ComfyUI build repository (bump the pyproject.toml version first)
+# The same for the ComfyUI build repository (its pyproject.toml gets the version of version.txt)
 release-comfy: (_require "COMFY_RELEASE_REPO" comfy_release) comfy
     python tools/assemble.py comfy "{{comfy_release}}"
+    python tools/commit_release.py "{{comfy_release}}"
 
 publish-comfy: release-comfy
     cd ../image-bench-comfy; comfy node publish

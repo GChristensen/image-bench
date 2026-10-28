@@ -17,7 +17,7 @@ import ImageOverlay from "@/components/ImageOverlay.vue";
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import NumberStepper from "@/components/NumberStepper.vue";
 import RunControl from "@/components/RunControl.vue";
-import {generateRun} from "@/runState.js";
+import {generateRun, useTabRun} from "@/runState.js";
 import PromptField from "@/components/PromptField.vue";
 import ReferencesPanel from "@/components/ReferencesPanel.vue";
 import ModulesSelect from "@/components/ModulesSelect.vue";
@@ -659,15 +659,8 @@ const batchInProgress = computed(() => generatedImagesStore.generationInProgress
 
 const generating = computed(() => singleInProgress.value || batchInProgress.value || sdWebUI.busy);
 
-const progress = computed(() => {
-  if (batchInProgress.value)
-    return generateRun.forever
-      ? {value: 100, label: "∞"}
-      : {value: generatedImagesStore.generationProgress || 0, label: "",
-         completed: generatedImagesStore.generationCompleted, total: generatedImagesStore.generationTotal};
-
-  return {value: sdWebUI.live.active ? sdWebUI.live.progress : 0, label: ""};
-});
+// The progress of the run, if this tab started it
+const run = useTabRun("generate-tab");
 
 async function onGenerate() {
   if (!await ensureGenerationIdle())
@@ -684,6 +677,7 @@ async function onGenerate() {
     if (config.automaticallyClearGeneratedImages)
       generatedImagesStore.clear();
 
+    generateRun.batch = true;
     generateRun.forever = nImages === -1;
     generatedImagesStore.startingGeneration();
     selectedImage.value = null;
@@ -719,6 +713,7 @@ async function onGenerateVariations() {
 
   const nImages = Number(generateImagesNumber.value);
 
+  generateRun.batch = true;
   generateRun.forever = nImages === -1;
   generatedImagesStore.startingGeneration();
   selectedImage.value = null;
@@ -786,7 +781,7 @@ const toolbarStatus = computed(() => {
             title: `The ${HOST_NAME} page still shows a generation that has ended on the server`,
             action: {title: `Reload the ${HOST_NAME} page`, run: onReloadStalledHost}};
   if (restarting.value)
-    return {text: "Restarting the generation…"};
+    return {text: "Restarting…", full: true};
   if (stopping.value)
     return {text: "Stopping…", full: true};
   // The restore may switch the UI preset itself
@@ -908,8 +903,12 @@ watch(() => sdWebUI.busy, (busy, wasBusy) => {
 });
 
 watch(batchInProgress, (inProgress, wasInProgress) => {
-  if (wasInProgress && !inProgress)
+  if (wasInProgress && !inProgress) {
+    // The generations of the image actions run in the same store
+    generateRun.batch = false;
+    generateRun.forever = false;
     autoHideStrip();
+  }
 });
 
 function onAfterSDEvent(e) {
@@ -1546,7 +1545,7 @@ const gridStyle = computed(() => ({
                   :alt="{label: 'Restart', icon: 'refresh'}" :alt-shown="ctrlDown || restarting"
                   :button-class="{joined: projects.hasCurrent}"
                   v-model:count="generateImagesNumber" :preset-count="config.generatePresetImages" forever
-                  :progress="progress"
+                  :run="run"
                   @click="onGenerateButton" @auxclick="e => e.button === 1 && generating && onRestart()">
         <ProjectCube v-if="projects.hasCurrent" ref="projectCube"/>
         <button class="btn outline" :disabled="!generating" title="Skip the image being generated (Ctrl+Backspace)"
@@ -1861,7 +1860,7 @@ const gridStyle = computed(() => ({
             <SessionStrip v-show="lowerTab === 'session'" class="lower-pane" :images="sessionImagesStore.images"
                           :selected="selectedImage" :active="lowerTab === 'session'"
                           @select="image => selectedImage = image" @open="openImageOverlay"
-                          @show-params="onShowParams" @interact="keepStrip"
+                          @show-params="onShowParams" @set-marking="onSetMarking" @interact="keepStrip"
                           @mouseenter="stripHovered = true" @mouseleave="onStripLeave"/>
 
             <div class="lower-tabs" role="tablist" aria-orientation="vertical">
@@ -2182,7 +2181,7 @@ const gridStyle = computed(() => ({
   text-overflow: ellipsis;
 }
 
-/* No fade on leave: the slot widens as the progress bar goes at the end of a run, and the leaving pill
+/* No fade on leave: the slot widens as the progress text goes at the end of a run, and the leaving pill
    would fade out re-centered there, like another pill */
 .status-enter-active {
   transition: opacity 0.15s;
@@ -2522,6 +2521,11 @@ const gridStyle = computed(() => ({
 
 .inline-field :deep(.stepper input) {
   height: 24px;
+}
+
+.toolbar {
+  /* The line of the run progress is on its bottom edge (ProgressIndicator) */
+  position: relative;
 }
 
 .toolbar-divider {

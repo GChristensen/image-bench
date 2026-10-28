@@ -1,16 +1,21 @@
 <script setup>
 /**
  * Filmstrip of the images generated in this session (stores/session.js), newest at the right.
- * It follows new images while it is scrolled to the end. A click opens the overlay, a middle click shows an image
- * in the result pane of the Generate tab (again: back to the latest); the context menu, the action keys
- * and dragging to the trays work as on the image cards.
+ * It follows new images while it is scrolled to the end. A click opens the overlay, a middle click toggles the
+ * action rim of an image, until the pointer leaves the image and the rim; the rim is put over the page, since the
+ * strip clips it, and reaches over the neighbors. Its arc below shows the image in the result pane of the Generate
+ * tab instead of the latest one (again: back to the latest). The context menu, the action keys and dragging to the
+ * trays work as on the image cards.
  */
-import {nextTick, onActivated, onMounted, ref, watch} from "vue";
+import {computed, nextTick, onActivated, onMounted, ref, watch} from "vue";
 import {KIND_SESSION} from "@/consts.js";
 import {openImageMenu} from "@/contextMenu.js";
 import {startImageDrag, endImageDrag} from "@/imageDrag.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
+import {useShiftKey} from "@/composables/useShiftKey.js";
+import {rimActionGroups, runImageAction} from "@/imageActions.js";
 import {previewUrl} from "@/media.js";
+import ActionRim from "@/components/ActionRim.vue";
 
 // Pixels of a wheel line (deltaMode 1)
 const WHEEL_LINE = 40;
@@ -34,7 +39,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["select", "open", "showParams", "interact"]);
+const emit = defineEmits(["select", "open", "showParams", "setMarking", "interact"]);
 
 const strip = ref(null);
 let atEnd = true;
@@ -62,6 +67,7 @@ function scrollToEnd() {
 
 function onScroll() {
   const element = strip.value;
+  closeRim();
 
   // Hidden or detached, the strip loses its scroll position; it is restored when shown again
   if (!element.isConnected || !element.clientWidth)
@@ -121,9 +127,89 @@ function onWheel(e) {
   }
 }
 
+// ---------- Action rim ----------
+
+const shiftKey = useShiftKey();
+const rimImage = ref(null);
+// Fixed box of the image the rim is centered on
+const rimBox = ref(null);
+const rimElement = ref(null);
+// The session images are not deeply reactive: the rim reads the marking when it opens and when it is set
+const rimMarking = ref(null);
+
+const rimGroups = computed(() => rimImage.value ? rimActionGroups(rimImage.value, ctx) : []);
+
+const rimExtras = computed(() => [rimImage.value && rimImage.value === props.selected
+  ? {id: "latest", icon: "picture", label: "Show the latest image in the result pane"}
+  : {id: "select", icon: "picture", label: "Show in the result pane"}]);
+
+const rimStyle = computed(() => {
+  const {left, top, width, height} = rimBox.value;
+  return {left: left + "px", top: top + "px", width: width + "px", height: height + "px"};
+});
+
+function openRim(image, element) {
+  const rect = element.getBoundingClientRect();
+  rimBox.value = {left: rect.left, top: rect.top, width: rect.width, height: rect.height};
+  rimMarking.value = image.marking ?? null;
+  rimImage.value = image;
+}
+
+function closeRim() {
+  rimImage.value = null;
+}
+
+// The rim stays while the pointer moves between the image and the rim
+function onRimLeave(e, image) {
+  const to = e.relatedTarget;
+
+  if (rimImage.value && !(to && (rimElement.value?.contains(to) || to === image)))
+    closeRim();
+}
+
+function onRimPointerOut(e) {
+  const to = e.relatedTarget;
+
+  if (!(to && (rimElement.value?.contains(to) || to.dataset?.sessionId === String(rimImage.value?.sessionId))))
+    closeRim();
+}
+
+function onRimAction(action, alt) {
+  runImageAction(action, rimImage.value, ctx, alt);
+}
+
+// null removes the marking; the view passes it to the other copies of the image
+function onRimMarking(marking) {
+  const image = rimImage.value;
+
+  if (marking)
+    image.marking = marking;
+  else
+    delete image.marking;
+
+  rimMarking.value = marking;
+  emit("setMarking", image);
+}
+
+function onRimExtra(id) {
+  emit("select", id === "select" ? rimImage.value : null);
+  closeRim();
+}
+
+// The rim is fixed over the page: it does not follow the strip
+watch(() => props.active, active => {
+  if (!active)
+    closeRim();
+});
+
 function onAuxClick(e, image) {
-  if (e.button === 1)
-    emit("select", image === props.selected ? null : image);
+  if (e.button !== 1)
+    return;
+
+  if (rimImage.value === image)
+    closeRim();
+  else
+    openRim(image, e.currentTarget);
 }
 
 function onContextMenu(e, image) {
@@ -135,8 +221,14 @@ function onMouseEnter(e, image) {
   setHoveredImageTarget({getImage: () => image, ctx, element: e.currentTarget, view: () => emit("open", image)});
 }
 
-function onMouseLeave(e) {
+function onMouseLeave(e, image) {
   clearHoveredImageTarget(e.currentTarget);
+  onRimLeave(e, image);
+}
+
+function onOpen(image) {
+  closeRim();
+  emit("open", image);
 }
 </script>
 
@@ -148,12 +240,25 @@ function onMouseLeave(e) {
          v-memo="[image === selected, index > 0 && image.run !== images[index - 1].run]">
       <img :src="previewUrl(image)" :class="{selected: image === selected}" :style="aspectStyle(image)" alt="" loading="lazy"
            @load="onImageLoad"
-           :title="image === selected ? 'Click to open; shown in the result pane: middle-click to show the latest image' : 'Click to open; middle-click to show in the result pane'"
-           @click="emit('open', image)" @mousedown.middle.prevent @auxclick="onAuxClick($event, image)"
+           :data-session-id="image.sessionId"
+           :title="image === selected ? 'Click to open, middle-click for the actions; shown in the result pane' : 'Click to open, middle-click for the actions'"
+           @click="onOpen(image)" @mousedown.middle.prevent @auxclick="onAuxClick($event, image)"
            @contextmenu="onContextMenu($event, image)"
-           @mouseenter="onMouseEnter($event, image)" @mouseleave="onMouseLeave"
+           @mouseenter="onMouseEnter($event, image)" @mouseleave="onMouseLeave($event, image)"
            @dragstart="startImageDrag($event, image, KIND_SESSION)" @dragend="endImageDrag">
     </div>
+
+    <!-- Over the page, since the strip clips it; its clicks stay here, so that they do not open the image -->
+    <Teleport to="body">
+      <Transition name="rim">
+        <div v-if="rimImage" ref="rimElement" class="session-rim" :style="rimStyle" @click.stop @auxclick.stop
+             @pointerout="onRimPointerOut">
+          <ActionRim :groups="rimGroups" :size="Math.min(rimBox.width, rimBox.height)" :marking="rimMarking"
+                     :show-alt="shiftKey" :extras="rimExtras"
+                     @run="onRimAction" @set-marking="onRimMarking" @extra="onRimExtra"/>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -202,6 +307,19 @@ function onMouseLeave(e) {
 
 .item img.selected {
   border-color: var(--ib-accent);
+}
+
+.session-rim {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+}
+
+.rim-enter-from,
+.rim-leave-to {
+  opacity: 0;
+  transform: scale(0.92);
 }
 
 .empty {

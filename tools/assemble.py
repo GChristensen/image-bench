@@ -4,10 +4,12 @@ python tools/assemble.py webui|comfy <out_dir>
 
 The file sets are those of the deploy recipes of the justfile. Shared code is copied from the common-extension/
 originals rather than through the symlinks of the extension folders. Everything in out_dir but .git is replaced;
-run `just webui` / `just comfy` first, since the built index.html is a part of the tree.
+run `just webui` / `just comfy` first, since the built index.html is a part of the tree. The version of a
+pyproject.toml in the tree (ComfyUI) is set to that of version.txt.
 """
 import fnmatch
 import os
+import re
 import shutil
 import sys
 
@@ -84,6 +86,34 @@ def clear(out_dir):
         shutil.rmtree(path) if os.path.isdir(path) and not os.path.islink(path) else os.remove(path)
 
 
+def read_version():
+    with open(os.path.join(REPOSITORY_DIR, "version.txt"), encoding="utf-8") as file:
+        version = file.read().strip()
+
+    if not re.fullmatch(r"\d+(\.\d+)*", version):
+        sys.exit(f"version.txt: not a version: {version!r}")
+
+    return version
+
+
+def write_pyproject_version(out_dir, version):
+    path = os.path.join(out_dir, "pyproject.toml")
+
+    if not os.path.isfile(path):
+        return
+
+    with open(path, encoding="utf-8", newline="") as file:
+        text = file.read()
+
+    text, count = re.subn(r'^(version\s*=\s*)"[^"]*"', rf'\g<1>"{version}"', text, count=1, flags=re.MULTILINE)
+
+    if not count:
+        sys.exit(f"{path}: no version line")
+
+    with open(path, "w", encoding="utf-8", newline="") as file:
+        file.write(text)
+
+
 def assemble(host, out_dir):
     config = HOSTS[host]
     extension_dir = os.path.join(REPOSITORY_DIR, config["dir"])
@@ -92,6 +122,7 @@ def assemble(host, out_dir):
     if not os.path.isfile(os.path.join(extension_dir, config["index"])):
         sys.exit(f"{config['dir']}/{config['index']} is missing: build first (just {host})")
 
+    version = read_version()
     os.makedirs(out_dir, exist_ok=True)
     clear(out_dir)
 
@@ -106,10 +137,12 @@ def assemble(host, out_dir):
         if not os.path.exists(os.path.join(out_dir, name)):
             shutil.copy2(os.path.join(REPOSITORY_DIR, name), os.path.join(out_dir, name))
 
+    write_pyproject_version(out_dir, version)
+
     with open(os.path.join(out_dir, ".gitignore"), "w", encoding="utf-8", newline="\n") as file:
         file.write(GITIGNORE)
 
-    print(f"Assembled {host} into {out_dir}")
+    print(f"Assembled {host} {version} into {out_dir}")
 
 
 if __name__ == "__main__":

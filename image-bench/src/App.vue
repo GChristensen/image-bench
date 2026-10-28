@@ -175,11 +175,21 @@ function runTitle(tabId) {
 
   const done = run.forever ? "Generating until stopped" : run.total ? `${run.completed} / ${run.total} images`
     : run.progress !== null ? `${Math.round(run.progress)}%` : "Running";
-  return `${done}. Middle click: stop`;
+  return `${done}. Middle click or Shift+click: stop`;
 }
 
 function onTabAuxClick(e) {
   const tab = e.button === 1 && e.target.closest(".tab");
+
+  if (tab && runOn(tab.id)) {
+    e.preventDefault();
+    webUI.stopGeneration();
+  }
+}
+
+// RouterLink leaves a Shift+click to the browser, which would open the app in a new window
+function onTabClick(e) {
+  const tab = e.shiftKey && e.target.closest(".tab");
 
   if (tab && runOn(tab.id)) {
     e.preventDefault();
@@ -433,7 +443,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
 
 <template>
   <div class="tab-container">
-    <nav class="tabs" @auxclick="onTabAuxClick">
+    <nav class="tabs" @click="onTabClick" @auxclick="onTabAuxClick">
       <RouterLink to="/generate" class="tab" id="generate-tab" :title="runTitle('generate-tab')"
         ><span class="tab-icon"><AppIcon name="generate" :size="14"
         /><RunRing v-if="runOn('generate-tab')" :run="runOn('generate-tab')"

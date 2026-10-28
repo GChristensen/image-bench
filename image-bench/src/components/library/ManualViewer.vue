@@ -128,7 +128,10 @@ const hostOrigin = location.origin;
         While a run goes on, a ring around the icon of the tab that started it shows its progress: Generate for
         batches, variations and the generations of image actions, Explore, ControlNet for the sweep and Upscaled
         for upscales. The ring spins while the progress is unknown or the run goes on until stopped. Hover the tab
-        to see the progress; a <b>middle click</b> on a ringed tab stops the run from any tab.
+        to see the progress; a <b>middle click</b> or <b>Shift+click</b> on a ringed tab stops the run from any tab.
+        In the tab itself, a line along the bottom of the toolbar shows the progress of the run, and the text after
+        the run controls gives the images done, the percent of the run and the time left. In a run of several images
+        a faint line above it shows the progress of the image being generated.
       </p>
       <p>
         Image Bench has plugins for Photoshop, Krita and GIMP. They send images from the editor to {{ HOST_NAME }}
@@ -410,7 +413,9 @@ const hostOrigin = location.origin;
           on the Input pane.</li>
         <li><b>Session filmstrip</b> (the tabs at the right edge of the parameters): the images generated while
           the window is open, grouped by batch. It is shown during a batch of several images. Click an image to
-          open it, or middle-click it to show it in the Result pane.</li>
+          open it, or middle-click it for its action rim, which reaches over the neighboring images; the arc below
+          the rim shows the image in the Result pane instead of the latest one (on the shown image: back to the
+          latest).</li>
         <li><b>Generate</b> makes one image with a live preview. With a count above 1 (or
           <AppIcon name="infinity" :size="13" class="inline-icon"/>, generating until you stop it), it runs a batch
           whose images arrive in the Generated tab. The count button sets the number chosen in <b>Settings › Images
@@ -977,14 +982,13 @@ const hostOrigin = location.origin;
           project: <b>Close and start a blank workspace</b>) asks first and is for starting a new project. It also empties both trays and
           the Compare tab, clears the prompts, sets a random seed<template v-if="isWebUI"> (and clears the variation
           seed)</template>, and closes the current project, whose saved state is kept. The other
-          parameters are kept, and the image files stay on disk.</li>
+          parameters are kept, and the image files stay on disk.<template v-if="isWebUI"> The prompts saved by
+          <b>Remember prompts and generation parameters across WebUI reloads</b> are cleared too, so a reload of the
+          WebUI page does not bring them back.</template></li>
         <li><b>Delete all output files…</b> <AppIcon name="trash" :size="13" class="inline-icon"/> asks first, then
           clears all tabs and trays and permanently deletes every file and folder in the {{ HOST_NAME }} output
           folder, including tray and upscaled images. This cannot be
           undone.</li>
-        <li v-if="isWebUI"><b>Reset saved generation parameters…</b> <AppIcon name="reset" :size="13"
-          class="inline-icon"/> asks first, then forgets the prompts and parameters saved by <b>Remember prompts and generation
-          parameters across WebUI reloads</b>, so that nothing is restored at the next reload.</li>
       </ul>
     </section>
 
