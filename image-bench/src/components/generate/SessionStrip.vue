@@ -253,7 +253,7 @@ function onOpen(image) {
       <Transition name="rim">
         <div v-if="rimImage" ref="rimElement" class="session-rim" :style="rimStyle" @click.stop @auxclick.stop
              @pointerout="onRimPointerOut">
-          <ActionRim :groups="rimGroups" :size="Math.min(rimBox.width, rimBox.height)" :marking="rimMarking"
+          <ActionRim :groups="rimGroups" :size="Math.min(rimBox.width, rimBox.height)" :height="rimBox.height" :marking="rimMarking"
                      :show-alt="shiftKey" :extras="rimExtras"
                      @run="onRimAction" @set-marking="onRimMarking" @extra="onRimExtra"/>
         </div>

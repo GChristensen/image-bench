@@ -270,7 +270,7 @@ defineExpose({grid, nativeZoom, setZoom});
            @contextmenu="openImageMenu($event, image, ctx)">
         <img :src="image.imageUrl" :style="imageStyle" draggable="false" alt="">
         <CompareChrome :ref="el => chromes[index] = el" :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
-                       :rim-toggled="rimIndex === index" @hide-rim="rimIndex = -1"
+                       :rim-toggled="rimIndex === index"
                        @set-marking="marking => emit('setMarking', image, marking)"
                        @open="emit('open', index)"/>
       </div>

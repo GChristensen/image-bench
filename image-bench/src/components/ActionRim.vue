@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onBeforeUnmount, onMounted, ref} from "vue";
+import {computed, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {ICON_PATHS} from "@/components/icons.js";
 import {MARKINGS} from "@/consts.js";
 import {ACTION_GROUP_COLORS as GROUP_COLORS} from "@/imageActions.js";
@@ -10,7 +10,8 @@ import {ACTION_GROUP_COLORS as GROUP_COLORS} from "@/imageActions.js";
  * The hovered sector or the center shows its label in the hole. Mounted while it is shown on the card,
  * so it starts with the actions each time.
  * With outer arcs for the markings (top) and the extra actions (bottom, e.g. reuse seed / all) no mode switch is
- * needed: in the image overlay (hub "close") the center closes the overlay, on a card (hub "hide") the rim.
+ * needed: in a closeable view (hub "close", the image overlay) the center closes the view; on a card (hub "filter")
+ * it is shown only with the marking of the image in a view filtered by markings, and toggles that filter.
  */
 const props = defineProps({
   // Visible actions per group in rim order, as returned by rimActionGroups()
@@ -22,6 +23,11 @@ const props = defineProps({
   size: {
     type: Number,
     required: true
+  },
+  // Height of the image in pixels, 0 if unknown: up to SMALL_HEIGHT the rim is smaller
+  height: {
+    type: Number,
+    default: 0
   },
   marking: {
     type: String,
@@ -54,8 +60,8 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  // What the center button does: "markings" switches the ring to the markings, "close" (the overlay) and "hide"
-  // (the rim) emit close
+  // What the center button does: "markings" switches the ring to the markings, "close" closes the view showing the
+  // image (emits close), "filter" toggles the view's filter by the image's marking (no button without one)
   hub: {
     type: String,
     default: "markings"
@@ -86,6 +92,12 @@ const HIT_OUTSIDE = 12;
 // Outer arcs: distance from the ring, width, and the span of one item in degrees
 const ARC_GAP = 5;
 const ARC_WIDTH = 26;
+// Images up to this height get the smaller rim
+const SMALL_HEIGHT = 200;
+const SMALL_ARC_GAP = 4;
+const SMALL_ARC_WIDTH = 23;
+// In the smaller rim the icons sit this much inwards of the middle of the ring, away from its colored edge
+const SMALL_ICON_INSET = 2;
 const MARKING_SPAN = 15;
 const EXTRA_SPAN = 26;
 
@@ -101,15 +113,19 @@ const root = ref(null);
 const hasArcs = computed(() => props.markingArc || props.extras.length > 0);
 
 const geometry = computed(() => {
-  const outer = Math.max(58, Math.min(84, Math.floor(props.size / 2) - 8));
-  const inner = outer - (outer >= 72 ? 28 : 24);
-  const arcInner = outer + ARC_GAP;
-  const arcOuter = arcInner + ARC_WIDTH;
-  const pad = hasArcs.value ? ARC_GAP + ARC_WIDTH + HIT_OUTSIDE : HIT_OUTSIDE + 4;
+  const small = props.height > 0 && props.height <= SMALL_HEIGHT;
+  const arcGap = small ? SMALL_ARC_GAP : ARC_GAP;
+  const arcWidth = small ? SMALL_ARC_WIDTH : ARC_WIDTH;
+  const half = Math.floor(props.size / 2) - 8;
+  const outer = small ? Math.max(56, Math.min(77, half)) : Math.max(58, Math.min(84, half));
+  const inner = outer - (small ? (outer >= 70 ? 25 : 22) : (outer >= 72 ? 28 : 24));
+  const arcInner = outer + arcGap;
+  const arcOuter = arcInner + arcWidth;
+  const pad = hasArcs.value ? arcGap + arcWidth + HIT_OUTSIDE : HIT_OUTSIDE + 4;
   // With arcs the hit areas of the ring end halfway to them
-  const hitOuter = hasArcs.value ? outer + ARC_GAP / 2 : outer + HIT_OUTSIDE;
-  return {outer, inner, arcInner, arcOuter, hitOuter, pad, center: outer + pad, box: 2 * (outer + pad),
-    icon: outer >= 66 ? 16 : 14};
+  const hitOuter = hasArcs.value ? outer + arcGap / 2 : outer + HIT_OUTSIDE;
+  return {outer, inner, arcGap, arcInner, arcOuter, hitOuter, pad, center: outer + pad, box: 2 * (outer + pad),
+    iconRadius: (outer + inner) / 2 - (small ? SMALL_ICON_INSET : 0), icon: outer >= (small ? 64 : 66) ? 16 : 14};
 });
 
 // A small rim (filmstrip, project file cards) has room in its hole for short labels only: the actions' shortLabel,
@@ -245,12 +261,12 @@ function rgba(hex, alpha) {
 
 // Dark glass behind the ring, colored edges per group; the hovered sector is brighter and grows outwards
 const drawn = computed(() => {
-  const {outer, inner, icon, hitOuter} = geometry.value;
+  const {outer, inner, icon, iconRadius, hitOuter} = geometry.value;
 
   const ring = sectors.value.map(({item, start, end}) => {
     const hovered = hoveredId.value === item.id;
     const radius = outer + (hovered ? 4 : 0);
-    const [x, y] = point((outer + inner) / 2 + (hovered ? 2 : 0), (start + end) / 2);
+    const [x, y] = point(iconRadius + (hovered ? 2 : 0), (start + end) / 2);
 
     return {
       item,
@@ -268,7 +284,7 @@ const drawn = computed(() => {
 
 // The arcs have no glass behind them, so each sector gets a dark underlay of its own
 const drawnArcs = computed(() => {
-  const {arcInner, arcOuter, icon} = geometry.value;
+  const {arcGap, arcInner, arcOuter, icon} = geometry.value;
 
   return arcSectors.value.map(({item, start, end}) => {
     const hovered = hoveredId.value === item.id;
@@ -282,7 +298,7 @@ const drawnArcs = computed(() => {
       fill: rgba(item.color, hovered ? 0.5 : item.strong ? 0.42 : 0.16),
       shape,
       edge: edgePath(radius - 1.5, start, end),
-      hit: sectorPath(arcInner - ARC_GAP / 2, arcOuter + HIT_OUTSIDE, start - 0.6, end + 0.6),
+      hit: sectorPath(arcInner - arcGap / 2, arcOuter + HIT_OUTSIDE, start - 0.6, end + 0.6),
       x, y,
       iconTransform: `translate(${x - icon / 2} ${y - icon / 2}) scale(${icon / 24})`
     };
@@ -310,16 +326,21 @@ const labelStyle = computed(() => {
 const hoveredItem = computed(() => items.value.find(item => item.id === hoveredId.value)
   ?? arcSectors.value.find(sector => sector.item.id === hoveredId.value)?.item ?? null);
 
-const closeHub = computed(() => props.hub === "close" || props.hub === "hide");
+const closeHub = computed(() => props.hub === "close");
+const filterHub = computed(() => props.hub === "filter");
+const centerShown = computed(() => !filterHub.value || !!props.marking && props.filterable);
 
-const centerText = computed(() => props.hub === "close" ? "Close" : props.hub === "hide" ? "Hide actions"
+// A button removed under the pointer gets no pointerleave
+watch(centerShown, shown => shown || (centerHovered.value = false));
+
+const centerText = computed(() => closeHub.value ? "Close"
+  : filterHub.value ? (props.filterActive ? "Show all images" : "Show only " + props.marking)
   : mode.value === "markings" ? "Back to actions" : props.marking ? "Change marking" : "Add marking");
 
-const centerKey = computed(() => props.hub === "close" ? "Esc" : closeHub.value ? null
-  : mode.value === "actions" ? "1–9" : null);
+const centerKey = computed(() => closeHub.value ? "Esc" : mode.value === "actions" && !filterHub.value ? "1–9" : null);
 
-const centerNote = computed(() => props.hub === "close" || mode.value !== "actions" || !props.marking || !props.filterable
-  ? null : props.filterActive ? "Middle: show all images" : "Middle: show only " + props.marking);
+const centerNote = computed(() => closeHub.value || filterHub.value || mode.value !== "actions" || !props.marking
+  || !props.filterable ? null : props.filterActive ? "Middle: show all images" : "Middle: show only " + props.marking);
 
 function onSectorClick(item, e) {
   activate(item, e.shiftKey);
@@ -356,6 +377,7 @@ function itemAt(clientX, clientY) {
   const distance = Math.hypot(dx, dy);
   const {inner, hitOuter, arcOuter} = geometry.value;
 
+  // Without a center button the hole still counts as the center: a press released there runs nothing
   if (distance < inner - 4)
     return "center";
 
@@ -396,6 +418,11 @@ function onSectorLeave(item) {
 function onCenterClick() {
   if (closeHub.value) {
     emit("close");
+    return;
+  }
+
+  if (filterHub.value) {
+    emit("filterMarking", props.marking);
     return;
   }
 
@@ -476,7 +503,7 @@ onBeforeUnmount(() => pointerSource?.removeEventListener("pointermove", onPointe
       </template>
     </div>
 
-    <button class="rim-center" :class="{back: mode === 'markings', close: closeHub}"
+    <button v-if="centerShown" class="rim-center" :class="{back: mode === 'markings', close: closeHub}"
             :aria-label="centerText"
             @click.stop="onCenterClick"
             @mousedown.middle.prevent

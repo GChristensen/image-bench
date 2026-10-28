@@ -156,6 +156,7 @@
   const frameElement = ref(null);
   const rimOpen = ref(false);
   const rimSize = ref(0);
+  const rimHeight = ref(0);
   let rimTimer = 0;
 
   const rimShown = computed(() => props.rim && !bare.value && (hoverMode.value ? rimOpen.value && !rimToggled.value
@@ -164,8 +165,10 @@
   watch(rimShown, shown => {
     const frame = frameElement.value;
 
-    if (shown && frame)
+    if (shown && frame) {
       rimSize.value = Math.min(frame.clientWidth, frame.clientHeight);
+      rimHeight.value = frame.clientHeight;
+    }
   });
 
   const rimToggleText = () => rimToggled.value ? "Hide actions" : "Show actions (or middle-click)";
@@ -336,11 +339,11 @@
 
     <!-- Before the other controls, which stay above it where a small card overlaps them -->
     <Transition name="rim">
-      <ActionRim v-if="rimShown" ref="rimElement" :groups="rimGroups" :size="rimSize" hub="hide" :marking="image.marking ?? null"
+      <ActionRim v-if="rimShown" ref="rimElement" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter" :marking="image.marking ?? null"
                  marking-arc :extras="rimExtras" :show-alt="showAlt" :deletable="deletable" :filterable="filterable"
                  :dim-far="hoverMode" :filter-active="!!image.marking && markingFilter === image.marking"
                  @run="onAction" @delete="$emit('deleteImage')" @set-marking="setMarking"
-                 @extra="id => runRimReuseExtra(image, id)" @close="rimToggled = hoverMode"
+                 @extra="id => runRimReuseExtra(image, id)"
                  @filter-marking="marking => $emit('filterMarking', marking)"/>
     </Transition>
 

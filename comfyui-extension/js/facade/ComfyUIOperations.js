@@ -366,6 +366,25 @@ export class ComfyUIOperations {
         return true;
     }
 
+    /**
+     * Empty the nodes marked with ib:img and ib:mask; the widgets are set without their callbacks, which would load
+     * the empty file
+     */
+    clearInpaintUploadImages() {
+        for (const role of [MARKER_ROLES.image, MARKER_ROLES.mask]) {
+            const target = this.getRoleTarget(role);
+            const widget = target && getTargetWidget(target, getRoleWidgetName(role, this.nodeConfig, target) ?? 'image');
+
+            if (!widget)
+                continue;
+
+            widget.value = '';
+            target.source.imgs = undefined;
+        }
+
+        this.app.graph.setDirtyCanvas(true, true);
+    }
+
     // ==================== HIGH-LEVEL OPERATIONS ====================
 
     /**

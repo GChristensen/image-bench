@@ -193,6 +193,10 @@ export function createMirror({app, ops, popup, showAlert}, {progress, references
         LIVE_PROGRESS_SUBSCRIBE: () => progress.watch(),
         SET_WEBUI_PARAMS: payload => applyParams(payload.params),
         SET_INPUT_IMAGE: payload => setInputImage(payload.kind, payload.file),
+        CLEAR_INPUT_IMAGES: () => {
+            ops.clearInpaintUploadImages();
+            pollIfActive();
+        },
         EDIT_REFERENCES: payload => editReferences(payload.edit),
         SET_CONTINUATION: payload => setContinuation(payload.url),
         SET_EDITOR_TARGET: payload => editorTarget = payload.target,

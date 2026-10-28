@@ -52,6 +52,11 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'SET_INPUT_IMAGE', kind, file });
   };
 
+  // Remove the input images of img2img and inpaint (ComfyUI: empty the nodes marked ib:img and ib:mask)
+  const clearInputImages = () => {
+    sendWebUIMessage({ type: 'CLEAR_INPUT_IMAGES' });
+  };
+
   // Edit the reference images of the shown WebUI tab: {add: File[]} | {remove: index} | {clear: true}
   const editReferences = (edit) => {
     sendWebUIMessage({ type: 'EDIT_REFERENCES', edit });
@@ -162,6 +167,7 @@ export function useWebUIBridge() {
     loadWorkflow,
     syncWorkflows,
     setInputImage,
+    clearInputImages,
     editReferences,
     setEditorTarget,
     subscribeMirror,

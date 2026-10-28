@@ -160,6 +160,7 @@ const RIM_DELAY = 100;
 const cellElement = ref(null);
 const rimOpen = ref(false);
 const rimSize = ref(0);
+const rimHeight = ref(0);
 // The session images are not deeply reactive: the rim reads the marking when it opens and when it is set
 const rimMarking = ref(null);
 let rimTimer = 0;
@@ -196,6 +197,7 @@ watch(rimShown, shown => {
     return;
 
   rimSize.value = Math.min(cell.clientWidth, cell.clientHeight);
+  rimHeight.value = cell.clientHeight;
   rimMarking.value = props.actionImage?.marking ?? null;
 });
 
@@ -497,10 +499,9 @@ onBeforeUnmount(() => {
 
     <!-- Last, so that it stays above the input thumbnail and the controls -->
     <Transition name="rim">
-      <ActionRim v-if="rimShown" ref="rimElement" class="result-rim" :groups="rimGroups" :size="rimSize" hub="hide"
+      <ActionRim v-if="rimShown" ref="rimElement" class="result-rim" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter"
                  :marking="rimMarking" marking-arc :extras="rimExtras" :show-alt="showAlt" :dim-far="hoverMode"
-                 @run="onAction" @set-marking="setMarking" @extra="id => runRimReuseExtra(rimImage, id)"
-                 @close="rimToggled = hoverMode"/>
+                 @run="onAction" @set-marking="setMarking" @extra="id => runRimReuseExtra(rimImage, id)"/>
     </Transition>
   </div>
 </template>

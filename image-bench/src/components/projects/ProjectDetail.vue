@@ -300,6 +300,7 @@ function onImageAction(item, action, alt) {
 // image (at the right) and reuse all
 const rimKey = ref(null);
 const rimSize = ref(0);
+const rimHeight = ref(0);
 
 const rimGroups = item => rimActionGroups(item.image, actionContext)
   .map(group => ({...group, actions: group.actions.filter(action => CARD_ACTIONS.includes(action.id))}));
@@ -314,7 +315,9 @@ const rimExtras = item => [
 const viewerRim = file => file?.item ? {groups: rimGroups(file.item), extras: rimExtras(file.item)} : null;
 
 function toggleRim(item, element) {
-  rimSize.value = element.closest(".file")?.querySelector(".file-image")?.clientWidth ?? 0;
+  const image = element.closest(".file")?.querySelector(".file-image");
+  rimSize.value = image?.clientWidth ?? 0;
+  rimHeight.value = image?.clientHeight ?? 0;
   rimKey.value = rimKey.value === item.key ? null : item.key;
 }
 
@@ -689,10 +692,10 @@ const unitDetails = unit => [
             <!-- Its clicks stay here, so that they do not open the file -->
             <div class="file-rim" @click.stop @auxclick.stop>
               <Transition name="rim">
-                <ActionRim v-if="rimKey === item.key" :groups="rimGroups(item)" :size="rimSize" hub="close"
+                <ActionRim v-if="rimKey === item.key" :groups="rimGroups(item)" :size="rimSize" :height="rimHeight" hub="filter"
                            :extras="rimExtras(item)" :show-alt="shiftKey"
                            @run="(action, alt) => onImageAction(item, action, alt)"
-                           @extra="id => onRimExtra(item, id)" @close="rimKey = null"/>
+                           @extra="id => onRimExtra(item, id)"/>
               </Transition>
             </div>
           </div>

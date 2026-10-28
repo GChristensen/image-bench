@@ -175,7 +175,6 @@ function onDrop(e) {
     </div>
 
     <CompareChrome ref="chromeElement" :image="image" :index="index" :ctx="ctx" :hovered="hovered" :rim-toggled="rimToggled"
-                   @hide-rim="rimToggled = false"
                    @set-marking="marking => emit('setMarking', marking)"
                    @open="emit('open')">
       <template #lead>

@@ -40,7 +40,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["setMarking", "open", "hideRim"]);
+const emit = defineEmits(["setMarking", "open"]);
 
 const rootElement = ref(null);
 const rimElement = ref(null);
@@ -50,13 +50,16 @@ const showAlt = computed(() => props.hovered && shiftDown.value);
 const rimGroups = computed(() => rimActionGroups(props.image, props.ctx));
 const rimExtras = computed(() => rimReuseExtras(props.image));
 const rimSize = ref(0);
+const rimHeight = ref(0);
 const rimOpen = computed(() => props.hovered && (ctrlDown.value || props.rimToggled));
 
 watch(rimOpen, open => {
   const root = rootElement.value;
 
-  if (open && root)
+  if (open && root) {
     rimSize.value = Math.min(root.clientWidth, root.clientHeight);
+    rimHeight.value = root.clientHeight;
+  }
 });
 
 function onAction(action, alt) {
@@ -87,12 +90,12 @@ function onMarkingAuxClick(e) {
     </div>
 
     <Transition name="rim">
-      <ActionRim v-if="rimOpen" ref="rimElement" :groups="rimGroups" :size="rimSize" hub="hide" :marking="image.marking ?? null"
+      <ActionRim v-if="rimOpen" ref="rimElement" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter" :marking="image.marking ?? null"
                  marking-arc :extras="rimExtras" :show-alt="showAlt" :deletable="!!ctx.handlers.removeImage"
                  :delete-label="ctx.removeLabel ?? 'Remove'"
                  @run="onAction" @delete="ctx.handlers.removeImage(image)"
                  @set-marking="marking => emit('setMarking', marking)"
-                 @extra="id => runRimReuseExtra(image, id)" @close="emit('hideRim')"/>
+                 @extra="id => runRimReuseExtra(image, id)"/>
     </Transition>
   </div>
 </template>
