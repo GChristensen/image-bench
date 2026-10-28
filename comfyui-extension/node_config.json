@@ -438,6 +438,28 @@
         "widget": "width"
       },
       {
+        "via": [
+          "latent_image",
+          "pixels",
+          "width"
+        ],
+        "types": [
+          "PrimitiveInt",
+          "PrimitiveNode"
+        ],
+        "widget": "value"
+      },
+      {
+        "via": [
+          "latent_image",
+          "pixels"
+        ],
+        "types": [
+          "ImageScale"
+        ],
+        "widget": "width"
+      },
+      {
         "from": "inpaintCrop",
         "widget": "output_target_width"
       },
@@ -481,6 +503,28 @@
           "MiniMaxH3ImageToVideo",
           "MiniMaxH3ReferenceToVideo",
           "EmptyMiniMaxH3LatentAV"
+        ],
+        "widget": "height"
+      },
+      {
+        "via": [
+          "latent_image",
+          "pixels",
+          "height"
+        ],
+        "types": [
+          "PrimitiveInt",
+          "PrimitiveNode"
+        ],
+        "widget": "value"
+      },
+      {
+        "via": [
+          "latent_image",
+          "pixels"
+        ],
+        "types": [
+          "ImageScale"
         ],
         "widget": "height"
       },

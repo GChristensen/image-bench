@@ -1,0 +1,999 @@
+{
+  "id": "4d8a3809-7210-4607-98c2-d11348881646",
+  "revision": 0,
+  "last_node_id": 29,
+  "last_link_id": 43,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        380,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "moss_image_sft_bf16.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "moss_image_sft_bf16.safetensors",
+        "default"
+      ],
+      "title": "Load Diffusion Model ib:cp"
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        0,
+        130
+      ],
+      "size": [
+        380,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen3.5_9b_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_int8_convrot.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen3.5_9b_int8_convrot.safetensors",
+        "moss_image",
+        "default"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        0,
+        290
+      ],
+      "size": [
+        380,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            16,
+            40
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "flux2-vae.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "flux2-vae.safetensors"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        0,
+        390
+      ],
+      "size": [
+        380,
+        82
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly",
+        "models": [
+          {
+            "name": "moss_sft_destripe_top64_bf16.safetensors",
+            "url": "https://huggingface.co/nynxz/MOSS-Image/resolve/main/loras/moss_sft_destripe_top64_bf16.safetensors",
+            "directory": "loras"
+          }
+        ]
+      },
+      "widgets_values": [
+        "moss_sft_destripe_top64_bf16.safetensors",
+        1.5
+      ],
+      "title": "Destripe LoRA (SFT, bypassed)"
+    },
+    {
+      "id": 5,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        0,
+        510
+      ],
+      "size": [
+        380,
+        82
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "moss_image_lora.safetensors",
+        1
+      ],
+      "title": "Load LoRA ib:lora"
+    },
+    {
+      "id": 6,
+      "type": "ImageBenchPrompt",
+      "pos": [
+        440,
+        0
+      ],
+      "size": [
+        460,
+        260
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 8
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 9,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            10
+          ]
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            1,
+            3
+          ]
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageBenchPrompt"
+      },
+      "widgets_values": [
+        "A wide view of a small bakery storefront at dusk, warm light spilling from the window onto a wet cobblestone street. A hand-painted wooden sign above the door reads \"MORNING CRUMB\", and a chalkboard on the sidewalk says:\n\"Fresh sourdough\nOpen 6am – 2pm\"\nPhotorealistic, 35mm lens, shallow depth of field, soft reflections on the pavement."
+      ],
+      "title": "Prompt ib:pp"
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        440,
+        300
+      ],
+      "size": [
+        460,
+        90
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 2,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "title": "CLIP Text Encode (Prompt)"
+    },
+    {
+      "id": 8,
+      "type": "CLIPTextEncode",
+      "pos": [
+        440,
+        430
+      ],
+      "size": [
+        460,
+        130
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "title": "Negative Prompt ib:np"
+    },
+    {
+      "id": 9,
+      "type": "SkipLayerGuidanceDiTSimple",
+      "pos": [
+        960,
+        0
+      ],
+      "size": [
+        300,
+        130
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SkipLayerGuidanceDiTSimple"
+      },
+      "widgets_values": [
+        "",
+        "22",
+        0,
+        1.0
+      ],
+      "title": "Skip Layer Guidance (layer 22)"
+    },
+    {
+      "id": 10,
+      "type": "PrimitiveInt",
+      "pos": [
+        960,
+        180
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "INT",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            41
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        1024,
+        "fixed"
+      ],
+      "title": "Width"
+    },
+    {
+      "id": 11,
+      "type": "PrimitiveInt",
+      "pos": [
+        960,
+        290
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "INT",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            42
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        1024,
+        "fixed"
+      ],
+      "title": "Height"
+    },
+    {
+      "id": 13,
+      "type": "KSampler",
+      "pos": [
+        1320,
+        0
+      ],
+      "size": [
+        300,
+        262
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 11
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 12
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 13
+        },
+        {
+          "localized_name": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 43
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 35
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            15
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        482913077561203,
+        "randomize",
+        50,
+        3,
+        "euler",
+        "simple",
+        0.6
+      ],
+      "title": "KSampler ib:smp"
+    },
+    {
+      "id": 14,
+      "type": "VAEDecode",
+      "pos": [
+        1660,
+        0
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 15
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            37
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 24,
+      "type": "SaveImage",
+      "pos": [
+        2870,
+        0
+      ],
+      "size": [
+        520,
+        560
+      ],
+      "flags": {},
+      "order": 23,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 37
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "MOSS-Image-img2img"
+      ]
+    },
+    {
+      "id": 25,
+      "type": "MarkdownNote",
+      "pos": [
+        -700,
+        0
+      ],
+      "size": [
+        660,
+        1500
+      ],
+      "flags": {},
+      "order": 24,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## MOSS-Image: img2img\n\n[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT) (OpenMOSS, 5.1B single-stream DiT, Qwen3.5 9B text\nencoder, FLUX.2 VAE, Apache-2.0) is strong at text rendering and layout. **SFT** is the curated fine-tune set here;\n**Base** and Base with the 8-step **DMD2 LoRA** run in the same graph, see below.\n\n**Settings (SFT)**: 50 steps, CFG 3 (true CFG: two passes per step), euler, simple, 1024×1024. Shift 5 is applied by\nthe model, so there is no Shift setting. Sizes from 512×512 to about 2048×2048 (0.25-4 MP; 1, 1.5 or 2 MP\nrecommended), sides multiples of 16. Leave the negative prompt empty on SFT.\n\n**Skip Layer Guidance** (layer 22, 0-1) is the official default: the negative pass runs with layer 22 skipped.\nBypass it for a more photographic look at the cost of fine detail, or set its end to 0.5 as a compromise.\n\n**Prompts**: natural language, booru-style tags or a JSON layout (paste it into the prompt; its size must match\nWidth / Height). Put text to render in double quotes; `(word:1.2)` weights are not known to work. CFG 3 suits long\nprompts; raise it toward 6 for short ones.\n\n## Base\n\n**Base** (`moss_image_base_bf16`, raw pretrain) is the checkpoint LoRAs are trained on. Out of the box its anime\noutput is weak and its photoreal decent; character and style LoRAs improve it a lot. Choose it in the model list,\nkeep the SFT settings (50 steps or more, CFG 3; 4-6 for short prompts) and the Destripe LoRA bypassed, and use the\nnegative prompt `nsfw, worst quality, bad anatomy, watermark, jpeg artifact`: light data filtering lets watermarks,\nblur and JPEG artefacts leak in. Tags work best in the order Quality → Score → Meta → Year → Character → Series →\nArtist → General.\n\n**8 steps (DMD2 LoRA)**: the DMD2 LoRA of [lodestones/Kromoss](https://huggingface.co/lodestones/Kromoss) is distilled\nfrom Base (rank 128). With Base, add `<lora:8-steps-dmd2-lora:1>` to the prompt and set 8 steps (4 also works) and\nCFG 1. At CFG 1 there is no negative pass, so the negative prompt and Skip\nLayer Guidance have no effect. **CFG above 1 burns the image.** It also works on Kromoss (`kromoss_bf16.safetensors`,\na drop-in replacement for the diffusion model); on SFT it is untested. Use one DMD LoRA at a time, and do not merge\nit into bf16 weights.\n\n## img2img\n\nThe image of **Load Image ib:img** is the starting point: **Resize to** scales it to the size of the Generate tab\n(Width / Height, its *Resize to* in img2img mode; **Use size** in the Input cell takes the size of the image),\n**VAE Encode** makes the latent, and the sampler adds noise by the **denoising** strength (0.6 here) and samples\nfrom there. The prompt describes the whole image you want. Low denoising keeps the composition and colors; high\ndenoising moves further from the image. To change one area only, use the inpaint workflow; to change the image by\nan instruction, an edit model with references.\n\nThe Generate tab is in **img2img** mode while this workflow is loaded. Send an image with **Send to the input\nimage** (B), from the editor, or upload it in the Input cell before the first queue. This workflow has no Hires.\nfix pass: upscale the result with the full workflow.\n\n## Image Bench\n\n| Marker | Node | Generate tab |\n|--------|------|--------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:img` | Load Image | Input cell; Send to the input image (B), the editor |\n| `ib:pp` / `ib:np` | Image Bench Prompt / Negative Prompt | prompts and LoRA list |\n| `ib:smp` | KSampler | seed, steps, CFG (CFG), sampler, scheduler; denoising; Resize to (Width / Height) |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**Destripe LoRA**: SFT paints faint vertical colour stripes in smooth areas (sky, walls). Enable the bypassed\n**Destripe LoRA** (Ctrl+B) after downloading it: strength 1.0 at 768 px, 1.5 at 1024 px; SFT only.\n\n**LoRAs**: check them in the LoRA list or type `<lora:name:weight>` into the prompt. Use the normal LoRA loaders:\n`Load LoRA (Bypass)` drops the q/k/v adapters of the fused Comfy-Org checkpoints (watch the console for `lora key not\nloaded`).\n\nThe Generate tab has no References panel and the ControlNet tab no units: MOSS-Image takes no reference images, and\nthere is no ControlNet for it.\n\nMOSS-Image needs a ComfyUI with native support (merged 16 Oct 2026, PR #17095; master after 0.41.x): an older\ninstall fails to load the model. The CLIP loader type must be `moss_image`.\n\n## Model Links\n\n[Comfy-Org/MOSS-Image](https://huggingface.co/Comfy-Org/MOSS-Image) also has `*_int8_convrot` diffusion models (5.4 GB,\nfor 16 GB VRAM or less) and the `qwen3.5_9b_w4a8_gptq` text encoder (7.3 GB).\n\n**diffusion_models**: [moss_image_sft_bf16.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_sft_bf16.safetensors), [moss_image_base_bf16.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_bf16.safetensors)\n**text_encoders**: [qwen3.5_9b_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_int8_convrot.safetensors) (one file for SFT and Base)\n**vae**: [flux2-vae.safetensors](https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae.safetensors) (the FLUX.2 VAE)\n**loras**: [moss_sft_destripe_top64_bf16.safetensors](https://huggingface.co/nynxz/MOSS-Image/resolve/main/loras/moss_sft_destripe_top64_bf16.safetensors) (nynxz), [8-steps-dmd2-lora.safetensors](https://huggingface.co/lodestones/Kromoss/resolve/main/8-steps-dmd2-lora.safetensors) (lodestones, into `models/loras`)"
+      ],
+      "title": "Note: MOSS-Image (Image Bench, img2img)"
+    },
+    {
+      "id": 26,
+      "type": "PrimitiveFloat",
+      "pos": [
+        1320,
+        -110
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            35
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveFloat"
+      },
+      "widgets_values": [
+        3
+      ],
+      "title": "CFG"
+    },
+    {
+      "type": "LoadImage",
+      "title": "Load Image ib:img",
+      "pos": [
+        620,
+        590
+      ],
+      "size": [
+        300,
+        330
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            38
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "widgets_values": [
+        "image_bench_photoshop_image.png",
+        "image"
+      ],
+      "id": 27,
+      "flags": {},
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      }
+    },
+    {
+      "type": "ImageScale",
+      "title": "Resize to",
+      "pos": [
+        960,
+        590
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 38
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 41
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 42
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            39
+          ]
+        }
+      ],
+      "widgets_values": [
+        "lanczos",
+        1024,
+        1024,
+        "disabled"
+      ],
+      "id": 28,
+      "flags": {},
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      }
+    },
+    {
+      "type": "VAEEncode",
+      "pos": [
+        960,
+        770
+      ],
+      "size": [
+        210,
+        50
+      ],
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 39
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 40
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            43
+          ]
+        }
+      ],
+      "id": 29,
+      "flags": {},
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      6,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      6,
+      2,
+      7,
+      1,
+      "STRING"
+    ],
+    [
+      3,
+      6,
+      1,
+      8,
+      0,
+      "CLIP"
+    ],
+    [
+      6,
+      1,
+      0,
+      4,
+      0,
+      "MODEL"
+    ],
+    [
+      7,
+      4,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      8,
+      5,
+      0,
+      6,
+      0,
+      "MODEL"
+    ],
+    [
+      9,
+      2,
+      0,
+      6,
+      1,
+      "CLIP"
+    ],
+    [
+      10,
+      6,
+      0,
+      9,
+      0,
+      "MODEL"
+    ],
+    [
+      11,
+      9,
+      0,
+      13,
+      0,
+      "MODEL"
+    ],
+    [
+      12,
+      7,
+      0,
+      13,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      13,
+      8,
+      0,
+      13,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      15,
+      13,
+      0,
+      14,
+      0,
+      "LATENT"
+    ],
+    [
+      16,
+      3,
+      0,
+      14,
+      1,
+      "VAE"
+    ],
+    [
+      35,
+      26,
+      0,
+      13,
+      4,
+      "FLOAT"
+    ],
+    [
+      37,
+      14,
+      0,
+      24,
+      0,
+      "IMAGE"
+    ],
+    [
+      38,
+      27,
+      0,
+      28,
+      0,
+      "IMAGE"
+    ],
+    [
+      39,
+      28,
+      0,
+      29,
+      0,
+      "IMAGE"
+    ],
+    [
+      40,
+      3,
+      0,
+      29,
+      1,
+      "VAE"
+    ],
+    [
+      41,
+      10,
+      0,
+      28,
+      1,
+      "INT"
+    ],
+    [
+      42,
+      11,
+      0,
+      28,
+      2,
+      "INT"
+    ],
+    [
+      43,
+      29,
+      0,
+      13,
+      3,
+      "LATENT"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.6,
+      "offset": [
+        700,
+        120
+      ]
+    }
+  },
+  "version": 0.4
+}

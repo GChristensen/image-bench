@@ -10,7 +10,9 @@ export const MANUAL_SECTIONS = [
   {id: "overview", title: "What it is for", icon: "help"},
   {id: "window", title: "The window", icon: "fit"},
   {id: "input", title: "Mouse and keys", icon: "help"},
-  {id: "workflow", title: "Typical workflow", icon: "steps"},
+  {id: "workflow", title: "Typical workflow", icon: "steps", children: [
+    {id: "workflow-edit", title: "Editing an image", icon: "brush"},
+  ]},
   {id: "images", title: "Working with images", icon: "layers"},
   {id: "generate", title: "Generate", icon: "generate"},
   {id: "controlnet", title: "ControlNet", icon: "controlnet"},

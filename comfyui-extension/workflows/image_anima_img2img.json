@@ -1,0 +1,1843 @@
+{
+  "id": "4d094601-b2a4-41d8-9faf-be97246a9307",
+  "revision": 0,
+  "last_node_id": 42,
+  "last_link_id": 64,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        380,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "anima-base-v1.0.safetensors",
+            "url": "https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/diffusion_models/anima-base-v1.0.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "anima-base-v1.0.safetensors",
+        "default"
+      ],
+      "title": "Load Diffusion Model ib:cp"
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        0,
+        130
+      ],
+      "size": [
+        380,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen_3_06b_base.safetensors",
+            "url": "https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen_3_06b_base.safetensors",
+        "stable_diffusion",
+        "default"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        0,
+        290
+      ],
+      "size": [
+        380,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            15,
+            22,
+            29,
+            37,
+            61
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "qwen_image_vae.safetensors",
+            "url": "https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/vae/qwen_image_vae.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen_image_vae.safetensors"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "LoraLoader",
+      "pos": [
+        0,
+        400
+      ],
+      "size": [
+        380,
+        126
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            3
+          ]
+        },
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoader"
+      },
+      "widgets_values": [
+        "anima-lora.safetensors",
+        1,
+        1
+      ],
+      "title": "Load LoRA ib:lora"
+    },
+    {
+      "id": 5,
+      "type": "ImageBenchPrompt",
+      "pos": [
+        440,
+        0
+      ],
+      "size": [
+        460,
+        260
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 4,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            8
+          ]
+        },
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            5,
+            7
+          ]
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageBenchPrompt"
+      },
+      "widgets_values": [
+        "masterpiece, best quality, score_7, safe, 1girl, solo, standing on a rooftop at dusk, wind in her long silver hair, oversized yellow raincoat, city lights below, warm rim light, looking at viewer"
+      ],
+      "title": "Prompt ib:pp"
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        960,
+        0
+      ],
+      "size": [
+        300,
+        54
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 5
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "link": 6,
+          "widget": {
+            "name": "text"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            23
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "title": "CLIP Text Encode (Prompt)"
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "pos": [
+        960,
+        100
+      ],
+      "size": [
+        300,
+        130
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            24
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, sepia"
+      ],
+      "title": "Negative Prompt ib:np",
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 8,
+      "type": "ModelSamplingAuraFlow",
+      "pos": [
+        960,
+        280
+      ],
+      "size": [
+        300,
+        58
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            17
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ModelSamplingAuraFlow"
+      },
+      "widgets_values": [
+        3.0
+      ]
+    },
+    {
+      "id": 9,
+      "type": "PrimitiveInt",
+      "pos": [
+        440,
+        330
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "INT",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            12,
+            62
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        1024,
+        "fixed"
+      ],
+      "title": "Width"
+    },
+    {
+      "id": 10,
+      "type": "PrimitiveInt",
+      "pos": [
+        440,
+        450
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "INT",
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            13,
+            63
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        1024,
+        "fixed"
+      ],
+      "title": "Height"
+    },
+    {
+      "id": 12,
+      "type": "LoadImage",
+      "pos": [
+        0,
+        700
+      ],
+      "size": [
+        300,
+        320
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ]
+        },
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "image_bench_reference_0.png",
+        "image"
+      ],
+      "title": "Reference ib:ref:0"
+    },
+    {
+      "id": 13,
+      "type": "ImageScale",
+      "pos": [
+        330,
+        700
+      ],
+      "size": [
+        300,
+        130
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 11
+        },
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "link": 12,
+          "widget": {
+            "name": "width"
+          }
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "link": 13,
+          "widget": {
+            "name": "height"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      },
+      "widgets_values": [
+        "lanczos",
+        1024,
+        1024,
+        "center"
+      ],
+      "title": "Scale to the generation size"
+    },
+    {
+      "id": 14,
+      "type": "VAEEncode",
+      "pos": [
+        330,
+        880
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "pixels",
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 14
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            16
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 15,
+      "type": "ApplyCosmosReferenceLatent",
+      "pos": [
+        330,
+        970
+      ],
+      "size": [
+        300,
+        78
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 17
+        },
+        {
+          "localized_name": "ref_latents.ref_latent_1",
+          "name": "ref_latents.ref_latent_1",
+          "type": "LATENT",
+          "link": 16,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            32
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ApplyCosmosReferenceLatent"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 16,
+      "type": "ACN_ControlNetLoaderAdvanced",
+      "pos": [
+        1440,
+        700
+      ],
+      "size": [
+        320,
+        58
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "CONTROL_NET",
+          "name": "CONTROL_NET",
+          "type": "CONTROL_NET",
+          "links": [
+            19
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ACN_ControlNetLoaderAdvanced",
+        "models": [
+          {
+            "name": "anima-vace-depth.safetensors",
+            "url": "https://huggingface.co/TaihoC/Anima-ControlNet-VACE-Depth/resolve/main/anima-vace-depth.safetensors",
+            "directory": "controlnet"
+          }
+        ]
+      },
+      "widgets_values": [
+        "anima-vace-depth.safetensors"
+      ],
+      "title": "Depth VACE model"
+    },
+    {
+      "id": 17,
+      "type": "LoadImage",
+      "pos": [
+        1440,
+        800
+      ],
+      "size": [
+        320,
+        320
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            18
+          ]
+        },
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "image_bench_cn_0_image.png",
+        "image"
+      ],
+      "title": "Depth control image"
+    },
+    {
+      "id": 18,
+      "type": "AIO_Preprocessor",
+      "pos": [
+        1440,
+        1160
+      ],
+      "size": [
+        320,
+        82
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AIO_Preprocessor"
+      },
+      "widgets_values": [
+        "DepthAnythingV2Preprocessor",
+        1024
+      ],
+      "title": "Depth preprocessor"
+    },
+    {
+      "id": 19,
+      "type": "LoadImageMask",
+      "pos": [
+        1790,
+        800
+      ],
+      "size": [
+        300,
+        320
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            21
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImageMask"
+      },
+      "widgets_values": [
+        "image_bench_cn_0_mask.png",
+        "red",
+        "image"
+      ],
+      "title": "Depth effect mask"
+    },
+    {
+      "id": 20,
+      "type": "ACN_AdvancedControlNetApply_v2",
+      "pos": [
+        1790,
+        1160
+      ],
+      "size": [
+        300,
+        186
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 23
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 24
+        },
+        {
+          "localized_name": "control_net",
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 19
+        },
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 20
+        },
+        {
+          "localized_name": "mask_optional",
+          "name": "mask_optional",
+          "type": "MASK",
+          "link": 21,
+          "shape": 7
+        },
+        {
+          "localized_name": "vae_optional",
+          "name": "vae_optional",
+          "type": "VAE",
+          "link": 22,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            30
+          ]
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "links": [
+            31
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ACN_AdvancedControlNetApply_v2"
+      },
+      "widgets_values": [
+        0.7,
+        0,
+        0.8
+      ],
+      "title": "ControlNet Depth ib:cn:1"
+    },
+    {
+      "id": 21,
+      "type": "ACN_ControlNetLoaderAdvanced",
+      "pos": [
+        720,
+        700
+      ],
+      "size": [
+        320,
+        58
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "CONTROL_NET",
+          "name": "CONTROL_NET",
+          "type": "CONTROL_NET",
+          "links": [
+            26
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ACN_ControlNetLoaderAdvanced",
+        "models": [
+          {
+            "name": "anima_controlnet_vace_canny_v1.safetensors",
+            "url": "https://huggingface.co/khanghy1000/Anima-ControlNet-VACE-Canny/resolve/main/anima_controlnet_vace_canny_v1.safetensors",
+            "directory": "controlnet"
+          }
+        ]
+      },
+      "widgets_values": [
+        "anima_controlnet_vace_canny_v1.safetensors"
+      ],
+      "title": "Canny VACE model"
+    },
+    {
+      "id": 22,
+      "type": "LoadImage",
+      "pos": [
+        720,
+        800
+      ],
+      "size": [
+        320,
+        320
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            25
+          ]
+        },
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "image_bench_cn_1_image.png",
+        "image"
+      ],
+      "title": "Canny control image"
+    },
+    {
+      "id": 23,
+      "type": "AIO_Preprocessor",
+      "pos": [
+        720,
+        1160
+      ],
+      "size": [
+        320,
+        82
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 25
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            27
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AIO_Preprocessor"
+      },
+      "widgets_values": [
+        "CannyEdgePreprocessor",
+        1024
+      ],
+      "title": "Canny preprocessor"
+    },
+    {
+      "id": 24,
+      "type": "LoadImageMask",
+      "pos": [
+        1070,
+        800
+      ],
+      "size": [
+        300,
+        320
+      ],
+      "flags": {},
+      "order": 23,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            28
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImageMask"
+      },
+      "widgets_values": [
+        "image_bench_cn_1_mask.png",
+        "red",
+        "image"
+      ],
+      "title": "Canny effect mask"
+    },
+    {
+      "id": 25,
+      "type": "ACN_AdvancedControlNetApply_v2",
+      "pos": [
+        1070,
+        1160
+      ],
+      "size": [
+        300,
+        186
+      ],
+      "flags": {},
+      "order": 24,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 30
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 31
+        },
+        {
+          "localized_name": "control_net",
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 26
+        },
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 27
+        },
+        {
+          "localized_name": "mask_optional",
+          "name": "mask_optional",
+          "type": "MASK",
+          "link": 28,
+          "shape": 7
+        },
+        {
+          "localized_name": "vae_optional",
+          "name": "vae_optional",
+          "type": "VAE",
+          "link": 29,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            33
+          ]
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "links": [
+            34
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ACN_AdvancedControlNetApply_v2"
+      },
+      "widgets_values": [
+        0.7,
+        0,
+        0.8
+      ],
+      "title": "ControlNet Canny ib:cn:0"
+    },
+    {
+      "id": 26,
+      "type": "KSampler",
+      "pos": [
+        1660,
+        0
+      ],
+      "size": [
+        300,
+        262
+      ],
+      "flags": {},
+      "order": 25,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 32
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 33
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 34
+        },
+        {
+          "localized_name": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 64
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": 56
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        875817230929465,
+        "randomize",
+        30,
+        4,
+        "er_sde",
+        "simple",
+        0.6
+      ],
+      "title": "KSampler ib:smp"
+    },
+    {
+      "id": 27,
+      "type": "VAEDecode",
+      "pos": [
+        2010,
+        0
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 26,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 36
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 37
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            58
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 37,
+      "type": "SaveImage",
+      "pos": [
+        3220,
+        0
+      ],
+      "size": [
+        520,
+        560
+      ],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 58
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "Anima-img2img"
+      ]
+    },
+    {
+      "id": 38,
+      "type": "MarkdownNote",
+      "pos": [
+        -680,
+        0
+      ],
+      "size": [
+        640,
+        1500
+      ],
+      "flags": {},
+      "order": 37,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## Anima: img2img, VACE canny and depth ControlNet, reference\n\n[Anima](https://huggingface.co/circlestone-labs/Anima) base v1.0 (Qwen3 0.6B text encoder, Qwen Image VAE): anime and\nillustration. Tags or natural language, quality tags first; see the negative prompt for the score tags.\n\n**Settings**: 30 steps, CFG 4, er_sde, simple, Shift 3 (the model's own; the VACE models were trained at 5),\n1024×1024 (multiples of 16, which VACE requires).\n\n## img2img\n\nThe image of **Load Image ib:img** is the starting point: **Resize to** scales it to the size of the Generate tab\n(Width / Height, its *Resize to* in img2img mode; **Use size** in the Input cell takes the size of the image),\n**VAE Encode** makes the latent, and the sampler adds noise by the **denoising** strength (0.6 here) and samples\nfrom there. The prompt describes the whole image you want. Low denoising keeps the composition and colors; high\ndenoising moves further from the image. To change one area only, use the inpaint workflow; to change the image by\nan instruction, an edit model with references.\n\nThe Generate tab is in **img2img** mode while this workflow is loaded. Send an image with **Send to the input\nimage** (B), from the editor, or upload it in the Input cell before the first queue. This workflow has no Hires.\nfix pass: upscale the result with the full workflow.\n\n## Image Bench\n\n| Marker | Node | Generate / ControlNet tab |\n|--------|------|---------------------------|\n| `ib:cp` | Load Diffusion Model | model list, model exploration |\n| `ib:img` | Load Image | Input cell; Send to the input image (B), the editor |\n| `ib:pp` / `ib:np` | Image Bench Prompt / Negative Prompt | prompts and LoRA list |\n| `ib:smp` | KSampler | seed, steps, CFG, sampler, scheduler; Shift (ModelSamplingAuraFlow); denoising; Resize to (Width / Height) |\n| `ib:cn:0` | ControlNet Canny | ControlNet tab, unit 1 |\n| `ib:cn:1` | ControlNet Depth | ControlNet tab, unit 2 |\n| `ib:ref:0` | Reference (bypassed) | References panel (one slot) |\n| `ib:lora` | Load LoRA (bypassed) | LoRA exploration only |\n\n**ControlNet** (VACE): each unit is an **Apply Advanced ControlNet** node, bypassed while the unit is disabled; Enable\nin the ControlNet tab turns it on. The tab sets weight (strength, 0.7) and guidance range (0-0.8), the model, the control\nimage (**Send to ControlNet**, a drop, or Photoshop: *ControlNet: preprocess* runs the preprocessor and sends the map\nback) and the preprocessor of its **AIO Aux Preprocessor** (Canny and Depth Anything V2 here; set it to *none* for a\nready-made map). **Use Mask** enables the effect mask, which limits the control to an area. Both units can run together.\n\n**Reference** (one image): the References panel puts it into **Reference ib:ref:0**; it is scaled to the generation\nsize and concatenated to the latent (ComfyUI-Cosmos-Reference), which keeps its details closely but slows sampling.\n\nPut any ESRGAN-type model into\n`models/upscale_models` ([RealESRGAN_x4plus.safetensors](https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors) here).\n\n## Required custom nodes\n\n- **ComfyUI-Advanced-ControlNet, Anima VACE fork**: `git clone -b fix/anima-vace-hardening\n  https://github.com/PineCookie/ComfyUI-Advanced-ControlNet.git` in `custom_nodes` (rename an installed original to\n  `.disabled`; update with `git pull`, not the Manager). The original package does not load VACE models.\n- **comfyui_controlnet_aux** for the preprocessors.\n- **ComfyUI-Cosmos-Reference** for the reference (delete the Reference group if you do not want it).\n- For the 2.9B / 40- and 52-block Anima models, put **Anima VACE ControlNet Remap** (ComfyUI-Anima-Remap) between each\n  VACE model loader and its apply node, with the diffusion model on its `model` input.\n\n## Troubleshooting\n\n- **ControlNet models**: the VACE models go into a `controlnet` model folder. A subfolder is listed with its path\n  (`vace/anima-vace-depth.safetensors`); with `extra_model_paths.yaml`, the folder must be among the `controlnet`\n  paths (or its parent), else the loaders list only the other models. Choose them in the loaders or in the Model\n  select of the ControlNet tab, and save the workflow.\n- **\"could not detect control model type\" / \"ControlNet is None\"** when a unit is enabled: the installed\n  Advanced-ControlNet is the original package, which does not load VACE models. The fork has the same package name\n  and version, so the Manager may put the original back when it updates or installs missing nodes: disable the\n  original folder, clone the fork again and restart ComfyUI.\n- **\"'NoneType' object is not iterable\" in the KSampler** when a unit is enabled: the ControlNet nodes are\n  placeholders of another pack (e.g. ComfyUI-Dummy_Node_Pack, which the Manager may install for missing nodes) that\n  pass nothing on. Remove that pack and restart. The loaders show a `cnet` dropdown when the real nodes are loaded.\n- With both units disabled, their nodes do not run, so these problems show only once a unit is enabled.\n\n## Model Links\n\n**diffusion_models**: [anima-base-v1.0.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/diffusion_models/anima-base-v1.0.safetensors)\n**text_encoders**: [qwen_3_06b_base.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors)\n**vae**: [qwen_image_vae.safetensors](https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/vae/qwen_image_vae.safetensors)\n**controlnet**: [anima-vace-depth.safetensors](https://huggingface.co/TaihoC/Anima-ControlNet-VACE-Depth/resolve/main/anima-vace-depth.safetensors) (TaihoC),\n[anima_controlnet_vace_canny_v1.safetensors](https://huggingface.co/khanghy1000/Anima-ControlNet-VACE-Canny/resolve/main/anima_controlnet_vace_canny_v1.safetensors) (khanghy1000)\n\nAnima and the VACE models are under the CircleStone Labs non-commercial license.\n"
+      ],
+      "title": "Note: Anima (Image Bench, img2img)",
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 39,
+      "type": "PrimitiveFloat",
+      "pos": [
+        440,
+        562
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "localized_name": "FLOAT",
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": [
+            56
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PrimitiveFloat"
+      },
+      "widgets_values": [
+        4
+      ],
+      "title": "CFG"
+    },
+    {
+      "type": "LoadImage",
+      "title": "Load Image ib:img",
+      "pos": [
+        620,
+        580
+      ],
+      "size": [
+        300,
+        330
+      ],
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            59
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "widgets_values": [
+        "image_bench_photoshop_image.png",
+        "image"
+      ],
+      "id": 40,
+      "flags": {},
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      }
+    },
+    {
+      "type": "ImageScale",
+      "title": "Resize to",
+      "pos": [
+        960,
+        580
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 59
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 62
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 63
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            60
+          ]
+        }
+      ],
+      "widgets_values": [
+        "lanczos",
+        1024,
+        1024,
+        "disabled"
+      ],
+      "id": 41,
+      "flags": {},
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      }
+    },
+    {
+      "type": "VAEEncode",
+      "pos": [
+        960,
+        760
+      ],
+      "size": [
+        210,
+        50
+      ],
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 60
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 61
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            64
+          ]
+        }
+      ],
+      "id": 42,
+      "flags": {},
+      "mode": 0,
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      4,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      2,
+      0,
+      4,
+      1,
+      "CLIP"
+    ],
+    [
+      3,
+      4,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      4,
+      4,
+      1,
+      5,
+      1,
+      "CLIP"
+    ],
+    [
+      5,
+      5,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      6,
+      5,
+      2,
+      6,
+      1,
+      "STRING"
+    ],
+    [
+      7,
+      5,
+      1,
+      7,
+      0,
+      "CLIP"
+    ],
+    [
+      8,
+      5,
+      0,
+      8,
+      0,
+      "MODEL"
+    ],
+    [
+      11,
+      12,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      12,
+      9,
+      0,
+      13,
+      1,
+      "INT"
+    ],
+    [
+      13,
+      10,
+      0,
+      13,
+      2,
+      "INT"
+    ],
+    [
+      14,
+      13,
+      0,
+      14,
+      0,
+      "IMAGE"
+    ],
+    [
+      15,
+      3,
+      0,
+      14,
+      1,
+      "VAE"
+    ],
+    [
+      16,
+      14,
+      0,
+      15,
+      1,
+      "LATENT"
+    ],
+    [
+      17,
+      8,
+      0,
+      15,
+      0,
+      "MODEL"
+    ],
+    [
+      18,
+      17,
+      0,
+      18,
+      0,
+      "IMAGE"
+    ],
+    [
+      19,
+      16,
+      0,
+      20,
+      2,
+      "CONTROL_NET"
+    ],
+    [
+      20,
+      18,
+      0,
+      20,
+      3,
+      "IMAGE"
+    ],
+    [
+      21,
+      19,
+      0,
+      20,
+      4,
+      "MASK"
+    ],
+    [
+      22,
+      3,
+      0,
+      20,
+      5,
+      "VAE"
+    ],
+    [
+      23,
+      6,
+      0,
+      20,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      24,
+      7,
+      0,
+      20,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      25,
+      22,
+      0,
+      23,
+      0,
+      "IMAGE"
+    ],
+    [
+      26,
+      21,
+      0,
+      25,
+      2,
+      "CONTROL_NET"
+    ],
+    [
+      27,
+      23,
+      0,
+      25,
+      3,
+      "IMAGE"
+    ],
+    [
+      28,
+      24,
+      0,
+      25,
+      4,
+      "MASK"
+    ],
+    [
+      29,
+      3,
+      0,
+      25,
+      5,
+      "VAE"
+    ],
+    [
+      30,
+      20,
+      0,
+      25,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      31,
+      20,
+      1,
+      25,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      32,
+      15,
+      0,
+      26,
+      0,
+      "MODEL"
+    ],
+    [
+      33,
+      25,
+      0,
+      26,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      34,
+      25,
+      1,
+      26,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      36,
+      26,
+      0,
+      27,
+      0,
+      "LATENT"
+    ],
+    [
+      37,
+      3,
+      0,
+      27,
+      1,
+      "VAE"
+    ],
+    [
+      56,
+      39,
+      0,
+      26,
+      4,
+      "FLOAT"
+    ],
+    [
+      58,
+      27,
+      0,
+      37,
+      0,
+      "IMAGE"
+    ],
+    [
+      59,
+      40,
+      0,
+      41,
+      0,
+      "IMAGE"
+    ],
+    [
+      60,
+      41,
+      0,
+      42,
+      0,
+      "IMAGE"
+    ],
+    [
+      61,
+      3,
+      0,
+      42,
+      1,
+      "VAE"
+    ],
+    [
+      62,
+      9,
+      0,
+      41,
+      1,
+      "INT"
+    ],
+    [
+      63,
+      10,
+      0,
+      41,
+      2,
+      "INT"
+    ],
+    [
+      64,
+      42,
+      0,
+      26,
+      3,
+      "LATENT"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Reference (ib:ref:0, ComfyUI-Cosmos-Reference)",
+      "bounding": [
+        -20,
+        650,
+        680,
+        430
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "ControlNet unit 1: Canny (ib:cn:0)",
+      "bounding": [
+        700,
+        650,
+        690,
+        720
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "ControlNet unit 2: Depth (ib:cn:1)",
+      "bounding": [
+        1420,
+        650,
+        690,
+        720
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.6,
+      "offset": [
+        700,
+        120
+      ]
+    }
+  },
+  "version": 0.4
+}

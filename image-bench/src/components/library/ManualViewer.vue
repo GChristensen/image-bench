@@ -203,17 +203,8 @@ const hostOrigin = location.origin;
         new images from it.
       </p>
       <p>
-        Edit models change an image according to an instruction in the prompt or to reference images, without a
-        mask. <template v-if="isWebUI">Switch the Generate tab to img2img, send</template><template v-else>Send</template>
-        the image from a tray or from the editor to <template v-if="isWebUI">img2img</template><template v-else>the load node
-        marked <code>ib:img</code></template>, and describe the change in the prompt.
-      </p>
-      <p>
-        To inpaint, <template v-if="isWebUI">switch the Generate tab to Inpaint, </template>select the area to change
-        in the editor, and send the image with the selection as the mask
-        to <template v-if="isWebUI">img2img › Inpaint upload</template><template v-else>the nodes marked
-        <code>ib:img</code> and <code>ib:mask</code></template>.
-        Add the inpainted variants to the <a href="#" @click.prevent="scrollTo('compare')">Compare</a> tab as they
+        To change an image you already have, see <a href="#" @click.prevent="scrollTo('workflow-edit')">Editing an
+        image</a>. Add the variants to the <a href="#" @click.prevent="scrollTo('compare')">Compare</a> tab as they
         arrive, pick the best one there, and put it into the image tray or the concept tray.
       </p>
       <p>
@@ -224,6 +215,71 @@ const hostOrigin = location.origin;
         A <a href="#" @click.prevent="scrollTo('projects')">project</a> is meant for one or a few images. For a long
         series, make a project per image and group the projects in folders.
       </p>
+
+      <h3 id="manual-workflow-edit">Editing an image</h3>
+      <p>
+        An image can be changed in three ways, which differ in what the prompt says and in how much of the image
+        stays.
+      </p>
+      <p>
+        <b>Instruction edit.</b> An edit model (FLUX.2 Klein, Qwen Image Edit, Flux Kontext, ...) reads the image as
+        a reference, and the prompt says what to change: "make it night", "change the coat to red". The model
+        generates a new image at full denoising and copies everything the instruction leaves alone, so no mask is
+        needed. Further reference images can bring in a face, an object or a style.
+      </p>
+      <ul v-if="isWebUI">
+        <li>Switch the Generate tab to img2img and send the image there
+          (<span class="kbd">M</span> on an image, or from the editor).</li>
+        <li>For the model families that have it (Klein, Anima, Krea 2), turn on <b>Edit</b> in the References
+          panel.</li>
+        <li>Add further images to <b>References</b> (beside the LoRA list).</li>
+      </ul>
+      <ul v-else>
+        <li>Load a workflow with reference slots (<code>ib:ref:N</code>). The bundled ones are
+          <code>image_flux2_klein_full</code>, <code>image_flux2_dev_full</code>,
+          <code>image_qwen_image_2_1_full</code> and <code>image_fibo2_edit_turbo</code>.</li>
+        <li>Add the image in the <b>References</b> panel (browse, paste or drag a card), or set
+          <span class="kbd">Ps</span> <b>sends to</b> to references for images from the editor. The prompt refers
+          to the images in slot order: Image 1, Image 2, ...</li>
+        <li>The Generate tab stays in txt2img mode, and the size controls set the size of the result: set them to
+          the aspect ratio of the image.</li>
+      </ul>
+      <p>
+        <b>img2img.</b> The image is the starting point of the sampling: it gets as much noise as the denoising
+        strength says, and the model samples from there. The prompt describes the whole image you want, not the
+        change. Low denoising keeps the composition and colors and changes little; high denoising moves further
+        from the original. It cannot keep everything but one part: use inpainting or an instruction edit for that.
+      </p>
+      <ul v-if="isWebUI">
+        <li>Switch the Generate tab to img2img, send the image there (<span class="kbd">M</span>), and set the
+          denoising in the img2img column.</li>
+      </ul>
+      <ul v-else>
+        <li>Load one of the <code>image_*_img2img</code> workflows and send the image to the input image
+          (<span class="kbd">B</span>). They pass the image of the Load Image marked <code>ib:img</code> through
+          <b>Resize to</b> (Image Scale, the Resize to size of the Generate tab; <b>Use size</b> in the Input cell
+          takes the size of the image) and VAE Encode into the latent of the sampler, at denoising 0.6. They have no
+          Hires. fix pass: upscale the result with the <code>_full</code> workflow.</li>
+        <li>In your own workflow, mark a Load Image <code>ib:img</code> (and no node <code>ib:mask</code>) and feed its
+          image through VAE Encode into the latent of the sampler, with a denoise below 1.</li>
+      </ul>
+      <p>
+        <b>Inpainting.</b> A mask limits the change to an area, and the rest of the image stays pixel for pixel. The
+        prompt describes the masked area with its surroundings (Only masked) or the whole image (Whole picture).
+        Select the area in the editor and send the image with the selection as the mask, or upload both in the
+        Input and Mask cells.
+      </p>
+      <ul v-if="isWebUI">
+        <li>Switch the Generate tab to Inpaint and send the image to img2img › Inpaint upload
+          (<span class="kbd">B</span>).</li>
+      </ul>
+      <ul v-else>
+        <li>Load one of the <code>image_*_inpaint</code> workflows (see
+          <a href="#" @click.prevent="scrollTo('comfy-images')">Input images and inpainting</a>) and send the image
+          to the input image (<span class="kbd">B</span>).</li>
+        <li>The inpaint workflows of Klein, FLUX.2 dev and Qwen Image 2.1 also have reference slots: with an image
+          in References they make an instruction edit limited to the mask.</li>
+      </ul>
     </section>
 
     <section id="manual-images">
