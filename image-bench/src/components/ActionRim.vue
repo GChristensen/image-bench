@@ -9,8 +9,8 @@ import {ACTION_GROUP_COLORS as GROUP_COLORS} from "@/imageActions.js";
  * (imageActions.js) plus Delete at the bottom. The center button switches the ring to the markings and back.
  * The hovered sector or the center shows its label in the hole. Mounted while it is shown on the card,
  * so it starts with the actions each time.
- * In the image overlay (hub "close") the center closes it, and outer arcs hold the markings (top) and the
- * extra actions (bottom, e.g. reuse seed / all), so no mode switch is needed.
+ * With outer arcs for the markings (top) and the extra actions (bottom, e.g. reuse seed / all) no mode switch is
+ * needed: in the image overlay (hub "close") the center closes the overlay, on a card (hub "hide") the rim.
  */
 const props = defineProps({
   // Visible actions per group in rim order, as returned by rimActionGroups()
@@ -54,7 +54,8 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  // What the center button does: "markings" switches the ring to the markings, "close" emits close
+  // What the center button does: "markings" switches the ring to the markings, "close" (the overlay) and "hide"
+  // (the rim) emit close
   hub: {
     type: String,
     default: "markings"
@@ -111,6 +112,10 @@ const geometry = computed(() => {
     icon: outer >= 66 ? 16 : 14};
 });
 
+// A small rim (filmstrip, project file cards) has room in its hole for short labels only: the actions' shortLabel,
+// no notes
+const compact = computed(() => geometry.value.inner < 46);
+
 const items = computed(() => {
   if (mode.value === "markings")
     return [
@@ -126,8 +131,9 @@ const items = computed(() => {
   for (const group of props.groups) {
     for (const action of group.actions) {
       const alt = props.showAlt && action.alt;
+      const shown = alt ? action.alt : action;
       result.push({id: action.id, group: "g" + group.index, color: GROUP_COLORS[group.index], action,
-        icon: alt ? action.alt.icon : action.icon, label: alt ? action.alt.label : action.label,
+        icon: shown.icon, label: compact.value && shown.shortLabel || shown.label,
         key: alt ? "Shift+" + action.key : action.key,
         note: !alt && action.alt ? `Middle: ${action.alt.label[0].toLowerCase()}${action.alt.label.slice(1)}` : null});
     }
@@ -304,15 +310,16 @@ const labelStyle = computed(() => {
 const hoveredItem = computed(() => items.value.find(item => item.id === hoveredId.value)
   ?? arcSectors.value.find(sector => sector.item.id === hoveredId.value)?.item ?? null);
 
-const closeHub = computed(() => props.hub === "close");
+const closeHub = computed(() => props.hub === "close" || props.hub === "hide");
 
-const centerText = computed(() => closeHub.value ? "Close" : mode.value === "markings" ? "Back to actions"
-  : props.marking ? "Change marking" : "Add marking");
+const centerText = computed(() => props.hub === "close" ? "Close" : props.hub === "hide" ? "Hide actions"
+  : mode.value === "markings" ? "Back to actions" : props.marking ? "Change marking" : "Add marking");
 
-const centerKey = computed(() => closeHub.value ? "Esc" : mode.value === "actions" ? "1–9" : null);
+const centerKey = computed(() => props.hub === "close" ? "Esc" : closeHub.value ? null
+  : mode.value === "actions" ? "1–9" : null);
 
-const centerNote = computed(() => closeHub.value || mode.value !== "actions" || !props.marking || !props.filterable ? null
-  : props.filterActive ? "Middle: show all images" : "Middle: show only " + props.marking);
+const centerNote = computed(() => props.hub === "close" || mode.value !== "actions" || !props.marking || !props.filterable
+  ? null : props.filterActive ? "Middle: show all images" : "Middle: show only " + props.marking);
 
 function onSectorClick(item, e) {
   activate(item, e.shiftKey);
@@ -322,7 +329,7 @@ function activate(item, shift) {
   if (item.id === "delete")
     emit("delete");
   else if (item.arc === "marking")
-    emit("setMarking", item.marking);
+    emit("setMarking", props.marking === item.marking ? null : item.marking);
   else if (item.arc === "extra")
     emit("extra", item.id);
   else if (mode.value === "markings") {
@@ -374,7 +381,7 @@ function releaseAt(clientX, clientY, shift = false) {
   return target === "center" ? "center" : target ? "item" : null;
 }
 
-defineExpose({releaseAt});
+defineExpose({itemAt, releaseAt});
 
 function onSectorAuxClick(item, e) {
   if (e.button === 1 && item.action?.alt)
@@ -455,17 +462,17 @@ onBeforeUnmount(() => pointerSource?.removeEventListener("pointermove", onPointe
       </g>
     </svg>
 
-    <div class="rim-label" :style="labelStyle">
+    <div class="rim-label" :class="{compact}" :style="labelStyle">
       <template v-if="centerHovered">
         <span>{{ centerText }}</span>
         <span class="rim-label-gap"></span>
         <kbd v-if="centerKey">{{ centerKey }}</kbd>
-        <span v-if="centerNote" class="rim-label-note">{{ centerNote }}</span>
+        <span v-if="centerNote && !compact" class="rim-label-note">{{ centerNote }}</span>
       </template>
       <template v-else-if="hoveredItem">
         <span>{{ hoveredItem.label }}</span>
         <kbd v-if="hoveredItem.key">{{ hoveredItem.key }}</kbd>
-        <span v-if="hoveredItem.note" class="rim-label-note">{{ hoveredItem.note }}</span>
+        <span v-if="hoveredItem.note && !compact" class="rim-label-note">{{ hoveredItem.note }}</span>
       </template>
     </div>
 
@@ -548,6 +555,16 @@ onBeforeUnmount(() => pointerSource?.removeEventListener("pointermove", onPointe
   line-height: 1.22;
   text-align: center;
   pointer-events: none;
+}
+
+/* Clipped by the circle rather than spilling over the sectors */
+.rim-label.compact {
+  gap: 2px;
+  padding: 4px;
+  overflow: hidden;
+  font-size: 9.5px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .action-rim.labelled .rim-label {

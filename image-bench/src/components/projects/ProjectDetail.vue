@@ -273,9 +273,10 @@ function mediaItem(name, item) {
 
 // ---------- Image actions ----------
 
-// Generation parameters, send to inpaint, ControlNet and the editor; the tray actions (Compare, trays) need
-// the image file in the workspace, so the cards add to Compare by uploading
-const CARD_ACTIONS = ["params", "inpaint", "controlnet", "editor"];
+// Generation parameters, send to img2img, inpaint, ControlNet and the editor, and Add to compare; the tray actions
+// need the image file in the workspace, so the cards add to Compare by uploading (addToCompare()), and the trays
+// are left out
+const CARD_ACTIONS = ["params", "img2img", "inpaint", "controlnet", "editor", "compare"];
 
 const shiftKey = useShiftKey();
 const paramsImage = ref(null);
@@ -288,22 +289,25 @@ const actionContext = {
 };
 
 function onImageAction(item, action, alt) {
-  runImageAction(action, item.image, actionContext, alt);
+  if (action.id === "compare")
+    addToCompare(item.url, item.name);
+  else
+    runImageAction(action, item.image, actionContext, alt);
 }
 
 // A middle click on a file or its corner button toggles its action rim, as on the image cards, until the pointer
-// leaves the file. Project files have no markings: the center closes the rim, and the arc below holds reuse all,
-// the final image and Add to compare (a copy of the file, addToCompare())
+// leaves the file. Project files have no markings: the center closes the rim, and the arc below holds the final
+// image (at the right) and reuse all
 const rimKey = ref(null);
 const rimSize = ref(0);
 
 const rimGroups = item => rimActionGroups(item.image, actionContext)
   .map(group => ({...group, actions: group.actions.filter(action => CARD_ACTIONS.includes(action.id))}));
 
+// The arc runs clockwise from the right of the bottom
 const rimExtras = item => [
-  ...canReuseAll(item) ? [{id: "reuseAll", icon: "sliders", label: "Reuse the prompts and all parameters"}] : [],
   {id: "final", icon: "star", label: "Set as the final image"},
-  ...item.kind === KIND_IMAGE ? [{id: "compare", icon: "compare", label: "Add to compare"}] : []
+  ...canReuseAll(item) ? [{id: "reuseAll", icon: "sliders", label: "Reuse the prompts and all parameters"}] : []
 ];
 
 // The rim of the file viewer (FileViewer.vue), for the files of the grid
@@ -329,8 +333,6 @@ function onRimExtra(item, id) {
     reuseAll(item);
   else if (id === "final")
     store.setFinal(project.value.path, item.final);
-  else if (id === "compare")
-    addToCompare(item.url, item.name);
 }
 
 // The viewer covers the tab bar, whose tabs would flash: a notice tells that the action was taken
@@ -338,7 +340,7 @@ function onViewerAction(file, action, alt) {
   onImageAction(file.item, action, alt);
 
   if (action.id !== "params")
-    toast(alt && action.alt ? action.alt.label : action.label);
+    toast((alt && action.alt ? action.alt.label : action.label).replace(/^Add to/, "Added to"));
 }
 
 function onViewerExtra(file, id, label) {

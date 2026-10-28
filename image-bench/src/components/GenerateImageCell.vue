@@ -9,10 +9,11 @@
 import {computed, onBeforeUnmount, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import ActionRim from "@/components/ActionRim.vue";
+import {useRimPress} from "@/composables/useRimPress.js";
 import MediaPlayback from "@/components/MediaPlayback.vue";
 import {getImageSize, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {blurExtent, CROP_FACTORS, cropRegion, expandCropRegion, maskBounds, renderSize} from "@/inpaintCrop.js";
-import {rimActionGroups, runImageAction} from "@/imageActions.js";
+import {rimActionGroups, rimReuseExtras, runImageAction, runRimReuseExtra} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import {useCtrlKey} from "@/composables/useCtrlKey.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
@@ -139,6 +140,7 @@ const actionContext = {
 
 const rimImage = computed(() => shownView.value === "result" ? props.actionImage : null);
 const rimGroups = computed(() => rimImage.value ? rimActionGroups(rimImage.value, actionContext) : []);
+const rimExtras = computed(() => rimImage.value ? rimReuseExtras(rimImage.value) : []);
 
 const shiftDown = useShiftKey();
 const hovered = ref(false);
@@ -166,8 +168,24 @@ const rimShown = computed(() => !!rimGroups.value.length && (hoverMode.value
   ? rimOpen.value && !bare.value && !rimToggled.value
   : hovered.value && (ctrlDown.value || rimToggled.value)));
 
+// A middle press that shows the rim runs the sector it is released on (useRimPress.js)
+const rimElement = ref(null);
+const rimPress = useRimPress(rimElement, {
+  show: () => rimToggled.value = !rimToggled.value,
+  hide: () => rimToggled.value = hoverMode.value,
+  leave: onCellLeave,
+  element: () => cellElement.value
+});
+
+function onResultMiddleDown(e) {
+  e.preventDefault();
+
+  if (rimGroups.value.length && !rimShown.value)
+    rimPress.begin(e);
+}
+
 function onResultAuxClick(e) {
-  if (e.button === 1 && rimGroups.value.length)
+  if (e.button === 1 && rimGroups.value.length && !rimPress.handlesAuxClick())
     rimToggled.value = !rimToggled.value;
 }
 
@@ -221,6 +239,9 @@ function onCellEnter() {
 }
 
 function onCellLeave() {
+  if (rimPress.pressing)
+    return;
+
   hovered.value = false;
   rimToggled.value = false;
   clearTimeout(rimTimer);
@@ -373,7 +394,7 @@ onBeforeUnmount(() => {
 
     <button v-if="shownView === 'result'" type="button" class="view" :class="{clickable: resultClickable}"
             :title="liveProgress !== null ? 'Live preview' : resultClickable ? 'Click to view' : ''"
-            @click="emit('result-click')" @mousedown.middle.prevent @auxclick="onResultAuxClick">
+            @click="emit('result-click')" @mousedown.middle="onResultMiddleDown" @auxclick="onResultAuxClick">
       <img v-if="resultUrl" :src="resultUrl" alt="">
       <span v-else class="empty">The generated image appears here</span>
       <span v-if="liveProgress !== null" class="live-progress"><i :style="{width: `${liveProgress}%`}"></i></span>
@@ -476,9 +497,10 @@ onBeforeUnmount(() => {
 
     <!-- Last, so that it stays above the input thumbnail and the controls -->
     <Transition name="rim">
-      <ActionRim v-if="rimShown" class="result-rim" :groups="rimGroups" :size="rimSize"
-                 :marking="rimMarking" :show-alt="showAlt" :dim-far="hoverMode"
-                 @run="onAction" @set-marking="setMarking"/>
+      <ActionRim v-if="rimShown" ref="rimElement" class="result-rim" :groups="rimGroups" :size="rimSize" hub="hide"
+                 :marking="rimMarking" marking-arc :extras="rimExtras" :show-alt="showAlt" :dim-far="hoverMode"
+                 @run="onAction" @set-marking="setMarking" @extra="id => runRimReuseExtra(rimImage, id)"
+                 @close="rimToggled = hoverMode"/>
     </Transition>
   </div>
 </template>

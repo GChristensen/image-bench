@@ -2,9 +2,9 @@
   import {computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
   import {syncTrayMarkings} from "@/stores/trayMarkings.js";
   import {useImageOperations} from "@/composables/useImageOperations.js";
-  import {HOST_NAME} from "@/host.js";
   import {openImageMenu} from "@/contextMenu.js";
-  import {canReuseParameters, reuseParameters, rimActionGroups, runImageAction} from "@/imageActions.js";
+  import {canReuseParameters, rimActionGroups, rimReuseExtras, runImageAction, runRimReuseExtra}
+    from "@/imageActions.js";
   import {setOverlayImageTarget, clearOverlayImageTarget} from "@/composables/useImageActionKeys.js";
   import {useCtrlKey} from "@/composables/useCtrlKey.js";
   import {useShiftKey} from "@/composables/useShiftKey.js";
@@ -243,9 +243,8 @@
   const canReuse = computed(() => canReuseParameters(props.image));
 
   // Unlike the parameters overlay, the image overlay stays open
-  async function onReuse(all) {
-    if (await reuseParameters(props.image, all))
-      toast(all ? `Parameters set in ${HOST_NAME}` : `Seed set in ${HOST_NAME}`);
+  function onReuse(all) {
+    runRimReuseExtra(props.image, all ? "reuseAll" : "reuseSeed");
   }
 
   // Only the views that listen to filterMarking filter by markings
@@ -307,10 +306,7 @@
   // {x, y, sticky} while the rim is shown; sticky once the middle button was released in its center
   const rim = ref(null);
   const rimGroups = computed(() => rimActionGroups(props.image, actionContext));
-  const rimExtras = computed(() => canReuse.value ? [
-    {id: "reuseSeed", icon: "seed", label: "Reuse seed"},
-    {id: "reuseAll", icon: "sliders", label: "Reuse all parameters"}
-  ] : []);
+  const rimExtras = computed(() => rimReuseExtras(props.image));
 
   // Half the extent of the rim with its arcs (ActionRim at its largest), kept inside the window
   const RIM_EXTENT = 132;
@@ -557,7 +553,7 @@
 
   function onRimExtra(id) {
     hideRim();
-    onReuse(id === "reuseAll");
+    runRimReuseExtra(props.image, id);
   }
 
   function onRimMarking(marking) {

@@ -4,6 +4,7 @@ import {openImageMenu} from "@/contextMenu.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
 import AppIcon from "@/components/AppIcon.vue";
 import CompareChrome from "@/components/compare/CompareChrome.vue";
+import {useRimPress} from "@/composables/useRimPress.js";
 
 /**
  * One image of the Compare strip: a box of the image's aspect ratio that shows the image at the shared zoom
@@ -90,13 +91,31 @@ function onMouseEnter() {
 }
 
 function onMouseLeave() {
+  if (rimPress.pressing)
+    return;
+
   hovered.value = false;
   rimToggled.value = false;
   clearHoveredImageTarget(rootElement.value);
 }
 
+// A middle press that shows the rim runs the sector it is released on (useRimPress.js)
+const chromeElement = ref(null);
+const rimPress = useRimPress(computed(() => chromeElement.value?.rimElement), {
+  show: () => rimToggled.value = true,
+  hide: () => rimToggled.value = false,
+  leave: onMouseLeave,
+  element: () => rootElement.value
+});
+
+// Not on the controls of the chrome (the rim, the marking badge), which handle their own middle clicks
+function onMiddleDown(e) {
+  if (e.button === 1 && !rimToggled.value && !e.target.closest(".compare-chrome"))
+    rimPress.begin(e);
+}
+
 function onAuxClick(e) {
-  if (e.button === 1)
+  if (e.button === 1 && !rimPress.handlesAuxClick())
     rimToggled.value = !rimToggled.value;
 }
 
@@ -143,7 +162,7 @@ function onDrop(e) {
 <template>
   <div ref="rootElement" class="compare-item" :class="[direction, dropSide && 'drop-' + dropSide, {selecting}]"
        :style="{aspectRatio: `${size.w} / ${size.h}`}" :data-index="index"
-       @mouseenter="onMouseEnter" @mouseleave="onMouseLeave" @auxclick="onAuxClick"
+       @mouseenter="onMouseEnter" @mouseleave="onMouseLeave" @mousedown="onMiddleDown" @auxclick="onAuxClick"
        @contextmenu="openImageMenu($event, image, ctx)"
        @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
     <div class="compare-stage" :style="stageStyle">
@@ -155,7 +174,8 @@ function onDrop(e) {
       </div>
     </div>
 
-    <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hovered" :rim-toggled="rimToggled"
+    <CompareChrome ref="chromeElement" :image="image" :index="index" :ctx="ctx" :hovered="hovered" :rim-toggled="rimToggled"
+                   @hide-rim="rimToggled = false"
                    @set-marking="marking => emit('setMarking', marking)"
                    @open="emit('open')">
       <template #lead>

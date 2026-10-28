@@ -11,7 +11,7 @@ import {flashTrayTab} from "@/components/utils.js";
 import {toRaw} from "vue";
 import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
-import {toastError} from "@/toast.js";
+import {toast, toastError} from "@/toast.js";
 import {HOST_NAME, hostHas, isComfy, isWebUI} from "@/host.js";
 import {createImageLink, ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
 import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
@@ -223,6 +223,24 @@ export function canReuseParameters(image) {
 }
 
 /**
+ * The arc of the action rim below the ring (ActionRim extras): reuse seed / all parameters
+ */
+export function rimReuseExtras(image) {
+  return canReuseParameters(image) ? [
+    {id: "reuseSeed", icon: "seed", label: "Reuse seed"},
+    {id: "reuseAll", icon: "sliders", label: "Reuse all parameters"}
+  ] : [];
+}
+
+// Runs an extra of rimReuseExtras()
+export async function runRimReuseExtra(image, id) {
+  const all = id === "reuseAll";
+
+  if (await reuseParameters(image, all))
+    toast(all ? `Parameters set in ${HOST_NAME}` : `Seed set in ${HOST_NAME}`);
+}
+
+/**
  * The card shows the groups of a side separated by a separator, in this order
  */
 export const IMAGE_ACTIONS = [
@@ -268,6 +286,7 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "inpaint", side: "right", group: 2, icon: "brush", label: INPAINT_LABEL, key: "B",
+    shortLabel: isWebUI ? "Send to inpaint" : "Send to input image",
     visible: image => isStill(image),
     run: image => sendToInpaint(image)
   },
@@ -288,7 +307,9 @@ export const IMAGE_ACTIONS = [
     id: "editor", side: "right", group: 2, key: "P",
     get icon() { return editorIcon(); },
     get label() { return `Send to ${editorName.value} as a new document`; },
-    alt: {icon: "layers", get label() { return `Send to ${editorName.value} as a new layer`; }},
+    get shortLabel() { return `${editorName.value} document`; },
+    alt: {icon: "layers", get label() { return `Send to ${editorName.value} as a new layer`; },
+      get shortLabel() { return `${editorName.value} layer`; }},
     visible: image => isStill(image),
     run: (image, ctx, alt) => sendToEditor(image, !alt)
   },

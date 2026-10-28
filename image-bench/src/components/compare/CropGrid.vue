@@ -4,6 +4,7 @@ import {openImageMenu} from "@/contextMenu.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
 import {cropAspect, packGrid} from "@/components/compare/compareGeometry.js";
 import CompareChrome from "@/components/compare/CompareChrome.vue";
+import {useRimPress} from "@/composables/useRimPress.js";
 
 /**
  * The region of each image of the Compare tab, packed into the grid with the largest cells that fit. The wheel
@@ -151,9 +152,18 @@ let removePanListeners = null;
 let suppressClick = false;
 
 function onMouseDown(e) {
-  // Middle click toggles the action rim on auxclick; no autoscroll
+  // A middle press on a cell shows its action rim (released on a sector it runs it); no autoscroll
   if (e.button === 1) {
     e.preventDefault();
+    const cell = e.target.closest(".crop-cell");
+    const index = cell ? [...gridElement.value.children].indexOf(cell) : -1;
+
+    // Not on the controls of the chrome (the rim, the marking badge), which handle their own middle clicks
+    if (index >= 0 && rimIndex.value !== index && !e.target.closest(".compare-chrome")) {
+      pressIndex = index;
+      rimPress.begin(e);
+    }
+
     return;
   }
 
@@ -200,6 +210,9 @@ function onMouseDown(e) {
 // ---------- Cells ----------
 
 function onCellEnter(e, image, index) {
+  if (rimPress.pressing)
+    return;
+
   hoveredIndex.value = index;
   setHoveredImageTarget({
     getImage: () => image,
@@ -211,6 +224,9 @@ function onCellEnter(e, image, index) {
 }
 
 function onCellLeave(e) {
+  if (rimPress.pressing)
+    return;
+
   hoveredIndex.value = -1;
   rimIndex.value = -1;
   clearHoveredImageTarget(e.currentTarget);
@@ -222,8 +238,22 @@ function onCellClick(index) {
     emit("open", index);
 }
 
+// The cell of a middle press that shows its rim, and the chrome of each cell, whose rim the gesture reads
+let pressIndex = -1;
+const chromes = [];
+const rimPress = useRimPress({get value() { return chromes[pressIndex]?.rimElement; }}, {
+  show: () => rimIndex.value = pressIndex,
+  hide: () => rimIndex.value = -1,
+  leave: () => {
+    hoveredIndex.value = -1;
+    rimIndex.value = -1;
+    clearHoveredImageTarget(gridElement.value?.children[pressIndex]);
+  },
+  element: () => gridElement.value?.children[pressIndex]
+});
+
 function onCellAuxClick(e, index) {
-  if (e.button === 1)
+  if (e.button === 1 && !rimPress.handlesAuxClick())
     rimIndex.value = rimIndex.value === index ? -1 : index;
 }
 
@@ -239,8 +269,8 @@ defineExpose({grid, nativeZoom, setZoom});
            @click="onCellClick(index)" @auxclick="onCellAuxClick($event, index)"
            @contextmenu="openImageMenu($event, image, ctx)">
         <img :src="image.imageUrl" :style="imageStyle" draggable="false" alt="">
-        <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
-                       :rim-toggled="rimIndex === index"
+        <CompareChrome :ref="el => chromes[index] = el" :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
+                       :rim-toggled="rimIndex === index" @hide-rim="rimIndex = -1"
                        @set-marking="marking => emit('setMarking', image, marking)"
                        @open="emit('open', index)"/>
       </div>

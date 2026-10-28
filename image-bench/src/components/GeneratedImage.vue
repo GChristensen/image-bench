@@ -5,12 +5,13 @@
   import {useShiftKey} from "@/composables/useShiftKey.js";
   import {useCtrlKey} from "@/composables/useCtrlKey.js";
   import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
-  import {rimActionGroups, runImageAction} from "@/imageActions.js";
+  import {rimActionGroups, rimReuseExtras, runImageAction, runRimReuseExtra} from "@/imageActions.js";
   import {openImageMenu} from "@/contextMenu.js";
   import {startImageDrag, endImageDrag, canReorderOn} from "@/imageDrag.js";
   import {useAppConfigStore} from "@/stores/appConfig.js";
   import AppIcon from "@/components/AppIcon.vue";
   import ActionRim from "@/components/ActionRim.vue";
+  import {useRimPress} from "@/composables/useRimPress.js";
   import MediaPlayback from "@/components/MediaPlayback.vue";
   import {KIND_IMAGE, KIND_VIDEO, mediaKind, previewUrl} from "@/media.js";
 
@@ -123,6 +124,7 @@
   };
 
   const rimGroups = computed(() => rimActionGroups(props.image, actionContext));
+  const rimExtras = computed(() => rimReuseExtras(props.image));
   // Explore and the ControlNet sweep show no marking filter
   const filterable = computed(() => props.kind !== "explore" && props.kind !== "controlnet_sweep");
 
@@ -191,6 +193,9 @@
   }
 
   function onFrameLeave() {
+    if (rimPress.pressing)
+      return;
+
     hovered.value = false;
     hoveredText.value = null;
     rimToggled.value = false;
@@ -246,8 +251,24 @@
   // image in a new window where the card has no rim (the ControlNet sweep)
   const middleTogglesRim = computed(() => props.rim);
 
+  // A middle press that shows the rim runs the sector it is released on (useRimPress.js)
+  const rimElement = ref(null);
+  const rimPress = useRimPress(rimElement, {
+    show: () => rimToggled.value = !rimToggled.value,
+    hide: () => rimToggled.value = hoverMode.value,
+    leave: onFrameLeave,
+    element: () => frameElement.value
+  });
+
+  function onImageMiddleDown(e) {
+    e.preventDefault();
+
+    if (middleTogglesRim.value && !rimShown.value)
+      rimPress.begin(e);
+  }
+
   function onImageAuxClick(e) {
-    if (e.button !== 1)
+    if (e.button !== 1 || rimPress.handlesAuxClick())
       return;
 
     if (middleTogglesRim.value)
@@ -295,7 +316,7 @@
            :src="`${link}#t=0.5`" preload="metadata" muted draggable="true"
            :title="imageOps.createImageTooltip(image)"
            @click="$emit('imageClick')"
-           @mousedown.middle.prevent
+           @mousedown.middle="onImageMiddleDown"
            @auxclick="onImageAuxClick"
            @dragstart="onDragStart"
            @dragend="onDragEnd"></video>
@@ -304,7 +325,7 @@
          :title="imageOps.createImageTooltip(image)"
          @error="onPreviewError"
          @click="$emit('imageClick')"
-         @mousedown.middle.prevent
+         @mousedown.middle="onImageMiddleDown"
          @auxclick="onImageAuxClick"
          @dragstart="onDragStart"
          @dragend="onDragEnd">
@@ -315,10 +336,11 @@
 
     <!-- Before the other controls, which stay above it where a small card overlaps them -->
     <Transition name="rim">
-      <ActionRim v-if="rimShown" :groups="rimGroups" :size="rimSize" :marking="image.marking ?? null"
-                 :show-alt="showAlt" :deletable="deletable" :filterable="filterable" :dim-far="hoverMode"
-                 :filter-active="!!image.marking && markingFilter === image.marking"
+      <ActionRim v-if="rimShown" ref="rimElement" :groups="rimGroups" :size="rimSize" hub="hide" :marking="image.marking ?? null"
+                 marking-arc :extras="rimExtras" :show-alt="showAlt" :deletable="deletable" :filterable="filterable"
+                 :dim-far="hoverMode" :filter-active="!!image.marking && markingFilter === image.marking"
                  @run="onAction" @delete="$emit('deleteImage')" @set-marking="setMarking"
+                 @extra="id => runRimReuseExtra(image, id)" @close="rimToggled = hoverMode"
                  @filter-marking="marking => $emit('filterMarking', marking)"/>
     </Transition>
 

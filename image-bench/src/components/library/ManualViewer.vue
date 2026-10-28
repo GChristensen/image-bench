@@ -232,7 +232,8 @@ const hostOrigin = location.origin;
         The actions of an image are on its action rim, a ring of sectors around the middle of the image, one per
         action and colored by kind. To show it, middle-click the image card or click the
         <AppIcon name="rim" :size="13" class="inline-icon"/> button at its top right; do the same again, or move
-        the pointer off the card, to hide it. The middle of the ring shows the name and key of the sector under the
+        the pointer off the card, to hide it. As in the full image view, you can also hold the middle button,
+        move to a sector and release it there to run that sector at once. The middle of the ring shows the name and key of the sector under the
         pointer. A middle click or Shift+click on a sector runs its alternative action, if it has one; hold Shift
         to see which sectors do. Clicking the image itself, inside or outside the ring, still opens it. Hold
         <span class="kbd">Ctrl</span> over a card to hide all of its controls and see only the image.
@@ -243,8 +244,8 @@ const hostOrigin = location.origin;
         hides it until the pointer leaves the card.
       </p>
       <p>
-        The button in the middle of the ring shows the marking of the image; click it to switch the ring to the
-        markings and back. The marking also appears at the bottom right of the image, where a click shows only the
+        The markings are an arc above the ring (pick a set one again to remove it), and reusing the seed or all
+        parameters of the image an arc below it; the button in the middle hides the ring. The marking also appears at the bottom right of the image, where a click shows only the
         images with that marking and a middle click removes it. Keys act on the image under the pointer:
         <span class="kbd">1</span>–<span class="kbd">9</span> set its marking (<span class="kbd">0</span> removes it) and
         <span class="kbd">V</span> views it large.
@@ -722,9 +723,9 @@ const hostOrigin = location.origin;
       </p>
       <p>Both trays offer:</p>
       <ul>
-        <li><b>Markings</b>: 👍 👎 🔴 🟠 🟡 🟢 🔵 🟣, and 🏁 for the final choice. On a card, click the
-          button in the middle of the action rim to switch the ring to the markings. In the full image view,
-          middle-click to open the rim and pick a marking from the arc above it, or press
+        <li><b>Markings</b>: 👍 👎 🔴 🟠 🟡 🟢 🔵 🟣, and 🏁 for the final choice. On a card, open its
+          action rim and pick a marking from the arc above the ring; in the full image view, middle-click to open
+          the rim and do the same. Or press
           <span class="kbd">1</span>–<span class="kbd">9</span>. To remove a marking, pick it again, click it in
           the lower right corner or press <span class="kbd">0</span>. Clicking the marking on a thumbnail shows only
           the images that carry it (click again to show all), and a middle click removes it. The
@@ -920,8 +921,8 @@ const hostOrigin = location.origin;
           contain the images of the trays as of the last save, and the image files of the project folder.
           Click an image to view it
           (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click it or click
-          <AppIcon name="rim" :size="13" class="inline-icon"/> at its top right to show its action rim (reuse all, the
-          final image and Add to compare in the arc below), or right-click for the menu (also Open in new window and
+          <AppIcon name="rim" :size="13" class="inline-icon"/> at its top right to show its action rim (with Add to compare;
+          the final image and reuse all in the arc below), or right-click for the menu (also Open in new window and
           deleting a file of the project folder). In the full view, a middle press shows the rim at the pointer, as in
           the image view, and the <AppIcon name="rim" :size="13" class="inline-icon"/> button at the lower right shows
           it in the middle.</li>

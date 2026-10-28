@@ -1,6 +1,6 @@
 <script setup>
 import {computed, ref, watch} from "vue";
-import {rimActionGroups, runImageAction} from "@/imageActions.js";
+import {rimActionGroups, rimReuseExtras, runImageAction, runRimReuseExtra} from "@/imageActions.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import {useCtrlKey} from "@/composables/useCtrlKey.js";
 import ActionRim from "@/components/ActionRim.vue";
@@ -40,13 +40,15 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["setMarking", "open"]);
+const emit = defineEmits(["setMarking", "open", "hideRim"]);
 
 const rootElement = ref(null);
+const rimElement = ref(null);
 const shiftDown = useShiftKey();
 const ctrlDown = useCtrlKey();
 const showAlt = computed(() => props.hovered && shiftDown.value);
 const rimGroups = computed(() => rimActionGroups(props.image, props.ctx));
+const rimExtras = computed(() => rimReuseExtras(props.image));
 const rimSize = ref(0);
 const rimOpen = computed(() => props.hovered && (ctrlDown.value || props.rimToggled));
 
@@ -60,6 +62,9 @@ watch(rimOpen, open => {
 function onAction(action, alt) {
   runImageAction(action, props.image, props.ctx, alt);
 }
+
+// The press-and-release gesture of the view reads the rim (useRimPress.js)
+defineExpose({rimElement});
 
 function onMarkingAuxClick(e) {
   if (e.button === 1)
@@ -82,10 +87,12 @@ function onMarkingAuxClick(e) {
     </div>
 
     <Transition name="rim">
-      <ActionRim v-if="rimOpen" :groups="rimGroups" :size="rimSize" :marking="image.marking ?? null"
-                 :show-alt="showAlt" :deletable="!!ctx.handlers.removeImage" :delete-label="ctx.removeLabel ?? 'Remove'"
+      <ActionRim v-if="rimOpen" ref="rimElement" :groups="rimGroups" :size="rimSize" hub="hide" :marking="image.marking ?? null"
+                 marking-arc :extras="rimExtras" :show-alt="showAlt" :deletable="!!ctx.handlers.removeImage"
+                 :delete-label="ctx.removeLabel ?? 'Remove'"
                  @run="onAction" @delete="ctx.handlers.removeImage(image)"
-                 @set-marking="marking => emit('setMarking', marking)"/>
+                 @set-marking="marking => emit('setMarking', marking)"
+                 @extra="id => runRimReuseExtra(image, id)" @close="emit('hideRim')"/>
     </Transition>
   </div>
 </template>
