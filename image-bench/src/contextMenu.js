@@ -17,7 +17,7 @@ import {canPasteInfotext, copyInfotext, imageFileName, pasteInfotext} from "@/in
  * {separator: true}, {heading} or {icon, label, submenu: [items]} (submenu items are {icon, label, hint, run} or
  * {separator: true}); hover(entered) of an item is called as the pointer enters and leaves it, onClose of the menu
  * when it closes or another menu takes its place.
- * A menu opened by a button (openMenuBelow, openMenuLeftOf) has the button as its anchor, whose click closes it again
+ * A menu opened by a button (openMenuBelow, openMenuInside) has the button as its anchor, whose click closes it again
  */
 export const contextMenu = shallowRef(null);
 
@@ -56,20 +56,21 @@ export function openMenuBelow(element, items, {alignRight = false} = {}) {
 }
 
 /**
- * Open a menu at the left of a button, its top at the button's (e.g. a tab of a vertical tab rail), or close it if
- * it is the button's menu
- * @param {Element} element
+ * Open a menu of a button in the top right corner of another element, inset from its edges (e.g. inside the field a
+ * tab of a vertical tab rail beside it acts on), or close it if it is the button's menu
+ * @param {Element} element - the button
+ * @param {Element} box - the element the menu opens inside
  * @param {Object[]} items - as for openContextMenu
- * @param {{onClose?: Function}} options
+ * @param {{inset?: number, onClose?: Function}} options
  */
-export function openMenuLeftOf(element, items, {onClose} = {}) {
+export function openMenuInside(element, box, items, {inset = 0, onClose} = {}) {
   if (contextMenu.value?.anchor === element) {
     closeContextMenu();
     return;
   }
 
-  const rect = element.getBoundingClientRect();
-  contextMenu.value = {x: rect.left - 2, y: rect.top, items, anchor: element, alignRight: true, onClose};
+  const rect = box.getBoundingClientRect();
+  contextMenu.value = {x: rect.right - inset, y: rect.top + inset, items, anchor: element, alignRight: true, onClose};
 }
 
 /**

@@ -36,6 +36,7 @@ defineProps({
 const slots = useSlots();
 
 const textarea = ref(null);
+const main = ref(null);
 // The label names the textarea by its id: the label row holds buttons, which a wrapping label would activate
 const id = `prompt-field-${++fieldCount}`;
 
@@ -56,8 +57,8 @@ async function onKeydown(e) {
   element.setSelectionRange(edit.selectionStart, edit.selectionEnd);
 }
 
-// The Snippets panel inserts at the caret of the textarea
-defineExpose({textarea});
+// The Snippets panel inserts at the caret of the textarea; menus open inside the box of the textarea or the view
+defineExpose({textarea, main});
 </script>
 
 <template>
@@ -68,7 +69,7 @@ defineExpose({textarea});
       <span v-if="tokens" class="tokens" title="Tokens">{{ tokens }}</span>
     </div>
     <div class="prompt-body">
-      <div class="prompt-main">
+      <div ref="main" class="prompt-main">
         <slot name="view">
           <textarea :id="id" ref="textarea" v-model="model" :disabled="disabled" spellcheck="false"
                     @keydown="onKeydown"></textarea>

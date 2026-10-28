@@ -68,7 +68,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {requestHost} from "@/hostRequest.js";
 import {onHostReady} from "@/hostWindow.js";
 import {toast, toastError} from "@/toast.js";
-import {openMenuLeftOf} from "@/contextMenu.js";
+import {openMenuInside} from "@/contextMenu.js";
 import {formToParameters} from "@/infotext.js";
 import {parametersToInfotext, writeClipboard} from "@/infotextClipboard.js";
 import {gestureTitle} from "@/gestures.js";
@@ -598,13 +598,14 @@ function copyItem(icon, label, what, target, hint = "") {
 function openCopyMenu() {
   const negative = has("negativePrompt");
 
-  openMenuLeftOf(copyTab.value, [
+  // Inside the prompt, 2px inside its 1px border
+  openMenuInside(copyTab.value, promptField.value.main, [
     ...negative ? [copyItem("copy", "Prompt and negative prompt", "both", "both", "Shift+click")] : [],
     copyItem("plus", "Prompt", "prompt", "prompt", negative ? "" : "Shift+click"),
     ...negative ? [copyItem("minus", "Negative prompt", "negative", "negative")] : [],
     {separator: true},
     copyItem("fileSearch", "Infotext (prompts and parameters)", "infotext", "both")
-  ], {onClose: () => copyTarget.value = null});
+  ], {inset: 3, onClose: () => copyTarget.value = null});
 }
 
 function onCopyTab(e) {
