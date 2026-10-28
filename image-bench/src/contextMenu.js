@@ -13,9 +13,11 @@ import {canPasteInfotext, copyInfotext, imageFileName, pasteInfotext} from "@/in
  * Context menu of an image (card or overlay) or of another item (openContextMenu), rendered by ImageContextMenu.vue,
  * which is mounted once in App.vue.
  * The state is module-level, so that one menu is open at a time.
- * {x, y, items, anchor?, alignRight?}: items are {icon, label, hint, title, danger, disabled, run}, {separator: true}, {heading} or
- * {icon, label, submenu: [items]} (submenu items are {icon, label, hint, run} or {separator: true}).
- * A menu opened by a button (openMenuBelow) has the button as its anchor, whose click closes it again
+ * {x, y, items, anchor?, alignRight?, onClose?}: items are {icon, label, hint, title, danger, disabled, run, hover},
+ * {separator: true}, {heading} or {icon, label, submenu: [items]} (submenu items are {icon, label, hint, run} or
+ * {separator: true}); hover(entered) of an item is called as the pointer enters and leaves it, onClose of the menu
+ * when it closes or another menu takes its place.
+ * A menu opened by a button (openMenuBelow, openMenuLeftOf) has the button as its anchor, whose click closes it again
  */
 export const contextMenu = shallowRef(null);
 
@@ -51,6 +53,23 @@ export function openMenuBelow(element, items, {alignRight = false} = {}) {
 
   const rect = element.getBoundingClientRect();
   contextMenu.value = {x: alignRight ? rect.right : rect.left, y: rect.bottom + 2, items, anchor: element, alignRight};
+}
+
+/**
+ * Open a menu at the left of a button, its top at the button's (e.g. a tab of a vertical tab rail), or close it if
+ * it is the button's menu
+ * @param {Element} element
+ * @param {Object[]} items - as for openContextMenu
+ * @param {{onClose?: Function}} options
+ */
+export function openMenuLeftOf(element, items, {onClose} = {}) {
+  if (contextMenu.value?.anchor === element) {
+    closeContextMenu();
+    return;
+  }
+
+  const rect = element.getBoundingClientRect();
+  contextMenu.value = {x: rect.left - 2, y: rect.top, items, anchor: element, alignRight: true, onClose};
 }
 
 /**

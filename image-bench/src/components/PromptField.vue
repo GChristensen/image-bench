@@ -2,9 +2,11 @@
 /**
  * Labelled prompt textarea with the token count reported by the host; the textarea fills the field height.
  * Ctrl+Up/Down changes the attention weight as in WebUI. The label row has a slot after the label
- * (e.g. the prompt history) and one at its end, before the token count (e.g. the copy button), and the "view" slot takes the place of the textarea (a read-only prompt)
+ * (e.g. the prompt history), and the "view" slot takes the place of the textarea (a read-only prompt).
+ * The "aside" slot is a column at the right of the textarea (a segment of the tab rail of the Generate tab), and
+ * highlight outlines the textarea (e.g. the target of a hovered copy item)
  */
-import {nextTick, ref} from "vue";
+import {nextTick, ref, useSlots} from "vue";
 import {editAttention, isEditAttentionKey} from "@/editAttention.js";
 
 let fieldCount = 0;
@@ -24,8 +26,14 @@ defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  highlight: {
+    type: Boolean,
+    default: false
   }
 });
+
+const slots = useSlots();
 
 const textarea = ref(null);
 // The label names the textarea by its id: the label row holds buttons, which a wrapping label would activate
@@ -53,19 +61,21 @@ defineExpose({textarea});
 </script>
 
 <template>
-  <div class="prompt-field">
+  <div class="prompt-field" :class="{'has-aside': !!slots.aside, highlight}">
     <div class="prompt-label">
       <label :for="id">{{ label }}</label>
       <slot name="after-label"/>
-      <span class="label-end">
-        <slot name="end"/>
-        <span v-if="tokens" class="tokens" title="Tokens">{{ tokens }}</span>
-      </span>
+      <span v-if="tokens" class="tokens" title="Tokens">{{ tokens }}</span>
     </div>
-    <slot name="view">
-      <textarea :id="id" ref="textarea" v-model="model" :disabled="disabled" spellcheck="false"
-                @keydown="onKeydown"></textarea>
-    </slot>
+    <div class="prompt-body">
+      <div class="prompt-main">
+        <slot name="view">
+          <textarea :id="id" ref="textarea" v-model="model" :disabled="disabled" spellcheck="false"
+                    @keydown="onKeydown"></textarea>
+        </slot>
+      </div>
+      <slot name="aside"/>
+    </div>
   </div>
 </template>
 
@@ -87,20 +97,40 @@ defineExpose({textarea});
   color: var(--ib-text-2);
 }
 
-.label-end {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
+/* The token count ends over the textarea, not over the aside */
+.has-aside .prompt-label {
+  padding-right: var(--prompt-aside-width, 30px);
 }
 
 .tokens {
+  margin-left: auto;
   padding: 0 6px;
   border-radius: 4px;
   background: var(--ib-elev);
   color: var(--ib-text-2);
   font-family: var(--ib-mono);
   font-size: 10.5px;
+}
+
+.prompt-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.prompt-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px;
+  transition: box-shadow 0.1s;
+}
+
+.highlight .prompt-main {
+  box-shadow: 0 0 0 1px var(--ib-accent), 0 0 0 3px var(--ib-accent-soft);
 }
 
 textarea {

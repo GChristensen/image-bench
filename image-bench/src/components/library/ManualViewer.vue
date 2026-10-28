@@ -451,10 +451,12 @@ const hostOrigin = location.origin;
           prompt. It shows, uses (double click), renames and removes them like history entries. The history and the
           variants are saved with a project and restored when it is opened; <b>Start a blank workspace</b> clears
           both.</li>
-        <li><AppIcon name="copy" :size="13" class="inline-icon"/> <b>Copy</b>, before the token count of the
-          prompt, opens a menu: the prompt and the negative prompt (each under its heading, <code>Prompt:</code>
-          and <code>Negative prompt:</code>), either one, or the infotext with the parameters of the tab. It copies the
-          prompts shown, a history entry or variant included. A middle click or Shift+click copies both at once.</li>
+        <li><AppIcon name="copy" :size="13" class="inline-icon"/> <b>Copy</b>, the tab at the top of the tab
+          column beside the prompts (it goes on down to <b>Parameters</b> and <b>Session</b>), opens a menu: the
+          prompt and the negative prompt (each under its heading, <code>Prompt:</code> and
+          <code>Negative prompt:</code>), either one, or the infotext with the parameters of the tab. Pointing at an
+          item outlines the fields it copies. It copies the prompts shown, a history entry or variant included. A
+          middle click or Shift+click copies both at once.</li>
         <li><b><AppIcon name="fileSearch" :size="13" class="inline-icon"/> PNG Info</b> shows the parameters of an
           image chosen, pasted or dropped there (or on the prompt). <b>Apply</b> sets the checked groups and lists
           the values that {{ HOST_NAME }} does not have.</li>

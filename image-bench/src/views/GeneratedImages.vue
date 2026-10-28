@@ -8,6 +8,7 @@ import ImageToolbar from "@/components/ImageToolbar.vue";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
 import {useImageTrayStore} from "@/stores/imageTray.js";
 import {generationStateToKind, KIND_GENERATED, KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_UPSCALED} from "@/consts.js";
+import {useTabRun} from "@/runState.js";
 import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useConfigPresetsStore} from "@/stores/configPresets.js";
 import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
@@ -87,6 +88,9 @@ function onRemoveSelectedClick() {
 
 // The image actions for all checked images of the view, including those hidden by the marking filter, as dragging
 // them does; an upscale waits for the running one
+// The progress of upscales in the Upscaled tab, which they start from any view
+const upscaleRun = useTabRun("upscaled-images-tab");
+
 const actionContext = computed(() => ({kind: props.kind, isTray: isComponentTray(props.kind),
   upscalable: isComponentTray(props.kind) || props.kind === KIND_GENERATED, handlers: {}}));
 const selectedImages = computed(() => imageStore.images.filter(i => i.selected && !i.separator));
@@ -356,6 +360,7 @@ function isComponentTray(kind) {
       :is-tray="isComponentTray(kind)"
       :images="imageStore.images"
       :is-all-selected="isAllSelected"
+      :run="kind === KIND_UPSCALED ? upscaleRun : null"
       :selected-count="selectedCount"
       :auto-clear="config.automaticallyClearGeneratedImages"
       :is-showing-marked="isShowingMarked"

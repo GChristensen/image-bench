@@ -68,7 +68,7 @@ import {dialog} from "@/dialogs/useDialog.js";
 import {requestHost} from "@/hostRequest.js";
 import {onHostReady} from "@/hostWindow.js";
 import {toast, toastError} from "@/toast.js";
-import {openMenuBelow} from "@/contextMenu.js";
+import {openMenuLeftOf} from "@/contextMenu.js";
 import {formToParameters} from "@/infotext.js";
 import {parametersToInfotext, writeClipboard} from "@/infotextClipboard.js";
 import {gestureTitle} from "@/gestures.js";
@@ -559,11 +559,14 @@ function currentPrompts() {
   return {prompt: form.prompt ?? "", negativePrompt: has("negativePrompt") ? form.negativePrompt ?? "" : ""};
 }
 
-// Copy menu of the prompt label: the prompts shown (a history entry or variant, else the current ones), the infotext
-// adds the parameters of the tab. The button names what it copied for a moment
-const copyButton = ref(null);
-const copied = ref(null);
-let copiedTimer = null;
+// The Copy tab at the top of the tab rail: a menu of the prompts shown (a history entry or variant, else the current
+// ones), the infotext adds the parameters of the tab. A hovered item outlines the fields it copies
+const copyTab = ref(null);
+// "prompt", "negative" or "both": the fields outlined
+const copyTarget = ref(null);
+
+const COPIED = {both: "Prompts copied", prompt: "Prompt copied", negative: "Negative prompt copied",
+  infotext: "Infotext copied"};
 
 function shownPrompts() {
   const entry = historyEntry.value ?? currentPrompts();
@@ -571,6 +574,8 @@ function shownPrompts() {
 }
 
 async function copyPrompts(what) {
+  copyTarget.value = null;
+
   const {prompt, negativePrompt} = shownPrompts();
   const texts = {
     both: `Prompt:\n${prompt}\n\nNegative prompt:\n${negativePrompt}`,
@@ -580,29 +585,29 @@ async function copyPrompts(what) {
                                     "prompt": prompt, "negative prompt": negativePrompt})
   };
 
-  if (!await writeClipboard(texts[what])) {
+  if (await writeClipboard(texts[what]))
+    toast(COPIED[what]);
+  else
     toastError("The browser refused to copy the text.", {title: "Copy the prompts"});
-    return;
-  }
+}
 
-  clearTimeout(copiedTimer);
-  copied.value = {both: "Both", prompt: "Prompt", negative: "Negative", infotext: "Infotext"}[what];
-  copiedTimer = setTimeout(() => copied.value = null, 1200);
+function copyItem(icon, label, what, target, hint = "") {
+  return {icon, label, hint, run: () => copyPrompts(what), hover: entered => copyTarget.value = entered ? target : null};
 }
 
 function openCopyMenu() {
   const negative = has("negativePrompt");
 
-  openMenuBelow(copyButton.value, [
-    ...negative ? [{icon: "copy", label: "Prompt and negative prompt", hint: "Shift+click", run: () => copyPrompts("both")}] : [],
-    {icon: "plus", label: "Prompt", hint: negative ? "" : "Shift+click", run: () => copyPrompts("prompt")},
-    ...negative ? [{icon: "minus", label: "Negative prompt", run: () => copyPrompts("negative")}] : [],
+  openMenuLeftOf(copyTab.value, [
+    ...negative ? [copyItem("copy", "Prompt and negative prompt", "both", "both", "Shift+click")] : [],
+    copyItem("plus", "Prompt", "prompt", "prompt", negative ? "" : "Shift+click"),
+    ...negative ? [copyItem("minus", "Negative prompt", "negative", "negative")] : [],
     {separator: true},
-    {icon: "fileSearch", label: "Infotext (prompts and parameters)", run: () => copyPrompts("infotext")}
-  ], {alignRight: true});
+    copyItem("fileSearch", "Infotext (prompts and parameters)", "infotext", "both")
+  ], {onClose: () => copyTarget.value = null});
 }
 
-function onCopyButton(e) {
+function onCopyTab(e) {
   if (e.shiftKey)
     copyPrompts(has("negativePrompt") ? "both" : "prompt");
   else
@@ -1684,6 +1689,7 @@ const gridStyle = computed(() => ({
       <PromptField ref="promptField" class="prompt" label="Prompt"
                    :tokens="has('tokens') && !historyEntry ? sdWebUI.tokens?.prompt : null"
                    :model-value="form.prompt ?? ''" @update:model-value="v => setParam('prompt', v)"
+                   :highlight="copyTarget === 'prompt' || copyTarget === 'both'"
                    @dragover="onPromptDragOver" @drop="onPromptDrop" @focusin="snippetTarget = 'prompt'">
         <template v-if="promptHistory.entries.length || promptHistory.variants.length || currentForkable" #after-label>
           <PromptHistoryBar :entries="promptHistory.entries" :selected="historyIndex"
@@ -1708,16 +1714,16 @@ const gridStyle = computed(() => ({
                     @click="usePrompts(historyEntry)"><AppIcon name="check" :size="11"/>Use</button>
           </template>
         </template>
-        <template #end>
-          <button ref="copyButton" type="button" class="history-btn copy-btn" :class="{copied}"
-                  :title="gestureTitle(historyEntry ? 'Copy the prompts shown' : 'Copy the prompts',
-                                       has('negativePrompt') ? 'copy the prompt and the negative prompt' : 'copy the prompt')"
-                  aria-label="Copy the prompts" aria-haspopup="menu" @click="onCopyButton"
-                  @auxclick="e => e.button === 1 && copyPrompts(has('negativePrompt') ? 'both' : 'prompt')"
-                  @mousedown.middle.prevent>
-            <template v-if="copied"><AppIcon name="check" :size="11"/>{{ copied }}</template>
-            <template v-else><AppIcon name="copy" :size="11"/><AppIcon name="chevron" :size="8"/></template>
-          </button>
+        <!-- The tab rail of the lower area goes on up beside the prompts, with the Copy tab at its top -->
+        <template #aside>
+          <div class="rail-segment">
+            <button ref="copyTab" type="button" class="lower-tab label-small copy-tab"
+                    :title="gestureTitle(historyEntry ? 'Copy the prompts shown' : 'Copy the prompts',
+                                         has('negativePrompt') ? 'copy the prompt and the negative prompt' : 'copy the prompt')"
+                    aria-label="Copy the prompts" aria-haspopup="menu" @click="onCopyTab"
+                    @auxclick="e => e.button === 1 && copyPrompts(has('negativePrompt') ? 'both' : 'prompt')"
+                    @mousedown.middle.prevent><AppIcon name="copy" :size="11"/>Copy</button>
+          </div>
         </template>
         <template v-if="historyEntry" #view>
           <PromptDiff :text="historyEntry.prompt" :base="form.prompt ?? ''" :plain="historyPlain"/>
@@ -1793,10 +1799,12 @@ const gridStyle = computed(() => ({
                        :tokens="has('tokens') ? sdWebUI.tokens?.negativePrompt : null"
                        :style="{height: `${negative.size + 20}px`}"
                        :model-value="form.negativePrompt ?? ''" @update:model-value="v => setParam('negativePrompt', v)"
+                       :highlight="copyTarget === 'negative' || copyTarget === 'both'"
                        @focusin="snippetTarget = 'negativePrompt'">
             <template v-if="historyEntry" #view>
               <PromptDiff :text="historyEntry.negativePrompt" :base="form.negativePrompt ?? ''" :plain="historyPlain"/>
             </template>
+            <template #aside><div class="rail-segment"></div></template>
           </PromptField>
         </template>
 
@@ -2027,16 +2035,6 @@ const gridStyle = computed(() => ({
 }
 
 .history-btn.on {
-  border-color: var(--ib-accent-border);
-  color: var(--ib-accent);
-}
-
-.history-btn.copy-btn {
-  gap: 1px;
-}
-
-.history-btn.copy-btn.copied {
-  gap: 3px;
   border-color: var(--ib-accent-border);
   color: var(--ib-accent);
 }
@@ -2430,6 +2428,25 @@ const gridStyle = computed(() => ({
 .params-pane {
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* The tab rail is as wide as its segments beside the prompts (PromptField's aside: the width and the gap of 8px) */
+.lower-tabs,
+.rail-segment {
+  width: 22px;
+  box-sizing: border-box;
+}
+
+.rail-segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-left: 1px solid var(--ib-border);
+}
+
+/* The tab icon stands upright in the rotated tab */
+.copy-tab :deep(svg) {
+  transform: rotate(180deg);
 }
 
 .lower-tabs {

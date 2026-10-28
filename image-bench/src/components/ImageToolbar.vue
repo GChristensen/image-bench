@@ -3,6 +3,7 @@ import {computed} from 'vue';
 import {KIND_GENERATED, KIND_UPSCALED} from "@/consts.js";
 import AppIcon from "@/components/AppIcon.vue";
 import ClearButton from "@/components/ClearButton.vue";
+import ProgressIndicator from "@/components/ProgressIndicator.vue";
 
 /**
  * Presentational component for the image toolbar
@@ -36,6 +37,11 @@ const props = defineProps({
   isAllSelected: {
     type: Boolean,
     default: false
+  },
+  // The run of the view's tab (runState.js:useTabRun(), e.g. upscales), null while none runs
+  run: {
+    type: Object,
+    default: null
   },
   // Number of checked images; the selection bar is shown while it is nonzero
   selectedCount: {
@@ -122,7 +128,7 @@ const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Sel
         ><AppIcon name="close" :size="14"/></button>
     </template>
 
-
+    <ProgressIndicator v-if="run" :run="run"/>
 
     <div class="toolbar-spacer"></div>
 
@@ -147,6 +153,11 @@ const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Sel
 </template>
 
 <style scoped>
+.toolbar {
+  /* The line of the run progress is on its bottom edge (ProgressIndicator) */
+  position: relative;
+}
+
 .marking-filter {
   font-size: 13px;
   line-height: 1;

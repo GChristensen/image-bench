@@ -14,8 +14,9 @@ const flipSubmenus = ref(false);
 
 const EDGE = 4;
 
-watch(contextMenu, async menu => {
+watch(contextMenu, async (menu, previous) => {
   removeListeners();
+  previous?.onClose?.();
 
   if (!menu)
     return;
@@ -109,7 +110,7 @@ function onItemClick(item) {
           </div>
         </div>
         <button v-else role="menuitem" :class="{danger: item.danger}" :title="item.title" :disabled="item.disabled"
-                @click="onItemClick(item)">
+                @click="onItemClick(item)" @mouseenter="item.hover?.(true)" @mouseleave="item.hover?.(false)">
           <AppIcon v-if="item.icon" :name="item.icon" :size="14" class="item-icon"/>
           <span v-else class="item-icon"></span>
           <span class="item-label">{{ item.label }}</span>

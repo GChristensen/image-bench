@@ -48,7 +48,9 @@ export function useActiveRun() {
     else if (total > 0 && image !== null)
       progress = Math.min(100, Math.max(progress, (completed + image / 100) / total * 100));
 
-    return {tabId, forever, multi: true, image, completed, total, progress: forever ? null : progress};
+    // A run of one image (e.g. one upscale) shows no image progress apart from the run's
+    return {tabId, forever, multi: forever || total !== 1, image, completed, total,
+      progress: forever ? null : progress};
   }
 
   // The progress of a run never goes back (events out of order, an image counted before the next one starts)
