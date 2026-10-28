@@ -250,35 +250,35 @@
     <h3>The layout</h3>
     <p>The Generate tab follows the layout of the SD WebUI txt2img and img2img tabs, so the controls are where a WebUI user expects them. The common controls fit in a 1200×800 window without scrolling; the ones you need less often sit behind buttons and switches and appear in the same place when you click them. The numbers in the screenshot match the list below it.</p>
     <figure class="annotated">
-      <svg viewBox="0 0 1196 1010" role="img" aria-label="The Generate tab in Inpaint mode with numbered markers on its controls; under it, the Input and Mask views of the result cell, joined by lines to the Input and Mask buttons">
+      <svg viewBox="0 0 1196 998" role="img" aria-label="The Generate tab in Inpaint mode with numbered markers on its controls; under it, the Input and Mask views of the result cell, joined by lines to the Input and Mask buttons">
         <defs>
-          <clipPath id="clip-main"><rect width="1196" height="679" rx="12"/></clipPath>
-          <clipPath id="clip-input"><rect x="470" y="723" width="352" height="287" rx="10"/></clipPath>
-          <clipPath id="clip-mask"><rect x="844" y="723" width="352" height="287" rx="10"/></clipPath>
+          <clipPath id="clip-main"><rect width="1194" height="667" rx="12"/></clipPath>
+          <clipPath id="clip-input"><rect x="470" y="711" width="352" height="287" rx="10"/></clipPath>
+          <clipPath id="clip-mask"><rect x="844" y="711" width="352" height="287" rx="10"/></clipPath>
         </defs>
-        <image href="../landing/img/screenshots/inpaint-view.webp" width="1196" height="679" clip-path="url(#clip-main)"/>
-        <image href="../landing/img/screenshots/input-view.webp" x="470" y="723" width="352" height="287" clip-path="url(#clip-input)"/>
-        <image href="../landing/img/screenshots/mask-view.webp" x="844" y="723" width="352" height="287" clip-path="url(#clip-mask)"/>
+        <image href="../landing/img/screenshots/inpaint-view.webp" width="1194" height="667" clip-path="url(#clip-main)"/>
+        <image href="../landing/img/screenshots/input-view.webp" x="470" y="711" width="352" height="287" clip-path="url(#clip-input)"/>
+        <image href="../landing/img/screenshots/mask-view.webp" x="844" y="711" width="352" height="287" clip-path="url(#clip-mask)"/>
         <!-- the Input and Mask buttons, and the lines to their views -->
         <g class="ann-link">
-          <rect x="896" y="396" width="44" height="23" rx="5"/>
+          <rect x="897" y="396" width="43" height="23" rx="5"/>
           <rect x="943" y="396" width="44" height="23" rx="5"/>
-          <path d="M918 419 L646 723 M965 419 L1020 723"/>
+          <path d="M918 419 L646 711 M965 419 L1020 711"/>
         </g>
         <g class="ann-markers">
           <g transform="translate(14 44)"><circle r="13"/><text>1</text></g>
           <g transform="translate(209 38)"><circle r="13"/><text>2</text></g>
           <g transform="translate(334 38)"><circle r="13"/><text>3</text></g>
           <g transform="translate(367 38)"><circle r="13"/><text>4</text></g>
-          <g transform="translate(806 40)"><circle r="13"/><text>5</text></g>
+          <g transform="translate(838 40)"><circle r="13"/><text>5</text></g>
           <g transform="translate(980 40)"><circle r="13"/><text>6</text></g>
           <g transform="translate(10 84)"><circle r="13"/><text>7</text></g>
           <g transform="translate(190 84)"><circle r="13"/><text>8</text></g>
           <g transform="translate(484 84)"><circle r="13"/><text>9</text></g>
-          <g transform="translate(246 137)"><circle r="13"/><text>10</text></g>
+          <g transform="translate(228 137)"><circle r="13"/><text>10</text></g>
           <g transform="translate(836 86)"><circle r="13"/><text>11</text></g>
           <g transform="translate(10 460)"><circle r="13"/><text>12</text></g>
-          <g transform="translate(785 560)"><circle r="13"/><text>13</text></g>
+          <g transform="translate(790 470)"><circle r="13"/><text>13</text></g>
           <g transform="translate(832 395)"><circle r="13"/><text>14</text></g>
         </g>
       </svg>
@@ -289,15 +289,15 @@
       <li>The × in front of the image count resets it to 1.</li>
       <li>The count button sets the number of images to the value of <em>Settings › Images set by the count button</em>, 128 in the screenshot. It is highlighted while the count has that value. WebUI generates at most 100 images per batch unless you raise the Batch count maximum in <code>ui-config.json</code> in the WebUI folder and restart WebUI.</li>
       <li>The ∞ button generates images until you press Stop. Click it again to go back to the number of images you had before.</li>
-      <li>The prompt tools, from left to right: Snippets, PNG Info, the eraser that clears both prompts, the prompt lock and the console drawer.</li>
+      <li>The prompt tools, from left to right: Snippets, PNG Info, the eraser that clears both prompts and the console drawer. With <em>Settings › Show the prompt lock button</em>, the prompt lock appears before the console drawer button.</li>
       <li>The mode switch selects txt2img, img2img or Inpaint.</li>
       <li>The WebUI UI preset, which sets up WebUI for a model family.</li>
       <li>The checkpoint dropdown. The button in front of it switches the dropdown to the VAE and text encoder files, and the button after it opens the checkpoint's page on Civitai.</li>
       <li>The image size and the number of steps. The button in front of the size switches between preset sizes and width/height fields.</li>
-      <li>The prompt history buttons, the variants dropdown and the fork button. The token count of the prompt is at the right end of the same line.</li>
+      <li>The prompt history buttons and the variants dropdown. While a history entry is shown, a fork button keeps it as a variant. The token count of the prompt is at the right end of the same line.</li>
       <li>The LoRA and References tabs. The field next to them filters the list.</li>
       <li>The parameter groups. Sampling and Seed are always shown; the third group holds the Hires. fix settings in txt2img and the img2img or inpaint settings in the other modes.</li>
-      <li>The vertical tabs switch this area between the parameter groups and the session filmstrip.</li>
+      <li>The vertical tabs switch this area between the parameter groups and the session filmstrip. The Copy tab at the top of the rail, beside the prompts, copies the prompts or the infotext of the tab's parameters.</li>
       <li>The result cell has three views: Result shows the latest image, Input the input image and Mask the mask. Use the Image and Mask buttons to upload an input image or a mask. The Input view draws the mask and the inpaint crop over the image, and the Mask view shows the mask by itself together with its size (see <a href="#ch05">chapter 5</a>).</li>
     </ol>
     <p>To give more room to the prompts or to the parameter groups, drag the handles between them.</p>
@@ -368,7 +368,7 @@
   <div class="topic">
     <h3>Stop and Skip buttons</h3>
     <p>While a generation runs, the Generate button turns into Stop, and Skip next to it becomes active. Skip ends the image that is being generated and continues with the rest of the batch. Stop ends the whole run. To stop and immediately generate again with the current parameters, <kbd>Ctrl</kbd>+click or middle-click Stop; while you hold <kbd>Ctrl</kbd>, the button reads Restart.</p>
-    <p>The same commands have keys that work in every tab, as long as no text field has the focus: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> generates, or stops a running generation; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> restarts it; <kbd>Ctrl</kbd>+<kbd>Backspace</kbd> skips the current image. They take effect once the Generate tab has been opened in the window, and they don't work in the host tab, where WebUI and ComfyUI have their own <kbd>Ctrl</kbd>+<kbd>Enter</kbd>.</p>
+    <p>The same commands have keys that work in every tab, also while you type in a text field: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> generates, or stops a running generation; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> restarts it; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Backspace</kbd> skips the current image. They do nothing while a dialog is open. They take effect once the Generate tab has been opened in the window, and they don't work in the host tab, where WebUI and ComfyUI have their own <kbd>Ctrl</kbd>+<kbd>Enter</kbd>.</p>
     <div class="app-demo" role="img" aria-label="The Generate, Stop and Skip buttons in their three states">
       <div class="app-row"><span class="app-btns"><span class="app-btn primary"><svg width="13" height="13" aria-hidden="true"><use href="#ic-play"></use></svg>Generate</span><span class="app-btn outline off"><svg width="13" height="13" aria-hidden="true"><use href="#ic-skip"></use></svg>Skip</span></span><span class="app-note">Idle</span></div>
       <div class="app-row"><span class="app-btns"><span class="app-btn stop"><svg width="13" height="13" aria-hidden="true"><use href="#ic-stop"></use></svg>Stop</span><span class="app-btn outline"><svg width="13" height="13" aria-hidden="true"><use href="#ic-skip"></use></svg>Skip</span></span><span class="app-note">Generating</span></div>
@@ -417,9 +417,20 @@
     <ul>
       <li>txt2img and img2img keep separate histories. Inpaint shares the img2img history.</li>
       <li>The diff compares the pieces of the prompt between commas and line breaks and ignores weights. Moving a phrase, or changing <code>(word:1.2)</code> to <code>(word:1.3)</code>, does not show up as a rewrite.</li>
-      <li>Editing the prompt or generating switches the view back to the current prompt. To continue from an older prompt, copy it or save it as a variant first.</li>
+      <li>Editing the prompt or generating switches the view back to the current prompt. To continue from an older prompt, copy it with the Copy tab or save it as a variant first.</li>
       <li>The history is saved with a project and restored when you open the project. Changes to it do not count as unsaved changes.</li>
     </ul>
+  </div>
+
+  <div class="topic">
+    <h3>Copying the prompts</h3>
+    <p>Click the <strong>Copy</strong> tab at the top of the vertical tab rail, next to the prompts, to open the copy menu in the top right corner of the prompt. When you point at a menu item, the fields it copies are outlined. The menu copies what the prompt fields show, so while a history entry or a variant is open, you get that one and not the current prompt.</p>
+    <ul>
+      <li><em>Prompt and negative prompt</em> copies both prompts, each after a <code>Prompt:</code> or <code>Negative prompt:</code> line.</li>
+      <li><em>Prompt</em> and <em>Negative prompt</em> copy a single prompt.</li>
+      <li><em>Infotext</em> copies the prompts and the tab's parameters as WebUI infotext, the text WebUI saves in its images. To write it into a PNG, use <em>Paste infotext…</em> in the image context menu.</li>
+    </ul>
+    <p>To copy both prompts without opening the menu, middle-click or <kbd>Shift</kbd>+click the tab.</p>
   </div>
 
   <div class="topic">
@@ -542,7 +553,7 @@
 
   <div class="topic">
     <h3>Batches and the session filmstrip</h3>
-    <p>When you generate a batch with more than one image, the session filmstrip replaces the parameter groups. It holds the last 265 images of the session, grouped by run. Click an image to view it large, or middle-click it to show it in the result pane in place of the latest image.</p>
+    <p>When you generate a batch with more than one image, the session filmstrip replaces the parameter groups. It holds the last 265 images of the session, grouped by run. Click an image to view it large, or middle-click it to show its action rim. The arc below the ring shows the image in the result pane in place of the latest image; on the image already shown there, the same arc brings back the latest one.</p>
     <figure class="shot-wide">
       <img src="../landing/img/screenshots/filmstrip.webp" width="1279" height="302" loading="lazy" alt="The session filmstrip under the prompt: three images of a run, the vertical Parameters and Session tabs at its right edge, and the result pane at the right">
       <figcaption>The session filmstrip, with the Parameters and Session tabs at its right edge.</figcaption>
@@ -684,13 +695,14 @@
   <div class="topic">
     <h3>The action rim</h3>
     <p>Most of what you do with an image starts from its card: you look at its parameters, send it to img2img or your editor, upscale it, or put it in a tray. Buttons for all of these would cover the thumbnail, so the card has none. The actions are on a ring that you show when you need it, and also in the card's context menu and on single keys that work while the pointer is over the card.</p>
-    <p>To show the ring, middle-click the card or click the rim toggle in its top right corner; it stays until you middle-click again or the pointer leaves the card. The actions sit around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer. Holding <kbd>Ctrl</kbd> over a card hides the toggle, the badges and the other controls, so you see only the image, and a click opens it.</p>
+    <p>To show the ring, middle-click the card or click the rim toggle in its top right corner. It stays until you middle-click again or the pointer leaves the card. For a single action, press the middle button, move to a sector and release the button there: the action runs and the ring closes. The actions sit around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer. Clicking the image, inside or outside the ring, still opens it. Holding <kbd>Ctrl</kbd> over a card hides the ring, the toggle, the badges and the other controls, so you see only the image, and a click opens it.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
       <ul>
-        <li>The center button switches the ring to the markings and back. Middle-clicking it turns the view's marking filter on or off.</li>
+        <li>The arc above the ring sets a marking; pick a set marking again to remove it. The arc below has Reuse seed and Reuse all.</li>
+        <li>The center of the ring has a button only when the image has a marking and the view can be filtered by markings. It shows only the images with that marking, and clicked again, all images.</li>
         <li>Some actions have an alternative version, which runs on a middle click, <kbd>Shift</kbd>+click or <kbd>Shift</kbd>+key. While you hold <kbd>Shift</kbd>, the ring shows the alternative icons; for example, Send to editor becomes Send as a new layer.</li>
-        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. Holding <kbd>Ctrl</kbd> hides the ring too, so a click opens the image. A middle click opens the image in a new browser tab instead of showing the ring.</li>
+        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. Holding <kbd>Ctrl</kbd> hides the ring too, so a click opens the image, and a middle click hides it until the pointer leaves the card.</li>
       </ul>
     </div>
   </div>
@@ -710,7 +722,10 @@
       <li>The ring has the same actions as the rim of a card. In the trays, it also has Delete. The arc above the ring sets a marking. The arc below the ring has Reuse seed and Reuse all, which copy the seed or all parameters of the image to WebUI or ComfyUI. The parameters sector shows the generation parameters over the image. The parameters stay visible when you move to another image.</li>
     </ol>
     <p>Click the image to show it at full size. The point that you clicked stays under the pointer. Drag the image to pan it, and click it again to fit it to the window. To close the image view, click the dark area around a fitted image or press <kbd>Esc</kbd>.</p>
-    <p>When the image fills the window and there is no dark area to click, close the view with the right mouse button: press it, drag down and release. The image follows the pointer and the background fades. Released far enough down, the view closes; released earlier, the image returns to its place. A right click without dragging still opens the context menu.</p>
+    <div class="callout non-obvious">
+      <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
+      <p>An image that fills the window leaves no dark area to click. To close the view anyway, press the right mouse button on the image, drag down and release. The image moves with the pointer and the background fades as you drag. If you release far enough down, the view closes; if you release sooner, the image goes back to its place. A right click without a drag still opens the context menu.</p>
+    </div>
     <p>To go to the previous or next image, turn the mouse wheel or press <kbd>←</kbd> or <kbd>→</kbd>. At full size, the next image also opens at full size and shows the same area. This lets you compare one detail across a series of images. The rim always applies to the image that is currently shown, even if you scroll to another image while the rim is open.</p>
     <p>If the image has a marking, the marking is shown in the lower right corner. Click it to remove the marking. A right click opens the same context menu as on a card, which includes Open in new window. The action keys and the digit keys work in the same way as over a card.</p>
     <div class="callout non-obvious">
@@ -1067,14 +1082,14 @@
       <div class="key"><kbd>Ctrl</kbd>+click<span>Generate without the project reminder</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>Generate, or stop the running generation. In a multi-line dialog: confirm it</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd><span>Stop and generate again</span></div>
-      <div class="key"><kbd>Ctrl</kbd>+<kbd>Backspace</kbd><span>Skip the image being generated</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Backspace</kbd><span>Skip the image being generated</span></div>
     </div>
   </div>
 
   <div class="topic">
     <h3>Mouse</h3>
     <div class="keys">
-      <div class="key">Middle click<span>On a card: show or hide its action rim. In the image view: open the rim at the pointer</span></div>
+      <div class="key">Middle click<span>On a card: show or hide its action rim; press, move to a sector and release to run it. In the image view: open the rim at the pointer</span></div>
       <div class="key">Right drag down<span>Close the image view</span></div>
       <div class="key">Wheel<span>Previous or next image in the image view</span></div>
     </div>

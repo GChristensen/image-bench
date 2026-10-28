@@ -277,9 +277,11 @@ td:first-child { white-space: nowrap; }
 
 /* a row of key / meaning cards */
 .keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.key { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; border-radius: 12px;
+.key { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; padding: 10px 14px; border-radius: 12px;
   background: #ffffff; box-shadow: inset 0 0 0 1px var(--card-line); font-size: 15px; color: var(--text2); line-height: 1.4; }
 .key kbd { flex: none; height: 21px; }
+/* the description goes under a long key combination (Ctrl+Shift+Backspace) instead of out of the card */
+.key > span { flex: 1 1 9em; min-width: 0; margin-left: 8px; }
 
 /* ---------------------------------------------------------------- footer */
 

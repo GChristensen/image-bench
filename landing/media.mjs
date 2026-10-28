@@ -44,4 +44,4 @@ for (const f of await readdir(at("images", "generations"))) {
 const demo = at("video", "demo.mp4");
 await convert(demo, at("img", "demo.mp4"),
   ["-an", "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-pix_fmt", "yuv420p", "-movflags", "+faststart"]);
-await convert(demo, at("img", "demo-poster.jpg"), ["-ss", "20", "-frames:v", "1", "-q:v", "3"]);
+await convert(demo, at("img", "demo-poster.jpg"), ["-ss", "46", "-frames:v", "1", "-q:v", "3"]);
