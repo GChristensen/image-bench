@@ -54,7 +54,7 @@ extensions only at startup, so restart it after creating the link; reload the pa
 
 ## Q&A
 
-**Q: Do you accept issues, feature or pull requests for this project?**<br>
+**Q: Do you accept feature or pull requests for this project?**<br>
 A: Not now. This software is distributed in the hope that it will be useful, but is provided 'as is' without warranty of any kind. You know.
 
 **Q: There is an annoying bug!**<br>
