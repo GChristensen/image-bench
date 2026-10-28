@@ -3,8 +3,8 @@ import {isContextMenuOpen} from "@/contextMenu.js";
 import {findKey, matchesKey} from "@/shortcuts.js";
 
 /**
- * Generation keys in any tab, text inputs included (so Ctrl+Backspace does not delete a word there): Ctrl+Enter
- * generates or stops, Ctrl+Shift+Enter stops and generates again, Ctrl+Backspace skips the image being generated.
+ * Generation keys in any tab, text inputs included (so Ctrl+Shift+Backspace skips there too): Ctrl+Enter
+ * generates or stops, Ctrl+Shift+Enter stops and generates again, Ctrl+Shift+Backspace skips the image being generated.
  * Listened in the capture phase, before the handlers of the inputs. The Generate tab (kept alive) is the controller
  * {toggle(), restart(), skip()}; until it has been shown the keys do nothing. Not installed in the host iframe,
  * where WebUI and ComfyUI have their own Ctrl+Enter. The keys are the entries of shortcuts.js.

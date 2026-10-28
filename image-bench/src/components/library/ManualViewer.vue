@@ -480,7 +480,7 @@ const hostOrigin = location.origin;
           skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click, Shift+click or a
           middle click on Stop stops the generation and starts a new one a second later. The keys work in every tab, also
           in text fields: <span class="kbd">Ctrl+Enter</span> generates or stops,
-          <span class="kbd">Ctrl+Shift+Enter</span> restarts and <span class="kbd">Ctrl+Backspace</span>
+          <span class="kbd">Ctrl+Shift+Enter</span> restarts and <span class="kbd">Ctrl+Shift+Backspace</span>
           skips.<template v-if="isWebUI"> A single
           Stop works even right after Generate: the generation ends before its first image (a model that is
           loading finishes loading first, and the toolbar shows "Stopping…" meanwhile). Rarely, the WebUI page

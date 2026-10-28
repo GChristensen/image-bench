@@ -848,7 +848,7 @@ function reminderAsks() {
   return reminder.armed && projects.hasCurrent && !!projectCube.value;
 }
 
-// ---------- Generation keys (generationKeys.js): Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+Backspace in any tab ----------
+// ---------- Generation keys (generationKeys.js): Ctrl+Enter, Ctrl+Shift+Enter, Ctrl+Shift+Backspace in any tab ----------
 
 const runControl = ref(null);
 
@@ -1554,7 +1554,7 @@ const gridStyle = computed(() => ({
                   :run="run"
                   @click="onGenerateButton" @auxclick="e => e.button === 1 && generating && onRestart()">
         <ProjectCube v-if="projects.hasCurrent" ref="projectCube"/>
-        <button class="btn outline" :disabled="!generating" title="Skip the image being generated (Ctrl+Backspace)"
+        <button class="btn outline" :disabled="!generating" title="Skip the image being generated (Ctrl+Shift+Backspace)"
                 @click="webUI.skipGeneration()"><AppIcon name="skip" :size="13"/>Skip</button>
         <!-- In the group, so that the progress of the run follows it and nothing moves when a run starts -->
         <template #after>

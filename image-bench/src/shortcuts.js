@@ -26,8 +26,8 @@ export const KEYS = [
     match: {codes: ENTER, ctrl: true, shift: true}, source: "generationKeys.js"
   },
   {
-    id: "skip", keys: "Ctrl+Backspace", label: "Skip the image being generated", scope: "global",
-    match: {codes: ["Backspace"], ctrl: true, shift: false}, source: "generationKeys.js"
+    id: "skip", keys: "Ctrl+Shift+Backspace", label: "Skip the image being generated", scope: "global",
+    match: {codes: ["Backspace"], ctrl: true, shift: true}, source: "generationKeys.js"
   },
   {id: "save", keys: "Ctrl+S", label: "Save the project", scope: "global", source: "App.vue"},
   {id: "console", keys: "Ctrl+`", label: "Show or hide the console", scope: "global", source: "consoleDrawer.js"},
