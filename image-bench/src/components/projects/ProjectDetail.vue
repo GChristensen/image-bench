@@ -21,6 +21,7 @@ import {HOST_LABELS, summarizeParams} from "@/projectParams.js";
 import {HOST, isComfy} from "@/host.js";
 import {openContextMenu} from "@/contextMenu.js";
 import {toast, toastError} from "@/toast.js";
+import {addWithUndo} from "@/undo.js";
 import {imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {editorIcon, editorName, sendUrlToEditor} from "@/editor.js";
 import {flashTrayTab} from "@/components/utils.js";
@@ -338,8 +339,17 @@ function onRimExtra(item, id) {
     store.setFinal(project.value.path, item.final);
 }
 
-// The viewer covers the tab bar, whose tabs would flash: a notice tells that the action was taken
-function onViewerAction(file, action, alt) {
+// The viewer covers the tab bar, whose tabs would flash: a notice tells that the action was taken (the addition to
+// Compare once uploaded, with Undo)
+async function onViewerAction(file, action, alt) {
+  if (action.id === "compare") {
+    const undo = await addToCompare(file.item.url, file.item.name);
+
+    if (undo !== false)
+      toast("Added to compare", undo ? {action: {label: "Undo", run: undo}} : {});
+    return;
+  }
+
   onImageAction(file.item, action, alt);
 
   if (action.id !== "params")
@@ -425,6 +435,7 @@ function openFinal() {
     viewFiles([{name: finalSourceLabel.value || "Final image", url: finalUrl.value, kind: finalKind.value}], 0);
 }
 
+// Returns the undo of the addition (null if the image was there already), false on failure
 async function addToCompare(url, name) {
   try {
     const blob = await (await fetch(url)).blob();
@@ -436,10 +447,12 @@ async function addToCompare(url, name) {
     if (result.error)
       throw new Error(result.error);
 
-    await compareStore.addImage(result);
+    const undo = addWithUndo(compareStore, result);
     flashTrayTab("compare-tab");
+    return undo;
   } catch (error) {
     toastError(error.message, {title: "Add to compare"});
+    return false;
   }
 }
 

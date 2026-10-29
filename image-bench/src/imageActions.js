@@ -12,6 +12,7 @@ import {toRaw} from "vue";
 import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {toast, toastError} from "@/toast.js";
+import {addWithUndo} from "@/undo.js";
 import {HOST_NAME, hostHas, isComfy, isWebUI} from "@/host.js";
 import {createImageLink, ensureGenerationIdle, sendWebUIMessage} from "@/sdwebui.js";
 import {fetchModules, getImageModules, isModule, replaceTextEncoder, stripExtension} from "@/modules.js";
@@ -160,6 +161,13 @@ async function upscaleImages(images) {
 
   useUpscaledImagesStore().startingGeneration();
   useWebUIBridge().upscaleImages(images.map(image => useImageOperations().cloneImage(image)));
+}
+
+// The undo of the addition, or null if the image was in the collection already (shown by the overlays' notices)
+function addToCollection(store, image, tabId) {
+  const undo = addWithUndo(store, image);
+  flashTrayTab(tabId);
+  return undo;
 }
 
 // Images are added to a collection one by one, as they would be from their cards
@@ -317,30 +325,21 @@ export const IMAGE_ACTIONS = [
     id: "compare", side: "right", group: 3, icon: "compare", label: "Add to compare", key: "A",
     bulkLabel: "Add to compare",
     visible: (image, ctx) => ctx.kind !== KIND_COMPARE && isStill(image),
-    run: image => {
-      useCompareStore().addImage(image);
-      flashTrayTab("compare-tab");
-    },
+    run: image => addToCollection(useCompareStore(), image, "compare-tab"),
     bulk: images => addImages(useCompareStore(), images, "compare-tab")
   },
   {
     id: "conceptTray", side: "right", group: 3, icon: "concept", label: "Add to concept tray", key: "Y",
     bulkLabel: "Concept tray",
     visible: (image, ctx) => !ctx.isTray || ctx.kind === KIND_IMAGE_TRAY,
-    run: image => {
-      useConceptTrayStore().addImage(image);
-      flashTrayTab("concept-tray-tab");
-    },
+    run: image => addToCollection(useConceptTrayStore(), image, "concept-tray-tab"),
     bulk: images => addImages(useConceptTrayStore(), images, "concept-tray-tab")
   },
   {
     id: "imageTray", side: "right", group: 3, icon: "palette", label: "Add to image tray", key: "T",
     bulkLabel: "Image tray",
     visible: (image, ctx) => !ctx.isTray || ctx.kind === KIND_CONCEPT_TRAY,
-    run: image => {
-      useImageTrayStore().addImage(image);
-      flashTrayTab("image-tray-tab");
-    },
+    run: image => addToCollection(useImageTrayStore(), image, "image-tray-tab"),
     bulk: images => addImages(useImageTrayStore(), images, "image-tray-tab")
   }
 ];

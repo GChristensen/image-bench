@@ -545,10 +545,10 @@
       return;
     }
 
-    runImageAction(action, props.image, actionContext, alt);
+    const undo = runImageAction(action, props.image, actionContext, alt);
 
     if (action.group === 3)
-      toast(action.label.replace(/^Add to/, "Added to"));
+      toast(action.label.replace(/^Add to/, "Added to"), undo ? {action: {label: "Undo", run: undo}} : {});
   }
 
   function onRimExtra(id) {

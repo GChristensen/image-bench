@@ -57,6 +57,30 @@ function restore(store, removed) {
 }
 
 /**
+ * Add an image to a saved view (a tray, Compare) so that the addition can be undone: the undo takes the entry out
+ * again, as Remove does (the file copied into the view's directory stays)
+ * @param {Object} store - a tray store
+ * @param {Object} image
+ * @returns {(() => void)|null} The undo, or null if the image was in the view already
+ */
+export function addWithUndo(store, image) {
+  const count = store.images.length;
+  // The entry is pushed before addImage() awaits the save
+  store.addImage(image);
+
+  if (store.images.length <= count)
+    return null;
+
+  // A save updates the entry in place
+  const entry = toRaw(store.images[count]);
+
+  return () => {
+    store.images = store.images.filter(other => toRaw(other) !== entry);
+    store.persist?.();
+  };
+}
+
+/**
  * Clear several views at once, with one notice offering Undo. A store with more state than its images (the ControlNet
  * sweep) is cleared with clear() and brought back with snapshot() / restoreSnapshot()
  * @param {Object[]} stores
