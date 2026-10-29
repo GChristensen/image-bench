@@ -430,9 +430,10 @@ function onCenterClick() {
   hoveredId.value = null;
 }
 
+// A middle click does what a left click does: the marking filter, closing the view, or the markings
 function onCenterAuxClick(e) {
-  if (e.button === 1 && props.marking && props.filterable && mode.value === "actions")
-    emit("filterMarking", props.marking);
+  if (e.button === 1)
+    onCenterClick();
 }
 
 // The ring is faint while the pointer is outside it, near the card edge

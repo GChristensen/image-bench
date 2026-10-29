@@ -29,7 +29,7 @@ export const GESTURES = [
     source: ["views/ControlNet.vue", "components/projects/ProjectDetail.vue"]},
   {clause: "control", target: "Snippet", does: "Insert only the part of this prompt",
     source: ["components/generate/SnippetsPanel.vue", "components/TreeView.vue"]},
-  {clause: "control", target: "Rim center", does: "Show only this marking (middle click)",
+  {clause: "control", target: "Rim center", does: "As a left click (middle click too): the marking filter, close the view, or the markings",
     source: ["components/ActionRim.vue"]},
 
   {clause: "image", target: "Image card, Generate result",
