@@ -276,10 +276,11 @@
           <g transform="translate(190 84)"><circle r="13"/><text>8</text></g>
           <g transform="translate(484 84)"><circle r="13"/><text>9</text></g>
           <g transform="translate(228 137)"><circle r="13"/><text>10</text></g>
-          <g transform="translate(836 86)"><circle r="13"/><text>11</text></g>
-          <g transform="translate(10 460)"><circle r="13"/><text>12</text></g>
-          <g transform="translate(790 470)"><circle r="13"/><text>13</text></g>
-          <g transform="translate(832 395)"><circle r="13"/><text>14</text></g>
+          <g transform="translate(790 162)"><circle r="13"/><text>11</text></g>
+          <g transform="translate(836 86)"><circle r="13"/><text>12</text></g>
+          <g transform="translate(10 460)"><circle r="13"/><text>13</text></g>
+          <g transform="translate(790 470)"><circle r="13"/><text>14</text></g>
+          <g transform="translate(832 395)"><circle r="13"/><text>15</text></g>
         </g>
       </svg>
       <figcaption>The Generate tab in Inpaint mode, with the Input and Mask views of the result cell below it.</figcaption>
@@ -295,9 +296,10 @@
       <li>The checkpoint dropdown. The button in front of it switches the dropdown to the VAE and text encoder files, and the button after it opens the checkpoint's page on Civitai.</li>
       <li>The image size and the number of steps. The button in front of the size switches between preset sizes and width/height fields.</li>
       <li>The prompt history buttons and the variants dropdown. While a history entry is shown, a fork button keeps it as a variant. The token count of the prompt is at the right end of the same line.</li>
+      <li>The Copy tab beside the prompts opens a menu that copies both prompts, either one of them, or the infotext: the prompts with all the parameters of the tab, in the text format that WebUI writes into its images. It copies the prompts as shown, so with a history entry or a variant open it copies that one. A middle click or <kbd>Shift</kbd>+click on the tab copies both prompts at once.</li>
       <li>The LoRA and References tabs. The field next to them filters the list.</li>
       <li>The parameter groups. Sampling and Seed are always shown; the third group holds the Hires. fix settings in txt2img and the img2img or inpaint settings in the other modes.</li>
-      <li>The vertical tabs switch this area between the parameter groups and the session filmstrip. The Copy tab at the top of the rail, beside the prompts, copies the prompts or the infotext of the tab's parameters.</li>
+      <li>The vertical tabs switch this area between the parameter groups and the session filmstrip.</li>
       <li>The result cell has three views: Result shows the latest image, Input the input image and Mask the mask. Use the Image and Mask buttons to upload an input image or a mask. The Input view draws the mask and the inpaint crop over the image, and the Mask view shows the mask by itself together with its size (see <a href="#ch05">chapter 5</a>).</li>
     </ol>
     <p>To give more room to the prompts or to the parameter groups, drag the handles between them.</p>
@@ -718,13 +720,13 @@
     </figure>
     <ol class="steps">
       <li>Press and hold the middle mouse button anywhere on the image. The rim opens around the pointer. Move the pointer to a sector and release the button to run that action. If you release the button outside the rim, nothing happens and the rim closes.</li>
-      <li>If you release the button without moving the pointer, the rim stays open. You can then click a sector with the left button. To close the image view, click <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-close"></use></svg></span> in the center of the rim. To close only the rim, click anywhere outside it or press <kbd>Esc</kbd>.</li>
+      <li>If you release the button without moving the pointer, the rim stays open. You can then click a sector with the left button. To close the image view, click <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-close"></use></svg></span> in the center of the rim with the left or the middle button. Because the rim opens with its center under the pointer, two middle clicks without moving the mouse close the view: the first opens the rim, the second clicks its close button. To close only the rim, click anywhere outside it or press <kbd>Esc</kbd>.</li>
       <li>The ring has the same actions as the rim of a card. In the trays, it also has Delete. The arc above the ring sets a marking. The arc below the ring has Reuse seed and Reuse all, which copy the seed or all parameters of the image to WebUI or ComfyUI. The parameters sector shows the generation parameters over the image. The parameters stay visible when you move to another image.</li>
     </ol>
     <p>Click the image to show it at full size. The point that you clicked stays under the pointer. Drag the image to pan it, and click it again to fit it to the window. To close the image view, click the dark area around a fitted image or press <kbd>Esc</kbd>.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
-      <p>An image that fills the window leaves no dark area to click. To close the view anyway, press the right mouse button on the image, drag down and release. The image moves with the pointer and the background fades as you drag. If you release far enough down, the view closes; if you release sooner, the image goes back to its place. A right click without a drag still opens the context menu.</p>
+      <p>The mouse closes the image view in three ways: a left click on <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-close"></use></svg></span> in the center of the rim, a middle click on it, or a right drag down. These ways work even when the image fills the window and leaves no dark area to click. For a right drag, press the right mouse button on the image, drag down and release. The image moves with the pointer and the background fades as you drag. If you release far enough down, the view closes; if you release sooner, the image goes back to its place. A right click without a drag still opens the context menu.</p>
     </div>
     <p>To go to the previous or next image, turn the mouse wheel or press <kbd>←</kbd> or <kbd>→</kbd>. At full size, the next image also opens at full size and shows the same area. This lets you compare one detail across a series of images. The rim always applies to the image that is currently shown, even if you scroll to another image while the rim is open.</p>
     <p>If the image has a marking, the marking is shown in the lower right corner. Click it to remove the marking. A right click opens the same context menu as on a card, which includes Open in new window. The action keys and the digit keys work in the same way as over a card.</p>
@@ -887,10 +889,118 @@
     <p class="scenario">You paint a rough fix in your editor, send it to inpainting, and get the result back as a layer, without saving a file by hand.</p>
   </div>
 
-  <figure>
-    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — editor round-trip</span></div>
-      <img src="../landing/img/screenshots/edit.webp" width="1194" height="667" loading="lazy" alt="An image open in a graphics editor next to Image Bench, with the Image Bench plugin panel">
-    </div>
+  <!-- an editor (emulated: canvas with a selection, the plugin panel, layers) and a small Image Bench window, drawn as
+       one SVG so the arrows stay on their buttons at every width -->
+  <figure class="roundtrip">
+    <svg viewBox="0 0 880 540" role="img" aria-label="Round trip: in a graphics editor with a selection on the canvas, the Image Bench plugin panel sends the image and the mask to the Input and Mask of the Inpaint mode of Image Bench. In Image Bench, a click on the Send to Photoshop sector of the action rim sends the result back as a new image, which opens in a new document tab. With Shift held, the sector shows the layers icon and sends the result as a new layer, which arrives on top of the Layers panel">
+      <g transform="translate(0 34)">
+      <defs>
+        <clipPath id="rt-editor"><rect x="0" y="20" width="490" height="390" rx="12"/></clipPath>
+        <clipPath id="rt-bench"><rect x="630" y="60" width="250" height="322" rx="12"/></clipPath>
+        <clipPath id="rt-photo"><rect x="39" y="155" width="200" height="144"/></clipPath>
+      </defs>
+
+      <!-- editor window -->
+      <g clip-path="url(#rt-editor)">
+        <rect x="0" y="20" width="490" height="390" fill="#1e1e1e"/>
+        <rect x="0" y="20" width="490" height="24" fill="#3c3c3c"/>
+        <rect x="8" y="25" width="16" height="14" rx="3" fill="#001e36"/>
+        <text class="rt-ps" x="16" y="32">Ps</text>
+        <g fill="#6b6b6b"><rect x="34" y="29" width="26" height="6" rx="3"/><rect x="68" y="29" width="20" height="6" rx="3"/><rect x="96" y="29" width="32" height="6" rx="3"/><rect x="136" y="29" width="24" height="6" rx="3"/></g>
+        <rect x="0" y="44" width="28" height="366" fill="#323232"/>
+        <g fill="#5a5a5a"><rect x="8" y="64" width="12" height="12" rx="3" fill="#31a8ff"/><rect x="8" y="84" width="12" height="12" rx="3"/><rect x="8" y="104" width="12" height="12" rx="3"/><rect x="8" y="124" width="12" height="12" rx="3"/><rect x="8" y="144" width="12" height="12" rx="3"/></g>
+        <!-- document tabs: the result sent as a new image opens in a tab of its own -->
+        <rect x="28" y="44" width="222" height="20" fill="#2b2b2b"/>
+        <rect x="28" y="44" width="104" height="20" fill="#1e1e1e"/>
+        <rect x="134" y="44" width="108" height="20" fill="#383838"/>
+        <text class="rt-doc" x="38" y="54">still-life.psd</text>
+        <text class="rt-doc rt-doc-new" x="144" y="54">result.png</text>
+        <image href="../landing/img/still-life.jpg" x="39" y="155" width="200" height="144" preserveAspectRatio="xMidYMid slice"/>
+        <g clip-path="url(#rt-photo)"><ellipse class="rt-ants" cx="121" cy="209" rx="56" ry="37" fill="rgba(249,115,22,0.18)" stroke="#ffffff" stroke-width="1.6" stroke-dasharray="6 6"/></g>
+        <!-- plugin panel -->
+        <rect x="250" y="44" width="240" height="366" fill="#323232"/>
+        <image href="../landing/img/screenshots/editor-plugin.webp" x="250" y="44" width="240" height="238"/>
+        <!-- layers panel -->
+        <rect x="250" y="286" width="240" height="2" fill="#262626"/>
+        <text class="rt-layers-tab" x="262" y="304">Layers</text>
+        <rect x="260" y="309" width="38" height="2" fill="#e5e5e5"/>
+        <rect x="256" y="316" width="228" height="24" rx="3" fill="#4a6a8a"/>
+        <g clip-path="url(#rt-editor)">
+          <image href="../landing/img/still-life.jpg" x="276" y="320" width="22" height="16" preserveAspectRatio="xMidYMid slice"/>
+          <image href="../landing/img/still-life.jpg" x="276" y="372" width="22" height="16" preserveAspectRatio="xMidYMid slice"/>
+        </g>
+        <rect x="276" y="346" width="22" height="16" fill="#8a8a8a"/>
+        <g fill="#bdbdbd"><circle cx="266" cy="328" r="2.5"/><circle cx="266" cy="354" r="2.5"/><circle cx="266" cy="380" r="2.5"/></g>
+        <text class="rt-layer rt-layer-new" x="306" y="328">Image Bench</text>
+        <text class="rt-layer" x="306" y="354">Layer 1</text>
+        <text class="rt-layer" x="306" y="380">Background</text>
+      </g>
+      <!-- the Inpaint upload buttons of the panel -->
+      <rect class="rt-mark" x="292" y="119" width="157" height="30" rx="9"/>
+      <!-- the new document tab -->
+      <rect class="rt-mark-back" x="133" y="44" width="110" height="20" rx="4"/>
+
+      <!-- Image Bench window: the Inpaint result pane (Result, Input, Mask) with its action rim -->
+      <g clip-path="url(#rt-bench)">
+        <rect x="630" y="60" width="250" height="322" fill="#18181b"/>
+        <image href="../landing/img/screenshots/inpaint-view.webp" x="62" y="-85" width="818" height="457"/>
+        <rect x="630" y="60" width="250" height="22" fill="#232326"/>
+        <g fill="#57534e"><circle cx="643" cy="71" r="4"/><circle cx="656" cy="71" r="4"/><circle cx="669" cy="71" r="4"/></g>
+        <text class="rt-title" x="682" y="71">Image Bench</text>
+        <g class="rt-rim">
+          <path d="M778.4 226.2A60 60 0 0 1 808.8 256.6L783.2 268A32 32 0 0 0 767 251.8Z"/>
+          <path d="M810 259.5A60 60 0 0 1 810 302.5L783.9 292.5A32 32 0 0 0 783.9 269.5Z"/>
+          <path d="M808.8 305.4A60 60 0 0 1 778.4 335.8L767 310.2A32 32 0 0 0 783.2 294Z"/>
+          <path d="M775.5 337A60 60 0 0 1 732.5 337L742.5 310.9A32 32 0 0 0 765.5 310.9Z"/>
+          <path d="M729.6 335.8A60 60 0 0 1 699.2 305.4L724.8 294A32 32 0 0 0 741 310.2Z"/>
+          <path d="M698 302.5A60 60 0 0 1 698 259.5L724.1 269.5A32 32 0 0 0 724.1 292.5Z"/>
+          <path d="M699.2 256.6A60 60 0 0 1 729.6 226.2L741 251.8A32 32 0 0 0 724.8 268Z"/>
+          <path class="rt-rim-on" d="M732.5 225A60 60 0 0 1 775.5 225L765.5 251.1A32 32 0 0 0 742.5 251.1Z"/>
+        </g>
+        <g fill="rgba(255,255,255,0.65)"><circle cx="786.5" cy="248.5" r="2.5"/><circle cx="800" cy="281" r="2.5"/><circle cx="786.5" cy="313.5" r="2.5"/><circle cx="754" cy="327" r="2.5"/><circle cx="721.5" cy="313.5" r="2.5"/><circle cx="708" cy="281" r="2.5"/><circle cx="721.5" cy="248.5" r="2.5"/></g>
+        <text class="rt-ps rt-ps-on" x="754" y="238">Ps</text>
+        <circle cx="754" cy="281" r="30" fill="rgba(24,24,27,0.78)"/>
+        <text class="rt-hole" x="754" y="276">Send to</text>
+        <text class="rt-hole" x="754" y="288">Photoshop</text>
+      </g>
+
+      <!-- to Image Bench -->
+      <path class="rt-to" d="M449 134 H 520 C 568 134, 572 194, 616 194"/>
+      <path d="M614 185 L 630 194 L 614 203 Z" fill="#f97316"/>
+      <!-- the Input and Mask tabs of the result pane -->
+      <rect class="rt-mark" x="676" y="184" width="68" height="21" rx="5"/>
+      <text class="rt-label rt-label-to" x="560" y="118">image · mask</text>
+      <!-- back to the editor: a click sends a new image -->
+      <path class="rt-back-halo" d="M754 219 V 2 Q 754 -14 738 -14 H 206 Q 190 -14 190 2 V 30"/>
+      <path class="rt-back" d="M754 219 V 2 Q 754 -14 738 -14 H 206 Q 190 -14 190 2 V 30"/>
+      <path d="M181 30 L 190 44 L 199 30 Z" fill="#18181b" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+      <text class="rt-label rt-label-back" x="472" y="-22">result as a new image · click or P</text>
+
+      <!-- the same rim with Shift held: the sector shows the layers icon and sends a new layer -->
+      <path class="rt-same" d="M760 384 L 716 404"/>
+      <g class="rt-rim">
+        <path d="M667.4 424.8A36 36 0 0 1 684.8 407.4L692.8 424.6A17 17 0 0 0 684.6 432.8Z"/>
+        <path d="M687.7 406.2A36 36 0 0 1 712.3 406.2L705.8 424A17 17 0 0 0 694.2 424Z"/>
+        <path d="M715.2 407.4A36 36 0 0 1 732.6 424.8L715.4 432.8A17 17 0 0 0 707.2 424.6Z"/>
+        <path d="M733.8 427.7A36 36 0 0 1 733.8 452.3L716 445.8A17 17 0 0 0 716 434.2Z"/>
+        <path d="M732.6 455.2A36 36 0 0 1 715.2 472.6L707.2 455.4A17 17 0 0 0 715.4 447.2Z"/>
+        <path d="M712.3 473.8A36 36 0 0 1 687.7 473.8L694.2 456A17 17 0 0 0 705.8 456Z"/>
+        <path d="M684.8 472.6A36 36 0 0 1 667.4 455.2L684.6 447.2A17 17 0 0 0 692.8 455.4Z"/>
+        <path class="rt-rim-on" d="M666.2 452.3A36 36 0 0 1 666.2 427.7L684 434.2A17 17 0 0 0 684 445.8Z"/>
+      </g>
+      <path class="rt-layers-icon" transform="translate(670.5 434) scale(0.5)" d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83zM22 17.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65M22 12.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>
+      <rect class="rt-key" x="748" y="429" width="46" height="22" rx="5"/>
+      <text class="rt-key-text" x="771" y="440">Shift</text>
+      <text class="rt-held" x="802" y="440">held</text>
+      <path class="rt-back-halo" d="M664 440 C 600 440, 570 328, 502 328"/>
+      <path class="rt-back" d="M664 440 C 600 440, 570 328, 502 328"/>
+      <path d="M504 319 L 488 328 L 504 337 Z" fill="#18181b" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+      <text class="rt-label rt-label-back" x="545" y="420">result as</text>
+      <text class="rt-label rt-label-back" x="545" y="436">a new layer</text>
+      <text class="rt-label rt-label-back rt-label-small" x="700" y="496">Shift+click · middle click · Shift+P</text>
+      </g>
+    </svg>
+    <figcaption>Make a selection and send the image and the mask from the plugin panel. Send the result back from the Send to Photoshop sector of the action rim: a click (or <kbd>P</kbd>) opens it as a new image. Hold <kbd>Shift</kbd> and the sector shows the layers icon: <kbd>Shift</kbd>+click, a middle click or <kbd>Shift</kbd>+<kbd>P</kbd> adds the result as a new layer on top of the open document.</figcaption>
   </figure>
 
   <div class="topic">
@@ -1089,7 +1199,7 @@
   <div class="topic">
     <h3>Mouse</h3>
     <div class="keys">
-      <div class="key">Middle click<span>On a card: show or hide its action rim; press, move to a sector and release to run it. In the image view: open the rim at the pointer</span></div>
+      <div class="key">Middle click<span>On a card: show or hide its action rim; press, move to a sector and release to run it. In the image view: open the rim at the pointer; on the rim's center: close the image view</span></div>
       <div class="key">Right drag down<span>Close the image view</span></div>
       <div class="key">Wheel<span>Previous or next image in the image view</span></div>
     </div>

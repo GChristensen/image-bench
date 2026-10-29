@@ -91,15 +91,21 @@ export function useImageOperations() {
    * Send the image file to the host page in a message made by createMessage(file)
    * @returns {Promise<string|null>} Error message, or null on success
    */
-  const sendImageFile = async (image, createMessage) => {
+  const sendImageFile = (image, createMessage) =>
+    sendUrlFile(createImageLink(image), (image.imagePath || 'image.png').split(/[\\/]/).pop(), createMessage);
+
+  /**
+   * Send the image at a URL to the host page as a file in a message made by createMessage(file)
+   * @returns {Promise<string|null>} Error message, or null on success
+   */
+  const sendUrlFile = async (url, name, createMessage) => {
     try {
-      const response = await fetch(createImageLink(image));
+      const response = await fetch(url);
 
       if (!response.ok)
         return `Unable to read the image: ${response.status}`;
 
       const blob = await response.blob();
-      const name = (image.imagePath || 'image.png').split(/[\\/]/).pop();
 
       sendWebUIMessage(createMessage(new File([blob], name, {type: blob.type})));
       return null;
@@ -114,6 +120,14 @@ export function useImageOperations() {
    */
   const sendToControlNet = (image) => sendImageFile(image, file =>
     ({type: 'SET_CONTROLNET_IMAGE', unit: useControlNetStore().selectedUnit, kind: 'image', file}));
+
+  /**
+   * Put an already preprocessed image (a ControlNet input of a generated image) into the control image of the unit
+   * chosen in the ControlNet tab, used without a preprocessor
+   * @returns {Promise<string|null>} Error message, or null on success
+   */
+  const sendProcessedToControlNet = (url) => sendUrlFile(url, 'control.png', file =>
+    ({type: 'SET_CONTROLNET_IMAGE', unit: useControlNetStore().selectedUnit, kind: 'image', file, processed: true}));
 
   /**
    * Put an image into the inpaint upload image (WebUI, switching to img2img › Inpaint upload)
@@ -175,6 +189,7 @@ export function useImageOperations() {
     openImageInNewWindow,
     sendToEditor,
     sendToControlNet,
+    sendProcessedToControlNet,
     sendToInpaint,
     sendToImg2Img,
     canCopyImage,

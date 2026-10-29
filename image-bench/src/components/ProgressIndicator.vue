@@ -136,15 +136,14 @@ onUnmounted(() => activeLabels.delete(titleKey));
   transition: width 0.3s linear;
 }
 
-/* The image being generated: 1px above the run */
+/* The image being generated: 1px above the run, in the project color (the accent's pair) */
 .run-edge.image {
   bottom: 2px;
   height: 1px;
 }
 
 .run-edge.image i {
-  background: var(--ib-text-2);
-  opacity: 0.55;
+  background: var(--ib-project);
   transition: width 0.25s linear;
 }
 

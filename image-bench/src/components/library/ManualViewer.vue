@@ -317,7 +317,9 @@ const hostOrigin = location.origin;
         <tr><td><AppIcon name="params" :size="14"/></td><td><span class="kbd">I</span> Shows the generation
           parameters, with buttons for the Civitai information of the image's checkpoint and LoRAs, and the
           ControlNet units the image was made with: the settings of each enabled unit with its control image,
-          mask and preprocessor preview as they were when the generation started. The <AppIcon name="seed" :size="13" class="inline-icon"/>
+          mask and preprocessor preview as they were when the generation started. The <AppIcon name="controlnet" :size="13" class="inline-icon"/>
+          button at the top left of a control image or preview sends it to the ControlNet tab's unit as an already
+          processed control image (preprocessor None). The <AppIcon name="seed" :size="13" class="inline-icon"/>
           button next to the title reuses the image's seed, and <AppIcon name="sliders" :size="13"
                                                                          class="inline-icon"/> all its parameters (prompt, sampler, size, ...), in {{ HOST_NAME }}.</td></tr>
         <tr><td><AppIcon name="comment" :size="14"/></td><td><span class="kbd">C</span> Adds a comment to the image.</td></tr>
@@ -363,6 +365,8 @@ const hostOrigin = location.origin;
         full size and fit to screen, the <AppIcon name="params" :size="13" class="inline-icon"/> <b>Show
         generation parameters</b> button at the top left shows the parameters over the image
         (a second click hides them; they stay shown while paging), and <span class="kbd">Esc</span> closes the view.
+        The mouse closes it in three ways: a left click or a middle click on the close button in the center of the
+        action rim (a middle click opens the rim at the pointer), or a right drag down, released far enough down.
         <b>Open in new window</b> of the image menu opens it in a new browser tab.
       </p>
       <p>
@@ -1140,7 +1144,7 @@ const hostOrigin = location.origin;
         <li><b>ControlNet: preprocess</b> loads the image into the unit shown in the ControlNet tab, runs its
           preprocessor, and places the result back in Photoshop as a layer. <b>ControlNet: image</b> uses the image
           as the control image unchanged, without a preprocessor, and <b>ControlNet: mask</b> sends the selection as
-          the unit's mask.</li>
+          the unit's mask after a confirmation, since it also checks Use Mask.</li>
         <li><b>Keep</b>: <b>Compare</b> adds the composite image of the document to the Compare tab, also while
           the Image Bench window is closed (the image appears when the window opens). <b>File</b> saves the document
           with its layers as <code>&lt;project name&gt;-NNN.psd</code> (the next free number) into the folder of the
@@ -1563,7 +1567,7 @@ const hostOrigin = location.origin;
         <tr><td><span class="kbd">Ctrl</span></td><td>Hold over an image card or in the image view to show only the
           image. Hold over the Generate tab's result or a Compare image to show its action rim</td></tr>
         <tr><td>Middle click</td><td>In the image view, open the action rim at the pointer. Release the button on a
-          sector to run it; the button in the center closes the image view. On an image card, show or hide its
+          sector to run it; the button in the center closes the image view on a left or a middle click. On an image card, show or hide its
           action rim (with the rim on hover: hide it), as on a Compare image and a project file. On a button, perform its alternative action (place as a new layer in the editor). On a marking,
           remove it</td></tr>
         <tr><td><span class="kbd">Shift</span>+click</td><td>On a button, perform its alternative action, as a

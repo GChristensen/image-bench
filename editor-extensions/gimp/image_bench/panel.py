@@ -58,6 +58,22 @@ def _in_thread(work, done):
     threading.Thread(target=run, daemon=True).start()
 
 
+def confirm(text, parent=None):
+    """Ask in a modal dialog; whether Send was chosen"""
+    dialog = Gtk.MessageDialog(transient_for=parent, modal=True, message_type=Gtk.MessageType.QUESTION,
+                               buttons=Gtk.ButtonsType.NONE, text=text, title="Image Bench")
+    dialog.add_buttons("_Cancel", Gtk.ResponseType.CANCEL, "_Send", Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.OK)
+
+    # The menu commands have no window of their own: keep the dialog over GIMP's
+    if parent is None:
+        GimpUi.window_set_transient(dialog)
+
+    response = dialog.run()
+    dialog.destroy()
+    return response == Gtk.ResponseType.OK
+
+
 class Panel(Gtk.Window):
 
     def __init__(self, version, image=None):
@@ -268,6 +284,9 @@ class Panel(Gtk.Window):
 
         if image is None:
             self._set_status("No image is open", True)
+            return
+
+        if action_id in actions.CONFIRMATIONS and not confirm(actions.CONFIRMATIONS[action_id], self):
             return
 
         start = time.monotonic()

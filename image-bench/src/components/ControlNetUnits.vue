@@ -4,6 +4,11 @@
  * (shared_backend/controlnet_inputs.py); shown under the generation parameters of the overlays
  */
 import {computed} from "vue";
+import AppIcon from "@/components/AppIcon.vue";
+import {useImageOperations} from "@/composables/useImageOperations.js";
+import {flashTrayTab} from "@/components/utils.js";
+import {toastError} from "@/toast.js";
+import {hostHas} from "@/host.js";
 
   const props = defineProps({
     image: {
@@ -13,6 +18,9 @@ import {computed} from "vue";
   });
 
   const UNIT_IMAGES = [["image", "Image"], ["mask", "Mask"], ["preview", "Preview"]];
+
+  // Images that can be a control image as they are (a mask cannot)
+  const CONTROL_IMAGES = new Set(["image", "preview"]);
 
   const controlnetUnits = computed(() => props.image.controlnet?.units ?? []);
 
@@ -33,7 +41,17 @@ import {computed} from "vue";
 
   function unitImages(unit) {
     return UNIT_IMAGES.filter(([kind]) => unit[kind])
-      .map(([kind, label]) => ({url: `/image-bench/controlnet/input?hash=${unit[kind]}`, label}));
+      .map(([kind, label]) => ({url: `/image-bench/controlnet/input?hash=${unit[kind]}`, label,
+                                sendable: CONTROL_IMAGES.has(kind) && hostHas("images", "sendToControlNet")}));
+  }
+
+  async function sendToControlNet(url) {
+    const error = await useImageOperations().sendProcessedToControlNet(url);
+
+    if (error)
+      toastError(error, {title: "Send to ControlNet"});
+    else
+      flashTrayTab("controlnet-tab");
   }
 </script>
 
@@ -46,11 +64,15 @@ import {computed} from "vue";
         <span class="controlnet-unit-summary">{{ unitSummary(unit.params || {}) }}</span>
       </div>
       <div class="controlnet-images">
-        <a v-for="item in unitImages(unit)" :key="item.label" :href="item.url" target="_blank"
-           class="controlnet-image-link" :title="item.label">
-          <img class="controlnet-image" :src="item.url" :alt="item.label">
-          <span class="controlnet-image-label">{{ item.label }}</span>
-        </a>
+        <div v-for="item in unitImages(unit)" :key="item.label" class="controlnet-image-item">
+          <a :href="item.url" target="_blank" class="controlnet-image-link" :title="item.label">
+            <img class="controlnet-image" :src="item.url" :alt="item.label">
+            <span class="controlnet-image-label">{{ item.label }}</span>
+          </a>
+          <button v-if="item.sendable" type="button" class="controlnet-send"
+                  title="Send to ControlNet as the control image, without a preprocessor"
+                  @click="sendToControlNet(item.url)"><AppIcon name="controlnet" :size="14"/></button>
+        </div>
         <span v-if="!unit.image && unit.params?.independent === false" class="controlnet-note"
           >Uses the img2img image</span>
       </div>
@@ -103,6 +125,33 @@ import {computed} from "vue";
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 10px;
+}
+
+.controlnet-image-item {
+  position: relative;
+}
+
+.controlnet-send {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--ib-border);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.controlnet-send:hover {
+  border-color: var(--ib-accent-border);
+  opacity: 1;
 }
 
 .controlnet-image-link {

@@ -256,6 +256,38 @@ figcaption { font-size: 14px; line-height: 1.5; color: var(--muted); max-width: 
 /* the list that explains the markers: its numbers look like the markers */
 ol.marker-list > li::before { background: var(--accent-text); color: #ffffff; box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px var(--card-line); }
 
+/* the editor round-trip (chapter 11): an emulated editor and a small Image Bench window in one SVG */
+.roundtrip svg { display: block; width: 100%; height: auto; overflow: visible;
+  filter: drop-shadow(0 18px 24px rgba(68, 30, 6, 0.28)); }
+.rt-ps { fill: #31a8ff; font: 700 9px 'Figtree', system-ui, sans-serif; text-anchor: middle; dominant-baseline: central; }
+.rt-layers-tab { fill: #e5e5e5; font: 600 10px 'Figtree', system-ui, sans-serif; }
+.rt-layer { fill: #d4d4d4; font: 500 10px 'Figtree', system-ui, sans-serif; dominant-baseline: central; }
+.rt-layer-new { fill: #ffffff; font-weight: 700; }
+.rt-title { fill: #a1a1aa; font: 10px 'JetBrains Mono', ui-monospace, monospace; dominant-baseline: central; }
+.rt-mark { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.rt-rim path { fill: rgba(24, 24, 27, 0.86); stroke: rgba(255, 255, 255, 0.28); stroke-width: 1; }
+.rt-rim path.rt-rim-on { fill: var(--accent); stroke: #ffffff; }
+.rt-ps-on { fill: #ffffff; font-size: 11px; }
+.rt-doc { fill: #a3a3a3; font: 500 8.5px 'Figtree', system-ui, sans-serif; dominant-baseline: central; }
+.rt-doc-new { fill: #ffffff; font-weight: 700; }
+.rt-mark-back { fill: none; stroke: #ffffff; stroke-width: 2; }
+.rt-same { fill: none; stroke: #a8a29e; stroke-width: 1.5; stroke-dasharray: 4 4; }
+.rt-layers-icon { fill: none; stroke: #ffffff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.rt-key { fill: #ffffff; stroke: var(--card-line); stroke-width: 1.5; }
+.rt-key-text { fill: var(--text); font: 600 11px 'JetBrains Mono', ui-monospace, monospace; text-anchor: middle; dominant-baseline: central; }
+.rt-held { fill: var(--muted); font: 600 12px 'JetBrains Mono', ui-monospace, monospace; dominant-baseline: central; }
+.rt-label-small { font-size: 11px; fill: var(--muted); }
+.rt-hole { fill: #ffffff; font: 600 8.5px 'Figtree', system-ui, sans-serif; text-anchor: middle; dominant-baseline: central; }
+.rt-to { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linecap: round; }
+.rt-back { fill: none; stroke: #18181b; stroke-width: 3.5; stroke-linecap: round; }
+.rt-back-halo { fill: none; stroke: #ffffff; stroke-width: 6.5; stroke-linecap: round; }
+.rt-label { font: 600 12px 'JetBrains Mono', ui-monospace, monospace; text-anchor: middle; }
+.rt-label-to { fill: var(--accent-deep); }
+.rt-label-back { fill: #27272a; }
+.rt-ants { animation: rt-ants 1s linear infinite; }
+@keyframes rt-ants { to { stroke-dashoffset: -12; } }
+@media (prefers-reduced-motion: reduce) { .rt-ants { animation: none; } }
+
 /* two screenshots side by side, stacked on narrow screens */
 .shots-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 @media (max-width: 640px) { .shots-row { grid-template-columns: minmax(0, 1fr); } }

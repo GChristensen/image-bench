@@ -426,14 +426,21 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         app.graph.setDirtyCanvas(true, true);
     }
 
-    async function setUnitImage(index, kind, file) {
+    async function setUnitImage(index, kind, file, processed = false) {
         try {
-            await loadUnitImage(index, kind, file);
+            if (await loadUnitImage(index, kind, file) && kind === 'image' && processed)
+                usePreprocessed(index);
         } catch (error) {
             showAlert(error.message);
         }
 
         pollIfActive();
+    }
+
+    // Use the control image of a unit as it is: preprocessor None, no preview
+    function usePreprocessed(index) {
+        applyParams(index, {preprocessor: 'none'});
+        previews.delete(index);
     }
 
     // ---------- Preprocessor ----------
@@ -532,10 +539,8 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
             if (!await loadUnitImage(index, 'image', filename))
                 return;
 
-            if (target === 'cn_image') {
-                applyParams(index, {preprocessor: 'none'});
-                previews.delete(index);
-            }
+            if (target === 'cn_image')
+                usePreprocessed(index);
             else if (target === 'cn_preprocess')
                 await preprocessToEditor(index);
         } finally {
@@ -641,7 +646,7 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         CONTROLNET_SUBSCRIBE: payload => subscribe(payload.active, payload.unit),
         SET_CONTROLNET_PARAMS: payload => applyParams(payload.unit, payload.params),
         CONTROLNET_ACTION: payload => runAction(payload.unit, payload.action),
-        SET_CONTROLNET_IMAGE: payload => setUnitImage(payload.unit, payload.kind, payload.file),
+        SET_CONTROLNET_IMAGE: payload => setUnitImage(payload.unit, payload.kind, payload.file, payload.processed),
         // ComfyUI has one workflow, there are no generation tabs to switch
         SET_CONTROLNET_TAB: () => {}
     };

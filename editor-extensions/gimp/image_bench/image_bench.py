@@ -42,6 +42,18 @@ def _success(procedure):
 
 
 def run_send(procedure, run_mode, image, drawables, config, action_id):
+    # Scripts send without asking
+    if run_mode == Gimp.RunMode.INTERACTIVE and action_id in actions.CONFIRMATIONS:
+        gi.require_version("GimpUi", "3.0")
+        gi.require_version("Gtk", "3.0")
+        from gi.repository import GimpUi
+        import panel as panel_module
+
+        GimpUi.init("image_bench")
+
+        if not panel_module.confirm(actions.CONFIRMATIONS[action_id]):
+            return procedure.new_return_values(Gimp.PDBStatusType.CANCEL, GLib.Error())
+
     try:
         reads = actions.read_pixels(action_id, image)
         actions.upload(ImageBenchClient(VERSION, settings.url()), action_id, reads)

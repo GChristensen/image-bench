@@ -241,6 +241,43 @@ async function sendControlNetMask() {
     return "Mask sent to ControlNet";
 }
 
+// Sends that ask first: the ControlNet mask checks Use Mask of the unit, and its button is next to the control image one
+const CONFIRMATIONS = new Map([
+    [sendControlNetMask, "Send the selection as the ControlNet mask? This checks Use Mask of the unit, "
+        + "so ControlNet applies only inside the selection."]
+]);
+
+/**
+ * Ask in a modal dialog, which also works for menu commands while the panel is hidden
+ * @param {string} message - The question
+ * @param {string} okText - Text of the confirming button
+ * @returns {Promise<boolean>} Whether it was confirmed
+ */
+async function confirmSend(message, okText = "Send") {
+    const dialog = document.createElement("dialog");
+    dialog.innerHTML = `
+        <form method="dialog" style="width: 360px">
+            <sp-heading>Image Bench</sp-heading>
+            <sp-body></sp-body>
+            <footer style="display: flex; justify-content: flex-end; gap: 8px">
+                <sp-button variant="secondary" data-value="cancel">Cancel</sp-button>
+                <sp-button variant="cta" data-value="ok"></sp-button>
+            </footer>
+        </form>`;
+    dialog.querySelector("sp-body").textContent = message;
+    dialog.querySelector("[data-value=ok]").textContent = okText;
+    for (const button of dialog.querySelectorAll("sp-button"))
+        button.addEventListener("click", () => dialog.close(button.dataset.value));
+
+    document.body.appendChild(dialog);
+    try {
+        // Escape resolves with "reasonCanceled"
+        return await dialog.uxpShowModal({title: "Image Bench"}) === "ok";
+    } finally {
+        dialog.remove();
+    }
+}
+
 async function sendCompare() {
     await upload("image", await readDocumentImage(getActiveDocument()), "compare");
     return "Image added to the Compare tab";
@@ -569,6 +606,20 @@ async function run(action, fromPanel = false) {
     // One send at a time: double clicks would send twice
     if (sending)
         return;
+
+    const confirmation = CONFIRMATIONS.get(action);
+    if (confirmation) {
+        // Blocks a second send while the dialog is open
+        sending = true;
+        let confirmed;
+        try {
+            confirmed = await confirmSend(confirmation);
+        } finally {
+            sending = false;
+        }
+        if (!confirmed)
+            return;
+    }
 
     sending = true;
     setBusy(true, "Sending");

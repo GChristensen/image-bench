@@ -90,6 +90,12 @@ SEND_ACTIONS = [
     ("save_final", "Save to Project as Final", "Final", save_final),
 ]
 
+# Sends that ask first: the ControlNet mask checks Use Mask of the unit, and its button is next to the control image one
+CONFIRMATIONS = {
+    send_controlnet_mask: "Send the selection as the ControlNet mask? This checks Use Mask of the unit, "
+                          "so ControlNet applies only inside the selection.",
+}
+
 
 class ImageBenchExtension(Extension):
     # Status text and whether it is an error
@@ -161,6 +167,9 @@ class ImageBenchExtension(Extension):
         if self._sending:
             return
 
+        if function in CONFIRMATIONS and not self._confirm(CONFIRMATIONS[function]):
+            return
+
         self._sending = True
         self._set_busy(True, "Sending")
 
@@ -181,9 +190,21 @@ class ImageBenchExtension(Extension):
                 self._alert(failure)
 
     @staticmethod
-    def _alert(message):
+    def _window():
         window = Krita.instance().activeWindow()
-        QMessageBox.warning(window.qwindow() if window else None, "Image Bench", message)
+        return window.qwindow() if window else None
+
+    @classmethod
+    def _alert(cls, message):
+        QMessageBox.warning(cls._window(), "Image Bench", message)
+
+    @classmethod
+    def _confirm(cls, message):
+        box = QMessageBox(QMessageBox.Question, "Image Bench", message, QMessageBox.Cancel, cls._window())
+        send = box.addButton("Send", QMessageBox.AcceptRole)
+        box.setDefaultButton(send)
+        box.exec_()
+        return box.clickedButton() is send
 
     # ---------- Receiving ----------
 

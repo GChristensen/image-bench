@@ -1142,7 +1142,7 @@
         "Node name for S&R": "ComfySwitchNode"
       },
       "widgets_values": [
-        true
+        false
       ],
       "title": "Hires. fix ib:hr",
       "color": "#2a363b",

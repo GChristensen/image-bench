@@ -26,6 +26,13 @@ SEND_ACTIONS = [
 
 ACTIONS = {action[0]: action for action in SEND_ACTIONS}
 
+# Sends that ask first, by action id: the ControlNet mask checks Use Mask of the unit, and its button is next to the
+# control image one
+CONFIRMATIONS = {
+    "send_cn_mask": "Send the selection as the ControlNet mask? This checks Use Mask of the unit, "
+                    "so ControlNet applies only inside the selection.",
+}
+
 READERS = {"image": document.read_image, "mask": document.read_mask, "document": document.read_document}
 
 
