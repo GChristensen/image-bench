@@ -1,8 +1,8 @@
 <script setup>
 /**
  * Folder shown in the Projects tab while a folder (or nothing, the root) is selected in the tree: its subfolders
- * and its projects with their final images. A folder without projects of its own shows all the projects of its
- * subfolders instead. A click selects, a double-click opens a project
+ * and its projects with their final images, its own first, then those of all its subfolders (marked with their
+ * folder). A click selects, a double-click opens a project
  */
 import {computed} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
@@ -38,9 +38,8 @@ function collectProjects(list) {
   return list.flatMap(entry => entry.type === "project" ? [entry] : collectProjects(entry.children ?? []));
 }
 
-// The projects of the subfolders, shown while the folder has none of its own
-const nested = computed(() => !projects.value.length && total.value > 0);
-const shownProjects = computed(() => nested.value ? collectProjects(entries.value) : projects.value);
+// The projects of the folder, then those of all its subfolders
+const shownProjects = computed(() => [...projects.value, ...collectProjects(folders.value)]);
 
 // Folder of a project of a subfolder, relative to the folder shown
 function subfolder(entry) {
@@ -100,7 +99,6 @@ const isCurrent = entry => entry.path === store.current.path;
       </button>
     </div>
 
-    <div v-if="nested" class="section-label">All projects in the subfolders</div>
     <div v-if="shownProjects.length" class="project-grid">
       <button v-for="entry in shownProjects" :key="entry.path" class="project" :class="{current: isCurrent(entry)}"
               title="Click to show the project, double-click to open it"
@@ -116,7 +114,7 @@ const isCurrent = entry => entry.path === store.current.path;
                 :title="`Saved in ${HOST_LABELS[entry.project?.host] ?? 'WebUI'}`"
             >{{ entry.project?.host === "comfy" ? "C" : "W" }}</span>
         </span>
-        <span v-if="nested" class="subfolder" :title="entry.path"
+        <span v-if="subfolder(entry)" class="subfolder" :title="entry.path"
           ><AppIcon name="folder" :size="11"/>{{ subfolder(entry) }}</span>
         <span class="saved">{{ formatSavedAt(entry.project?.savedAt) ?? "Not saved yet" }}</span>
         <span v-if="entry.project?.tags?.length" class="tags"
@@ -324,12 +322,6 @@ h2 {
 .host.comfy {
   border-color: rgba(196, 166, 255, 0.45);
   color: #c4a6ff;
-}
-
-.section-label {
-  margin-bottom: -8px;
-  color: var(--ib-muted);
-  font-size: 11.5px;
 }
 
 .subfolder {

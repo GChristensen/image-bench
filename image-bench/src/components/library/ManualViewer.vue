@@ -930,7 +930,7 @@ const hostOrigin = location.origin;
           <b>Copy path</b> copies the path on the server; <b>Show in Explorer</b> is offered when {{ HOST_NAME }}
           runs on this computer. The letter after a project shows the host it was saved in: <b>W</b> (WebUI) or
           <b>C</b> (ComfyUI). Select a folder (or nothing, for the root) to see its page: its subfolders and its
-          projects with their final images. Click a project there to show it and double-click it to open it.</li>
+          projects with their final images, then the projects of all its subfolders, each with its folder. Click a project there to show it and double-click it to open it.</li>
         <li><b>Search</b>: words find projects by name and prompt, <code>#tag</code> keeps the projects with that
           tag, and <code>host:comfy</code> or <code>host:webui</code> keeps those of a host. Results are listed with
           their folders. The tags under the field, with their counts, add themselves to the search.</li>
