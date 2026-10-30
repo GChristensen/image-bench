@@ -2,8 +2,9 @@ import {toRaw} from "vue";
 import {toast} from "@/toast.js";
 
 /**
- * Removal from a view that can be undone: the images go at once, and a notice offers Undo. Removing never deletes
- * a file (a tray save only copies files into the tray directory), so the removed entries can simply be put back.
+ * Removal from a view that can be undone: the images go at once, and a notice offers Undo. The backend deletes the
+ * copies of removed tray images (image-bench/<kind>/) only 10 s after the save (tray.REMOVED_FILE_DELAY), so
+ * the removed entries can simply be put back.
  */
 
 // Saved views replace image objects on save (useTrayStoreState), so images are matched by path too
@@ -58,7 +59,7 @@ function restore(store, removed) {
 
 /**
  * Add an image to a saved view (a tray, Compare) so that the addition can be undone: the undo takes the entry out
- * again, as Remove does (the file copied into the view's directory stays)
+ * again, as Remove does
  * @param {Object} store - a tray store
  * @param {Object} image
  * @returns {(() => void)|null} The undo, or null if the image was in the view already

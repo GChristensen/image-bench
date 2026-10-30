@@ -18,7 +18,7 @@ from .image_bench_shared import (civitai, console, controlnet_inputs, editor, ex
                                  persist, pnginfo, projects)
 from .image_bench_nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from .image_bench_shared.tray import (TRAY_FILES, download_image_tray, image_tray_upload as tray_upload_handler,
-                                      save_tray_images)
+                                      removed_tray_files, save_tray_images, schedule_tray_file_deletion)
 from .image_bench_shared.tray import COMPARE_KIND, save_compare_file, append_tray_image
 
 # Tell ComfyUI to serve files from the js/ directory
@@ -489,7 +489,12 @@ async def update_tray(request, kind):
         await save_tray_images(tray_data, kind, get_image_bench_dir(), "comfyui")
 
         base_dir = get_extension_root()
+        store_path = persist.get_store_file_path(base_dir, TRAY_FILES[kind])
+        removed = removed_tray_files(store_path, tray_data, get_image_bench_dir())
         await persist.write_store_file_content(base_dir, TRAY_FILES[kind], json.dumps(tray_data))
+
+        # The copies of the removed images go too
+        schedule_tray_file_deletion(removed, os.path.dirname(store_path), get_image_bench_dir())
 
         # Return updated tray data so frontend can update its store with new paths
         return web.Response(text=json.dumps(tray_data), content_type="application/json")
