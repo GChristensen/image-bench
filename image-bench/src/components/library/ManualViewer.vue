@@ -157,18 +157,16 @@ const hostOrigin = location.origin;
 
       <p>
         With the setting <b>Open Image Bench from the {{ HOST_NAME }} interface</b>, the button opens Image Bench
-        directly, in a browser tab that stays connected to the {{ HOST_NAME }} page it was opened from. Drag that
-        tab into a window of its own so that the {{ HOST_NAME }} page stays the active tab of its window (see
-        below).
+        directly. Image Bench then drives the {{ HOST_NAME }} page it was opened from instead of loading its own copy.
       </p>
 
       <div class="note">
         <AppIcon name="info" :size="15"/>
         <div>
           <p>
-            When Image Bench is opened from the {{ HOST_NAME }} page, it drives that same page, so {{ HOST_NAME }}
-            must stay open in a browser window as the active tab of that window. The window does not need to be
-            visible: you can minimize it, move it to another display or cover it with other windows.
+            In this mode the {{ HOST_NAME }} page must stay open as the active tab of its browser window. If
+            Image Bench opens as a tab next to it, drag Image Bench into a window of its own. The {{ HOST_NAME }}
+            window can be minimized, moved to another display or covered by other windows.
           </p>
         </div>
       </div>
@@ -176,14 +174,19 @@ const hostOrigin = location.origin;
 
     <section id="manual-input">
       <h2>Mouse and keys</h2>
+      <p>What the mouse buttons and Shift do depends on what is under the pointer:</p>
+      <ul>
+        <li>On a <b>button</b>, a middle click or Shift+click runs the alternative of its action, for example
+          sending an image as a new layer, or stopping and generating again.</li>
+        <li>On an <b>image</b>, a click views it, a right press opens its action rim at the pointer, and a middle
+          click opens its menu. The setting <b>Open the context menu of an image with the right button</b> swaps
+          the right and middle buttons.</li>
+        <li>On a <b>tab</b> or a <b>badge</b>, a middle click acts on it without switching to it: it stops the run
+          of the tab, opens the console from the {{ HOST_NAME }} tab, or removes a marking.</li>
+      </ul>
       <p>
-        What the middle button and Shift do depends on what is under the pointer. On a <b>button</b>, a middle
-        click or Shift+click runs the alternative of its action (send as a new layer, stop and generate again). On an
-        <b>image</b>, a click views it, a right press shows its action rim at the pointer and a middle click its
-        menu (<b>Open the context menu of an image with the right button</b> in the Settings tab swaps the two). On a <b>tab</b> or a <b>badge</b>, a
-        middle click acts on it without going there: it stops the run of the tab, opens the console from the
-        {{ HOST_NAME }} tab or removes a marking. Press <span class="kbd">?</span> anywhere for this sheet; over an
-        image it starts at the image actions.
+        Press <span class="kbd">?</span> anywhere to show these tables. Over an image, they open at the image
+        actions.
       </p>
       <ShortcutTables/>
     </section>
@@ -286,27 +289,37 @@ const hostOrigin = location.origin;
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        The actions of an image are on its action rim, a ring of sectors, one per action and colored by kind. Press
-        the right button on an image and the ring opens around the pointer: move to a sector and release the button
-        there to run it at once, or release it without moving to keep the ring open and click a sector. A click
-        outside the ring, <span class="kbd">Esc</span> or the wheel closes it. The
-        <AppIcon name="rim" :size="13" class="inline-icon"/> button at the top right of a card shows the ring around
-        the middle of the image instead; click it again, or move the pointer off the card, to hide it. The middle of the ring shows the name and key of the sector under the
-        pointer. A middle click or Shift+click on a sector runs its alternative action, if it has one; hold Shift
-        to see which sectors do. Clicking the image itself, inside or outside the ring, still opens it. Hold
+        The actions of an image are on its action rim: a ring with one sector per action, colored by kind. The
+        middle of the ring shows the name and key of the sector under the pointer. There are two ways to open it:
+      </p>
+      <ul>
+        <li>Press the right button on the image. The ring opens around the pointer. Move to a sector and release
+          the button to run that action. If you release the button without moving, the ring stays open and you can
+          click a sector. A click outside the ring, <span class="kbd">Esc</span> or the wheel closes it.</li>
+        <li>Click the <AppIcon name="rim" :size="13" class="inline-icon"/> button at the top right of a card. The
+          ring opens around the middle of the image. Click the button again, or move the pointer off the card, to
+          close it.</li>
+      </ul>
+      <p>
+        A middle click or Shift+click on a sector runs its alternative action, if it has one. Hold Shift to see
+        which sectors have one. Clicking the image itself, inside or outside the ring, still opens it. Hold
         <span class="kbd">Ctrl</span> over a card to hide all of its controls and see only the image.
       </p>
       <p>
-        With <b>Show the action rim of an image on hover</b> turned on in the Settings tab, hovering alone opens
-        the ring. Holding <span class="kbd">Ctrl</span> hides it too, with the other controls, and a middle click
-        on the eye at the top right hides it until the pointer leaves the card.
+        With <b>Show the action rim of an image on hover</b> turned on in the Settings tab, the ring opens when the
+        pointer is over a card. <span class="kbd">Ctrl</span> hides it along with the other controls, and a middle
+        click on the eye at the top right hides it until the pointer leaves the card.
       </p>
       <p>
-        The markings are an arc above the ring (pick a set one again to remove it), and reusing the seed or all
-        parameters of the image an arc below it; the button in the middle hides the ring. The marking also appears at the bottom right of the image, where a click shows only the
-        images with that marking and a middle click removes it. Keys act on the image under the pointer:
-        <span class="kbd">1</span>–<span class="kbd">9</span> set its marking (<span class="kbd">0</span> removes it) and
-        <span class="kbd">V</span> views it large.
+        The arc above the ring sets a marking; picking the marking the image already has removes it. The arc below
+        the ring reuses the seed or all parameters of the image. In a view filtered by a marking, the middle of the
+        ring has a button that turns the filter off and on.
+      </p>
+      <p>
+        A marked image shows its marking at the bottom right. Click it to show only the images with that marking,
+        or middle-click it to remove the marking. Keys act on the image under the pointer:
+        <span class="kbd">1</span>–<span class="kbd">9</span> set its marking, <span class="kbd">0</span> removes
+        it, and <span class="kbd">V</span> views it large.
       </p>
       <p>
         <b>Remove</b> (the red sector, <span class="kbd">Del</span> or the menu) takes the image out of the tab at
@@ -314,16 +327,10 @@ const hostOrigin = location.origin;
         has <b>Undo</b> for a few seconds, which puts the images back where they were.
       </p>
 
-      <h3>The menu actions</h3>
+      <h3>Image actions and their keys</h3>
       <table>
         <tr><td><AppIcon name="params" :size="14"/></td><td><span class="kbd">I</span> Shows the generation
-          parameters, with buttons for the Civitai information of the image's checkpoint and LoRAs, and the
-          ControlNet units the image was made with: the settings of each enabled unit with its control image,
-          mask and preprocessor preview as they were when the generation started. The <AppIcon name="controlnet" :size="13" class="inline-icon"/>
-          button at the top left of a control image or preview sends it to the ControlNet tab's unit as an already
-          processed control image (preprocessor None). The <AppIcon name="seed" :size="13" class="inline-icon"/>
-          button next to the title reuses the image's seed, and <AppIcon name="sliders" :size="13"
-                                                                         class="inline-icon"/> all its parameters (prompt, sampler, size, ...), in {{ HOST_NAME }}.</td></tr>
+          parameters and the ControlNet units the image was made with (see below).</td></tr>
         <tr><td><AppIcon name="comment" :size="14"/></td><td><span class="kbd">C</span> Adds a comment to the image.</td></tr>
         <tr><td><AppIcon name="steps" :size="14"/></td><td><span class="kbd">G</span> Generates the image with a
           list of step counts.</td></tr>
@@ -351,11 +358,22 @@ const hostOrigin = location.origin;
           image tray.</td></tr>
       </table>
       <p>
+        The parameters view has buttons for the Civitai information of the image's checkpoint and LoRAs. Under them
+        are the ControlNet units the image was made with: the settings of each enabled unit, with its control image,
+        mask and preprocessor preview as they were when the generation started. The
+        <AppIcon name="controlnet" :size="13" class="inline-icon"/> button at the top left of a control image or
+        preview sends it to the unit chosen in the ControlNet tab as an already processed control image
+        (preprocessor None). The <AppIcon name="seed" :size="13" class="inline-icon"/> button next to the title
+        copies the image's seed to {{ HOST_NAME }}, and <AppIcon name="sliders" :size="13" class="inline-icon"/>
+        copies all its parameters (prompt, sampler, size, ...).
+      </p>
+      <p>
         Middle-click an image for a menu with all of its actions. Its first row holds the destinations as colored
-        buttons (send to img2img, inpaint, ControlNet and the editor; add to Compare and the trays), named under the row while the pointer is over them; a middle click or Shift+click on one runs its
-        alternative (send to the editor as a new layer). With <b>Open the context menu of an image with the right
-        button</b> turned on in the Settings tab, the right button opens the menu and the middle button the action rim.
-        <span class="kbd">Shift</span>+right-click shows the browser's own menu.
+        buttons: send to img2img, inpaint, ControlNet and the editor, and add to Compare and the trays. The name of
+        a button appears under the row while the pointer is over it. A middle click or Shift+click on a button runs
+        its alternative, for example sending to the editor as a new layer. With <b>Open the context menu of an image
+        with the right button</b> turned on in the Settings tab, the right button opens the menu and the middle
+        button the action rim. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
       </p>
       <p>
         The menu also has <AppIcon name="params" :size="13" class="inline-icon"/> <b>Copy infotext</b>, which copies
@@ -366,19 +384,53 @@ const hostOrigin = location.origin;
         to the project folder, for example) the parameters of the image it was made from.
       </p>
       <p>
-        Click an image to view it large. In that view, <span class="kbd">←</span> and
-        <span class="kbd">→</span> page through the images, a left click switches between
-        full size and fit to screen, the <AppIcon name="params" :size="13" class="inline-icon"/> <b>Show
-        generation parameters</b> button at the top left shows the parameters over the image
-        (a second click hides them; they stay shown while paging), and <span class="kbd">Esc</span> closes the view.
-        The mouse closes it with a click on the close button in the center of the action rim: a right press opens
-        the rim at the pointer, and a left, right or middle click on its center closes the view. When the right
-        button opens the menu (the setting above), a right drag down, released far enough down, closes it too.
-        <b>Open in new window</b> of the image menu opens it in a new browser tab.
+        Click an image to view it large. The view has no toolbar. <span class="kbd">←</span>,
+        <span class="kbd">→</span> and the wheel page through the images, a left click switches between full size
+        and fit to screen, and dragging pans a full-size image. The parameters sector of the action rim (or
+        <span class="kbd">I</span>) shows the parameters over the image; they stay shown while you page, until you
+        choose the sector again.
+      </p>
+      <p>
+        <span class="kbd">Esc</span> closes the view. With the mouse, open the rim at the pointer (right press, or
+        middle with the setting above), then click the close button in its center with the left or middle button,
+        or with the right button if the rim was opened with it. With that setting, a right drag down also closes the
+        view when you release it far enough down. <b>Open in new window</b> in the image menu opens
+        the image in a new browser tab.
       </p>
       <p>
         Images can be dragged into the input, reference and ControlNet panes.
       </p>
+
+      <h3>Generating again from an image</h3>
+      <p>
+        These actions take the parameters of an image, including its seed, and generate a series in which only one
+        setting changes:
+      </p>
+      <ul>
+        <li><b>Generate with steps</b> <AppIcon name="steps" :size="13" class="inline-icon"/>
+          (<span class="kbd">G</span>) asks for a list of step counts and generates the image again with each of
+          them. The images arrive in the Generated tab.</li>
+        <li v-if="isWebUI"><b>Generate with text encoders</b> <AppIcon name="puzzle" :size="13" class="inline-icon"/>
+          (<span class="kbd">E</span>, in the image menu only) lists the text encoder files, filtered by the name of
+          the image's own encoder, which is checked. It generates the image again with each checked encoder and
+          keeps the seed and the other modules. If the image used several encoders (CLIP-L and T5), the one whose
+          name is most like the checked one is replaced. The modules set before are restored afterwards.</li>
+        <li><b>Upscale</b> <AppIcon name="upscale" :size="13" class="inline-icon"/> (<span class="kbd">U</span>)
+          generates the image again with Hires. fix into the Upscaled tab.</li>
+        <li><b>Upscale with denoising</b> <AppIcon name="denoise" :size="13" class="inline-icon"/>
+          (<span class="kbd">D</span>) asks for a list of Hires. fix denoising strengths and upscales the image with
+          each of them.<template v-if="isComfy"> Upscaling needs a workflow with a Hires. fix sampler
+          (<code>ib:smp:1</code>); its <code>ib:hr</code> switch is turned on for the run and restored
+          afterwards.</template></li>
+      </ul>
+      <div v-if="isComfy" class="note warn">
+        <AppIcon name="alert" :size="15"/>
+        <div>
+          <b>These actions use the open workflow.</b> They set the image's prompt, model, seed and other parameters
+          and run the workflow that is open. Generate the drafts and upscale them with the same workflow, or with one
+          of the same structure.
+        </div>
+      </div>
 
       <h3 id="manual-images-media">Video and audio</h3>
       <p>
@@ -415,12 +467,12 @@ const hostOrigin = location.origin;
           or Shift+click inserts only the part for that prompt. A snippet with a placeholder wraps the selected text.
           <b>From selection</b> saves the
           selected text as a new snippet.</li>
-        <li><b>Checkpoint</b>: typing in the open dropdown (or on the closed one) narrows the list down to the
-          names containing every typed word; ↑/↓ and Enter pick one. The VAE / Text Encoder and workflow dropdowns
-          filter the same way. <AppIcon name="info" :size="13" class="inline-icon"/> opens the model's Civitai
-          page.<template v-if="isWebUI"> The <AppIcon name="box" :size="13" class="inline-icon"/>/<AppIcon
-          name="puzzle" :size="13" class="inline-icon"/> button before it switches to the Forge Neo VAE / Text
-          Encoder list, which is kept per <b>UI preset</b> (the setting in the WebUI).</template></li>
+        <li><b>Checkpoint</b>: type while the dropdown is open or focused to list only the names that contain every
+          word you typed; ↑/↓ and Enter pick one. The VAE / Text Encoder and workflow dropdowns filter the same way.
+          <AppIcon name="info" :size="13" class="inline-icon"/> opens the model's Civitai page.<template
+            v-if="isWebUI"> The <AppIcon name="box" :size="13" class="inline-icon"/>/<AppIcon name="puzzle"
+            :size="13" class="inline-icon"/> button before the dropdown switches it to the Forge Neo VAE / Text
+            Encoder list. WebUI keeps that list per <b>UI preset</b>.</template></li>
         <li><b>LoRA list</b>: checking a LoRA adds its <code>&lt;lora:name:weight&gt;</code> tag (and activation
           text) to the prompt, and the LoRA stays checked while the tag is there. Hovering a LoRA shows
           <AppIcon name="info" :size="13" class="inline-icon"/> for its Civitai information; a middle click or
@@ -458,9 +510,10 @@ const hostOrigin = location.origin;
           <a href="#" @click.prevent="scrollTo('comfy-images')">Input images and inpainting</a>).</li>
         <li><b>Size</b>: preset sizes or width and height inputs. The
           <AppIcon name="list" :size="13" class="inline-icon"/> / <AppIcon name="ruler" :size="13" class="inline-icon"/>
-          button before it switches between them. The presets have the same aspect ratios in four grades, from
-          0.25 to 2 MP, followed by sizes for particular models. The rectangle before a size shows its shape, and
-          <b>≈</b> joins two neighbouring sizes of nearly the same ratio. The icons at the right show the medium a ratio comes from:
+          button before them switches between the two. The presets come in four sizes from 0.25 to 2 MP, each with
+          the same set of aspect ratios, followed by sizes for particular models. The rectangle before a size shows
+          its shape, and <b>≈</b> joins two neighbouring sizes of nearly the same ratio. The icons at the right name
+          the medium a ratio comes from:
           <AppIcon name="easel" :size="13" class="inline-icon"/> 4:3, the painting canvas;
           <AppIcon name="photoCamera" :size="13" class="inline-icon"/> 3:2, 35 mm photography;
           <AppIcon name="tv" :size="13" class="inline-icon"/> 16:9, television and video;
@@ -470,34 +523,43 @@ const hostOrigin = location.origin;
         <li><b>Result, Input and Mask</b>: upload, drop or paste the input image or mask onto its pane. Hold
           <span class="kbd">Ctrl</span> over the result, or click its <AppIcon name="rim" :size="13" class="inline-icon"/>
           button, to show its action rim; a right press opens it at the pointer, a middle click the menu. Drag the grips to resize the panes; double-click restores them.</li>
-        <li><b>Only masked crop</b>: when the inpaint area is Only masked, the Mask pane outlines the mask (dashed)
-          and the part of the image that is regenerated, which is the mask grown by the padding and then widened to
-          the aspect ratio of the size. <AppIcon name="maskFit" :size="13" class="inline-icon"/> sets the size to
-          this padded box enlarged by a factor, rounded to multiples of 16 (pick the factor from its list, or step
-          through them with the wheel); the padding still sets how much context surrounds the mask.
-          <AppIcon name="reset" :size="13" class="inline-icon"/> beside it restores the size from Settings ›
-          Generate Tab (1024 × 1024 unless changed). The size at the right is the resolution the crop is rendered
-          at, and its tooltip gives the crop size and the enlargement. With Mask overlay, the outline also appears
-          on the Input pane.</li>
+        <li><b>Only masked crop</b>: when the inpaint area is Only masked, the Mask pane outlines two boxes. The
+          dashed one is the mask. The solid one is the part of the image that is regenerated: the mask grown by the
+          padding, then widened to the aspect ratio of the size. With Mask overlay, the outlines also appear on the
+          Input pane.
+          <ul>
+            <li><AppIcon name="maskFit" :size="13" class="inline-icon"/> sets the size to the solid box enlarged by
+              a factor and rounded to multiples of 16. Pick the factor from its list, or step through the list with
+              the wheel. The padding still sets how much context surrounds the mask.</li>
+            <li><AppIcon name="reset" :size="13" class="inline-icon"/> beside it restores the size from Settings ›
+              Generate Tab (1024 × 1024 unless changed).</li>
+            <li>The size at the right is the resolution the crop is rendered at. Its tooltip gives the crop size and
+              the enlargement.</li>
+          </ul></li>
         <li><b>Session filmstrip</b> (the tabs at the right edge of the parameters): the images generated while
           the window is open, grouped by batch. It is shown during a batch of several images. Click an image to
           open it, or press the right button on it for its action rim at the pointer; the arc below
           the rim shows the image in the Result pane instead of the latest one (on the shown image: back to the
           latest).</li>
-        <li><b>Generate</b> makes one image with a live preview. With a count above 1 (or
-          <AppIcon name="infinity" :size="13" class="inline-icon"/>, generating until you stop it), it runs a batch
-          whose images arrive in the Generated tab. The count button sets the number chosen in <b>Settings › Images
-          set by the count button</b>, and clicking <b>×</b> resets the count to 1. <b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>; <b>Skip</b>
-          skips the current image. With Ctrl held, Stop turns into <b>Restart</b>: a Ctrl+click, Shift+click or a
-          middle click on Stop stops the generation and starts a new one a second later. The keys work in every tab, also
-          in text fields: <span class="kbd">Ctrl+Enter</span> generates or stops,
-          <span class="kbd">Ctrl+Shift+Enter</span> restarts and <span class="kbd">Ctrl+Shift+Backspace</span>
-          skips.<template v-if="isWebUI"> A single
-          Stop works even right after Generate: the generation ends before its first image (a model that is
-          loading finishes loading first, and the toolbar shows "Stopping…" meanwhile). Rarely, the WebUI page
-          keeps showing a generation although the server has been idle for 10 seconds. The toolbar then says so
-          and offers a <AppIcon name="refresh" :size="13" class="inline-icon"/> button that reloads the WebUI
-          page and ends the run.</template></li>
+        <li><b>Generate</b> makes one image with a live preview. With a count above 1, it runs a batch whose images
+          arrive in the Generated tab; <AppIcon name="infinity" :size="13" class="inline-icon"/> generates until
+          you stop it. The count button sets the number chosen in <b>Settings › Images set by the count button</b>,
+          and <b>×</b> resets the count to 1.
+          <ul>
+            <li><b>Stop</b> ends the batch<template v-if="isComfy"> and clears the ComfyUI queue</template>, and
+              <b>Skip</b> skips the current image.</li>
+            <li>While Ctrl is held, Stop reads <b>Restart</b>. A Ctrl+click, Shift+click or middle click on it stops
+              the generation and starts a new one a second later.</li>
+            <li>The keys work in every tab, also in text fields: <span class="kbd">Ctrl+Enter</span> generates or
+              stops, <span class="kbd">Ctrl+Shift+Enter</span> restarts and
+              <span class="kbd">Ctrl+Shift+Backspace</span> skips.</li>
+            <li v-if="isWebUI">Stop works even right after Generate: the generation ends before its first image. A
+              model that is loading finishes loading first, and the toolbar shows "Stopping…" meanwhile.</li>
+            <li v-if="isWebUI">Rarely, the WebUI page keeps showing a generation although the server has been idle
+              for 10 seconds. The toolbar then says so and offers a
+              <AppIcon name="refresh" :size="13" class="inline-icon"/> button that reloads the WebUI page and ends
+              the run.</li>
+          </ul></li>
         <li><b>Project cube</b>: while a project is current, the <AppIcon name="box" :size="13" class="inline-icon"/>
           cube in the project color, joined to Generate, reminds you that you are working in that project. Click it
           to save the project or start a new workspace. Before some generations it asks whether you are still
@@ -507,41 +569,50 @@ const hostOrigin = location.origin;
           Settings › Generate Tab) makes the prompts editable only here, and <AppIcon name="eraser" :size="13" class="inline-icon"/> clears them.</li>
         <li><b>Prompt history</b>: the numbered buttons after the prompt label hold the last 20 prompts generated
           from this tab. <b>1</b> is the latest, and a prompt generated again moves to the front. txt2img and
-          img2img (including Inpaint) keep separate histories and variants. Click a number to see that prompt and
-          its negative, read-only and compared with the current ones: green text would be added, struck-out text
-          removed, and amber marks a changed weight. <b>Diff</b> switches to the plain text, and <b>Use</b> (or a
-          double click on the number) replaces the current prompts with it.
-          <AppIcon name="pencil" :size="13" class="inline-icon"/> is the current prompt, the only editable one;
-          starting a generation returns to it.
-          <AppIcon name="fork" :size="13" class="inline-icon"/> <b>Fork</b>, before <b>Diff</b>, saves the prompts
-          shown as a named variant (for the current prompts, it is after the history buttons). Once there are
-          variants, the <b>Variants</b> dropdown after the numbers lists them by name and the beginning of their
-          prompt. It shows, uses (double click), renames and removes them like history entries. The history and the
-          variants are saved with a project and restored when it is opened; <b>Start a blank workspace</b> clears
-          both.</li>
-        <li><AppIcon name="copy" :size="13" class="inline-icon"/> <b>Copy</b>, the tab at the top of the tab
-          column beside the prompts (it goes on down to <b>Parameters</b> and <b>Session</b>), opens a menu: the
-          prompt and the negative prompt (each under its heading, <code>Prompt:</code> and
-          <code>Negative prompt:</code>), either one, or the infotext with the parameters of the tab. Pointing at an
-          item outlines the fields it copies. It copies the prompts shown, a history entry or variant included. A
-          middle click or Shift+click copies both at once.</li>
+          img2img (including Inpaint) keep separate histories and variants.
+          <ul>
+            <li>Click a number to see that prompt and its negative, read-only and compared with the current ones:
+              green text would be added, struck-out text removed, and amber marks a changed weight. <b>Diff</b>
+              switches to the plain text, and <b>Use</b> (or a double click on the number) replaces the current
+              prompts with it.</li>
+            <li><AppIcon name="pencil" :size="13" class="inline-icon"/> is the current prompt, the only editable
+              one. Starting a generation returns to it.</li>
+            <li><AppIcon name="fork" :size="13" class="inline-icon"/> <b>Fork</b> saves the prompts shown as a named
+              variant. It sits before <b>Diff</b> while a history entry is shown, and after the history buttons for
+              the current prompts. Once there are variants, the <b>Variants</b> dropdown after the numbers lists them
+              by name and the beginning of their prompt. You show, use (double click), rename and remove them like
+              history entries.</li>
+            <li>The history and the variants are saved with a project and restored when it is opened.
+              <b>Start a blank workspace</b> clears both.</li>
+          </ul></li>
+        <li><AppIcon name="copy" :size="13" class="inline-icon"/> <b>Copy</b> is the top tab of the vertical tab
+          column beside the prompts, above <b>Parameters</b> and <b>Session</b>. It opens a menu that copies both
+          prompts (each under its heading, <code>Prompt:</code> and <code>Negative prompt:</code>), either one, or
+          the infotext with the parameters of the tab. Pointing at an item outlines the fields it copies. The menu
+          copies the prompts shown, so with a history entry or variant open it copies that one. A middle click or
+          Shift+click on the tab copies both prompts at once.</li>
         <li><b><AppIcon name="fileSearch" :size="13" class="inline-icon"/> PNG Info</b> shows the parameters of an
           image chosen, pasted or dropped there (or on the prompt). <b>Apply</b> sets the checked groups and lists
           the values that {{ HOST_NAME }} does not have.</li>
         <li><b><AppIcon name="terminal" :size="13" class="inline-icon"/> Console</b> opens a drawer with the terminal
           output of {{ HOST_NAME }}. It stays open across the tabs, and Ctrl+` opens or closes it from any
           tab<template v-if="EMBEDDED">, as does a middle click or Shift+click on the
-          <AppIcon name="appWindow" :size="13" class="inline-icon"/> {{ HOST_NAME }} tab</template>.
-          Its <AppIcon name="power" :size="13" class="inline-icon"/> button restarts {{ HOST_NAME }} when it hangs
-          or crashes (e.g. after running out of memory): it kills the {{ HOST_NAME }} process along with its console
-          window and runs your start script again.
-          Restarting needs the <a :href="ADDON_URL" target="_blank" rel="noopener">Host Restart addon</a>. It is
-          installed by hand, because security software may flag its process control; the button explains where to
-          get it and how to set it up. While {{ HOST_NAME }} hangs, the browser talks to the addon's helper process
-          on the {{ HOST_NAME }} port plus 100 (<code>"port"</code> in <code>host_restart.json</code> changes it). If
-          you use Image Bench over HTTPS with a self-signed certificate, accept the certificate once more for that
-          port through <b>Settings › Host restart</b>.</li>
+          <AppIcon name="appWindow" :size="13" class="inline-icon"/> {{ HOST_NAME }} tab</template>.</li>
       </ul>
+      <p>
+        The <AppIcon name="power" :size="13" class="inline-icon"/> button of the console restarts {{ HOST_NAME }}
+        when it hangs or crashes, for example after running out of memory. It kills the {{ HOST_NAME }} process
+        with its console window and runs your start script again. Restarting needs the
+        <a :href="ADDON_URL" target="_blank" rel="noopener">Host Restart addon</a>, which you install by hand
+        because security software may flag its process control. Without the addon, the button explains where to get
+        it and how to set it up.
+      </p>
+      <p>
+        While {{ HOST_NAME }} hangs, the browser talks to the addon's helper process on the {{ HOST_NAME }} port
+        plus 100 (<code>"port"</code> in <code>host_restart.json</code> changes it). If you use Image Bench over
+        HTTPS with a self-signed certificate, accept the certificate once more for that port through
+        <b>Settings › Host restart</b>.
+      </p>
       <p v-if="isComfy" class="muted">
         A control whose node cannot be found in the workflow is hidden, so a missing control usually means a
         missing marker.
@@ -609,9 +680,11 @@ const hostOrigin = location.origin;
       <ul>
         <li>The first image is generated with the unit's current values. It is shown at the left of the matrix
           next to the control image, as a reference for the other cells.</li>
-        <li>The diagonals are generated first. Weak and short to strong and long shows how much control you need;
-          strong and short to weak and long compares kinds of control at roughly the same strength. The cells
-          between them follow. If you have seen enough, stop the sweep and leave the rest of the matrix empty.</li>
+        <li>The two diagonals are generated first. The one from low weight and early end to high weight and late
+          end shows how much control you need. The other one, from high weight and early end to low weight and late
+          end, holds cells of roughly the same overall strength, so you can compare ways of applying it. The cells
+          between the diagonals follow. If you have seen enough, stop the sweep and leave the rest of the matrix
+          empty.</li>
         <li>Hovering an image shows <b>Apply</b>, which copies its weight and ending step into the unit. Clicking
           a row or column header applies just that one value. The cell that matches the unit's current values is
           outlined.</li>
@@ -707,16 +780,18 @@ const hostOrigin = location.origin;
           new batch starts</b> toggle is on, the tab is emptied whenever a new batch starts; turn it off to keep
           the images of successive runs.</li>
         <li><b>Clear</b>, at the right end of the toolbar of the Generated, Upscaled, tray and Compare tabs,
-          removes all images from the tab. Its arrow, or a middle click on it, lists what else it can remove,
-          with counts: the checked images, the unmarked or marked ones, or those of one marking. The output files
-          stay on disk, and the notice that follows has <b>Undo</b>. The Upscaled, tray and Compare tabs keep copies
-          of their images, which are deleted 10 seconds after they are removed.</li>
+          removes all images from the tab (<span class="kbd">Shift</span>+<span class="kbd">Del</span> does the
+          same). Its arrow, a middle click or Shift+click lists what else it can remove, with counts: the checked
+          images, the unmarked or marked ones, or those of one marking. The output files stay on disk, and the
+          notice that follows has <b>Undo</b>. The Upscaled, tray and Compare tabs keep copies of their images, and
+          a removed image's copy is deleted 10 seconds later.</li>
         <li><b>Selecting images</b>: check images with the circle at the top left of the thumbnail, or all of them
-          with <b>Select all</b> in the toolbar. While images are checked, the toolbar shows the image actions that
-          work on many images, in every image tab the same and colored as on the action rim: <b>Add to
-          compare</b>, the trays, <b>Upscale</b> where the tab offers it, then <b>Remove</b> (with Undo). An
-          action that does not apply to some of the checked images (a video, for one) skips them, and its tooltip
-          tells how many it takes. Dragging a checked thumbnail takes them all along. <span class="kbd">Ctrl</span>+<span class="kbd">U</span> unchecks them.</li>
+          with <b>Select all</b> in the toolbar. While images are checked, the toolbar shows the actions that work
+          on several images, in the same colors as on the action rim: <b>Add to compare</b>, the trays,
+          <b>Upscale</b> where the tab offers it, and <b>Remove</b> (with Undo). An action skips the checked images
+          it does not apply to (a video, for example), and its tooltip says how many it takes. Dragging a checked
+          thumbnail drags all checked images. <span class="kbd">Ctrl</span>+<span class="kbd">U</span> unchecks
+          them.</li>
         <li><b>Filtering by markings</b>: as in the trays, <AppIcon name="filter" :size="13" class="inline-icon"/>
           shows only the marked images, and clicking the marking of an image shows only the images with that
           marking (click it again to show all).</li>
@@ -763,8 +838,7 @@ const hostOrigin = location.origin;
           <span class="kbd">Ctrl</span> over one or press the right button on it to show its action rim (parameters,
           ControlNet, editor, the trays, a comment, Remove from compare at the bottom, and the markings above),
           middle-click it for its menu, or use the keys. Click an image without dragging to view it large.</li>
-        <li><b>Clear</b> removes all images; its arrow, a middle click or Shift+click removes only the unmarked or marked
-          ones, or those of one marking. Their copies are deleted 10 seconds later, and the notice has <b>Undo</b>.</li>
+        <li><b>Clear</b> works as in the <a href="#" @click.prevent="scrollTo('generated')">Generated</a> tab.</li>
       </ul>
     </section>
 
@@ -804,24 +878,10 @@ const hostOrigin = location.origin;
           from. Images of the same generation run (one batch, or one run of model exploration, steps, denoising
           strengths, etc.) share a color, and each new run takes the next color.</li>
         <li><b>Comments</b> <AppIcon name="comment" :size="13" class="inline-icon"/> on images, shown at the top of the image.</li>
-        <li><b>Removing images</b>: check them and use <b>Remove</b>, which appears in the toolbar
-          while images are checked, or use the <AppIcon name="trash" :size="13" class="inline-icon"/> button of the
-          full image view. <b>Clear</b> removes all images of the tray. In both cases the files stay on disk, and
-          the notice that follows has <b>Undo</b>, which puts the images back.</li>
-        <li><b>Upscale</b> upscales the checked images one after another into the Upscaled tab.</li>
-        <li><b>Generate with steps</b> <AppIcon name="steps" :size="13" class="inline-icon"/> asks for a list of
-          step counts and generates the image again with each of them in the Generated tab.</li>
-        <li v-if="isWebUI"><b>Generate with text encoders</b> <AppIcon name="puzzle" :size="13" class="inline-icon"/>
-          lists the text encoder files, filtered by the name of the image's own encoder (which is checked), and
-          generates the image again with each checked encoder, keeping its seed and other modules. If the image
-          used several encoders (CLIP-L and T5), the one whose name is most similar to the checked one is replaced.
-          The modules set before are restored afterwards. This action is in the context menu of the image (key
-          <span class="kbd">E</span>), not on the action rim.</li>
-        <li><b>Upscale with denoising</b> <AppIcon name="denoise" :size="13" class="inline-icon"/>
-          asks for a list of Hires. fix denoising strengths and upscales the image with each of them. <b>Upscale
-          selected</b>, shown in the toolbar next to it, upscales each selected image.<template v-if="isComfy"> Upscaling
-          needs a workflow with a Hires. fix sampler (<code>ib:smp:1</code>); its <code>ib:hr</code> switch is
-          turned on for the run and restored afterwards.</template></li>
+        <li><b>Removing images</b>: use the <b>Remove</b> sector of the action rim or <span class="kbd">Del</span>,
+          or check images and use <b>Remove</b> in the toolbar. <b>Clear</b> removes all images of the tray. The
+          files stay on disk, and the notice that follows has <b>Undo</b>, which puts the images back.</li>
+        <li><b>Upscale</b> in the toolbar upscales the checked images one after another into the Upscaled tab.</li>
         <li><b>Download</b> <AppIcon name="download" :size="13" class="inline-icon"/> saves the tray as a .zip
           archive (images with their parameters), which can be imported into any tray.</li>
         <li><b>Import</b> <AppIcon name="upload" :size="13" class="inline-icon"/> adds .png files (with their
@@ -829,15 +889,6 @@ const hostOrigin = location.origin;
           trays themselves are saved into the
           <a href="#" @click.prevent="scrollTo('projects')">projects</a>.</li>
       </ul>
-      <div v-if="isComfy" class="note warn">
-        <AppIcon name="alert" :size="15"/>
-        <div>
-          <b>Re-generating an image uses the open workflow.</b> Buttons that make an image again (upscale,
-          upscale with denoising, generate with steps) set the image's prompt, model, seed, etc. and run the
-          workflow that is open. Generate the drafts and upscale them with the same workflow, or with one of the
-          same structure.
-        </div>
-      </div>
     </section>
 
     <section id="manual-upscaled">
@@ -943,31 +994,40 @@ const hostOrigin = location.origin;
         <li><b>Search</b>: words find projects by name and prompt, <code>#tag</code> keeps the projects with that
           tag, and <code>host:comfy</code> or <code>host:webui</code> keeps those of a host. Results are listed with
           their folders. The tags under the field, with their counts, add themselves to the search.</li>
-        <li><b>The current project</b> is shown at the right of the tab bar, with a dot when the trays have
-          changed since the last save. Its <AppIcon name="save" :size="13" class="inline-icon"/> button or
-          <span class="kbd">Ctrl</span>+<span class="kbd">S</span> saves the workspace into it; nothing is saved
-          automatically. Image Bench remembers the current project across restarts. Without a current project the
-          chip reads <i>No project</i>, and its <AppIcon name="plus" :size="13" class="inline-icon"/> button
-          creates a new project. When a folder is selected in the Projects tab, or a project inside a folder, a switch
-          in the dialog lets you choose between that folder and the root. The <AppIcon name="chevron" :size="13" class="inline-icon"/>
-          arrow of the chip, or a right-click on it, opens its menu: <b>Save</b> and <b>Close</b> (or <b>New project…</b>),
-          <b>Show in Projects</b>, the recent projects and <b>All projects…</b>, and the clean-up actions (see
-          <a href="#" @click.prevent="scrollTo('settings')">Settings and actions</a>).
-          <b>Close</b> <AppIcon name="close" :size="13" class="inline-icon"/> is also the project icon of the chip:
-          it turns into the close icon while the pointer is over the icon or the name. Closing asks first, then
-          closes the project (its saved state is kept) and starts a blank workspace, as <b>Start a blank workspace</b>
-          does; with unsaved changes, <b>Save and close</b> saves them first.
-          Drop image cards on the chip to copy them into the folder of the current project.</li>
+        <li><b>The current project</b> is shown in the chip at the right of the tab bar, with a dot when the trays
+          have changed since the last save. Image Bench remembers the current project across restarts.
+          <ul>
+            <li>The chip's <AppIcon name="save" :size="13" class="inline-icon"/> button or
+              <span class="kbd">Ctrl</span>+<span class="kbd">S</span> saves the workspace into the project.
+              Nothing is saved automatically.</li>
+            <li>Without a current project, the chip reads <i>No project</i>, and its
+              <AppIcon name="plus" :size="13" class="inline-icon"/> button creates one. When a folder, or a project
+              inside a folder, is selected in the Projects tab, a switch in the dialog chooses between that folder
+              and the root.</li>
+            <li>The chip's <AppIcon name="chevron" :size="13" class="inline-icon"/> arrow, or a right-click on the
+              chip, opens its menu: <b>Save</b> and <b>Close</b> (or <b>New project…</b>), <b>Show in Projects</b>,
+              the recent projects and <b>All projects…</b>, and the clean-up actions (see
+              <a href="#" @click.prevent="scrollTo('settings')">Settings and actions</a>).</li>
+            <li>The project icon of the chip turns into a <AppIcon name="close" :size="13" class="inline-icon"/>
+              close button while the pointer is over the icon or the name. <b>Close</b> asks first, then closes the
+              project and starts a blank workspace, as <b>Start a blank workspace</b> does. The project keeps its
+              saved state. With unsaved changes, <b>Save and close</b> saves them first.</li>
+            <li>Drop image cards on the chip to copy them into the folder of the current project.</li>
+          </ul></li>
         <li><b>The project reminder</b>: while a project is current, a cube in the project color is joined to the
-          Generate button. Click it for <b>Save project</b> and <b>New workspace…</b>. The cube turns striped and
-          pulses when the work may be starting anew: when the Image Bench window opens with a project current (not
-          when it is reloaded), after clearing the prompts, and after applying PNG Info. The next <b>Generate</b> or
-          <b>Variations…</b> then asks first: <b>Continue project</b> (<span class="kbd">Enter</span>) generates,
-          <b>New workspace</b> clears the images and trays and closes the project but keeps the prompts and
-          parameters, then generates, and <span class="kbd">Esc</span> generates nothing. Ctrl+click on Generate skips
-          the question; <b>Don't ask again for this project</b> silences it until the window is opened again. To turn the
-          question off for good (the cube stays), uncheck <b>Settings › Generate Tab › Ask whether to continue the current
-          project</b>.</li>
+          Generate button. Click it for <b>Save project</b> and <b>New workspace…</b>.
+          <ul>
+            <li>The cube turns striped and pulses when the work may be starting anew: when the Image Bench window
+              opens with a project current (not when it is reloaded), after you clear the prompts, and after you
+              apply PNG Info.</li>
+            <li>The next <b>Generate</b> or <b>Variations…</b> then asks first. <b>Continue project</b>
+              (<span class="kbd">Enter</span>) generates. <b>New workspace</b> clears the images and trays and
+              closes the project, keeping the prompts and parameters, then generates.
+              <span class="kbd">Esc</span> generates nothing.</li>
+            <li>Ctrl+click on Generate skips the question. <b>Don't ask again for this project</b> silences it until
+              the window is opened again. To turn the question off for good (the cube stays), uncheck
+              <b>Settings › Generate Tab › Ask whether to continue the current project</b>.</li>
+          </ul></li>
         <li><b>New project</b> creates the folder and, unless unchecked, saves the workspace into it and makes it
           current.</li>
         <li><b>Open</b> (or double-click) restores the trays and parameters of a project and makes it current.
@@ -989,15 +1049,22 @@ const hostOrigin = location.origin;
           into <code>ib_project</code> and kept even if the workspace is not saved. A project saved without a
           final image uses the image marked 🏁 in the image tray (or else in the concept tray).</li>
         <li><b>Tags</b> and <b>notes</b> are saved immediately. Click a tag to search by it.</li>
-        <li>The tabs under the parameters, <b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b>, <b>Upscaled</b> and <b>Files</b>,
-          contain the images of the trays as of the last save, and the image files of the project folder.
-          Click an image to view it
-          (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), press the right button on it
-          for its action rim at the pointer, or click <AppIcon name="rim" :size="13" class="inline-icon"/> at its top
-          right to show it on the file (with Add to compare; the final image and reuse all in the arc below), or
-          middle-click it for the menu (also Open in new window and deleting a file of the project folder). The full
-          view has the same buttons, as in the image view, and the <AppIcon name="rim" :size="13" class="inline-icon"/> button at the lower right shows
-          it in the middle.</li>
+        <li>The tabs under the parameters, <b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b>, <b>Upscaled</b>
+          and <b>Files</b>, show the images of the trays as of the last save and the image files of the project
+          folder.
+          <ul>
+            <li>Click an image to view it; <span class="kbd">←</span> / <span class="kbd">→</span> page through
+              them.</li>
+            <li>Press the right button on an image for its action rim at the pointer, or click the
+              <AppIcon name="rim" :size="13" class="inline-icon"/> button at its top right to show the rim on the
+              image. The rim has Add to compare, and its lower arc sets the final image and reuses all
+              parameters.</li>
+            <li>Middle-click an image for its menu, which also has Open in new window and, for a file of the project
+              folder, Delete.</li>
+            <li>The full view works like the image view. Its
+              <AppIcon name="rim" :size="13" class="inline-icon"/> button at the lower right shows the rim in the
+              middle of the image.</li>
+          </ul></li>
       </ul>
     </section>
 
@@ -1057,12 +1124,12 @@ const hostOrigin = location.origin;
           images from the Generated and Explore tabs and the ControlNet sweep at once, with Undo in the notice. The
           Upscaled tab, the Compare tab, the trays, the prompts and the parameters are kept, and no output files are
           deleted.</li>
-        <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> (with a current
-          project, it is <b>Close</b> <AppIcon name="close" :size="13" class="inline-icon"/> after <b>Save</b>) asks
-          first and is for starting a new project. It also empties both trays and
-          the Compare tab, clears the prompts and the ControlNet images, sets a random seed<template v-if="isWebUI"> (and clears the variation
-          seed)</template>, and closes the current project, whose saved state is kept. The other
-          parameters are kept. The output files stay on
+        <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> prepares for a new
+          piece of work. With a current project, the same action is <b>Close</b>
+          <AppIcon name="close" :size="13" class="inline-icon"/>, after <b>Save</b>. It asks first, then clears the
+          generated images, both trays and the Compare tab, clears the prompts and the ControlNet images, sets a
+          random seed<template v-if="isWebUI"> and clears the variation seed</template>, and closes the current
+          project, which keeps its saved state. The other parameters stay as they are, and the output files stay on
           disk.<template v-if="isWebUI"> The prompts saved by
           <b>Remember prompts and generation parameters across WebUI reloads</b> are cleared too, so a reload of the
           WebUI page does not bring them back.</template></li>
@@ -1183,10 +1250,9 @@ const hostOrigin = location.origin;
         like <b>To Photoshop</b> in the ControlNet panes, opens the image as a new document.
         Middle-click or Shift+click it to place the image as a new layer of the active document instead. The layer
         is rasterized, so you can edit its pixels directly; check <b>Place as smart objects</b> in the plugin panel
-        to keep it a smart object. A notice at the bottom of the window stays until the image is in Photoshop. With
-        an older plugin, the notice disappears as soon as the server has passed the image on; install the current
-        plugin above to fix this. During a transfer in either direction, the plugin panel shows a blinking dot and
-        its buttons wait until the transfer ends.
+        to keep it a smart object. A notice at the bottom of the window stays until the image is in Photoshop.
+        During a transfer in either direction, the plugin panel shows a blinking dot and its buttons wait until the
+        transfer ends.
       </p>
 
       <h3 id="manual-photoshop-canny">Canny Edges plugin</h3>
@@ -1332,6 +1398,11 @@ const hostOrigin = location.origin;
           mode. Images from the editor are saved, and a message reports that no node is marked.</td></tr>
         <tr><td><code>ib:ref:0</code>, <code>ib:ref:1</code>, ...</td><td>Load Image nodes of edit-model
           references</td><td>References panel</td><td>There is no References panel</td></tr>
+        <tr><td><code>ib:vref:N</code> / <code>ib:aref:N</code></td><td>Load Video / Load Audio nodes of video and
+          audio references</td><td>Video and audio in the References panel</td><td>The panel takes no clips of that
+          kind</td></tr>
+        <tr><td><code>ib:ext</code></td><td>Load Video</td><td>Extend video</td><td>Extend video is not
+          offered</td></tr>
         <tr><td><code>ib:cn:0</code>, <code>ib:cn:1</code>, ...</td><td>Apply ControlNet (including the SD3 and
           legacy versions) and the Advanced-ControlNet apply nodes</td><td>ControlNet tab</td><td>The ControlNet
           tab reports that no node is marked</td></tr>
@@ -1566,41 +1637,6 @@ const hostOrigin = location.origin;
         (ControlNet units) and <code>image_bench_photoshop_*.png</code> (the editor). The trays, presets, model
         hashes and Civitai lookups are stored in <code>store/</code> in the extension folder.
       </p>
-    </section>
-
-    <section id="manual-shortcuts">
-      <h2>Keyboard and mouse</h2>
-      <p>The window has these shortcuts:</p>
-      <table>
-        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">↑</span> / <span class="kbd">↓</span></td><td>Raise or lower the attention in a prompt</td></tr>
-        <tr><td><span class="kbd">←</span> <span class="kbd">→</span>, wheel</td><td>Previous or next image in the image view</td></tr>
-        <tr><td><span class="kbd">Esc</span></td><td>Close the image view, or the topmost dialog</td></tr>
-        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">U</span></td><td>Unselect all images</td></tr>
-        <tr><td><span class="kbd">Shift</span>+<span class="kbd">Del</span></td><td>Clear the shown tab (Generated,
-          Upscaled, the trays, Compare); the notice that follows has Undo</td></tr>
-        <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>Save the workspace into the
-          current project</td></tr>
-        <tr><td>Click</td><td>On the image in the image view, switch between full size and fit to screen. Drag to
-          pan the image</td></tr>
-        <tr><td><span class="kbd">Ctrl</span></td><td>Hold over an image card or in the image view to show only the
-          image. Hold over the Generate tab's result or a Compare image to show its action rim</td></tr>
-        <tr><td>Right press</td><td>On an image (card, image view, Compare image, project file), open its action
-          rim at the pointer. Release the button on a sector to run it, or without moving to keep the ring open; in
-          the image view the button in the center closes the view on a left or a right click</td></tr>
-        <tr><td>Middle click</td><td>On an image, open its menu (with the setting that swaps the buttons: its action
-          rim, as the right press does). On a button, perform its alternative action (place as a new layer in the
-          editor). On a marking, remove it</td></tr>
-        <tr><td><span class="kbd">Shift</span>+click</td><td>On a button, perform its alternative action, as a
-          middle click does</td></tr>
-        <tr><td>Right drag down</td><td>With the setting that swaps the buttons, close the image view: the image
-          follows the pointer, released far enough down it closes</td></tr>
-        <tr><td>Letter keys</td><td>Actions of the image under the pointer or in the image view (see <a href="#"
-          @click.prevent="scrollTo('images')">Working with images</a>)</td></tr>
-        <tr><td><span class="kbd">1</span>–<span class="kbd">9</span>, <span class="kbd">0</span></td><td>Set or
-          remove the marking in the image view of a tray, or of the Compare image under the pointer</td></tr>
-        <tr><td><span class="kbd">R</span>, <span class="kbd">X</span></td><td>Compare tab: select a region, show
-          the crops</td></tr>
-      </table>
     </section>
 
   </article>

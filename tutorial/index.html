@@ -132,7 +132,7 @@
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
       <ul>
-        <li>By default, the 🔬 Image Bench button in the host UI shows the <code>/image-bench/app</code> link in a small dialog instead of opening the app. Left-clicking the link opens the app in the same tab. To have the button open Image Bench as a popup next to the host page, turn on <em>Settings › Open Image Bench from the host interface</em>.</li>
+        <li>By default, the 🔬 Image Bench button in the host UI shows the <code>/image-bench/app</code> link in a small dialog instead of opening the app. Left-clicking the link opens the app in the same tab. To have the button open Image Bench directly, connected to the host page it was opened from, turn on <em>Settings › Open Image Bench from the host interface</em>.</li>
         <li>With <em>Settings › Open Image Bench in a popup window instead of a browser tab</em>, the app opens in a window of its own, which remembers its size and position.</li>
         <li>The host UI keeps running in its tab while you work in the others. You can still use it directly, and Image Bench picks up the changes you make there.</li>
       </ul>
@@ -141,7 +141,8 @@
 
   <div class="topic">
     <h3>Image Bench tabs</h3>
-    <p>The tab bar follows the usual course of work from left to right. You set up a generation in Generate, ControlNet or Explore, and the results arrive in Generated. From there you move the images worth keeping to the trays, compare candidates in Compare, and upscale the best ones into Upscaled. The numbers on the tabs count the images each one holds, and a tray tab flashes when an image is added to it. The tray tabs are also drop targets: drag an image card onto one to put the image there. Library, the project chip, Settings and the host tab sit at the right end of the bar.</p>
+    <p>The tab bar follows the usual course of work from left to right. You set up a generation in Generate, ControlNet or Explore, and the results arrive in Generated. From there you move the images worth keeping to the trays, compare candidates in Compare, and upscale the best ones into Upscaled. Library, the project chip, Settings and the host tab sit at the right end of the bar.</p>
+    <p>The numbers on the tabs count the images each one holds. A tray tab flashes when an image is added to it, and you can drag an image card onto a tray tab to put the image there.</p>
     <div class="table-box">
       <table>
         <thead><tr><th>Tab</th><th>Use it for</th></tr></thead>
@@ -210,7 +211,7 @@
         <tbody>
           <tr><td><code>ib:cp:0</code></td><td>Checkpoint / model loader</td><td>Model choice, model exploration</td></tr>
           <tr><td><code>ib:pp</code> / <code>ib:np</code></td><td>Positive / negative prompt</td><td>Prompt fields</td></tr>
-          <tr><td><code>ib:smp</code></td><td>Sampler (first pass)</td><td>Found automatically in most graphs. Mark it when the graph has several samplers.</td></tr>
+          <tr><td><code>ib:smp</code></td><td>Sampler (first pass)</td><td>Sampling parameters. Without a marker, Image Bench uses the first KSampler of the graph, so mark the sampler when the graph has several samplers or uses SamplerCustomAdvanced.</td></tr>
           <tr><td><code>ib:smp:1</code></td><td>Hires. fix sampler</td><td>Hires. fix group, Upscale actions</td></tr>
           <tr><td><code>ib:hr</code></td><td>If/Else switch between the first-pass and the Hires. fix image</td><td>The Hires. fix checkbox</td></tr>
           <tr><td><code>ib:lora</code></td><td>LoRA loader</td><td>LoRA exploration</td></tr>
@@ -233,7 +234,7 @@
       <li>If a control is missing from the Generate or ControlNet tab, check the markers first. A missing marker is by far the most common cause.</li>
       <li>Image Bench finds the sampler parameters (seed, steps, CFG, guidance, shift and size) by following the graph from the sampler through nodes such as <code>RandomNoise</code>, <code>BasicScheduler</code>, <code>CFGGuider</code>, <code>FluxGuidance</code>, <code>ModelSampling*</code> and the empty latent. It also follows Reroutes and subgraphs.</li>
       <li>To support a custom loader or sampler node, add it to <code>store/node_config.json</code> in the extension folder. This file is merged over the bundled <code>node_config.json</code> and is kept when the extension updates.</li>
-      <li>Inpaint workflows can use ComfyUI-Inpaint-CropAndStitch. When it is installed, the tab also shows Mask blur, Only masked and padding.</li>
+      <li>Inpaint workflows can use the Inpaint Crop and Inpaint Stitch nodes of ComfyUI-Inpaint-CropAndStitch, as the bundled inpaint workflows do. When the workflow has them, the tab also shows Mask blur, Only masked and padding.</li>
     </ul>
   </div>
 </section>
@@ -288,7 +289,7 @@
     <ol class="steps marker-list">
       <li>The Generate button starts a run and becomes Stop while the run is in progress. Next to it are Skip and the number of images to generate. Variations… generates seed variations (see <a href="#ch06">chapter 6</a>).</li>
       <li>The × in front of the image count resets it to 1.</li>
-      <li>The count button sets the number of images to the value of <em>Settings › Images set by the count button</em>, 128 in the screenshot. It is highlighted while the count has that value. WebUI generates at most 100 images per batch unless you raise the Batch count maximum in <code>ui-config.json</code> in the WebUI folder and restart WebUI.</li>
+      <li>The count button sets the number of images to the value of <em>Settings › Images set by the count button</em>, 128 in the screenshot. It is highlighted while the count has that value. <span class="tag tag-webui">WebUI</span> WebUI generates at most 100 images per batch unless you raise the Batch count maximum in <code>ui-config.json</code> in the WebUI folder and restart WebUI.</li>
       <li>The ∞ button generates images until you press Stop. Click it again to go back to the number of images you had before.</li>
       <li>The prompt tools, from left to right: Snippets, PNG Info, the eraser that clears both prompts and the console drawer. With <em>Settings › Show the prompt lock button</em>, the prompt lock appears before the console drawer button.</li>
       <li>The mode switch selects txt2img, img2img or Inpaint.</li>
@@ -369,7 +370,7 @@
 
   <div class="topic">
     <h3>Stop and Skip buttons</h3>
-    <p>While a generation runs, the Generate button turns into Stop, and Skip next to it becomes active. Skip ends the image that is being generated and continues with the rest of the batch. Stop ends the whole run. To stop and immediately generate again with the current parameters, <kbd>Ctrl</kbd>+click or middle-click Stop; while you hold <kbd>Ctrl</kbd>, the button reads Restart.</p>
+    <p>While a generation runs, the Generate button turns into Stop, and Skip next to it becomes active. Skip ends the image that is being generated and continues with the rest of the batch. Stop ends the whole run. To stop and immediately generate again with the current parameters, <kbd>Ctrl</kbd>+click, <kbd>Shift</kbd>+click or middle-click Stop; while you hold <kbd>Ctrl</kbd>, the button reads Restart.</p>
     <p>The same commands have keys that work in every tab, also while you type in a text field: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> generates, or stops a running generation; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> restarts it; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Backspace</kbd> skips the current image. They do nothing while a dialog is open. They take effect once the Generate tab has been opened in the window, and they don't work in the host tab, where WebUI and ComfyUI have their own <kbd>Ctrl</kbd>+<kbd>Enter</kbd>.</p>
     <div class="app-demo" role="img" aria-label="The Generate, Stop and Skip buttons in their three states">
       <div class="app-row"><span class="app-btns"><span class="app-btn primary"><svg width="13" height="13" aria-hidden="true"><use href="#ic-play"></use></svg>Generate</span><span class="app-btn outline off"><svg width="13" height="13" aria-hidden="true"><use href="#ic-skip"></use></svg>Skip</span></span><span class="app-note">Idle</span></div>
@@ -454,8 +455,8 @@
         <p>The Snippets button <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-snippet"></use></svg></span> next to the prompt opens a floating panel above it. You can move the panel by its header and resize it by its corner. The badge in the header shows which prompt receives the snippets: the one you edited last.</p>
         <ul>
           <li>Clicking a snippet inserts it at the cursor. If the snippet also has a negative part, that part goes into the negative prompt.</li>
-          <li>Middle-clicking inserts the snippet into this prompt only.</li>
-          <li><kbd>Shift</kbd>+click wraps the selected text: the selection takes the place of <code>{}</code> or <code>{prompt}</code> in the snippet.</li>
+          <li>A middle click or <kbd>Shift</kbd>+click inserts only the part for this prompt.</li>
+          <li>A snippet that contains <code>{}</code> or <code>{prompt}</code> wraps the selected text: the selection takes the place of the placeholder.</li>
         </ul>
         <p>The prompt keeps the focus, so you can insert several snippets in a row, and <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes an insertion. <em>From selection</em> makes a new snippet of the selected prompt text. <em>Edit in Library</em> opens <a href="#ch12">Library › Snippets</a>, where you manage them.</p>
       </div>
@@ -510,13 +511,14 @@
 
   <div class="topic">
     <h3>Inpainting with a mask from your editor</h3>
-    <p>For inpainting, Image Bench uses only WebUI's <em>img2img › Inpaint upload</em> tab, where the image and the mask are two separate uploads. You cannot draw a mask in Image Bench, and it does not use the brush canvas of WebUI's <em>Inpaint</em> tab. Instead, you make the mask in Photoshop, Krita or GIMP as a selection and send it together with the image with <em>Input / Inpaint: Both</em> in the editor plugin (see <a href="#ch11">chapter 11</a>). A feathered selection gives the mask soft edges. A mask saved from an editor as a file can also be uploaded with the Mask button of the result cell. If WebUI shows another img2img tab, such as <em>Sketch</em> or <em>Inpaint</em>, Image Bench leaves it as it is.</p>
+    <p>Image Bench has no mask brush. Make the mask in Photoshop, Krita or GIMP as a selection, and send it together with the image with <em>Input / Inpaint: Both</em> in the editor plugin (see <a href="#ch11">chapter 11</a>). A feathered selection gives the mask soft edges. You can also upload a mask file with the Mask button of the result cell.</p>
+    <p><span class="tag tag-webui">WebUI</span> Image Bench inpaints through WebUI's <em>img2img › Inpaint upload</em> tab, where the image and the mask are separate uploads. It does not use the brush canvas of the <em>Inpaint</em> tab.</p>
   </div>
 
   <div class="pair">
     <div class="topic">
       <h3>Only masked: reading the crop</h3>
-      <p>With the <em>Only masked</em> inpaint setting, WebUI cuts out the area around the mask, generates it at full resolution and pastes it back. The Mask view shows this crop before you generate: the bounding box of the mask is dashed, and the crop is outlined in orange. Padding and mask blur enlarge the box, and <em>Resize to</em> determines its aspect ratio.</p>
+      <p>With the <em>Only masked</em> inpaint setting, WebUI cuts out the area around the mask, generates it at full resolution and pastes it back. The Mask view shows this crop before you generate: the bounding box of the mask is dashed, and the crop is outlined in the accent color. Padding and mask blur enlarge the box, and <em>Resize to</em> determines its aspect ratio.</p>
       <p>The factor button sets <em>Resize to</em> once, to the padded box multiplied by the factor and rounded to multiples of 16. It does not update the value later.</p>
     </div>
     <figure class="shot-small">
@@ -555,7 +557,7 @@
 
   <div class="topic">
     <h3>Batches and the session filmstrip</h3>
-    <p>When you generate a batch with more than one image, the session filmstrip replaces the parameter groups. It holds the last 265 images of the session, grouped by run. Click an image to view it large, or middle-click it to show its action rim. The arc below the ring shows the image in the result pane in place of the latest image; on the image already shown there, the same arc brings back the latest one.</p>
+    <p>When you generate a batch with more than one image, the session filmstrip replaces the parameter groups. It holds the last 265 images of the session, grouped by run. Click an image to view it large, or press the right button on it to open its action rim at the pointer. The arc below the ring shows the image in the result pane in place of the latest image; on the image already shown there, the same arc brings back the latest one.</p>
     <figure class="shot-wide">
       <img src="../landing/img/screenshots/filmstrip.webp" width="1279" height="302" loading="lazy" alt="The session filmstrip under the prompt: three images of a run, the vertical Parameters and Session tabs at its right edge, and the result pane at the right">
       <figcaption>The session filmstrip, with the Parameters and Session tabs at its right edge.</figcaption>
@@ -569,10 +571,10 @@
   <div class="topic">
     <h3>Model and LoRA exploration</h3>
     <p>To see what several checkpoints or LoRAs make of the same prompt, select them in the Explore tab and start the run. Image Bench generates the current prompt with each of them in turn and shows the results side by side. A LoRA exploration also generates the images without the LoRA for reference, unless you turn off the <em>No LoRA</em> button. When the run ends, your model and parameters are restored.</p>
-    <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Explore</span></div>
-      <img src="../landing/img/screenshots/03-explore.webp" width="1194" height="667" loading="lazy" alt="The Explore tab: the same prompt rendered by several checkpoints side by side">
-    </div>
     <figure>
+      <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — Explore</span></div>
+        <img src="../landing/img/screenshots/03-explore.webp" width="1194" height="667" loading="lazy" alt="The Explore tab: the same prompt rendered by several checkpoints side by side">
+      </div>
       <figcaption>One prompt rendered by several checkpoints.</figcaption>
     </figure>
     <p>When you select both checkpoints and LoRAs, you can switch the run from <em>By model</em> to <em>Matrix</em>. A matrix run generates one image for every combination of a checkpoint and a LoRA and lays them out as a grid, with the checkpoints in rows and the LoRAs in columns. With <em>No LoRA</em> on, the first column shows each checkpoint without a LoRA. All the images of a matrix use the same random seed, so the differences you see come from the models alone. <em>Save results</em> saves the grid as a single HTML page.</p>
@@ -589,7 +591,7 @@
   <div class="topic">
     <h3>Automated sweeps from one image</h3>
     <p>Once you have an image you like, you may want to see whether more steps, another denoising strength or other text encoders improve it. By hand, that means restoring the image's parameters and changing one value before each generation; Image Bench runs the whole series at once.</p>
-    <p>These image actions start from the parameters of an existing image, including its seed, and generate a series in which only one setting changes. You find them on the left side of the action rim: middle-click an image card, or hold <kbd>Ctrl</kbd> over the result in the Generate tab, and point at the icons below (see <a href="#ch08">chapter 8</a>). With the pointer over the card or in the overlay, the keys run them directly.</p>
+    <p>These image actions start from the parameters of an existing image, including its seed, and generate a series in which only one setting changes. You find them on the left side of the action rim: press the right button on an image card, or hold <kbd>Ctrl</kbd> over the result in the Generate tab, and point at the icons below (see <a href="#ch08">chapter 8</a>). With the pointer over the card or in the overlay, the keys run them directly.</p>
     <div class="keys">
       <div class="key"><kbd>G</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-steps"></use></svg></span><span>Generate with steps: the same image at different step counts.</span></div>
       <div class="key"><kbd>E</kbd><span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-puzzle"></use></svg></span><span>Generate with text encoders: the same image with different VAE and text encoder sets <span class="tag tag-webui">Forge Neo</span>.</span></div>
@@ -620,7 +622,7 @@
 
   <div class="topic">
     <h3>Setting up a unit</h3>
-    <p>The ControlNet tab has the same units, control types, preprocessors, models and parameters as the ControlNet built into Forge Neo, and shows one unit at a time. Changes in the tab go to the unit on the WebUI page and changes on the page show up in the tab, so what you know about Forge's ControlNet applies here.</p>
+    <p>The ControlNet tab shows one unit at a time and keeps it in sync with the host in both directions. <span class="tag tag-webui">WebUI</span> It has the same units, control types, preprocessors, models and parameters as the ControlNet built into Forge Neo, so what you know about Forge's ControlNet applies here. <span class="tag tag-comfy">ComfyUI</span> Each unit is a ControlNet apply node of the workflow (see the end of this chapter).</p>
     <ol class="steps">
       <li>Select the unit. In WebUI, also select txt2img or img2img in the toolbar.</li>
       <li>Add a control image: drop or paste it, use <em>Send to ControlNet</em> (<kbd>N</kbd>) on any image, or send it from your editor.</li>
@@ -697,39 +699,42 @@
   <div class="topic">
     <h3>The action rim</h3>
     <p>Most of what you do with an image starts from its card: you look at its parameters, send it to img2img or your editor, upscale it, or put it in a tray. Buttons for all of these would cover the thumbnail, so the card has none. The actions are on a ring that you show when you need it, and also in the card's context menu and on single keys that work while the pointer is over the card.</p>
-    <p>To show the ring, middle-click the card or click the rim toggle in its top right corner. It stays until you middle-click again or the pointer leaves the card. For a single action, press the middle button, move to a sector and release the button there: the action runs and the ring closes. The actions sit around the center of the image: parameters at the top, send actions and trays on the right, Delete at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer. Clicking the image, inside or outside the ring, still opens it. Holding <kbd>Ctrl</kbd> over a card hides the ring, the toggle, the badges and the other controls, so you see only the image, and a click opens it.</p>
+    <p>Press the right button on a card, and the ring opens around the pointer. Move to a sector and release the button there: the action runs and the ring closes. If you release the button without moving, the ring stays open and you can click a sector. A click outside the ring, <kbd>Esc</kbd> or the mouse wheel closes it.</p>
+    <p>The rim toggle in the top right corner of a card shows the ring around the center of the image instead. It stays until you click the toggle again or the pointer leaves the card.</p>
+    <p>The actions sit in fixed places: parameters at the top, send actions and trays on the right, Remove at the bottom and generate actions on the left. The label in the middle of the ring names the action under the pointer. Clicking the image, inside or outside the ring, still opens it. Holding <kbd>Ctrl</kbd> over a card hides the ring, the toggle, the badges and the other controls, so you see only the image, and a click opens it.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
       <ul>
         <li>The arc above the ring sets a marking; pick a set marking again to remove it. The arc below has Reuse seed and Reuse all.</li>
         <li>The center of the ring has a button only when the image has a marking and the view can be filtered by markings. It shows only the images with that marking, and clicked again, all images.</li>
         <li>Some actions have an alternative version, which runs on a middle click, <kbd>Shift</kbd>+click or <kbd>Shift</kbd>+key. While you hold <kbd>Shift</kbd>, the ring shows the alternative icons; for example, Send to editor becomes Send as a new layer.</li>
-        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. Holding <kbd>Ctrl</kbd> hides the ring too, so a click opens the image, and a middle click hides it until the pointer leaves the card.</li>
+        <li>With <em>Settings › Show the action rim of an image on hover</em>, the ring appears when you hover over a card. Holding <kbd>Ctrl</kbd> hides the ring too, so a click opens the image, and a middle click on the eye in the top right corner hides it until the pointer leaves the card.</li>
+        <li>With <em>Settings › Open the context menu of an image with the right button</em>, the right and middle buttons swap: the right button opens the menu, the middle button the ring.</li>
       </ul>
     </div>
   </div>
 
   <div class="topic">
     <h3>The image view</h3>
-    <p>Click a card, or press <kbd>V</kbd> while the pointer is over it, to open the image view over the whole window. The view has no toolbars, so the image gets the full window area, which helps most in a small window such as 1200×800.</p>
+    <p>Click a card, or press <kbd>V</kbd> while the pointer is over it, to open the image view over the whole window. The view has no toolbars, so the image gets the full window area.</p>
     <figure>
       <div class="window"><div class="window-bar"><i></i><i></i><i></i><span class="window-title">Image Bench — image view</span></div>
         <img src="../landing/img/screenshots/image-view.webp" width="1198" height="683" loading="lazy" alt="An image in the image view with the action rim open at the pointer. The close button is in the center of the rim, the markings are in an arc above it, and Reuse seed and Reuse all are in an arc below it">
       </div>
-      <figcaption>The image view with the action rim open. A middle click opens the rim.</figcaption>
+      <figcaption>The image view with the action rim open. A right press opens the rim.</figcaption>
     </figure>
     <ol class="steps">
-      <li>Press and hold the middle mouse button anywhere on the image. The rim opens around the pointer. Move the pointer to a sector and release the button to run that action. If you release the button outside the rim, nothing happens and the rim closes.</li>
-      <li>If you release the button without moving the pointer, the rim stays open. You can then click a sector with the left button. To close the image view, click <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-close"></use></svg></span> in the center of the rim with the left or the middle button. Because the rim opens with its center under the pointer, two middle clicks without moving the mouse close the view: the first opens the rim, the second clicks its close button. To close only the rim, click anywhere outside it or press <kbd>Esc</kbd>.</li>
+      <li>Press and hold the right mouse button anywhere on the image. The rim opens around the pointer. Move the pointer to a sector and release the button to run that action. If you release the button outside the rim, nothing happens and the rim closes.</li>
+      <li>If you release the button without moving the pointer, the rim stays open. You can then click a sector with the left button. To close the image view, click <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-close"></use></svg></span> in the center of the rim with the left, middle or right button. Because the rim opens with its center under the pointer, two right clicks without moving the mouse close the view: the first opens the rim, the second clicks its close button. To close only the rim, click anywhere outside it or press <kbd>Esc</kbd>.</li>
       <li>The ring has the same actions as the rim of a card. In the trays, it also has Delete. The arc above the ring sets a marking. The arc below the ring has Reuse seed and Reuse all, which copy the seed or all parameters of the image to WebUI or ComfyUI. The parameters sector shows the generation parameters over the image. The parameters stay visible when you move to another image.</li>
     </ol>
     <p>Click the image to show it at full size. The point that you clicked stays under the pointer. Drag the image to pan it, and click it again to fit it to the window. To close the image view, click the dark area around a fitted image or press <kbd>Esc</kbd>.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
-      <p>The mouse closes the image view in three ways: a left click on <span class="ui"><svg width="14" height="14" aria-hidden="true"><use href="#ic-close"></use></svg></span> in the center of the rim, a middle click on it, or a right drag down. These ways work even when the image fills the window and leaves no dark area to click. For a right drag, press the right mouse button on the image, drag down and release. The image moves with the pointer and the background fades as you drag. If you release far enough down, the view closes; if you release sooner, the image goes back to its place. A right click without a drag still opens the context menu.</p>
+      <p>The close button in the center of the rim works even when the image fills the window and leaves no dark area to click. With <em>Settings › Open the context menu of an image with the right button</em>, the middle button opens the rim, and a right drag down also closes the view: press the right button on the image, drag down and release. The image moves with the pointer and the background fades as you drag. If you release far enough down, the view closes; if you release sooner, the image goes back to its place. A right click without a drag opens the context menu.</p>
     </div>
     <p>To go to the previous or next image, turn the mouse wheel or press <kbd>←</kbd> or <kbd>→</kbd>. At full size, the next image also opens at full size and shows the same area. This lets you compare one detail across a series of images. The rim always applies to the image that is currently shown, even if you scroll to another image while the rim is open.</p>
-    <p>If the image has a marking, the marking is shown in the lower right corner. Click it to remove the marking. A right click opens the same context menu as on a card, which includes Open in new window. The action keys and the digit keys work in the same way as over a card.</p>
+    <p>If the image has a marking, the marking is shown in the lower right corner. Click it to remove the marking. A middle click opens the same context menu as on a card, which includes Open in new window. The action keys and the digit keys work in the same way as over a card.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
       <p>Hold <kbd>Ctrl</kbd> to show only the image. This hides the arrows, the marking, the parameters and the rim until you release the key.</p>
@@ -765,7 +770,7 @@
 
   <div class="topic">
     <h3>The context menu</h3>
-    <p>Right-click an image for the commands that are not on the ring: Open in new window, Copy image, Copy to project folder, Copy infotext and Paste infotext, and a markings submenu with <em>Show only</em>.</p>
+    <p>Middle-click an image for its context menu. Its first row has the destinations as colored buttons: send to img2img, inpaint, ControlNet and the editor, and add to Compare and the trays. Below the row are the other actions, followed by the commands that are not on the ring: Open in new window, Copy image, Copy to project folder, Copy infotext and Paste infotext, and a markings submenu with <em>Show only</em>.</p>
   </div>
 
   <div class="callout non-obvious">
@@ -803,7 +808,7 @@
     <h3>Compare</h3>
     <ol class="steps">
       <li>To add images, press <kbd>A</kbd>, use the action rim (on a card or in the image view), drop files on the tab, or send them from your editor.</li>
-      <li>Zoom with the mouse wheel and pan by dragging. All images follow and show the same area, even if their resolutions differ.</li>
+      <li>Zoom with <kbd>Ctrl</kbd>+wheel and pan by dragging. All images follow and show the same area, even if their resolutions differ.</li>
       <li>In select mode, drag to draw a region; it applies to every image. The crop grid then shows only these regions, side by side.</li>
       <li>Export the crops as a single PNG.</li>
     </ol>
@@ -811,8 +816,8 @@
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"/></svg>Good to know</div>
       <ul>
         <li>The strip is vertical when all images are landscape with the same aspect ratio, and horizontal otherwise. In a horizontal strip, the mouse wheel scrolls sideways.</li>
-        <li>Because a plain drag pans the view, you open an image in the overlay with a middle click or <kbd>Shift</kbd>+click.</li>
-        <li>Hold <kbd>Ctrl</kbd> over an image to show its actions. To remove an image from Compare, use its context menu; this removes only the image's entry in Compare.</li>
+        <li>A drag pans the view, and a click without dragging opens the image in the overlay.</li>
+        <li>Press the right button on an image, or hold <kbd>Ctrl</kbd> over it, to show its actions. To remove an image from Compare, use its context menu (middle click); this removes only the image's entry in Compare.</li>
         <li>In the crop grid, you reorder images by dragging the grip or with <kbd>←</kbd> and <kbd>→</kbd>.</li>
       </ul>
     </div>
@@ -859,7 +864,7 @@
       <li>The trays make up the workspace. "Unsaved changes" on the chip means that the trays differ from the last save; generating images does not change them.</li>
       <li>Projects are never saved automatically. When you open another project, Image Bench asks whether to save or discard your changes.</li>
       <li>When you choose a final image, it is copied into the project right away, whether or not you save.</li>
-      <li>The × on the chip and <em>Start a blank workspace</em> both clear the images, trays, prompts and seed, and then close the project.</li>
+      <li><em>Close</em> and <em>Start a blank workspace</em> both clear the images, trays, prompts and seed, and then close the project. To close, point at the project icon of the chip, which turns into ×, and click it, or use <em>Close</em> in the chip's menu.</li>
       <li>A project saved in WebUI opens in ComfyUI and vice versa. Samplers, schedulers and models are matched by name, and anything that cannot be matched is reported.</li>
       <li>Right-click the chip to see your recent projects.</li>
     </ul>
@@ -1070,9 +1075,10 @@
     </div>
   </figure>
 
+  <p>The Library tab has three sections, switched at the top of the tab: Docs for Markdown notes and tag lists, Snippets for reusable prompt fragments, and Manual for the Image Bench manual. Use it to look up how a model expects to be prompted, how a tag is spelled or the wording of a style you used before.</p>
+
   <div class="topic">
     <h3>Docs</h3>
-    <p>The Library tab lets you look up how a model expects to be prompted, how a tag is spelled or the wording of a style you used before, without switching to a browser or a file manager. It has three sections, switched at the top of the tab: Docs for Markdown notes and tag lists, Snippets for reusable prompt fragments, and Manual for the Image Bench manual.</p>
     <p>The Docs section lists the Markdown files under the docs root as a tree and displays them read-only, including their images and the links between them. You set the docs root in <em>Settings › Library</em>; when it is empty, Image Bench shows the model docs that ship with the extension. Point the root to your own notes folder to read your notes here.</p>
     <div class="callout non-obvious">
       <div class="callout-title"><svg width="18" height="18" aria-hidden="true"><use href="#i-bulb"></use></svg>Good to know</div>
@@ -1193,14 +1199,18 @@
       <div class="key"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>Generate, or stop the running generation. In a multi-line dialog: confirm it</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd><span>Stop and generate again</span></div>
       <div class="key"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Backspace</kbd><span>Skip the image being generated</span></div>
+      <div class="key"><kbd>Ctrl</kbd>+<kbd>U</kbd><span>Uncheck all images</span></div>
+      <div class="key"><kbd>Shift</kbd>+<kbd>Del</kbd><span>Clear the images of the shown tab (with Undo)</span></div>
+      <div class="key"><kbd>?</kbd><span>Show the keys and mouse actions in the app</span></div>
     </div>
   </div>
 
   <div class="topic">
     <h3>Mouse</h3>
     <div class="keys">
-      <div class="key">Middle click<span>On a card: show or hide its action rim; press, move to a sector and release to run it. In the image view: open the rim at the pointer; on the rim's center: close the image view</span></div>
-      <div class="key">Right drag down<span>Close the image view</span></div>
+      <div class="key">Right press<span>On an image: open its action rim at the pointer; move to a sector and release to run it. In the image view, a click on the rim's center closes the view</span></div>
+      <div class="key">Middle click<span>On an image: open its context menu. On a button: run its alternative action. On a marking: remove it</span></div>
+      <div class="key">Right drag down<span>Close the image view, with the setting that swaps the right and middle buttons</span></div>
       <div class="key">Wheel<span>Previous or next image in the image view</span></div>
     </div>
   </div>
@@ -1214,6 +1224,7 @@
           <tr><td>Open Image Bench from the host interface</td><td>The 🔬 button opens the app as a popup instead of showing its link</td><td>Off</td></tr>
           <tr><td>Open Image Bench in a popup window</td><td>The app opens in a window of its own instead of a browser tab</td><td>Off</td></tr>
           <tr><td>Show the action rim on hover</td><td>The ring of a card appears on hover</td><td>Off</td></tr>
+          <tr><td>Open the context menu of an image with the right button</td><td>Swaps the buttons: right opens the menu, middle the action rim</td><td>Off</td></tr>
           <tr><td>Keep the session filmstrip shown</td><td>The filmstrip stays open after a batch ends</td><td>Off</td></tr>
           <tr><td>Ask whether to continue the current project</td><td>The project reminder before Generate</td><td>On</td></tr>
           <tr><td>Remember prompts and parameters across WebUI reloads</td><td>The host page restores your values after it loads <span class="tag tag-webui">WebUI</span></td><td>On</td></tr>

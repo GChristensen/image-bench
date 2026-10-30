@@ -44,7 +44,6 @@ export const MANUAL_SECTIONS = [
     {id: "comfy-subgraphs", title: "Subgraphs", icon: "box"},
     {id: "comfy-files", title: "Files written", icon: "folder"},
   ]}] : []),
-  {id: "shortcuts", title: "Keyboard & mouse", icon: "zap"},
 ];
 
 const SCROLL_KEY = "imageBench_manualScrollTop";
