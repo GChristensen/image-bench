@@ -11,7 +11,8 @@ export const KEY_SCOPES = [
   {id: "global", title: "Anywhere"},
   {id: "image", title: "Over an image card"},
   {id: "overlay", title: "In the image view"},
-  {id: "compare", title: "Compare"}
+  {id: "compare", title: "Compare"},
+  {id: "layout", title: "Layout editor"}
 ];
 
 const ENTER = ["Enter", "NumpadEnter"];
@@ -49,7 +50,14 @@ export const KEYS = [
 
   {id: "region", keys: "R", label: "Select a region", scope: "compare", source: "views/Compare.vue"},
   {id: "crops", keys: "X", label: "Show the crops of the region", scope: "compare", source: "views/Compare.vue"},
-  {id: "reorder", keys: "← →", label: "Move the hovered image", scope: "compare", source: "views/Compare.vue"}
+  {id: "reorder", keys: "← →", label: "Move the hovered image", scope: "compare", source: "views/Compare.vue"},
+
+  {id: "layoutNudge", keys: "Arrows · Shift+arrows", label: "Move the selected box, a little or more", scope: "layout",
+    source: "components/generate/LayoutEditor.vue"},
+  {id: "layoutRemove", keys: "Del", label: "Remove the selected box", scope: "layout",
+    source: "components/generate/LayoutEditor.vue"},
+  {id: "layoutEscape", keys: "Esc", label: "Deselect the box, then show the prompts", scope: "layout",
+    source: "components/generate/LayoutEditor.vue"}
 ];
 
 export function findKey(id) {

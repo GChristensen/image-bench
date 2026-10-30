@@ -9,7 +9,7 @@
  * One image is generated in place with a live preview; more images are a batch shown in the Generated tab
  * and, while it runs, in the session filmstrip, which takes the place of the parameter groups.
  */
-import {computed, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, toRef, watch} from "vue";
+import {computed, nextTick, onActivated, onBeforeMount, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, shallowRef, toRef, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import CheckTree from "@/components/CheckTree.vue";
 import GenerateImageCell from "@/components/GenerateImageCell.vue";
@@ -39,6 +39,7 @@ import SnippetsPanel from "@/components/generate/SnippetsPanel.vue";
 import PromptHistoryBar from "@/components/generate/PromptHistoryBar.vue";
 import PromptVariantsSelect from "@/components/generate/PromptVariantsSelect.vue";
 import PromptDiff from "@/components/generate/PromptDiff.vue";
+import LayoutEditor from "@/components/generate/LayoutEditor.vue";
 import ProjectCube from "@/components/generate/ProjectCube.vue";
 import {clearGenerationController, setGenerationController} from "@/generationKeys.js";
 import {consoleOpen, toggleConsole} from "@/consoleDrawer.js";
@@ -73,6 +74,8 @@ import {formToParameters} from "@/infotext.js";
 import {parametersToInfotext, writeClipboard} from "@/infotextClipboard.js";
 import {gestureTitle} from "@/gestures.js";
 import {addLoraToPrompt, hasLoraTag, removeLoraFromPrompt} from "@/loras.js";
+import {convertLayout, detectLayoutModel, emptyLayout, joinPrompt, layoutModel, parseLayout, scaleIntoCanvas, splitPrompt,
+        writeLayout} from "@/layoutPrompt.js";
 import {imageFilesFromDataTransfer} from "@/imageFiles.js";
 import {isStill, mediaKind, previewUrl} from "@/media.js";
 import {appendToPrompt, insertIntoTextarea, useSnippetsStore} from "@/stores/snippets.js";
@@ -654,6 +657,169 @@ function recordPrompts() {
   promptHistory.record(form.prompt, has("negativePrompt") ? form.negativePrompt : "");
 }
 
+// ---------- Layout editor ----------
+
+// The Layout tab under Copy, shown for the models of JSON layout prompts (src/layoutPrompt.js): the editor takes the
+// place of both prompts and writes the layout into the prompt on every edit, keeping the text around the JSON
+// (the LoRA tags). A change of the prompt from elsewhere reloads the layout, or closes the editor if it is no layout.
+const detectedLayoutModel = computed(() =>
+  detectLayoutModel({checkpoint: stripHash(form.checkpoint ?? ""), uiPreset: form.uiPreset})?.id ?? null);
+// Chosen in the editor when the detection fails or is wrong, for this session
+const layoutModelOverride = ref(null);
+// {model, layout, key, parts: {before, after}}; the layout as last edited is in `layoutCurrent`
+const layoutEditor = shallowRef(null);
+let layoutCurrent = null;
+// The prompt as last written by the editor, so that its own writes are not taken as changes from elsewhere
+let layoutWritten = null;
+let layoutKey = 0;
+
+const layoutSize = () => ({width: form.width, height: form.height});
+const showLayoutTab = computed(() => !!layoutEditor.value || !!detectedLayoutModel.value && !historyEntry.value);
+
+function showLayout(model, layout, parts, write) {
+  layoutCurrent = layout;
+  layoutEditor.value = {model, layout, parts, key: ++layoutKey};
+
+  if (write)
+    writeLayoutPrompt();
+  else
+    layoutWritten = form.prompt ?? "";
+}
+
+function writeLayoutPrompt() {
+  const {model, parts} = layoutEditor.value;
+  layoutWritten = joinPrompt(writeLayout(model, layoutCurrent, layoutSize()), parts);
+
+  if (layoutWritten !== form.prompt)
+    setParam("prompt", layoutWritten);
+}
+
+/**
+ * Read a layout prompt for the model
+ * @returns {Promise<{layout, parts, write: boolean}|null>} - null: not a layout (reported), or declined
+ */
+async function readLayoutPrompt(prompt, model, {ask = true} = {}) {
+  const split = splitPrompt(prompt);
+  const parts = {before: split.before, after: split.after};
+
+  if (split.kind === "empty")
+    return {layout: emptyLayout(), parts, write: true};
+
+  if (split.kind === "text") {
+    if (!ask || !await dialog.confirm("The prompt is not a JSON layout. Start a layout with this text as the description?",
+                                      {title: "Layout", okText: "Start a layout"}))
+      return null;
+
+    return {layout: {...emptyLayout(), caption: split.text}, parts, write: true};
+  }
+
+  const parsed = parseLayout(split.json, layoutSize());
+
+  if (parsed.error) {
+    toastError(parsed.error, {title: "Layout"});
+    return null;
+  }
+
+  let layout = convertLayout(parsed.layout, parsed.model, model);
+  let write = parsed.model !== model;
+
+  if (write)
+    toast(`Converted the ${layoutModel(parsed.model).label} layout to ${layoutModel(model).label}`);
+
+  if (parsed.outOfCanvas && ask && await dialog.confirm(
+      `Boxes of the layout lie outside the ${form.width}×${form.height} image: it was written for another size. Scale the boxes into the image?`,
+      {title: "Layout", okText: "Scale"})) {
+    layout = scaleIntoCanvas(layout);
+    write = true;
+  }
+
+  return {layout, parts, write};
+}
+
+/**
+ * The Layout tab: open the editor on the prompt, or close it
+ * @param {boolean} fresh - the alternative: a new empty layout, the current prompts kept as a variant first
+ */
+async function toggleLayout(fresh = false) {
+  if (layoutEditor.value && !fresh) {
+    layoutEditor.value = null;
+    return;
+  }
+
+  const model = layoutModelOverride.value ?? detectedLayoutModel.value;
+
+  if (!model)
+    return;
+
+  if (!(form.width > 0 && form.height > 0)) {
+    toastError("The image size is not known yet.", {title: "Layout"});
+    return;
+  }
+
+  shown.value = null;
+
+  if (fresh) {
+    if (currentForkable.value)
+      promptHistory.fork(`Before layout ${formatHistoryTime(Date.now())}`, currentPrompts());
+
+    const split = splitPrompt(form.prompt);
+    showLayout(model, emptyLayout(), {before: "", after: split.after}, true);
+    return;
+  }
+
+  const read = await readLayoutPrompt(form.prompt, model);
+
+  if (read)
+    showLayout(model, read.layout, read.parts, read.write);
+}
+
+function onLayoutChange(layout) {
+  layoutCurrent = layout;
+  writeLayoutPrompt();
+}
+
+function onLayoutModel(model) {
+  const {model: from} = layoutEditor.value;
+  layoutModelOverride.value = model === detectedLayoutModel.value ? null : model;
+  showLayout(model, convertLayout(layoutCurrent, from, model), layoutEditor.value.parts, true);
+}
+
+// A prompt changed elsewhere (history Use, PNG Info, a LoRA checked): only the text around the JSON, or a new layout
+watch(() => form.prompt, async prompt => {
+  if (!layoutEditor.value || (prompt ?? "") === layoutWritten)
+    return;
+
+  const {model} = layoutEditor.value;
+  const split = splitPrompt(prompt);
+
+  if (split.kind === "json" && split.json === writeLayout(model, layoutCurrent, layoutSize())) {
+    layoutEditor.value = {...layoutEditor.value, parts: {before: split.before, after: split.after}};
+    layoutWritten = prompt;
+    return;
+  }
+
+  const read = split.kind === "json" ? await readLayoutPrompt(prompt, model, {ask: false}) : null;
+
+  if (read)
+    showLayout(model, read.layout, read.parts, read.write);
+  else {
+    layoutEditor.value = null;
+    toast("The prompt was replaced by one that is not a layout: the layout editor is closed.");
+  }
+});
+
+// MOSS boxes are pixels of the image
+watch(() => [form.width, form.height], () => {
+  if (layoutEditor.value?.model === "moss" && form.width > 0 && form.height > 0)
+    writeLayoutPrompt();
+});
+
+// A history entry or variant takes the place of the prompts
+watch(historyEntry, entry => {
+  if (entry)
+    layoutEditor.value = null;
+});
+
 // ---------- Generation ----------
 
 const generateImagesNumber = ref(1);
@@ -1034,7 +1200,8 @@ async function onSnippetInsert(snippet, mode) {
   if (own && textarea && !textarea.disabled)
     insertIntoTextarea(textarea, own);
 
-  if (mode !== "middle" && rest && (other === "prompt" || has("negativePrompt")))
+  // The layout editor writes the prompt itself
+  if (mode !== "middle" && rest && (other === "prompt" ? !layoutEditor.value : has("negativePrompt")))
     setParam(other, appendToPrompt(form[other] ?? "", rest));
 }
 
@@ -1724,10 +1891,25 @@ const gridStyle = computed(() => ({
                     aria-label="Copy the prompts" aria-haspopup="menu" @click="onCopyTab"
                     @auxclick="e => e.button === 1 && copyPrompts(has('negativePrompt') ? 'both' : 'prompt')"
                     @mousedown.middle.prevent><AppIcon name="copy" :size="11"/>Copy</button>
+            <button v-if="showLayoutTab" type="button" class="lower-tab label-small layout-tab" :class="{on: !!layoutEditor}"
+                    :title="gestureTitle(layoutEditor ? 'Show the prompts' : 'Edit the JSON layout of the prompt in boxes',
+                                         'start a new empty layout, the current prompts kept as a variant')"
+                    aria-label="Layout editor" :aria-pressed="!!layoutEditor"
+                    @click="e => toggleLayout(e.shiftKey)"
+                    @auxclick="e => e.button === 1 && toggleLayout(true)"
+                    @mousedown.middle.prevent><AppIcon name="region" :size="11"/>Layout</button>
           </div>
         </template>
         <template v-if="historyEntry" #view>
           <PromptDiff :text="historyEntry.prompt" :base="form.prompt ?? ''" :plain="historyPlain"/>
+        </template>
+        <template v-else-if="layoutEditor" #view>
+          <LayoutEditor :key="layoutEditor.key" :initial="layoutEditor.layout" :model="layoutEditor.model"
+                        :detected="detectedLayoutModel" :width="form.width" :height="form.height"
+                        :image-url="shownImageUrl || null"
+                        :negative-prompt="has('negativePrompt') ? form.negativePrompt ?? '' : null"
+                        @change="onLayoutChange" @update:model="onLayoutModel"
+                        @update:negative-prompt="v => setParam('negativePrompt', v)" @close="layoutEditor = null"/>
         </template>
       </PromptField>
 
@@ -1789,7 +1971,8 @@ const gridStyle = computed(() => ({
 
       <!-- Negative prompt and parameters -->
       <div class="lower">
-        <template v-if="has('negativePrompt')">
+        <!-- The layout editor has the negative prompt as a single line -->
+        <template v-if="has('negativePrompt') && !layoutEditor">
           <div class="grip" :class="{active: negative.resizing}" role="separator" aria-orientation="horizontal"
                aria-label="Resize the negative prompt" :aria-valuenow="negative.size"
                :aria-valuemin="NEGATIVE_HEIGHT.min" :aria-valuemax="NEGATIVE_HEIGHT.max" tabindex="0"
@@ -2446,7 +2629,8 @@ const gridStyle = computed(() => ({
 }
 
 /* The tab icon stands upright in the rotated tab */
-.copy-tab :deep(svg) {
+.copy-tab :deep(svg),
+.layout-tab :deep(svg) {
   transform: rotate(180deg);
 }
 

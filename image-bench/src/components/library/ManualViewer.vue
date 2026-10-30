@@ -591,6 +591,29 @@ const hostOrigin = location.origin;
           the infotext with the parameters of the tab. Pointing at an item outlines the fields it copies. The menu
           copies the prompts shown, so with a history entry or variant open it copies that one. A middle click or
           Shift+click on the tab copies both prompts at once.</li>
+        <li><AppIcon name="region" :size="13" class="inline-icon"/> <b>Layout</b>, the tab under Copy, is shown for
+          the models that place subjects and text by bounding boxes in a JSON prompt: Ideogram 4 and MOSS-Image, told
+          by the checkpoint name (or the UI preset). It replaces the prompts with a layout editor and writes the
+          model's JSON into the prompt as you edit, so Generate always uses what is drawn.
+          <ul>
+            <li>It opens on an empty prompt or on a JSON layout. A layout of the other model is converted, plain text
+              can become the description of a new layout, and anything else is refused with the reason. A MOSS-Image
+              layout written for a larger image offers to scale its boxes into the image.</li>
+            <li>Drag on the image to draw a box of the kind chosen in the toolbar (Object, Text, and Character for
+              MOSS-Image), drag a box to move it and its handles to resize it. The arrow keys move the selected box
+              (Shift: more), Delete removes it, Escape deselects it and then shows the prompts again.</li>
+            <li>The list at the right holds the image description first (Ideogram 4 also has the background and the
+              style), then the boxes from back to front; the selected one has its text, its description and its
+              palette (hex colors). The picture button shows the latest image under the boxes.</li>
+            <li><AppIcon name="snippet" :size="13" class="inline-icon"/> <b>JSON</b> shows the JSON written into the
+              prompt, indented, in place of the list: read-only, live, with the selected box's element highlighted (a
+              click on an element selects its box). The prompt itself stays compact, as the models were trained on it.
+              A middle click or Shift+click on the button copies the indented JSON.</li>
+            <li>The negative prompt is the line at the bottom. <code>&lt;lora:...&gt;</code> tags of the LoRA list
+              stay after the JSON. MOSS-Image boxes are pixels of the image, so a size change rewrites them.</li>
+            <li>A middle click or Shift+click on the tab starts a new empty layout and keeps the current prompts as a
+              variant.</li>
+          </ul></li>
         <li><b><AppIcon name="fileSearch" :size="13" class="inline-icon"/> PNG Info</b> shows the parameters of an
           image chosen, pasted or dropped there (or on the prompt). <b>Apply</b> sets the checked groups and lists
           the values that {{ HOST_NAME }} does not have.</li>
