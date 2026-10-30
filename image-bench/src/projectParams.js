@@ -28,7 +28,8 @@ const IMAGE_EXTENSIONS = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp
 
 /**
  * Snapshot of the host page as the parameters saved in project.json and the ControlNet image files
- * @param {Object} snapshot - {mode, params, controlnet: {tab, units: [{index, params, image, mask, pose}]}, workflow}
+ * @param {Object} snapshot - {mode, params, controlnet: {tab, units: [{index, params, image, mask, pose}]}, workflow,
+ *   workflowName} (workflowName: ComfyUI, the saved workflow the graph comes from, which names its tab on restore)
  * @returns {{parameters: Object, workflow: Object|null, files: {name: string, blob: Blob}[]}}
  */
 export function snapshotToSave(snapshot) {
@@ -56,7 +57,8 @@ export function snapshotToSave(snapshot) {
       host: HOST,
       mode: snapshot.mode,
       params: snapshot.params ?? {},
-      controlnet: {tab: snapshot.controlnet?.tab ?? "txt2img", units}
+      controlnet: {tab: snapshot.controlnet?.tab ?? "txt2img", units},
+      ...snapshot.workflowName ? {workflowName: snapshot.workflowName} : {}
     },
     workflow: snapshot.workflow ?? null,
     files

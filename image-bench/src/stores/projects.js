@@ -516,7 +516,8 @@ export const useProjectsStore = defineStore("projects", () => {
 
     const result = await requestHost({
       type: "PROJECT_RESTORE",
-      snapshot: {mode: prepared.mode, params: prepared.params, controlnet: {units}, workflow, name: info.name}
+      snapshot: {mode: prepared.mode, params: prepared.params, controlnet: {units}, workflow,
+                 workflowName: parameters.workflowName ?? null, name: info.name}
     }, RESTORE_TIMEOUT);
 
     for (const index of result?.missingUnits ?? [])

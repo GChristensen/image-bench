@@ -943,10 +943,13 @@ const hostOrigin = location.origin;
           chip reads <i>No project</i>, and its <AppIcon name="plus" :size="13" class="inline-icon"/> button
           creates a new project. When a folder is selected in the Projects tab, or a project inside a folder, a switch
           in the dialog lets you choose between that folder and the root. The <AppIcon name="chevron" :size="13" class="inline-icon"/>
-          arrow of the chip, or a right-click on it, opens its menu: <b>Save</b> (or <b>New project…</b>),
+          arrow of the chip, or a right-click on it, opens its menu: <b>Save</b> and <b>Close</b> (or <b>New project…</b>),
           <b>Show in Projects</b>, the recent projects and <b>All projects…</b>, and the clean-up actions (see
-          <a href="#" @click.prevent="scrollTo('settings')">Settings and actions</a>), among them <b>Close and start a
-          blank workspace</b>.
+          <a href="#" @click.prevent="scrollTo('settings')">Settings and actions</a>).
+          <b>Close</b> <AppIcon name="close" :size="13" class="inline-icon"/> is also the project icon of the chip:
+          it turns into the close icon while the pointer is over the icon or the name. Closing asks first, then
+          closes the project (its saved state is kept) and starts a blank workspace, as <b>Start a blank workspace</b>
+          does; with unsaved changes, <b>Save and close</b> saves them first.
           Drop image cards on the chip to copy them into the folder of the current project.</li>
         <li><b>The project reminder</b>: while a project is current, a cube in the project color is joined to the
           Generate button. Click it for <b>Save project</b> and <b>New workspace…</b>. The cube turns striped and
@@ -1041,11 +1044,12 @@ const hostOrigin = location.origin;
       </p>
       <ul>
         <li><b>Clear generated images</b> <AppIcon name="broom" :size="13" class="inline-icon"/> removes all
-          images from the Generated, Upscaled and Explore tabs and the ControlNet sweep at once, with Undo in the
-          notice. The trays, the Compare tab, the prompts and the parameters are kept, and no output files are deleted (the
-          copies of the Upscaled images are).</li>
+          images from the Generated and Explore tabs and the ControlNet sweep at once, with Undo in the notice. The
+          Upscaled tab, the Compare tab, the trays, the prompts and the parameters are kept, and no output files are
+          deleted.</li>
         <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> (with a current
-          project: <b>Close and start a blank workspace</b>) asks first and is for starting a new project. It also empties both trays and
+          project, it is <b>Close</b> <AppIcon name="close" :size="13" class="inline-icon"/> after <b>Save</b>) asks
+          first and is for starting a new project. It also empties both trays and
           the Compare tab, clears the prompts and the ControlNet images, sets a random seed<template v-if="isWebUI"> (and clears the variation
           seed)</template>, and closes the current project, whose saved state is kept. The other
           parameters are kept. The output files stay on

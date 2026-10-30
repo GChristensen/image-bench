@@ -1,9 +1,10 @@
 <script setup>
 /**
- * Current project in the tab bar, also the tab of the Projects view: its name (shows the project in the Projects
- * tab), a dot while the workspace has unsaved changes, the Save button, and the arrow opening the chip's menu. Without a
- * current project: "No project" (shows the projects), a button creating a new project and the arrow. The menu (also
- * on right-click) has Save / New project, the recent projects and the clean-up actions (cleanUp.js); image cards
+ * Current project in the tab bar, also the tab of the Projects view: its icon (a close button while the icon or the
+ * name is hovered), its name (shows the project in the Projects tab), a dot while the workspace has unsaved changes,
+ * the Save button, and the arrow opening the chip's menu. Without a current project: "No project" (shows the projects),
+ * a button creating a new project and the arrow. The menu (also on right-click) has Save and Close / New project, the
+ * recent projects and the clean-up actions (cleanUp.js); image cards
  * dropped on the chip are copied into the folder of the current project. It pulses when the project reminder is armed (projectReminder.js)
  */
 import {computed, ref, watch} from "vue";
@@ -15,8 +16,10 @@ import {copyToProject, openContextMenu, openMenuBelow} from "@/contextMenu.js";
 import {canDropOn, KIND_PROJECT, takeDraggedImages} from "@/imageDrag.js";
 import {reminder} from "@/projectReminder.js";
 import {showShortcuts} from "@/shortcutSheet.js";
+import {startBlankWorkspace} from "@/workspace.js";
 
 const PROJECTS_ROUTE = "/projects";
+const CLOSE_TITLE = "Closes the project and clears the workspace; output images stay on disk";
 
 const store = useProjectsStore();
 const route = useRoute();
@@ -37,7 +40,7 @@ const title = computed(() => {
     `Current project: ${current.path}`,
     current.exists === false ? "The project folder is not found" : null,
     changed.length ? `Changed since the last save: ${changed.join(", ")}` : "No unsaved tray changes",
-    "Click to show it in the projects; right-click or the arrow: recent projects and clean-up",
+    "Click to show it in the projects; the icon closes it; right-click or the arrow: recent projects and clean-up",
     canTakeImages.value ? "Drop images here to copy them into the project folder" : null
   ].filter(Boolean).join("\n");
 });
@@ -52,6 +55,7 @@ function menuItems() {
   const items = store.hasCurrent
     ? [{icon: "save", label: "Save", hint: "Ctrl+S", disabled: !!store.busy || store.current.exists === false,
         run: () => store.save()},
+       {icon: "close", label: "Close", disabled: !!store.busy, title: CLOSE_TITLE, run: () => startBlankWorkspace()},
        {icon: "box", label: "Show in Projects", run: () => { show(); router.push(PROJECTS_ROUTE); }}]
     : [{icon: "plus", label: "New project…", disabled: !!store.busy, run: () => store.createProject()}];
 
@@ -115,11 +119,17 @@ function onDrop() {
   </div>
   <div v-else class="project-chip" :class="{active, missing: store.current.exists === false, 'drop-target': dropTarget, pulsing}"
        @animationend="pulsing = false" @contextmenu="openMenu" @dragover="onDragOver" @dragleave="onDragLeave" @drop.prevent="onDrop">
-    <RouterLink :to="PROJECTS_ROUTE" class="chip-name" :title="title" @click="show">
-      <AppIcon :name="store.current.exists === false ? 'alert' : 'box'" :size="13"/>
-      <span class="name">{{ store.current.name }}</span>
-      <span v-if="store.unsaved" class="dot" aria-label="Unsaved changes"></span>
-    </RouterLink>
+    <div class="chip-head">
+      <button class="chip-close" :disabled="!!store.busy" :title="CLOSE_TITLE" aria-label="Close the project"
+              @click="startBlankWorkspace()">
+        <AppIcon class="icon-project" :name="store.current.exists === false ? 'alert' : 'box'" :size="13"/>
+        <AppIcon class="icon-close" name="close" :size="13"/>
+      </button>
+      <RouterLink :to="PROJECTS_ROUTE" class="chip-name" :title="title" @click="show">
+        <span class="name">{{ store.current.name }}</span>
+        <span v-if="store.unsaved" class="dot" aria-label="Unsaved changes"></span>
+      </RouterLink>
+    </div>
     <button class="chip-save" :disabled="!!store.busy || store.current.exists === false"
             :title="store.busy || 'Save the workspace into the project (Ctrl+S)'" aria-label="Save the project"
             @click="store.save()"><span v-if="store.busy" class="spinner"></span><AppIcon v-else name="save" :size="13"/></button>
@@ -199,7 +209,15 @@ function onDrop() {
   box-shadow: inset 0 0 0 1px var(--ib-project-border);
 }
 
+.chip-head {
+  display: flex;
+  min-width: 0;
+  flex-shrink: 1;
+  height: 100%;
+}
+
 .chip-name,
+.chip-close,
 .chip-save,
 .chip-menu {
   height: 100%;
@@ -221,17 +239,43 @@ function onDrop() {
   padding: 0 4px 0 9px;
 }
 
-.chip-name .app-icon {
+/* The icon is the close button: its own hit area, so the name keeps the gap after it as padding */
+.chip-close {
+  flex-shrink: 0;
+  padding: 0 3px 0 9px;
+}
+
+.chip-head .chip-name {
+  padding-left: 3px;
+}
+
+.chip-name .app-icon,
+.chip-close .app-icon {
   flex-shrink: 0;
   color: var(--ib-project);
 }
 
-.active .chip-name .app-icon,
+/* Hovering the icon or the name turns the project icon into the close icon */
+.chip-close .icon-close,
+.chip-head:hover .chip-close:not(:disabled) .icon-project {
+  display: none;
+}
+
+.chip-head:hover .chip-close:not(:disabled) .icon-close {
+  display: block;
+  color: var(--ib-text);
+}
+
+.chip-close:hover:not(:disabled) .icon-close {
+  color: var(--ib-danger);
+}
+
+.active .chip-close .icon-project,
 .active .chip-save {
   color: var(--ib-accent);
 }
 
-.missing .chip-name .app-icon {
+.missing .chip-close .icon-project {
   color: var(--ib-warn);
 }
 
@@ -270,9 +314,14 @@ function onDrop() {
 }
 
 .chip-name:hover,
+.chip-close:hover:not(:disabled),
 .chip-save:hover:not(:disabled),
 .chip-menu:hover:not(:disabled) {
   background: var(--ib-hover);
+}
+
+.chip-close:disabled {
+  cursor: default;
 }
 
 .chip-save:disabled,

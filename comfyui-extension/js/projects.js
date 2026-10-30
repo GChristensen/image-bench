@@ -4,6 +4,9 @@
  * ControlNet units with their images, and the workflow, which is loaded first when a project is restored.
  */
 
+// Key of the graph's extra data holding the name of the saved workflow a restored project graph comes from
+const WORKFLOW_NAME_KEY = 'imageBenchWorkflow';
+
 /**
  * @param {Object} ctx - {app, ops, popup: {sendMessage}}
  * @param {Object} modules - {mirror, controlNet}
@@ -21,6 +24,17 @@ export function createProjects({app, ops, popup}, {mirror, controlNet}) {
         }
     }
 
+    /**
+     * Name of the saved workflow the graph comes from: that of the tab, else the one a project restore recorded in the
+     * graph (its tab is temporary), so a project saved again keeps it
+     */
+    function workflowName() {
+        const active = app.extensionManager?.workflow?.activeWorkflow;
+        const name = active && !active.isTemporary ? active.key ?? active.filename : app.graph.extra?.[WORKFLOW_NAME_KEY];
+
+        return name ? name.split('/').pop().replace(/\.json$/i, '') : null;
+    }
+
     async function capture() {
         const mode = mirror.getMode();
 
@@ -28,17 +42,19 @@ export function createProjects({app, ops, popup}, {mirror, controlNet}) {
             mode,
             params: ops.params.read(mode).params,
             controlnet: {tab: 'txt2img', units: await controlNet.captureUnits()},
-            workflow: app.graph.serialize()
+            workflow: app.graph.serialize(),
+            workflowName: workflowName()
         };
     }
 
     /**
-     * @param {Object} snapshot - {mode, params, controlnet: {units}, workflow, name} with the ControlNet images as files
+     * @param {Object} snapshot - {mode, params, controlnet: {units}, workflow, workflowName, name} with the ControlNet
+     *   images as files
      * @returns {Promise<{missingUnits: number[]}>}
      */
-    async function restore({params, controlnet, workflow, name}) {
+    async function restore({params, controlnet, workflow, workflowName, name}) {
         if (workflow)
-            await loadWorkflow(workflow, name);
+            await loadWorkflow(workflow, workflowName, name);
 
         ops.params.apply(params || {}, mirror.getMode());
 
@@ -50,11 +66,15 @@ export function createProjects({app, ops, popup}, {mirror, controlNet}) {
     }
 
     /**
-     * Load the workflow of a project, in a workflow tab named after the project where the frontend has them
+     * Load the workflow of a project in a new tab, "<workflow> (<project>)", or the project name without a workflow
+     * name; no saved workflow is changed. The project keeps the workflow (ib_project/workflow.json)
      */
-    async function loadWorkflow(workflow, name) {
+    async function loadWorkflow(workflow, workflowName, name) {
+        if (workflowName)
+            workflow = {...workflow, extra: {...workflow.extra, [WORKFLOW_NAME_KEY]: workflowName}};
+
         try {
-            await app.loadGraphData(workflow, true, true, name || null);
+            await app.loadGraphData(workflow, true, true, workflowName ? `${workflowName} (${name})` : name || null);
         } catch (error) {
             console.warn('[Image Bench] Loading the workflow by name failed, loading it in place:', error);
             await app.loadGraphData(workflow);

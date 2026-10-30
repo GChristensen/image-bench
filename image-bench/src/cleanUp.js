@@ -1,7 +1,6 @@
-import {clearViewsAndTrays, startBlankWorkspace, VIEWS} from "@/workspace.js";
+import {clearViewsAndTrays, startBlankWorkspace} from "@/workspace.js";
 import {useExploreImagesStore} from "@/stores/explore.js";
 import {useGeneratedImagesStore} from "@/stores/generatedImages.js";
-import {useUpscaledImagesStore} from "@/stores/upscaled.js";
 import {useControlNetSweepStore} from "@/stores/controlnetSweep.js";
 import {useProjectsStore} from "@/stores/projects.js";
 import {clearWithUndo} from "@/undo.js";
@@ -13,24 +12,26 @@ import {HOST_NAME} from "@/host.js";
  * The clean-up actions, the last group of the project chip's menu (ProjectChip.vue)
  */
 
-function clearGeneratedImages() {
-  const stores = [useGeneratedImagesStore(), useExploreImagesStore(), useUpscaledImagesStore(),
-    useControlNetSweepStore()];
+// The views cleared by Clear generated images; Upscaled, Compare and the trays are kept
+const GENERATED_VIEWS = "Generated and Explore tabs and the ControlNet sweep";
 
-  if (!clearWithUndo(stores, `Cleared the ${VIEWS}. The output files stay on disk.`))
+function clearGeneratedImages() {
+  const stores = [useGeneratedImagesStore(), useExploreImagesStore(), useControlNetSweepStore()];
+
+  if (!clearWithUndo(stores, `Cleared the ${GENERATED_VIEWS}. Output images stay on disk.`))
     toast("There are no generated images to clear.");
 }
 
 async function deleteOutputs() {
-  if (await dialog.confirm(`Permanently deletes every file and folder in the ${HOST_NAME} outputs directory, `
-      + `including the images of the trays, the Compare tab and the Upscaled tab, and empties all tabs and trays. `
-      + "This cannot be undone.", {title: "Delete all output files", okText: "Delete files", danger: true})) {
+  if (await dialog.confirm(`Deletes all files and folders in the ${HOST_NAME} output folder and clears the `
+      + "workspace. This cannot be undone.", {title: "Delete all output files", okText: "Delete files", danger: true})) {
     clearViewsAndTrays();
     setTimeout(() => fetch("/image-bench/clear_outputs_dir", {method: "POST"}), 500);
   }
 }
 
 /**
+ * With a current project, starting a blank workspace is the chip's Close, after Save
  * @returns {Object[]} Context menu items (contextMenu.js), with their heading
  */
 export function cleanUpItems() {
@@ -38,12 +39,13 @@ export function cleanUpItems() {
 
   return [
     {heading: "Clean up"},
-    {icon: "broom", label: "Clear generated images", title: `Removes all images of the ${VIEWS}; trays, prompts `
-      + "and parameters are kept, output files stay on disk (Undo in the notice)", run: clearGeneratedImages},
-    {icon: "nuke", label: projects.hasCurrent ? "Close and start a blank workspace" : "Start a blank workspace",
-     title: "Clears all images, trays, prompts and ControlNet images, randomizes the seed and closes the project; output files stay on disk",
-     run: () => startBlankWorkspace()},
+    {icon: "broom", label: "Clear generated images",
+     title: `Clears the ${GENERATED_VIEWS}, keeps Upscaled, Compare and the trays; output images stay on disk`,
+     run: clearGeneratedImages},
+    ...projects.hasCurrent ? [] : [
+      {icon: "nuke", label: "Start a blank workspace", title: "Clears the workspace; output images stay on disk",
+       run: () => startBlankWorkspace()}],
     {icon: "trash", label: "Delete all output files…", danger: true,
-     title: `Deletes the ${HOST_NAME} outputs directory; cannot be undone`, run: deleteOutputs}
+     title: `Deletes all files and folders in the ${HOST_NAME} output folder; cannot be undone`, run: deleteOutputs}
   ];
 }
