@@ -1056,9 +1056,11 @@ const hostOrigin = location.origin;
         <li><b>Open</b> (or double-click) restores the trays and parameters of a project and makes it current.
           If the current project has unsaved changes, you are asked to save or discard them first. The menu next
           to <b>Open</b> restores <b>Trays only</b> or <b>Parameters only</b>, or offers <b>Merge trays into the
-          workspace</b>. <b>Save</b> (<b>Save here</b> on a project that is not current) saves the workspace into
-          the project shown; the menu next to it saves it as a new project in the same folder (<b>Save as new
-          project…</b>), which becomes current. <b>Revert</b> restores the saved state of the
+          workspace</b>. <b>Save</b> saves the workspace into the current project, whichever project is shown
+          (without a current project the button is <b>Save as new…</b>). The menu next to it saves it as a new
+          project in the same folder as the one shown (<b>Save as new project…</b>), or, on a project that is not
+          current, into the project shown (<b>Save here…</b>, after a confirmation, since it overwrites that
+          project's trays and parameters); either becomes current. <b>Revert</b> restores the saved state of the
           current project.</li>
         <li><b>Parameters</b> are those of the generation mode that was shown, as they were when the project was
           saved, with the enabled ControlNet units and their images and edited poses. Input and reference images

@@ -78,14 +78,28 @@ function onOpenMenu(e) {
   ]);
 }
 
+// The main save button saves the current project, or a new one without a current project
+function onSave() {
+  if (store.hasCurrent)
+    store.save();
+  else
+    store.saveAs(project.value.path);
+}
+
 function onSaveMenu(e) {
   const rect = e.currentTarget.getBoundingClientRect();
   const position = {preventDefault() {}, clientX: rect.right - 220, clientY: rect.bottom + 4};
   const path = project.value.path;
+  const items = [];
 
-  openContextMenu(position, [
-    {icon: "save", label: "Save as new project…", run: () => store.saveAs(path)}
-  ]);
+  if (store.hasCurrent)
+    items.push({icon: "save", label: "Save as new project…", run: () => store.saveAs(path)});
+
+  // Overwrites this project, confirmed by saveInto()
+  if (!isCurrent.value)
+    items.push({icon: "download", label: "Save here…", danger: true, run: () => store.saveInto(path)});
+
+  openContextMenu(position, items);
 }
 
 function onMoreMenu(e) {
@@ -560,10 +574,11 @@ const unitDetails = unit => [
           </div>
           <div class="split">
             <button class="btn" :class="isCurrent ? 'primary' : 'outline'" :disabled="!!store.busy"
-                    :title="isCurrent ? 'Save the workspace into the project (Ctrl+S)' : 'Save the workspace into this project'"
-                    @click="store.saveInto(project.path)"><AppIcon name="save" :size="14"/>{{ isCurrent ? "Save" : "Save here" }}</button>
-            <button class="btn" :class="isCurrent ? 'primary' : 'outline'" :disabled="!!store.busy" aria-label="Save options"
-                    title="Save the workspace as a new project" @click="onSaveMenu"><AppIcon name="chevron" :size="14"/></button>
+                    :title="store.hasCurrent ? `Save the workspace into ${baseName(store.current.path)} (Ctrl+S)` : 'Save the workspace as a new project'"
+                    @click="onSave"><AppIcon name="save" :size="14"/>{{ store.hasCurrent ? "Save" : "Save as new…" }}</button>
+            <button class="btn" :class="isCurrent ? 'primary' : 'outline'" :disabled="!!store.busy"
+                    aria-label="Save options" title="Save as a new project, or into this project"
+                    @click="onSaveMenu"><AppIcon name="chevron" :size="14"/></button>
           </div>
           <button class="ib" aria-label="More project actions" @click="onMoreMenu"><AppIcon name="more" :size="14"/></button>
         </div>
