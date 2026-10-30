@@ -22,12 +22,37 @@ function clearGeneratedImages() {
     toast("There are no generated images to clear.");
 }
 
+/**
+ * With a current project, closes it first (saved if chosen), so that the cleared trays are not its unsaved changes
+ */
 async function deleteOutputs() {
-  if (await dialog.confirm(`Deletes all files and folders in the ${HOST_NAME} output folder and clears the `
-      + "workspace. This cannot be undone.", {title: "Delete all output files", okText: "Delete files", danger: true})) {
-    clearViewsAndTrays();
-    setTimeout(() => fetch("/image-bench/clear_outputs_dir", {method: "POST"}), 500);
-  }
+  const projects = useProjectsStore();
+
+  await projects.loadCurrent();
+
+  const open = projects.hasCurrent;
+  const unsaved = open && projects.unsaved;
+  const message = [
+    open ? `Closes the project ${projects.current.name}, deletes` : "Deletes",
+    `all files and folders in the ${HOST_NAME} output folder and clears the workspace. This cannot be undone.`,
+    unsaved ? "Unsaved changes of the project are lost unless you save them." : null
+  ].filter(Boolean).join(" ");
+
+  const answer = await dialog.confirm(message,
+    {title: "Delete all output files", okText: open ? "Close & delete" : "Delete files", danger: true,
+     actions: unsaved ? [{id: "save", label: "Save, close & delete"}] : []});
+
+  if (!answer)
+    return;
+
+  if (answer === "save" && !await projects.save())
+    return;
+
+  if (open)
+    await projects.close();
+
+  clearViewsAndTrays();
+  setTimeout(() => fetch("/image-bench/clear_outputs_dir", {method: "POST"}), 500);
 }
 
 /**
@@ -46,6 +71,9 @@ export function cleanUpItems() {
       {icon: "nuke", label: "Start a blank workspace", title: "Clears the workspace; output images stay on disk",
        run: () => startBlankWorkspace()}],
     {icon: "trash", label: "Delete all output files…", danger: true,
-     title: `Deletes all files and folders in the ${HOST_NAME} output folder; cannot be undone`, run: deleteOutputs}
+     ...projects.hasCurrent ? {hint: "closes project"} : {},
+     title: `Deletes all files and folders in the ${HOST_NAME} output folder; cannot be undone`
+       + (projects.hasCurrent ? ". Closes the project first" : ""),
+     run: deleteOutputs}
   ];
 }

@@ -71,6 +71,11 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  // A right click on the center acts as a left click (the rim opened by the right button, PointerRim.vue)
+  centerRightClick: {
+    type: Boolean,
+    default: false
+  },
   // Actions as an arc outside the ring, at the bottom: [{id, icon, label}], emitted as extra(id)
   extras: {
     type: Array,
@@ -436,6 +441,14 @@ function onCenterAuxClick(e) {
     onCenterClick();
 }
 
+// The browser menu never shows on the center
+function onCenterContextMenu(e) {
+  e.preventDefault();
+
+  if (props.centerRightClick)
+    onCenterClick();
+}
+
 // The ring is faint while the pointer is outside it, near the card edge
 function onPointerMove(e) {
   const rect = root.value?.getBoundingClientRect();
@@ -509,6 +522,7 @@ onBeforeUnmount(() => pointerSource?.removeEventListener("pointermove", onPointe
             @click.stop="onCenterClick"
             @mousedown.middle.prevent
             @auxclick="onCenterAuxClick"
+            @contextmenu="onCenterContextMenu"
             @pointerenter="centerHovered = true"
             @pointerleave="centerHovered = false">
       <svg v-if="closeHub" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"

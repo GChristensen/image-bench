@@ -7,9 +7,9 @@ import ActionRim from "@/components/ActionRim.vue";
 
 /**
  * Index badge, comment and marking shown over an image of the Compare tab (strip item or crop cell); holding Ctrl
- * over the image or a middle click on it (rimToggled, kept by the view) shows its action rim (ActionRim.vue), with
- * the view's removeImage handler as its Delete sector.
- * The other actions are in the context menu and the keys.
+ * over the image shows its action rim (ActionRim.vue), with the view's removeImage handler as its Delete sector.
+ * The rim button of the image opens it at the pointer (pointerRim.js, handled by the view), the menu button the
+ * context menu.
  * The root takes no pointer events, so that drags on the image reach the view; its controls do. Their clicks
  * stop here: a control may re-render away before the click bubbles on, so the image could no longer tell it came
  * from the chrome.
@@ -32,18 +32,12 @@ const props = defineProps({
   hovered: {
     type: Boolean,
     default: false
-  },
-  // A middle click on the image toggled the rim on (the view clears it when the pointer leaves the image)
-  rimToggled: {
-    type: Boolean,
-    default: false
   }
 });
 
 const emit = defineEmits(["setMarking", "open"]);
 
 const rootElement = ref(null);
-const rimElement = ref(null);
 const shiftDown = useShiftKey();
 const ctrlDown = useCtrlKey();
 const showAlt = computed(() => props.hovered && shiftDown.value);
@@ -51,7 +45,7 @@ const rimGroups = computed(() => rimActionGroups(props.image, props.ctx));
 const rimExtras = computed(() => rimReuseExtras(props.image));
 const rimSize = ref(0);
 const rimHeight = ref(0);
-const rimOpen = computed(() => props.hovered && (ctrlDown.value || props.rimToggled));
+const rimOpen = computed(() => props.hovered && ctrlDown.value);
 
 watch(rimOpen, open => {
   const root = rootElement.value;
@@ -65,9 +59,6 @@ watch(rimOpen, open => {
 function onAction(action, alt) {
   runImageAction(action, props.image, props.ctx, alt);
 }
-
-// The press-and-release gesture of the view reads the rim (useRimPress.js)
-defineExpose({rimElement});
 
 function onMarkingAuxClick(e) {
   if (e.button === 1)
@@ -90,7 +81,7 @@ function onMarkingAuxClick(e) {
     </div>
 
     <Transition name="rim">
-      <ActionRim v-if="rimOpen" ref="rimElement" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter" :marking="image.marking ?? null"
+      <ActionRim v-if="rimOpen" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter" :marking="image.marking ?? null"
                  marking-arc :extras="rimExtras" :show-alt="showAlt" :deletable="!!ctx.handlers.removeImage"
                  :delete-label="ctx.removeLabel ?? 'Remove'"
                  @run="onAction" @delete="ctx.handlers.removeImage(image)"

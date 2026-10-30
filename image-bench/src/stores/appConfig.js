@@ -151,6 +151,18 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         }
     });
 
+    // The right button opens the context menu of an image and the middle button its action rim, not the other way round
+    // (disabled unless set to true)
+    const rightClickMenu = computed({
+        get() {
+            return _config.rightClickMenu ?? false;
+        },
+        set(v) {
+            _config.rightClickMenu = v;
+            return persist();
+        }
+    });
+
     // Remember txt2img prompts and parameters across WebUI reloads (enabled unless set to false)
     const persistGenerationParams = computed({
         get() {
@@ -291,6 +303,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
         projectReminder,
         commonSizesOnly,
         rimOnHover,
+        rightClickMenu,
         persistGenerationParams,
         generateUiPresets,
         generatePresetImages,

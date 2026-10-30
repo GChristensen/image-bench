@@ -4,7 +4,8 @@ import {openImageMenu} from "@/contextMenu.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
 import {cropAspect, packGrid} from "@/components/compare/compareGeometry.js";
 import CompareChrome from "@/components/compare/CompareChrome.vue";
-import {useRimPress} from "@/composables/useRimPress.js";
+import {openImageRim} from "@/pointerRim.js";
+import {imageButtonHandlers} from "@/imageButtons.js";
 
 /**
  * The region of each image of the Compare tab, packed into the grid with the largest cells that fit. The wheel
@@ -56,8 +57,6 @@ const rootElement = ref(null);
 const gridElement = ref(null);
 const area = ref({width: 0, height: 0});
 const hoveredIndex = ref(-1);
-// The cell whose action rim a middle click toggled on, until the pointer leaves it
-const rimIndex = ref(-1);
 const panning = ref(false);
 
 const aspect = computed(() => cropAspect(props.region, props.images.map(image => props.sizes[image.imageUrl])));
@@ -152,18 +151,9 @@ let removePanListeners = null;
 let suppressClick = false;
 
 function onMouseDown(e) {
-  // A middle press on a cell shows its action rim (released on a sector it runs it); no autoscroll
+  // The buttons of a cell are its own (onCellButton); no autoscroll
   if (e.button === 1) {
     e.preventDefault();
-    const cell = e.target.closest(".crop-cell");
-    const index = cell ? [...gridElement.value.children].indexOf(cell) : -1;
-
-    // Not on the controls of the chrome (the rim, the marking badge), which handle their own middle clicks
-    if (index >= 0 && rimIndex.value !== index && !e.target.closest(".compare-chrome")) {
-      pressIndex = index;
-      rimPress.begin(e);
-    }
-
     return;
   }
 
@@ -210,9 +200,6 @@ function onMouseDown(e) {
 // ---------- Cells ----------
 
 function onCellEnter(e, image, index) {
-  if (rimPress.pressing)
-    return;
-
   hoveredIndex.value = index;
   setHoveredImageTarget({
     getImage: () => image,
@@ -224,37 +211,27 @@ function onCellEnter(e, image, index) {
 }
 
 function onCellLeave(e) {
-  if (rimPress.pressing)
-    return;
-
   hoveredIndex.value = -1;
-  rimIndex.value = -1;
   clearHoveredImageTarget(e.currentTarget);
 }
 
-// A click opens the image in the overlay, a middle click toggles its action rim
+// A click opens the image in the overlay
 function onCellClick(index) {
   if (!suppressClick)
     emit("open", index);
 }
 
-// The cell of a middle press that shows its rim, and the chrome of each cell, whose rim the gesture reads
-let pressIndex = -1;
-const chromes = [];
-const rimPress = useRimPress({get value() { return chromes[pressIndex]?.rimElement; }}, {
-  show: () => rimIndex.value = pressIndex,
-  hide: () => rimIndex.value = -1,
-  leave: () => {
-    hoveredIndex.value = -1;
-    rimIndex.value = -1;
-    clearHoveredImageTarget(gridElement.value?.children[pressIndex]);
-  },
-  element: () => gridElement.value?.children[pressIndex]
-});
+// The rim button of a cell opens its action rim at the pointer, the menu button its context menu; not on the
+// controls of the chrome (the rim shown with Ctrl, the marking badge), which handle their own clicks
+function onCellButton(e, image, name) {
+  if (e.target.closest(".compare-chrome")) {
+    if (e.type === "contextmenu")
+      e.preventDefault();
+    return;
+  }
 
-function onCellAuxClick(e, index) {
-  if (e.button === 1 && !rimPress.handlesAuxClick())
-    rimIndex.value = rimIndex.value === index ? -1 : index;
+  imageButtonHandlers(event => openImageRim(event, image, props.ctx),
+    event => openImageMenu(event, image, props.ctx))[name](e);
 }
 
 defineExpose({grid, nativeZoom, setZoom});
@@ -266,11 +243,11 @@ defineExpose({grid, nativeZoom, setZoom});
     <div ref="gridElement" class="crop-grid" :style="gridStyle">
       <div v-for="(image, index) in images" :key="image.imageUrl" class="crop-cell"
            @mouseenter="onCellEnter($event, image, index)" @mouseleave="onCellLeave"
-           @click="onCellClick(index)" @auxclick="onCellAuxClick($event, index)"
-           @contextmenu="openImageMenu($event, image, ctx)">
+           @click="onCellClick(index)" @mousedown="onCellButton($event, image, 'onMouseDown')"
+           @auxclick="onCellButton($event, image, 'onAuxClick')"
+           @contextmenu="onCellButton($event, image, 'onContextMenu')">
         <img :src="image.imageUrl" :style="imageStyle" draggable="false" alt="">
-        <CompareChrome :ref="el => chromes[index] = el" :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
-                       :rim-toggled="rimIndex === index"
+        <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hoveredIndex === index && !panning"
                        @set-marking="marking => emit('setMarking', image, marking)"
                        @open="emit('open', index)"/>
       </div>

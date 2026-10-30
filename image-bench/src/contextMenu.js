@@ -1,6 +1,6 @@
 import {HOST_NAME} from "@/host.js";
 import {shallowRef} from "vue";
-import {visibleActionGroups, runImageAction} from "@/imageActions.js";
+import {ACTION_GROUP_COLORS, visibleActionGroups, runImageAction} from "@/imageActions.js";
 import {useImageOperations} from "@/composables/useImageOperations.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {useProjectsStore} from "@/stores/projects.js";
@@ -14,8 +14,10 @@ import {canPasteInfotext, copyInfotext, imageFileName, pasteInfotext} from "@/in
  * which is mounted once in App.vue.
  * The state is module-level, so that one menu is open at a time.
  * {x, y, items, anchor?, alignRight?, onClose?}: items are {icon, label, hint, title, danger, disabled, run, hover},
- * {separator: true}, {heading} or {icon, label, submenu: [items]} (submenu items are {icon, label, hint, run} or
- * {separator: true}); hover(entered) of an item is called as the pointer enters and leaves it, onClose of the menu
+ * {separator: true}, {heading}, {icon, label, submenu: [items]} (submenu items are {icon, label, hint, run} or
+ * {separator: true}) or {row: [entries], placeholder}, a row of icon buttons, labelled under it by the hovered one
+ * (entries are {icon, label, hint, color, groupStart, alt?: {icon, label, hint}, run(alt)}: groupStart sets an entry
+ * apart from the one before, alt runs on a middle click, Shift+click or a click with Shift held); hover(entered) of an item is called as the pointer enters and leaves it, onClose of the menu
  * when it closes or another menu takes its place.
  * A menu opened by a button (openMenuBelow, openMenuInside) has the button as its anchor, whose click closes it again
  */
@@ -84,10 +86,25 @@ export function openImageMenu(event, image, ctx) {
   contextMenu.value = {x: event.clientX, y: event.clientY, items: imageMenuItems(image, ctx)};
 }
 
+// Groups of the destinations, the row at the top of the menu of an image: send, then the trays and Compare
+const ROW_GROUPS = [2, 3];
+
 function imageMenuItems(image, ctx) {
   const items = [];
+  const groups = visibleActionGroups(image, ctx);
+  const rowGroups = ROW_GROUPS.map(index => groups.find(group => group[0].group === index)).filter(Boolean);
 
-  for (const group of visibleActionGroups(image, ctx)) {
+  if (rowGroups.length)
+    items.push({placeholder: "Send or add to…", row: rowGroups.flatMap((group, groupIndex) => group.map((action, index) => ({
+      icon: action.icon, label: action.label, hint: action.key, color: ACTION_GROUP_COLORS[action.group],
+      groupStart: groupIndex > 0 && index === 0,
+      alt: action.alt ? {icon: action.alt.icon, label: action.alt.label, hint: "Shift+" + action.key} : null,
+      run: alt => runImageAction(action, image, ctx, alt)})))});
+
+  for (const group of groups) {
+    if (rowGroups.includes(group))
+      continue;
+
     if (items.length)
       items.push({separator: true});
 

@@ -23,6 +23,7 @@ import {useWebUIBridge} from "@/composables/useWebUIBridge.js";
 import AppIcon from "@/components/AppIcon.vue";
 import DialogHost from "@/dialogs/DialogHost.vue";
 import ImageContextMenu from "@/components/ImageContextMenu.vue";
+import PointerRim from "@/components/PointerRim.vue";
 import ToastHost from "@/components/ToastHost.vue";
 import ProjectChip from "@/components/ProjectChip.vue";
 import {installImageActionKeys} from "@/composables/useImageActionKeys.js";
@@ -509,6 +510,7 @@ async function switchTabAccordingToGenerationMode(e, state) {
       <ConsoleDrawer v-if="consoleOpen" @close="toggleConsole"/>
     </div>
   <ImageContextMenu />
+  <PointerRim />
   <DialogHost />
   <ToastHost />
   </div>

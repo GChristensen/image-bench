@@ -7,11 +7,11 @@
     from "@/imageActions.js";
   import {setOverlayImageTarget, clearOverlayImageTarget} from "@/composables/useImageActionKeys.js";
   import {useCtrlKey} from "@/composables/useCtrlKey.js";
-  import {useShiftKey} from "@/composables/useShiftKey.js";
   import {toast} from "@/toast.js";
   import {dialogStack} from "@/dialogs/useDialog.js";
   import AppIcon from "@/components/AppIcon.vue";
-  import ActionRim from "@/components/ActionRim.vue";
+  import {closePointerRim, isPointerRimOpen, openPointerRim} from "@/pointerRim.js";
+  import {buttonName, menuButton, rimButton} from "@/imageButtons.js";
   import GenerationParameters from "@/components/GenerationParameters.vue";
   import GenerationParametersHeader from "@/components/GenerationParametersHeader.vue";
   import ControlNetUnits from "@/components/ControlNetUnits.vue";
@@ -296,27 +296,16 @@
     }
   }
 
-  // The overlay has no fixed chrome, the image gets all the space. A middle press shows the action rim at the
-  // pointer: released on a sector it runs it, released in the center the rim stays for clicks (its center closes
-  // the overlay). Holding Ctrl hides everything but the image
+  // The overlay has no fixed chrome, the image gets all the space. A press of the rim button shows the action rim at
+  // the pointer (pointerRim.js): released on a sector it runs it, released in the center the rim stays for clicks
+  // (its center closes the overlay). The menu button opens the context menu. Holding Ctrl hides everything but the
+  // image
   const ctrlDown = useCtrlKey();
-  const shiftDown = useShiftKey();
   const rootElement = ref(null);
-  const rimElement = ref(null);
-  // {x, y, sticky} while the rim is shown; sticky once the middle button was released in its center
-  const rim = ref(null);
   const rimGroups = computed(() => rimActionGroups(props.image, actionContext));
   const rimExtras = computed(() => rimReuseExtras(props.image));
 
-  // Half the extent of the rim with its arcs (ActionRim at its largest), kept inside the window
-  const RIM_EXTENT = 132;
-
-  function showRim(x, y) {
-    rim.value = {
-      sticky: false,
-      x: Math.min(Math.max(x, RIM_EXTENT), window.innerWidth - RIM_EXTENT),
-      y: Math.min(Math.max(y, RIM_EXTENT), window.innerHeight - RIM_EXTENT)
-    };
+  function openRim(e) {
     hintShown.value = false;
 
     try {
@@ -325,88 +314,57 @@
     catch {
       // The hint shows again next time
     }
-  }
 
-  function hideRim() {
-    rim.value = null;
+    openPointerRim(e, {
+      groups: rimGroups.value,
+      extras: rimExtras.value,
+      hub: "close",
+      marking: props.image.marking ?? null,
+      markingArc: props.isTray || props.markable,
+      deletable: props.isTray,
+      on: {
+        run: onRimRun,
+        delete: () => emit("deleteImage", props.image),
+        setMarking: setMarkingByKey,
+        extra: id => runRimReuseExtra(props.image, id),
+        close: () => emit("hideOverlay")
+      }
+    });
   }
-
-  // The middle button is held since it showed the rim
-  let gesture = false;
-  // A left press that only dismissed the rim: its click neither zooms nor closes
-  let suppressClick = false;
-  // A middle release that ran a sector: its auxclick (on the sector, where a browser targets the release)
-  // does not run the alternative as well
-  let suppressAuxClick = false;
 
   function onMouseDown(e) {
-    suppressClick = false;
-    suppressAuxClick = false;
-
     if (!rootElement.value?.contains(e.target))
       return;
 
-    // Clicks on the shown rim are its own (a middle click runs the alternative of a sector)
-    if (rim.value && rimElement.value?.$el.contains(e.target))
+    // The parameters panel keeps the native menu of its text
+    const inPanel = !!e.target.closest(".params-panel");
+
+    if (e.button === rimButton() && !(inPanel && e.button === 2)) {
+      // No autoscroll
+      e.preventDefault();
+      openRim(e);
       return;
-
-    if (rim.value) {
-      hideRim();
-
-      if (e.button === 0) {
-        suppressClick = true;
-        e.preventDefault();
-        return;
-      }
     }
 
-    if (e.button === 2) {
+    if (e.button === 1)
+      e.preventDefault();
+
+    // The right drag closes the overlay where the right button opens no rim, and not while one is shown
+    if (e.button === 2 && !inPanel && !isPointerRimOpen())
       startFlick(e);
-      return;
-    }
-
-    if (e.button !== 1)
-      return;
-
-    // No autoscroll
-    e.preventDefault();
-    gesture = true;
-    showRim(e.clientX, e.clientY);
   }
 
   function onMouseUp(e) {
     onFlickUp(e);
-
-    if (e.button !== 1 || !gesture)
-      return;
-
-    gesture = false;
-    const target = rimElement.value?.releaseAt(e.clientX, e.clientY, e.shiftKey);
-
-    if (target === "center" && rim.value)
-      rim.value.sticky = true;
-    else
-      hideRim();
-
-    suppressAuxClick = target === "item";
   }
 
+  // The middle button as the menu button: the context menu of the image
   function onAuxClick(e) {
-    if (!suppressAuxClick)
+    if (e.button !== 1 || menuButton() !== 1 || !rootElement.value?.contains(e.target))
       return;
 
-    suppressAuxClick = false;
     e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function onClick(e) {
-    if (!suppressClick)
-      return;
-
-    suppressClick = false;
-    e.preventDefault();
-    e.stopPropagation();
+    openImageMenu(e, props.image, actionContext);
   }
 
   // A right drag downwards closes the overlay: the image follows the pointer down and the background fades,
@@ -432,10 +390,6 @@
   } : null);
 
   function startFlick(e) {
-    // The parameters panel keeps the native menu of its text
-    if (e.target.closest(".params-panel"))
-      return;
-
     flickStart = {x: e.clientX, y: e.clientY};
     flickMoved = false;
     suppressContextMenu = false;
@@ -489,6 +443,13 @@
     if (flickStart && !flickMoved)
       endFlick(false);
 
+    // The right button as the rim button opens no menu (the parameters panel keeps the native one)
+    if (rimButton() === 2 && rootElement.value?.contains(e.target) && !e.target.closest(".params-panel")) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     if (!suppressContextMenu)
       return;
 
@@ -499,7 +460,6 @@
 
   onBeforeUnmount(() => endFlick(false));
 
-  // Escape closes the rim before the overlay
   function isTyping(e) {
     const element = e.target;
     return element instanceof HTMLElement
@@ -516,30 +476,16 @@
         emit("navigateEnd", direction);
       return;
     }
-
-    if (e.key !== "Escape" || !rim.value)
-      return;
-
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    hideRim();
   }
 
   function onWindowBlur() {
-    gesture = false;
-
     if (flickStart)
       endFlick(false);
-
-    if (rim.value && !rim.value.sticky)
-      hideRim();
   }
 
   // The parameters sector shows the panel of the overlay; the trays flash their tabs, which the overlay covers.
   // The rim closes after each action
   function onRimRun(action, alt) {
-    hideRim();
-
     if (action.id === "params") {
       showParamsPanel.value = !showParamsPanel.value;
       return;
@@ -551,25 +497,13 @@
       toast(action.label.replace(/^Add to/, "Added to"), undo ? {action: {label: "Undo", run: undo}} : {});
   }
 
-  function onRimExtra(id) {
-    hideRim();
-    runRimReuseExtra(props.image, id);
-  }
-
-  function onRimMarking(marking) {
-    hideRim();
-    setMarkingByKey(marking);
-  }
-
-  function onRimDelete() {
-    hideRim();
-    emit("deleteImage", props.image);
-  }
-
   // How to reach the actions, on each opening until the rim was shown once
   const HINT_KEY = "imageBench_overlayRimUsed";
   const HINT_DURATION = 6000;
   const hintShown = ref(false);
+  const hintText = computed(() => `${buttonName(rimButton())} click for the actions · `
+    + (rimButton() === 2 ? "right-click the center to close · middle click for the menu" : "right-drag down to close")
+    + " · hold Ctrl to see only the image");
   let hintTimer = 0;
 
   function showHint() {
@@ -589,7 +523,6 @@
     setOverlayImageTarget(keyTarget);
     window.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("mouseup", onMouseUp, true);
-    window.addEventListener("click", onClick, true);
     window.addEventListener("auxclick", onAuxClick, true);
     window.addEventListener("contextmenu", onContextMenu, true);
     window.addEventListener("keydown", onKeyDown, true);
@@ -599,9 +532,9 @@
 
   onBeforeUnmount(() => {
     clearOverlayImageTarget(keyTarget);
+    closePointerRim();
     window.removeEventListener("mousedown", onMouseDown, true);
     window.removeEventListener("mouseup", onMouseUp, true);
-    window.removeEventListener("click", onClick, true);
     window.removeEventListener("auxclick", onAuxClick, true);
     window.removeEventListener("contextmenu", onContextMenu, true);
     window.removeEventListener("keydown", onKeyDown, true);
@@ -651,20 +584,13 @@
             </div>
           </div>
         </Transition>
-        <!-- A box without size at the pointer: the rim centers itself on it -->
-        <div v-if="rim" class="overlay-rim" :style="{left: rim.x + 'px', top: rim.y + 'px'}">
-          <ActionRim ref="rimElement" :groups="rimGroups" :size="1000" hub="close" :marking="image.marking ?? null"
-                     :marking-arc="isTray || markable" :extras="rimExtras" :show-alt="shiftDown" :deletable="isTray"
-                     @run="onRimRun" @delete="onRimDelete" @set-marking="onRimMarking"
-                     @extra="onRimExtra" @close="$emit('hideOverlay')"/>
-        </div>
         <!-- The marking of the image; a click removes it -->
         <button v-if="image.marking && (isTray || markable)" type="button" class="overlay-marking"
                 title="Remove marking (0)" aria-label="Remove marking"
                 @click="setMarkingByKey(null)">{{ image.marking }}</button>
         <Transition name="fade">
           <div v-if="hintShown" class="overlay-hint">
-            Middle click for the actions · right-drag down to close · hold Ctrl to see only the image
+            {{ hintText }}
           </div>
         </Transition>
       </div>
@@ -853,14 +779,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 4px 16px 14px;
-}
-
-/* A box without size at the pointer, which the rim centers itself on */
-.overlay-rim {
-  position: fixed;
-  width: 0;
-  height: 0;
-  z-index: 1005;
 }
 
 .overlay-marking {

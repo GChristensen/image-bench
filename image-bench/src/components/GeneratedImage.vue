@@ -11,7 +11,8 @@
   import {useAppConfigStore} from "@/stores/appConfig.js";
   import AppIcon from "@/components/AppIcon.vue";
   import ActionRim from "@/components/ActionRim.vue";
-  import {useRimPress} from "@/composables/useRimPress.js";
+  import {openImageRim} from "@/pointerRim.js";
+  import {buttonName, imageButtonHandlers, rimButton} from "@/imageButtons.js";
   import MediaPlayback from "@/components/MediaPlayback.vue";
   import {KIND_IMAGE, KIND_VIDEO, mediaKind, previewUrl} from "@/media.js";
 
@@ -106,8 +107,8 @@
     get kind() { return props.kind; },
     get isTray() { return props.isTray; },
     get upscalable() { return props.upscalable; },
-    // The context menu names the middle click only where it opens the image
-    get middleClickOpens() { return !middleTogglesRim.value; },
+    // The context menu names the middle click only where it opens the image (a card without a rim)
+    get middleClickOpens() { return !props.rim && rimButton() === 1; },
     handlers: {
       showParams: () => emit("showParams"),
       upscale: image => emit("upscaleImage", image),
@@ -171,7 +172,8 @@
     }
   });
 
-  const rimToggleText = () => rimToggled.value ? "Hide actions" : "Show actions (or middle-click)";
+  const rimToggleText = () => rimToggled.value ? "Hide actions"
+    : `Show actions (or ${buttonName(rimButton()).toLowerCase()}-click at the pointer)`;
 
   function openRim() {
     if (!dragging.value)
@@ -196,9 +198,6 @@
   }
 
   function onFrameLeave() {
-    if (rimPress.pressing)
-      return;
-
     hovered.value = false;
     hoveredText.value = null;
     rimToggled.value = false;
@@ -250,34 +249,24 @@
     }
   }
 
-  // Middle click toggles the action rim as its button does (with rimOnHover it hides the open rim); it opens the
-  // image in a new window where the card has no rim (the ControlNet sweep)
-  const middleTogglesRim = computed(() => props.rim);
-
-  // A middle press that shows the rim runs the sector it is released on (useRimPress.js)
-  const rimElement = ref(null);
-  const rimPress = useRimPress(rimElement, {
-    show: () => rimToggled.value = !rimToggled.value,
-    hide: () => rimToggled.value = hoverMode.value,
-    leave: onFrameLeave,
-    element: () => frameElement.value
-  });
-
-  function onImageMiddleDown(e) {
-    e.preventDefault();
-
-    if (middleTogglesRim.value && !rimShown.value)
-      rimPress.begin(e);
-  }
-
-  function onImageAuxClick(e) {
-    if (e.button !== 1 || rimPress.handlesAuxClick())
-      return;
-
-    if (middleTogglesRim.value)
-      rimToggled.value = !rimToggled.value;
-    else
+  // The rim button of the image opens the action rim at the pointer (released on a sector it runs it), in place of
+  // the card's own rim; it opens the image in a new window where the card has no rim (the ControlNet sweep).
+  // The menu button opens the context menu
+  const imageButtons = imageButtonHandlers(e => {
+    if (!props.rim) {
       emit("imageOpen");
+      return;
+    }
+
+    closeRim();
+    rimToggled.value = hoverMode.value;
+    openImageRim(e, props.image, actionContext);
+  }, e => openImageMenu(e, props.image, actionContext));
+
+  // A middle click on the view eye hides the rim opened on hover
+  function onEyeAuxClick(e) {
+    if (e.button === 1)
+      rimToggled.value = !rimToggled.value;
   }
 
   function onMarkingAuxClick(e) {
@@ -314,13 +303,13 @@
      @dragover="onReorderDragOver" @dragleave="onReorderDragLeave" @drop="onReorderDrop">
   <div class="image-separator" v-if="image.separator"></div>
   <div v-else ref="frameElement" class="image-frame" :class="{bare}" @mouseenter="onFrameEnter" @mouseleave="onFrameLeave"
-       @contextmenu="openImageMenu($event, image, actionContext)">
+       @contextmenu="imageButtons.onContextMenu">
     <video v-if="thumbFailed" class="selectable-image-preview"
            :src="`${link}#t=0.5`" preload="metadata" muted draggable="true"
            :title="imageOps.createImageTooltip(image)"
            @click="$emit('imageClick')"
-           @mousedown.middle="onImageMiddleDown"
-           @auxclick="onImageAuxClick"
+           @mousedown="imageButtons.onMouseDown"
+           @auxclick="imageButtons.onAuxClick"
            @dragstart="onDragStart"
            @dragend="onDragEnd"></video>
     <img v-else class="selectable-image-preview"
@@ -328,8 +317,8 @@
          :title="imageOps.createImageTooltip(image)"
          @error="onPreviewError"
          @click="$emit('imageClick')"
-         @mousedown.middle="onImageMiddleDown"
-         @auxclick="onImageAuxClick"
+         @mousedown="imageButtons.onMouseDown"
+         @auxclick="imageButtons.onAuxClick"
          @dragstart="onDragStart"
          @dragend="onDragEnd">
 
@@ -339,7 +328,7 @@
 
     <!-- Before the other controls, which stay above it where a small card overlaps them -->
     <Transition name="rim">
-      <ActionRim v-if="rimShown" ref="rimElement" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter" :marking="image.marking ?? null"
+      <ActionRim v-if="rimShown" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter" :marking="image.marking ?? null"
                  marking-arc :extras="rimExtras" :show-alt="showAlt" :deletable="deletable" :filterable="filterable"
                  :dim-far="hoverMode" :filter-active="!!image.marking && markingFilter === image.marking"
                  @run="onAction" @delete="$emit('deleteImage')" @set-marking="setMarking"
@@ -356,7 +345,7 @@
 
     <!-- Rim on hover: visual anchor for viewing the image; it opens the overlay like a click on the image -->
     <button v-if="rim && hoverMode" type="button" class="corner-button" aria-label="View image"
-            @click="$emit('imageClick')" @mousedown.middle.prevent @auxclick="onImageAuxClick"
+            @click="$emit('imageClick')" @mousedown.middle.prevent @auxclick="onEyeAuxClick"
             @mouseenter="hoveredText = 'View'" @mouseleave="hoveredText = null"
       ><AppIcon name="eye" :size="20"/></button>
     <!-- Otherwise it shows and hides the action rim -->

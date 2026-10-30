@@ -13,6 +13,8 @@ import {canPasteInfotext, copyInfotext, pasteInfotext} from "@/infotextClipboard
 import ParametersOverlay from "@/components/ParametersOverlay.vue";
 import {canReuseParameters, reuseParameters, rimActionGroups, runImageAction} from "@/imageActions.js";
 import ActionRim from "@/components/ActionRim.vue";
+import {openPointerRim} from "@/pointerRim.js";
+import {buttonName, imageButtonHandlers, rimButton} from "@/imageButtons.js";
 import {useShiftKey} from "@/composables/useShiftKey.js";
 import {baseName, fetchTray, formatSavedAt, PROJECT_TRAYS, projectFileUrl, trayImageUrl, useProjectsStore} from "@/stores/projects.js";
 import {useLocalStorage} from "@/composables/useLocalStorage.js";
@@ -296,8 +298,8 @@ function onImageAction(item, action, alt) {
     runImageAction(action, item.image, actionContext, alt);
 }
 
-// A middle click on a file or its corner button toggles its action rim, as on the image cards, until the pointer
-// leaves the file. Project files have no markings: the center closes the rim, and the arc below holds the final
+// The corner button of a file toggles its action rim, as on the image cards, until the pointer leaves the file; the
+// rim button opens it at the pointer, the menu button the context menu (onItemMenu). Project files have no markings: the center closes the rim, and the arc below holds the final
 // image (at the right) and reuse all
 const rimKey = ref(null);
 const rimSize = ref(0);
@@ -315,17 +317,38 @@ const rimExtras = item => [
 // The rim of the file viewer (FileViewer.vue), for the files of the grid
 const viewerRim = file => file?.item ? {groups: rimGroups(file.item), extras: rimExtras(file.item)} : null;
 
+// Size and height of the file's image, which make the rim of a small card smaller (ActionRim)
+function imageExtent(element) {
+  const image = element?.closest(".file")?.querySelector(".file-image");
+  return image ? {size: image.clientWidth, height: image.clientHeight} : {};
+}
+
 function toggleRim(item, element) {
-  const image = element.closest(".file")?.querySelector(".file-image");
-  rimSize.value = image?.clientWidth ?? 0;
-  rimHeight.value = image?.clientHeight ?? 0;
+  const {size, height} = imageExtent(element);
+  rimSize.value = size ?? 0;
+  rimHeight.value = height ?? 0;
   rimKey.value = rimKey.value === item.key ? null : item.key;
 }
 
-function onItemAuxClick(e, item) {
-  if (e.button === 1)
-    toggleRim(item, e.currentTarget);
+// The rim at the pointer is as large as the file's own
+function openItemRim(e, item) {
+  rimKey.value = null;
+  openPointerRim(e, {groups: rimGroups(item), extras: rimExtras(item), hub: "filter", ...imageExtent(e.target),
+    on: {run: (action, alt) => onImageAction(item, action, alt), extra: id => onRimExtra(item, id)}});
 }
+
+// Not on the file's own rim and its button, which handle their own clicks
+function onItemButton(e, item, name) {
+  if (e.target.closest(".file-rim, .rim-toggle")) {
+    if (e.type === "contextmenu")
+      e.preventDefault();
+    return;
+  }
+
+  imageButtonHandlers(event => openItemRim(event, item), event => onItemMenu(event, item))[name](e);
+}
+
+const rimToggleTitle = () => `Show actions (or ${buttonName(rimButton()).toLowerCase()}-click at the pointer)`;
 
 function onItemLeave(item) {
   if (rimKey.value === item.key)
@@ -691,8 +714,9 @@ const unitDetails = unit => [
       <div v-if="gridItems.length" class="file-grid">
         <div v-for="(item, index) in gridItems" :key="item.key" class="file" :class="{'rim-open': rimKey === item.key}"
              :title="item.title"
-             @click="openItem(index)" @mousedown.middle.prevent @auxclick="e => onItemAuxClick(e, item)"
-             @mouseleave="onItemLeave(item)" @contextmenu.prevent="e => onItemMenu(e, item)">
+             @click="openItem(index)" @mousedown="onItemButton($event, item, 'onMouseDown')"
+             @auxclick="onItemButton($event, item, 'onAuxClick')"
+             @mouseleave="onItemLeave(item)" @contextmenu="onItemButton($event, item, 'onContextMenu')">
           <div class="file-image">
             <img :src="item.thumb" alt="" loading="lazy" draggable="false">
             <span v-if="item.kind !== KIND_IMAGE" class="file-kind" :title="item.kind === KIND_VIDEO ? 'Video' : 'Audio'"
@@ -700,7 +724,7 @@ const unitDetails = unit => [
             <span v-if="item.marking" class="file-marking">{{ item.marking }}</span>
             <button type="button" class="rim-toggle" :class="{on: rimKey === item.key}"
                     :aria-pressed="rimKey === item.key" aria-label="Show actions"
-                    :title="rimKey === item.key ? 'Hide actions' : 'Show actions (or middle-click)'"
+                    :title="rimKey === item.key ? 'Hide actions' : rimToggleTitle()"
                     @click.stop="e => toggleRim(item, e.currentTarget)"><AppIcon name="rim" :size="18"/></button>
             <!-- Its clicks stay here, so that they do not open the file -->
             <div class="file-rim" @click.stop @auxclick.stop>
@@ -719,7 +743,8 @@ const unitDetails = unit => [
     </section>
 
     <FileViewer v-if="viewerIndex !== null" v-model:index="viewerIndex" :files="viewerFiles" :paused="!!paramsImage"
-                :rim="viewerRim" @run="onViewerAction" @extra="onViewerExtra" @close="viewerIndex = null"/>
+                :rim="viewerRim" @run="onViewerAction" @extra="onViewerExtra"
+                @menu="(e, file) => file?.item && onItemMenu(e, file.item)" @close="viewerIndex = null"/>
     <ParametersOverlay v-if="paramsImage" :image="paramsImage"
                        @hide-overlay="paramsImage = null"/>
   </div>

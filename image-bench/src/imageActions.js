@@ -9,7 +9,7 @@ import {useImageOperations} from "@/composables/useImageOperations.js";
 import {useGenerationSettingsStore} from "@/stores/generationSettings.js";
 import {flashTrayTab} from "@/components/utils.js";
 import {toRaw} from "vue";
-import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE} from "@/consts.js";
+import {KIND_IMAGE_TRAY, KIND_CONCEPT_TRAY, KIND_COMPARE, KIND_GENERATED} from "@/consts.js";
 import {dialog} from "@/dialogs/useDialog.js";
 import {toast, toastError} from "@/toast.js";
 import {addWithUndo} from "@/undo.js";
@@ -92,6 +92,8 @@ async function generateVaryingSteps(image) {
 
   if (steps) {
     const generatedImagesStore = useGeneratedImagesStore();
+    // Before the Generated images are cleared, which may hold this one
+    const source = useImageOperations().cloneImage(image);
 
     if (useAppConfigStore().automaticallyClearGeneratedImages)
       generatedImagesStore.clear();
@@ -99,7 +101,7 @@ async function generateVaryingSteps(image) {
     generatedImagesStore.startingGeneration();
 
     settings.set("varyingSteps", steps);
-    useWebUIBridge().generateVaryingSteps(useImageOperations().cloneImage(image), steps);
+    useWebUIBridge().generateVaryingSteps(source, steps);
   }
 }
 
@@ -221,6 +223,11 @@ export async function reuseParameters(image, all) {
   return true;
 }
 
+// The trays and the Generated images (incl. the Generate tab's result) are generated again with other values
+function regenerable(ctx) {
+  return ctx.isTray || ctx.kind === KIND_GENERATED;
+}
+
 // Images uploaded to the Compare tab or sent there from the editor may have no generation parameters
 function hasParameters(image) {
   return !!image.parameters && Object.keys(image.parameters).length > 0;
@@ -264,7 +271,7 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "steps", side: "left", group: 1, icon: "steps", label: "Generate with steps", key: "G",
-    visible: (image, ctx) => ctx.isTray && !image.img2img && mediaKind(image) !== KIND_AUDIO,
+    visible: (image, ctx) => regenerable(ctx) && !image.img2img && mediaKind(image) !== KIND_AUDIO,
     run: image => generateVaryingSteps(image)
   },
   {
@@ -283,7 +290,7 @@ export const IMAGE_ACTIONS = [
   },
   {
     id: "denoising", side: "left", group: 1, icon: "denoise", label: "Upscale with denoising", key: "D",
-    visible: (image, ctx) => ctx.isTray && !image.img2img && isStill(image),
+    visible: (image, ctx) => regenerable(ctx) && !image.img2img && isStill(image),
     run: image => upscaleVaryingDenoising(image)
   },
   {

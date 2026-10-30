@@ -2,15 +2,16 @@
 /**
  * Full-size view of the image files of a project, with ← / → through the files and Escape to close.
  * A video or audio file plays at once, with sound.
- * The actions of a file are its action rim (ActionRim.vue), as in the image overlay: a middle press shows it at the
- * pointer, released on a sector it runs it, released in the center it stays for clicks (its center closes the
- * viewer); the rim button at the lower right shows it in the middle of the window
+ * The actions of a file are its action rim, as in the image overlay: a press of the rim button shows it at the
+ * pointer (pointerRim.js), released on a sector it runs it, released in the center it stays for clicks (its center
+ * closes the viewer); the rim button at the lower right shows it in the middle of the window. The menu button emits
+ * menu(event, file)
  */
 import {computed, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import MediaView from "@/components/MediaView.vue";
-import ActionRim from "@/components/ActionRim.vue";
-import {useShiftKey} from "@/composables/useShiftKey.js";
+import {closePointerRim, openPointerRim, pointerRim} from "@/pointerRim.js";
+import {buttonName, menuButton, rimButton} from "@/imageButtons.js";
 import {KIND_IMAGE, mediaKindOfName} from "@/media.js";
 
 const props = defineProps({
@@ -35,124 +36,78 @@ const props = defineProps({
   }
 });
 
-// run(file, action, alt), extra(file, id, label)
-const emit = defineEmits(["update:index", "close", "run", "extra"]);
+// run(file, action, alt), extra(file, id, label), menu(event, file)
+const emit = defineEmits(["update:index", "close", "run", "extra", "menu"]);
 
 const file = computed(() => props.files[props.index]);
 
 // ---------- Action rim ----------
 
-const shiftDown = useShiftKey();
 const rootElement = ref(null);
-const rimElement = ref(null);
 const rimContent = computed(() => props.rim?.(file.value) ?? null);
-// {x, y} while the rim is shown
-const rimAt = ref(null);
-// Half the extent of the rim with its arcs (ActionRim at its largest), kept inside the window
-const RIM_EXTENT = 132;
+const rimShown = computed(() => !!pointerRim.value);
+const rimTitle = computed(() => `Show actions (or ${buttonName(rimButton()).toLowerCase()}-click)`);
 
-function showRim(x, y) {
-  rimAt.value = {
-    x: Math.min(Math.max(x, RIM_EXTENT), window.innerWidth - RIM_EXTENT),
-    y: Math.min(Math.max(y, RIM_EXTENT), window.innerHeight - RIM_EXTENT)
-  };
+// At the point of a press, or of the window center
+function openRim(point) {
+  const content = rimContent.value;
+  const shown = file.value;
+
+  openPointerRim(point, {
+    groups: content.groups,
+    extras: content.extras,
+    hub: "close",
+    on: {
+      run: (action, alt) => emit("run", shown, action, alt),
+      extra: id => emit("extra", shown, id, content.extras.find(extra => extra.id === id)?.label ?? ""),
+      close: () => emit("close")
+    }
+  });
 }
 
-function hideRim() {
-  rimAt.value = null;
-}
+watch(() => props.index, closePointerRim);
 
-watch(() => props.index, hideRim);
-
+// A click on the button while the rim is shown only closes it (a press outside the rim does)
 function toggleRim() {
-  if (rimAt.value)
-    hideRim();
-  else
-    showRim(window.innerWidth / 2, window.innerHeight / 2);
+  openRim({clientX: window.innerWidth / 2, clientY: window.innerHeight / 2});
 }
 
-function onRimRun(action, alt) {
-  hideRim();
-  emit("run", file.value, action, alt);
+function inViewer(e) {
+  return !props.paused && !!rootElement.value?.contains(e.target);
 }
-
-function onRimExtra(id) {
-  const label = rimContent.value?.extras.find(extra => extra.id === id)?.label ?? "";
-  hideRim();
-  emit("extra", file.value, id, label);
-}
-
-// The middle button is held since it showed the rim
-let gesture = false;
-// A left press that only dismissed the rim: its click does not close the viewer
-let suppressClick = false;
-// A middle release that ran a sector: its auxclick does not run the alternative as well
-let suppressAuxClick = false;
 
 function onMouseDown(e) {
-  suppressClick = false;
-  suppressAuxClick = false;
-
-  if (props.paused || !rimContent.value || !rootElement.value?.contains(e.target))
+  // The rim button toggles the rim
+  if (!inViewer(e) || e.target.closest(".rim-button"))
     return;
 
-  // Clicks on the shown rim are its own, the rim button toggles it
-  if (rimAt.value && rimElement.value?.$el.contains(e.target) || e.target.closest(".rim-button"))
-    return;
-
-  if (rimAt.value) {
-    hideRim();
-
-    if (e.button === 0) {
-      suppressClick = true;
-      e.preventDefault();
-      return;
-    }
+  if (e.button === rimButton() && rimContent.value) {
+    // No autoscroll
+    e.preventDefault();
+    openRim(e);
   }
-
-  if (e.button !== 1)
-    return;
-
-  // No autoscroll
-  e.preventDefault();
-  gesture = true;
-  showRim(e.clientX, e.clientY);
-}
-
-function onMouseUp(e) {
-  if (e.button !== 1 || !gesture)
-    return;
-
-  gesture = false;
-  const target = rimElement.value?.releaseAt(e.clientX, e.clientY, e.shiftKey);
-
-  if (target !== "center")
-    hideRim();
-
-  suppressAuxClick = target === "item";
-}
-
-function onClick(e) {
-  if (!suppressClick)
-    return;
-
-  suppressClick = false;
-  e.preventDefault();
-  e.stopPropagation();
+  else if (e.button === 1)
+    e.preventDefault();
 }
 
 function onAuxClick(e) {
-  if (!suppressAuxClick)
+  if (e.button === 1 && menuButton() === 1 && inViewer(e)) {
+    e.preventDefault();
+    emit("menu", e, file.value);
+  }
+}
+
+function onContextMenu(e) {
+  if (!inViewer(e))
     return;
 
-  suppressAuxClick = false;
   e.preventDefault();
-  e.stopPropagation();
+
+  if (menuButton() === 2)
+    emit("menu", e, file.value);
 }
 
-function onWindowBlur() {
-  gesture = false;
-}
+onBeforeUnmount(closePointerRim);
 
 // ---------- Keys ----------
 const kind = computed(() => file.value ? file.value.kind ?? mediaKindOfName(file.value.name) : KIND_IMAGE);
@@ -168,9 +123,7 @@ function onKeydown(e) {
   if (props.paused)
     return;
 
-  if ((e.key === "Escape" || e.key === "Esc") && rimAt.value)
-    hideRim();
-  else if (e.key === "Escape" || e.key === "Esc")
+  if (e.key === "Escape" || e.key === "Esc")
     emit("close");
   else if (e.key === "ArrowLeft")
     step(-1);
@@ -186,19 +139,15 @@ function onKeydown(e) {
 onMounted(() => {
   document.addEventListener("keydown", onKeydown, true);
   window.addEventListener("mousedown", onMouseDown, true);
-  window.addEventListener("mouseup", onMouseUp, true);
-  window.addEventListener("click", onClick, true);
   window.addEventListener("auxclick", onAuxClick, true);
-  window.addEventListener("blur", onWindowBlur);
+  window.addEventListener("contextmenu", onContextMenu, true);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", onKeydown, true);
   window.removeEventListener("mousedown", onMouseDown, true);
-  window.removeEventListener("mouseup", onMouseUp, true);
-  window.removeEventListener("click", onClick, true);
   window.removeEventListener("auxclick", onAuxClick, true);
-  window.removeEventListener("blur", onWindowBlur);
+  window.removeEventListener("contextmenu", onContextMenu, true);
 });
 </script>
 
@@ -218,14 +167,9 @@ onBeforeUnmount(() => {
           ><AppIcon name="external" :size="14"/></a>
         <button class="ib flat" aria-label="Close" @click="emit('close')"><AppIcon name="close" :size="14"/></button>
       </div>
-      <button v-if="rimContent" type="button" class="ib rim-button" :class="{on: rimAt}" :aria-pressed="!!rimAt"
-              aria-label="Show actions" :title="rimAt ? 'Hide actions' : 'Show actions (or middle-click)'"
+      <button v-if="rimContent" type="button" class="ib rim-button" :class="{on: rimShown}" :aria-pressed="rimShown"
+              aria-label="Show actions" :title="rimShown ? 'Hide actions' : rimTitle"
               @click="toggleRim"><AppIcon name="rim" :size="18"/></button>
-      <!-- A box without size at the pointer: the rim centers itself on it -->
-      <div v-if="rimAt && rimContent" class="viewer-rim" :style="{left: rimAt.x + 'px', top: rimAt.y + 'px'}">
-        <ActionRim ref="rimElement" :groups="rimContent.groups" :extras="rimContent.extras" :size="1000" hub="close"
-                   :show-alt="shiftDown" @run="onRimRun" @extra="onRimExtra" @close="emit('close')"/>
-      </div>
     </div>
   </Teleport>
 </template>
@@ -281,13 +225,6 @@ img {
 
 .rim-button.on {
   color: var(--ib-accent);
-}
-
-.viewer-rim {
-  position: fixed;
-  width: 0;
-  height: 0;
-  z-index: 1;
 }
 
 .name {

@@ -3,8 +3,9 @@
  * Context menu of an image, opened through openImageMenu() of contextMenu.js, or another menu (openContextMenu(),
  * openMenuBelow()); mounted once in App.vue
  */
-import {nextTick, onBeforeUnmount, ref, watch} from "vue";
+import {computed, nextTick, onBeforeUnmount, ref, watch} from "vue";
 import {contextMenu, closeContextMenu} from "@/contextMenu.js";
+import {useShiftKey} from "@/composables/useShiftKey.js";
 import AppIcon from "@/components/AppIcon.vue";
 
 const menuElement = ref(null);
@@ -16,6 +17,7 @@ const EDGE = 4;
 
 watch(contextMenu, async (menu, previous) => {
   removeListeners();
+  rowHovered.value = null;
   previous?.onClose?.();
 
   if (!menu)
@@ -81,6 +83,26 @@ function onItemClick(item) {
   closeContextMenu();
   item.run();
 }
+
+// ---------- Row of icon buttons (the Send actions) ----------
+
+const shiftDown = useShiftKey();
+// The entry of a row under the pointer, labelled under the row
+const rowHovered = ref(null);
+
+const rowEntry = entry => shiftDown.value && entry.alt ? entry.alt : entry;
+const rowLabel = computed(() => rowHovered.value ? rowEntry(rowHovered.value) : null);
+
+function onRowClick(entry, alt) {
+  closeContextMenu();
+  entry.run(alt);
+}
+
+// A middle click runs the alternative, as on the action rim
+function onRowAuxClick(entry, e) {
+  if (e.button === 1)
+    onRowClick(entry, true);
+}
 </script>
 
 <template>
@@ -90,6 +112,25 @@ function onItemClick(item) {
       <template v-for="(item, index) in contextMenu.items" :key="index">
         <hr v-if="item.separator">
         <div v-else-if="item.heading" class="item-heading" role="presentation">{{ item.heading }}</div>
+        <div v-else-if="item.row" class="item-row" role="group">
+          <div class="row-buttons">
+            <button v-for="(entry, entryIndex) in item.row" :key="entryIndex" type="button" role="menuitem"
+                    class="row-button" :class="{'group-start': entry.groupStart}" :style="{'--row-color': entry.color}"
+                    :aria-label="rowEntry(entry).label"
+                    @click="onRowClick(entry, $event.shiftKey)" @mousedown.middle.prevent
+                    @auxclick="onRowAuxClick(entry, $event)"
+                    @mouseenter="rowHovered = entry" @mouseleave="rowHovered = null">
+              <AppIcon :name="rowEntry(entry).icon" :size="16"/>
+            </button>
+          </div>
+          <div class="row-label">
+            <template v-if="rowLabel">
+              <span class="item-label">{{ rowLabel.label }}</span>
+              <span class="item-hint">{{ rowLabel.hint }}</span>
+            </template>
+            <span v-else class="row-placeholder">{{ item.placeholder }}</span>
+          </div>
+        </div>
         <div v-else-if="item.submenu" class="submenu-item" @mouseenter="fitSubmenu">
           <button role="menuitem" aria-haspopup="menu">
             <AppIcon v-if="item.icon" :name="item.icon" :size="14" class="item-icon"/>
@@ -153,6 +194,58 @@ function onItemClick(item) {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+/* The destinations (send, trays, Compare): icon buttons tinted by their group, the label of the hovered one under them, which does not widen the menu */
+.item-row {
+  padding: 2px 2px 4px;
+}
+
+.row-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.menu .row-button {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--row-color) 16%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--row-color) 70%, transparent);
+  color: var(--row-color);
+}
+
+.menu .row-button.group-start {
+  margin-left: 6px;
+}
+
+.menu .row-button:hover {
+  background: color-mix(in srgb, var(--row-color) 34%, transparent);
+  color: #fff;
+}
+
+.row-label {
+  display: flex;
+  align-items: center;
+  width: 0;
+  min-width: 100%;
+  height: 20px;
+  margin-top: 3px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  font-size: 11.5px;
+}
+
+.row-label .item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-placeholder {
+  color: var(--ib-muted);
 }
 
 .submenu-item {

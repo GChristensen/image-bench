@@ -9,7 +9,9 @@
 import {computed, onBeforeUnmount, ref, watch} from "vue";
 import AppIcon from "@/components/AppIcon.vue";
 import ActionRim from "@/components/ActionRim.vue";
-import {useRimPress} from "@/composables/useRimPress.js";
+import {openImageRim} from "@/pointerRim.js";
+import {openImageMenu} from "@/contextMenu.js";
+import {imageButtonHandlers} from "@/imageButtons.js";
 import MediaPlayback from "@/components/MediaPlayback.vue";
 import {getImageSize, imageFilesFromDataTransfer, pickImageFiles} from "@/imageFiles.js";
 import {blurExtent, CROP_FACTORS, cropRegion, expandCropRegion, maskBounds, renderSize} from "@/inpaintCrop.js";
@@ -169,26 +171,17 @@ const rimShown = computed(() => !!rimGroups.value.length && (hoverMode.value
   ? rimOpen.value && !bare.value && !rimToggled.value
   : hovered.value && (ctrlDown.value || rimToggled.value)));
 
-// A middle press that shows the rim runs the sector it is released on (useRimPress.js)
-const rimElement = ref(null);
-const rimPress = useRimPress(rimElement, {
-  show: () => rimToggled.value = !rimToggled.value,
-  hide: () => rimToggled.value = hoverMode.value,
-  leave: onCellLeave,
-  element: () => cellElement.value
-});
+// The rim button of the result opens the action rim at the pointer, in place of the cell's own rim; the menu button
+// opens the context menu
+const imageButtons = imageButtonHandlers(e => {
+  if (!rimImage.value)
+    return;
 
-function onResultMiddleDown(e) {
-  e.preventDefault();
-
-  if (rimGroups.value.length && !rimShown.value)
-    rimPress.begin(e);
-}
-
-function onResultAuxClick(e) {
-  if (e.button === 1 && rimGroups.value.length && !rimPress.handlesAuxClick())
-    rimToggled.value = !rimToggled.value;
-}
+  clearTimeout(rimTimer);
+  rimOpen.value = false;
+  rimToggled.value = hoverMode.value;
+  openImageRim(e, rimImage.value, actionContext);
+}, e => rimImage.value && openImageMenu(e, rimImage.value, actionContext));
 
 watch(rimShown, shown => {
   const cell = cellElement.value;
@@ -241,9 +234,6 @@ function onCellEnter() {
 }
 
 function onCellLeave() {
-  if (rimPress.pressing)
-    return;
-
   hovered.value = false;
   rimToggled.value = false;
   clearTimeout(rimTimer);
@@ -396,7 +386,8 @@ onBeforeUnmount(() => {
 
     <button v-if="shownView === 'result'" type="button" class="view" :class="{clickable: resultClickable}"
             :title="liveProgress !== null ? 'Live preview' : resultClickable ? 'Click to view' : ''"
-            @click="emit('result-click')" @mousedown.middle="onResultMiddleDown" @auxclick="onResultAuxClick">
+            @click="emit('result-click')" @mousedown="imageButtons.onMouseDown" @auxclick="imageButtons.onAuxClick"
+            @contextmenu="imageButtons.onContextMenu">
       <img v-if="resultUrl" :src="resultUrl" alt="">
       <span v-else class="empty">The generated image appears here</span>
       <span v-if="liveProgress !== null" class="live-progress"><i :style="{width: `${liveProgress}%`}"></i></span>
@@ -494,12 +485,12 @@ onBeforeUnmount(() => {
 
     <button v-if="!hoverMode && rimGroups.length" type="button" class="overlay-button icon-only rim-toggle"
             :class="{on: rimToggled}" :aria-pressed="rimToggled" aria-label="Show actions"
-            :title="rimToggled ? 'Hide actions' : 'Show actions (or middle-click, or hold Ctrl)'"
+            :title="rimToggled ? 'Hide actions' : 'Show actions (or hold Ctrl)'"
             @click="rimToggled = !rimToggled"><AppIcon name="rim" :size="14"/></button>
 
     <!-- Last, so that it stays above the input thumbnail and the controls -->
     <Transition name="rim">
-      <ActionRim v-if="rimShown" ref="rimElement" class="result-rim" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter"
+      <ActionRim v-if="rimShown" class="result-rim" :groups="rimGroups" :size="rimSize" :height="rimHeight" hub="filter"
                  :marking="rimMarking" marking-arc :extras="rimExtras" :show-alt="showAlt" :dim-far="hoverMode"
                  @run="onAction" @set-marking="setMarking" @extra="id => runRimReuseExtra(rimImage, id)"/>
     </Transition>

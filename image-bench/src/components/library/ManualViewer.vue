@@ -179,7 +179,8 @@ const hostOrigin = location.origin;
       <p>
         What the middle button and Shift do depends on what is under the pointer. On a <b>button</b>, a middle
         click or Shift+click runs the alternative of its action (send as a new layer, stop and generate again). On an
-        <b>image</b>, a click views it and a middle click shows its action rim. On a <b>tab</b> or a <b>badge</b>, a
+        <b>image</b>, a click views it, a right press shows its action rim at the pointer and a middle click its
+        menu (<b>Open the context menu of an image with the right button</b> in the Settings tab swaps the two). On a <b>tab</b> or a <b>badge</b>, a
         middle click acts on it without going there: it stops the run of the tab, opens the console from the
         {{ HOST_NAME }} tab or removes a marking. Press <span class="kbd">?</span> anywhere for this sheet; over an
         image it starts at the image actions.
@@ -285,11 +286,12 @@ const hostOrigin = location.origin;
     <section id="manual-images">
       <h2>Working with images</h2>
       <p>
-        The actions of an image are on its action rim, a ring of sectors around the middle of the image, one per
-        action and colored by kind. To show it, middle-click the image card or click the
-        <AppIcon name="rim" :size="13" class="inline-icon"/> button at its top right; do the same again, or move
-        the pointer off the card, to hide it. As in the full image view, you can also hold the middle button,
-        move to a sector and release it there to run that sector at once. The middle of the ring shows the name and key of the sector under the
+        The actions of an image are on its action rim, a ring of sectors, one per action and colored by kind. Press
+        the right button on an image and the ring opens around the pointer: move to a sector and release the button
+        there to run it at once, or release it without moving to keep the ring open and click a sector. A click
+        outside the ring, <span class="kbd">Esc</span> or the wheel closes it. The
+        <AppIcon name="rim" :size="13" class="inline-icon"/> button at the top right of a card shows the ring around
+        the middle of the image instead; click it again, or move the pointer off the card, to hide it. The middle of the ring shows the name and key of the sector under the
         pointer. A middle click or Shift+click on a sector runs its alternative action, if it has one; hold Shift
         to see which sectors do. Clicking the image itself, inside or outside the ring, still opens it. Hold
         <span class="kbd">Ctrl</span> over a card to hide all of its controls and see only the image.
@@ -297,7 +299,7 @@ const hostOrigin = location.origin;
       <p>
         With <b>Show the action rim of an image on hover</b> turned on in the Settings tab, hovering alone opens
         the ring. Holding <span class="kbd">Ctrl</span> hides it too, with the other controls, and a middle click
-        hides it until the pointer leaves the card.
+        on the eye at the top right hides it until the pointer leaves the card.
       </p>
       <p>
         The markings are an arc above the ring (pick a set one again to remove it), and reusing the seed or all
@@ -349,7 +351,11 @@ const hostOrigin = location.origin;
           image tray.</td></tr>
       </table>
       <p>
-        Right-click an image for a menu with all of its actions. <span class="kbd">Shift</span>+right-click shows the browser's own menu.
+        Middle-click an image for a menu with all of its actions. Its first row holds the destinations as colored
+        buttons (send to img2img, inpaint, ControlNet and the editor; add to Compare and the trays), named under the row while the pointer is over them; a middle click or Shift+click on one runs its
+        alternative (send to the editor as a new layer). With <b>Open the context menu of an image with the right
+        button</b> turned on in the Settings tab, the right button opens the menu and the middle button the action rim.
+        <span class="kbd">Shift</span>+right-click shows the browser's own menu.
       </p>
       <p>
         The menu also has <AppIcon name="params" :size="13" class="inline-icon"/> <b>Copy infotext</b>, which copies
@@ -365,8 +371,9 @@ const hostOrigin = location.origin;
         full size and fit to screen, the <AppIcon name="params" :size="13" class="inline-icon"/> <b>Show
         generation parameters</b> button at the top left shows the parameters over the image
         (a second click hides them; they stay shown while paging), and <span class="kbd">Esc</span> closes the view.
-        The mouse closes it in three ways: a left click or a middle click on the close button in the center of the
-        action rim (a middle click opens the rim at the pointer), or a right drag down, released far enough down.
+        The mouse closes it with a click on the close button in the center of the action rim: a right press opens
+        the rim at the pointer, and a left, right or middle click on its center closes the view. When the right
+        button opens the menu (the setting above), a right drag down, released far enough down, closes it too.
         <b>Open in new window</b> of the image menu opens it in a new browser tab.
       </p>
       <p>
@@ -462,7 +469,7 @@ const hostOrigin = location.origin;
           buckets.</li>
         <li><b>Result, Input and Mask</b>: upload, drop or paste the input image or mask onto its pane. Hold
           <span class="kbd">Ctrl</span> over the result, or click its <AppIcon name="rim" :size="13" class="inline-icon"/>
-          button, to show its action rim. Drag the grips to resize the panes; double-click restores them.</li>
+          button, to show its action rim; a right press opens it at the pointer, a middle click the menu. Drag the grips to resize the panes; double-click restores them.</li>
         <li><b>Only masked crop</b>: when the inpaint area is Only masked, the Mask pane outlines the mask (dashed)
           and the part of the image that is regenerated, which is the mask grown by the padding and then widened to
           the aspect ratio of the size. <AppIcon name="maskFit" :size="13" class="inline-icon"/> sets the size to
@@ -474,7 +481,7 @@ const hostOrigin = location.origin;
           on the Input pane.</li>
         <li><b>Session filmstrip</b> (the tabs at the right edge of the parameters): the images generated while
           the window is open, grouped by batch. It is shown during a batch of several images. Click an image to
-          open it, or middle-click it for its action rim, which reaches over the neighboring images; the arc below
+          open it, or press the right button on it for its action rim at the pointer; the arc below
           the rim shows the image in the Result pane instead of the latest one (on the shown image: back to the
           latest).</li>
         <li><b>Generate</b> makes one image with a live preview. With a count above 1 (or
@@ -753,9 +760,9 @@ const hostOrigin = location.origin;
           their native resolution, and <AppIcon name="photoshop" :size="13" class="inline-icon"/> opens that image in
           the editor as a new document.</li>
         <li><b>Image actions</b>: images and crops show only their number, comment and marking. Hold
-          <span class="kbd">Ctrl</span> over one or middle-click it to show its action rim (parameters, ControlNet,
-          editor, the trays, a comment, Remove from compare at the bottom, and the markings in the middle),
-          right-click it for its actions, or use the keys. Click an image without dragging to view it large.</li>
+          <span class="kbd">Ctrl</span> over one or press the right button on it to show its action rim (parameters,
+          ControlNet, editor, the trays, a comment, Remove from compare at the bottom, and the markings above),
+          middle-click it for its menu, or use the keys. Click an image without dragging to view it large.</li>
         <li><b>Clear</b> removes all images; its arrow, a middle click or Shift+click removes only the unmarked or marked
           ones, or those of one marking. Their copies are deleted 10 seconds later, and the notice has <b>Undo</b>.</li>
       </ul>
@@ -786,8 +793,8 @@ const hostOrigin = location.origin;
       <p>Both trays offer:</p>
       <ul>
         <li><b>Markings</b>: 👍 👎 🔴 🟠 🟡 🟢 🔵 🟣, and 🏁 for the final choice. On a card, open its
-          action rim and pick a marking from the arc above the ring; in the full image view, middle-click to open
-          the rim and do the same. Or press
+          action rim and pick a marking from the arc above the ring; in the full image view, press the right button
+          to open the rim and do the same. Or press
           <span class="kbd">1</span>–<span class="kbd">9</span>. To remove a marking, pick it again, click it in
           the lower right corner or press <span class="kbd">0</span>. Clicking the marking on a thumbnail shows only
           the images that carry it (click again to show all), and a middle click removes it. The
@@ -985,11 +992,11 @@ const hostOrigin = location.origin;
         <li>The tabs under the parameters, <b>Image tray</b>, <b>Concept tray</b>, <b>Compare</b>, <b>Upscaled</b> and <b>Files</b>,
           contain the images of the trays as of the last save, and the image files of the project folder.
           Click an image to view it
-          (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), middle-click it or click
-          <AppIcon name="rim" :size="13" class="inline-icon"/> at its top right to show its action rim (with Add to compare;
-          the final image and reuse all in the arc below), or right-click for the menu (also Open in new window and
-          deleting a file of the project folder). In the full view, a middle press shows the rim at the pointer, as in
-          the image view, and the <AppIcon name="rim" :size="13" class="inline-icon"/> button at the lower right shows
+          (<span class="kbd">←</span> / <span class="kbd">→</span> page through them), press the right button on it
+          for its action rim at the pointer, or click <AppIcon name="rim" :size="13" class="inline-icon"/> at its top
+          right to show it on the file (with Add to compare; the final image and reuse all in the arc below), or
+          middle-click it for the menu (also Open in new window and deleting a file of the project folder). The full
+          view has the same buttons, as in the image view, and the <AppIcon name="rim" :size="13" class="inline-icon"/> button at the lower right shows
           it in the middle.</li>
       </ul>
     </section>
@@ -1006,8 +1013,11 @@ const hostOrigin = location.origin;
           button shows.</li>
         <li><b>Show the action rim of an image on hover</b>: opens the action rim of an image
           when the pointer is over it, as described in <a href="#" @click.prevent="scrollTo('images')">Working with images</a>.
-          Off by default; the rim of a card then shows on a middle click or through its toggle button. With it on, a
-          middle click hides the open rim.</li>
+          Off by default; the rim of a card then shows through its toggle button. With it on, a middle click on the
+          eye at the top right hides the open rim.</li>
+        <li><b>Open the context menu of an image with the right button, its action rim with the middle button</b>:
+          swaps the two buttons on images. Off by default: a right press opens the action rim at the pointer and a
+          middle click the menu. With it on, a right drag down also closes the image view.</li>
         <li><b>Open Image Bench in a popup window instead of a browser tab</b>: the 🔬 button and the
           <code>/image-bench/app</code> link open Image Bench in a popup window (without bookmarks and extension
           buttons) instead of a regular browser tab. The change takes effect the next time Image Bench is opened.</li>
@@ -1574,15 +1584,16 @@ const hostOrigin = location.origin;
           pan the image</td></tr>
         <tr><td><span class="kbd">Ctrl</span></td><td>Hold over an image card or in the image view to show only the
           image. Hold over the Generate tab's result or a Compare image to show its action rim</td></tr>
-        <tr><td>Middle click</td><td>In the image view, open the action rim at the pointer. Release the button on a
-          sector to run it; the button in the center closes the image view on a left or a middle click. On an image card, show or hide its
-          action rim (with the rim on hover: hide it), as on a Compare image and a project file. On a button, perform its alternative action (place as a new layer in the editor). On a marking,
-          remove it</td></tr>
+        <tr><td>Right press</td><td>On an image (card, image view, Compare image, project file), open its action
+          rim at the pointer. Release the button on a sector to run it, or without moving to keep the ring open; in
+          the image view the button in the center closes the view on a left or a right click</td></tr>
+        <tr><td>Middle click</td><td>On an image, open its menu (with the setting that swaps the buttons: its action
+          rim, as the right press does). On a button, perform its alternative action (place as a new layer in the
+          editor). On a marking, remove it</td></tr>
         <tr><td><span class="kbd">Shift</span>+click</td><td>On a button, perform its alternative action, as a
           middle click does</td></tr>
-        <tr><td>Right click</td><td>Open the menu of an image</td></tr>
-        <tr><td>Right drag down</td><td>Close the image view: the image follows the pointer, released far enough
-          down it closes</td></tr>
+        <tr><td>Right drag down</td><td>With the setting that swaps the buttons, close the image view: the image
+          follows the pointer, released far enough down it closes</td></tr>
         <tr><td>Letter keys</td><td>Actions of the image under the pointer or in the image view (see <a href="#"
           @click.prevent="scrollTo('images')">Working with images</a>)</td></tr>
         <tr><td><span class="kbd">1</span>–<span class="kbd">9</span>, <span class="kbd">0</span></td><td>Set or

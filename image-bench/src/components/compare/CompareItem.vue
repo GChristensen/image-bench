@@ -4,7 +4,8 @@ import {openImageMenu} from "@/contextMenu.js";
 import {setHoveredImageTarget, clearHoveredImageTarget} from "@/composables/useImageActionKeys.js";
 import AppIcon from "@/components/AppIcon.vue";
 import CompareChrome from "@/components/compare/CompareChrome.vue";
-import {useRimPress} from "@/composables/useRimPress.js";
+import {openImageRim} from "@/pointerRim.js";
+import {imageButtonHandlers} from "@/imageButtons.js";
 
 /**
  * One image of the Compare strip: a box of the image's aspect ratio that shows the image at the shared zoom
@@ -60,8 +61,6 @@ const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
 const rootElement = ref(null);
 const hovered = ref(false);
-// A middle click toggles the action rim, as on the image cards
-const rimToggled = ref(false);
 // Side of this item where a dragged item would be inserted
 const dropSide = ref(null);
 
@@ -91,32 +90,23 @@ function onMouseEnter() {
 }
 
 function onMouseLeave() {
-  if (rimPress.pressing)
-    return;
-
   hovered.value = false;
-  rimToggled.value = false;
   clearHoveredImageTarget(rootElement.value);
 }
 
-// A middle press that shows the rim runs the sector it is released on (useRimPress.js)
-const chromeElement = ref(null);
-const rimPress = useRimPress(computed(() => chromeElement.value?.rimElement), {
-  show: () => rimToggled.value = true,
-  hide: () => rimToggled.value = false,
-  leave: onMouseLeave,
-  element: () => rootElement.value
-});
+// The rim button opens the action rim at the pointer, the menu button the context menu; not on the controls of the
+// chrome (the rim shown with Ctrl, the marking badge), which handle their own clicks
+const imageButtons = imageButtonHandlers(e => openImageRim(e, props.image, props.ctx),
+  e => openImageMenu(e, props.image, props.ctx));
 
-// Not on the controls of the chrome (the rim, the marking badge), which handle their own middle clicks
-function onMiddleDown(e) {
-  if (e.button === 1 && !rimToggled.value && !e.target.closest(".compare-chrome"))
-    rimPress.begin(e);
-}
+function onChromeFree(handler, e) {
+  if (e.target.closest(".compare-chrome")) {
+    if (e.type === "contextmenu")
+      e.preventDefault();
+    return;
+  }
 
-function onAuxClick(e) {
-  if (e.button === 1 && !rimPress.handlesAuxClick())
-    rimToggled.value = !rimToggled.value;
+  handler(e);
 }
 
 function onGripDragStart(e) {
@@ -162,8 +152,9 @@ function onDrop(e) {
 <template>
   <div ref="rootElement" class="compare-item" :class="[direction, dropSide && 'drop-' + dropSide, {selecting}]"
        :style="{aspectRatio: `${size.w} / ${size.h}`}" :data-index="index"
-       @mouseenter="onMouseEnter" @mouseleave="onMouseLeave" @mousedown="onMiddleDown" @auxclick="onAuxClick"
-       @contextmenu="openImageMenu($event, image, ctx)"
+       @mouseenter="onMouseEnter" @mouseleave="onMouseLeave" @mousedown="e => onChromeFree(imageButtons.onMouseDown, e)"
+       @auxclick="e => onChromeFree(imageButtons.onAuxClick, e)"
+       @contextmenu="e => onChromeFree(imageButtons.onContextMenu, e)"
        @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
     <div class="compare-stage" :style="stageStyle">
       <img :src="image.imageUrl" draggable="false" alt="">
@@ -174,7 +165,7 @@ function onDrop(e) {
       </div>
     </div>
 
-    <CompareChrome ref="chromeElement" :image="image" :index="index" :ctx="ctx" :hovered="hovered" :rim-toggled="rimToggled"
+    <CompareChrome :image="image" :index="index" :ctx="ctx" :hovered="hovered"
                    @set-marking="marking => emit('setMarking', marking)"
                    @open="emit('open')">
       <template #lead>
