@@ -109,7 +109,7 @@ defineEmits(["upload", "toggleSelect", "update:aspect", "clearRegion", "toggleCr
     <div class="toolbar-spacer"></div>
 
     <ClearButton :images="images" :selectable="false"
-                 all-title="Remove all images from the Compare tab (Shift+Del); the files stay on disk"
+                 all-title="Remove all images from the Compare tab (Shift+Del); their copies are deleted, the output files stay on disk"
                  @remove="predicate => $emit('remove', predicate)"/>
   </div>
 </template>

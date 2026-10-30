@@ -57,6 +57,11 @@ export function useWebUIBridge() {
     sendWebUIMessage({ type: 'CLEAR_INPUT_IMAGES' });
   };
 
+  // Remove the control images, masks and previews of all ControlNet units
+  const clearControlNetImages = () => {
+    sendWebUIMessage({ type: 'CLEAR_CONTROLNET_IMAGES' });
+  };
+
   // Edit the reference images of the shown WebUI tab: {add: File[]} | {remove: index} | {clear: true}
   const editReferences = (edit) => {
     sendWebUIMessage({ type: 'EDIT_REFERENCES', edit });
@@ -168,6 +173,7 @@ export function useWebUIBridge() {
     syncWorkflows,
     setInputImage,
     clearInputImages,
+    clearControlNetImages,
     editReferences,
     setEditorTarget,
     subscribeMirror,

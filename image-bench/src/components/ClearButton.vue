@@ -33,7 +33,7 @@ const props = defineProps({
   // The text of the tooltip of a click
   allTitle: {
     type: String,
-    default: "Remove all images from this view (Shift+Del); the files stay on disk"
+    default: "Remove all images from this view (Shift+Del); the output files stay on disk"
   }
 });
 

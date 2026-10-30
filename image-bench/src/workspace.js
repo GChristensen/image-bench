@@ -52,7 +52,7 @@ export function clearViewsAndTrays() {
 }
 
 /**
- * Start a new piece of work, after a confirmation: no images, empty prompts and input images, a random seed, and no
+ * Start a new piece of work, after a confirmation: no images, empty prompts, input and ControlNet images, a random seed, and no
  * current project, so that the empty workspace is not taken for changes of the project it was. The other parameters are kept.
  * Unsaved changes of the current project may be saved first
  * @param {{keepParams?: boolean}} options - keepParams: keep the prompts and the seed (a new start in the Generate
@@ -70,10 +70,11 @@ export async function startBlankWorkspace({keepParams = false} = {}) {
     : ` The current project "${name}" is closed (its saved state is kept).`;
 
   const params = keepParams ? "clears the prompt history (the prompts and parameters are kept)"
-    : `clears the prompts and their history and the img2img and inpaint images and sets a random seed in ${HOST_NAME}`;
+    : `clears the prompts and their history, the img2img, inpaint images and the ControlNet images and sets a `
+      + `random seed in ${HOST_NAME}`;
 
   const answer = await dialog.confirm(`Removes all images from the ${VIEWS}, empties the image and concept trays and `
-      + `the Compare tab, ${params}.${project} No files are deleted from disk.`,
+      + `the Compare tab, ${params}.${project} The generated files stay.`,
     {title: projects.hasCurrent ? `Close ${name}` : "Start a blank workspace", okText: "Clear", danger: true,
      actions: projects.hasCurrent && projects.unsaved ? [{id: "save", label: "Save and clear"}] : []});
 
@@ -92,6 +93,7 @@ export async function startBlankWorkspace({keepParams = false} = {}) {
     bridge.setWebUIParams({prompt: "", negativePrompt: "", seed: -1,
                            ...(isWebUI ? {subseed: -1, subseedStrength: 0} : {})});
     bridge.clearInputImages();
+    bridge.clearControlNetImages();
 
     if (isWebUI)
       clearSavedPrompts();

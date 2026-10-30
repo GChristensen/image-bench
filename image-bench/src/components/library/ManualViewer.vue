@@ -701,8 +701,9 @@ const hostOrigin = location.origin;
           the images of successive runs.</li>
         <li><b>Clear</b>, at the right end of the toolbar of the Generated, Upscaled, tray and Compare tabs,
           removes all images from the tab. Its arrow, or a middle click on it, lists what else it can remove,
-          with counts: the checked images, the unmarked or marked ones, or those of one marking. The files stay
-          on disk, and the notice that follows has <b>Undo</b>.</li>
+          with counts: the checked images, the unmarked or marked ones, or those of one marking. The output files
+          stay on disk, and the notice that follows has <b>Undo</b>. The Upscaled, tray and Compare tabs keep copies
+          of their images, which are deleted 10 seconds after they are removed.</li>
         <li><b>Selecting images</b>: check images with the circle at the top left of the thumbnail, or all of them
           with <b>Select all</b> in the toolbar. While images are checked, the toolbar shows the image actions that
           work on many images, in every image tab the same and colored as on the action rim: <b>Add to
@@ -725,7 +726,8 @@ const hostOrigin = location.origin;
         class="inline-icon"/>, or use the <b>Compare</b> button of the editor plugin. Like the trays, the tab
         keeps its images across restarts
         and is saved with the trays into a <a href="#" @click.prevent="scrollTo('projects')">project</a>.
-        <b>Clear</b> removes them all from the tab (the files stay on disk).
+        <b>Clear</b> removes them all from the tab and deletes their copies (images uploaded or sent from an editor
+        exist only there).
       </p>
       <ul>
         <li><b>Layout</b>: the images follow each other, separated by a thin line whose color you set with the
@@ -755,7 +757,7 @@ const hostOrigin = location.origin;
           editor, the trays, a comment, Remove from compare at the bottom, and the markings in the middle),
           right-click it for its actions, or use the keys. Click an image without dragging to view it large.</li>
         <li><b>Clear</b> removes all images; its arrow, a middle click or Shift+click removes only the unmarked or marked
-          ones, or those of one marking. The files stay on disk, and the notice has <b>Undo</b>.</li>
+          ones, or those of one marking. Their copies are deleted 10 seconds later, and the notice has <b>Undo</b>.</li>
       </ul>
     </section>
 
@@ -1040,12 +1042,14 @@ const hostOrigin = location.origin;
       <ul>
         <li><b>Clear generated images</b> <AppIcon name="broom" :size="13" class="inline-icon"/> removes all
           images from the Generated, Upscaled and Explore tabs and the ControlNet sweep at once, with Undo in the
-          notice. The trays, the Compare tab, the prompts and the parameters are kept, and no files are deleted.</li>
+          notice. The trays, the Compare tab, the prompts and the parameters are kept, and no output files are deleted (the
+          copies of the Upscaled images are).</li>
         <li><b>Start a blank workspace</b> <AppIcon name="nuke" :size="13" class="inline-icon"/> (with a current
           project: <b>Close and start a blank workspace</b>) asks first and is for starting a new project. It also empties both trays and
-          the Compare tab, clears the prompts, sets a random seed<template v-if="isWebUI"> (and clears the variation
+          the Compare tab, clears the prompts and the ControlNet images, sets a random seed<template v-if="isWebUI"> (and clears the variation
           seed)</template>, and closes the current project, whose saved state is kept. The other
-          parameters are kept, and the image files stay on disk.<template v-if="isWebUI"> The prompts saved by
+          parameters are kept. The output files stay on
+          disk.<template v-if="isWebUI"> The prompts saved by
           <b>Remember prompts and generation parameters across WebUI reloads</b> are cleared too, so a reload of the
           WebUI page does not bring them back.</template></li>
         <li><b>Delete all output files…</b> <AppIcon name="trash" :size="13" class="inline-icon"/> asks first, then

@@ -122,7 +122,7 @@ const selectAllText = computed(() => props.isAllSelected ? 'Unselect all' : 'Sel
               :title="item.title" @click="$emit('bulk', item.id)"
         ><AppIcon :name="item.icon" :size="14" :style="{color: item.color}"/>{{ item.label }}</button>
       <button class="btn outline remove-selected"
-              title="Remove the checked images from this view; the files stay on disk (Undo in the notice)"
+              title="Remove the checked images from this view; the output files stay on disk (Undo in the notice)"
               @click="$emit('remove-selected')"><AppIcon name="trash" :size="14"/>Remove</button>
       <button class="ib" title="Unselect all (Ctrl+U)" aria-label="Unselect all" @click="$emit('unselect-all')"
         ><AppIcon name="close" :size="14"/></button>

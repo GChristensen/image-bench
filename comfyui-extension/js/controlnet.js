@@ -426,6 +426,18 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         app.graph.setDirtyCanvas(true, true);
     }
 
+    // Empty the control images and masks of all units (a blank workspace)
+    function clearImages() {
+        getUnitTargets().forEach((target, index) => {
+            clearUnitImage(index);
+
+            if (resolveUnit(index)?.mask)
+                applyParams(index, {useMask: false});
+        });
+
+        pollIfActive();
+    }
+
     async function setUnitImage(index, kind, file, processed = false) {
         try {
             if (await loadUnitImage(index, kind, file) && kind === 'image' && processed)
@@ -646,6 +658,7 @@ export function createControlNet({app, api, ops, popup, showAlert}) {
         CONTROLNET_SUBSCRIBE: payload => subscribe(payload.active, payload.unit),
         SET_CONTROLNET_PARAMS: payload => applyParams(payload.unit, payload.params),
         CONTROLNET_ACTION: payload => runAction(payload.unit, payload.action),
+        CLEAR_CONTROLNET_IMAGES: () => clearImages(),
         SET_CONTROLNET_IMAGE: payload => setUnitImage(payload.unit, payload.kind, payload.file, payload.processed),
         // ComfyUI has one workflow, there are no generation tabs to switch
         SET_CONTROLNET_TAB: () => {}

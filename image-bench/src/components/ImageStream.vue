@@ -124,7 +124,7 @@
   const selectedCount = computed(() => images.value.filter(i => i.selected).length);
 
   // Removals are undone from their notice; trays and the upscaled images are saved on the server
-  const removedText = count => `Removed ${imageCount(count)}. The files stay on disk.`;
+  const removedText = count => `Removed ${imageCount(count)}. The output files stay on disk.`;
 
   function clear() {
     removeWithUndo(props.imageStore, () => true, removedText);

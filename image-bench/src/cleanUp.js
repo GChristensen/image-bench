@@ -17,7 +17,7 @@ function clearGeneratedImages() {
   const stores = [useGeneratedImagesStore(), useExploreImagesStore(), useUpscaledImagesStore(),
     useControlNetSweepStore()];
 
-  if (!clearWithUndo(stores, `Cleared the ${VIEWS}. The files stay on disk.`))
+  if (!clearWithUndo(stores, `Cleared the ${VIEWS}. The output files stay on disk.`))
     toast("There are no generated images to clear.");
 }
 
@@ -39,9 +39,9 @@ export function cleanUpItems() {
   return [
     {heading: "Clean up"},
     {icon: "broom", label: "Clear generated images", title: `Removes all images of the ${VIEWS}; trays, prompts `
-      + "and parameters are kept, files stay on disk (Undo in the notice)", run: clearGeneratedImages},
+      + "and parameters are kept, output files stay on disk (Undo in the notice)", run: clearGeneratedImages},
     {icon: "nuke", label: projects.hasCurrent ? "Close and start a blank workspace" : "Start a blank workspace",
-     title: "Clears all images, trays and prompts, randomizes the seed and closes the project; files stay on disk",
+     title: "Clears all images, trays, prompts and ControlNet images, randomizes the seed and closes the project; output files stay on disk",
      run: () => startBlankWorkspace()},
     {icon: "trash", label: "Delete all output files…", danger: true,
      title: `Deletes the ${HOST_NAME} outputs directory; cannot be undone`, run: deleteOutputs}
